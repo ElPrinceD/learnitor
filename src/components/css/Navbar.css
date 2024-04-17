@@ -1,0 +1,48 @@
+/* Navbar.css */
+
+.navbar {
+    width: 200px; /* Adjust width as needed */
+    background-color: #ac449b;
+    color: #fff;
+}
+  
+  .nav-menu {
+    
+    display: block;
+    
+    padding-bottom:  160%;
+    margin-left: 0px;
+  }
+  
+  .nav-item {
+    list-style-type: none;
+    
+    text-align: left;
+    margin-left: -20px;
+    padding-top: 30px;
+
+    
+    cursor: pointer;
+  }
+  
+  
+
+  .nav-item:last-child {
+    border-top: 1px solid rgb(243, 240, 240);
+    padding-top: 20px;
+  }
+
+  .nav-item svg {
+    margin-right: 11px; /* Add space between icon and text */
+  }
+  .nav-item:hover {
+    background-color: #fcf8f8;
+    color: #ac449b;
+    padding-top: 1px;
+    border-radius: 3px;
+    
+  }
+  
+  
+
+  

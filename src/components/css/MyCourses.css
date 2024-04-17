@@ -1,0 +1,51 @@
+/* MyCourses.css */
+
+.my-courses-section {
+    padding: 20px;
+  }
+
+.my-courses-section h1{
+    text-align: left;
+}
+  
+  .course-cards {
+    display: flex; /* Change display to flex */
+    flex-wrap: wrap; /* Allow cards to wrap to the next line */
+    gap: 20px; /* Add gap between cards */
+  }
+  
+  .see_all{
+    float: right;
+    color: #a8a5a5;
+    font-size: 18px;
+    
+
+  }
+
+  .course-card {
+    flex: 1; /* Make each card grow to fill available space */
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+  }
+  
+  .course-card h3 {
+    margin: 0;
+    color: #333;
+  }
+  
+  .course-card p {
+    margin: 10px 0;
+    color: #666;
+  }
+  
+  .course-icons {
+    display: flex;
+    align-items: center;
+  }
+  
+  .course-icons span {
+    margin-left: 10px;
+  }
+  

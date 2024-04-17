@@ -1,0 +1,63 @@
+/* Header.css */
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #ac449b;
+    color: #fff;
+    padding: 20px;
+  }
+  
+  .logo img {
+    height: 40px; /* Adjust height as needed */
+  }
+
+  
+  
+  .search-bar input {
+    padding: 8px;
+    border: none;
+    border-radius: 5px;
+    margin-right: 10px;
+  }
+  
+  .search-bar button {
+    padding: 8px 20px;
+    background-color: #ac449b;
+    color: #fff;
+    border: 1.5px solid white;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  .user-profile img {
+    width: 40px; /* Adjust width as needed */
+    border-radius: 50%;
+  }
+  .user-profile {
+    display: flex;
+    align-items: center;
+  }
+
+  .add_course{
+    background-color: white;
+    color: #a53392;
+    font-weight: light;
+    margin-right: 20px;
+    border-radius: 2.5px;
+  }
+  
+  .notification-btn {
+    background: rgb(255, 255, 255);
+    border: none;
+    color: #a53392;
+    font-size: 20px;
+    margin-left: 10px;
+    cursor: pointer;
+  }
+  
+  .notification-btn:hover {
+    color: #764a22;
+  }
+  

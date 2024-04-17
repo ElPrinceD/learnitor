@@ -1,0 +1,114 @@
+/* MainSection.css */
+
+section {
+  padding: 5px 20px;
+}
+
+
+
+.content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start; /* Align items at the top */
+  padding-left: 80px;
+}
+
+.text-content {
+  flex: 1;
+  margin-right: 0px;
+  padding-left: 100px;
+  padding-bottom: 30px;
+}
+
+.image-content {
+  flex: 0 0 300px;
+  padding: 20px;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+h2 {
+  font-size: 2.5rem;
+  margin-bottom: 15px;
+  color: #2c2c2c;
+  text-align: left;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+h4 {
+  color: rgb(40, 40, 40);
+  text-align: left;
+  font-weight: light;
+}
+
+.actions {
+  margin-top: 10px;
+}
+
+.login{
+  border: 2px solid #942e82;
+  background-color: white;
+  color: #262626;
+  margin: 2px;
+}
+
+/* Styles for registration form */
+.registration-form {
+  width: 100%;
+  max-width: 400px; /* Adjust as needed */
+  margin: 10px 0; /* Add margin for spacing */
+}
+
+.registration-form h3 {
+  color: #a6a11e;
+  margin-bottom: 15px;
+}
+
+.registration-form form {
+  display: flex;
+  flex-direction: column;
+}
+
+.registration-form input,
+.registration-form button {
+  padding: 15px;
+  margin-bottom: 7px;
+  border: 1px solid #ffffff; /* Add border for input fields */
+  border-bottom: 1px solid #a6a11e;
+  transition: all 2s ease; /* Add transition for all properties */
+}
+
+.registration-form button {
+  background-color: #a6a11e;
+  margin-top: 20px;
+  color: #ffffff;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.registration-form button:hover {
+  background-color: #942e82; /* Darken the color on hover */
+  transform: scale(1.05); /* Apply a slight scale increase on hover */
+}
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.back-button {
+
+  color: #262626;
+  border: none;
+  padding: 2px 5px;
+  float: left;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.back-button:hover {
+  background-color: #942e82;
+}

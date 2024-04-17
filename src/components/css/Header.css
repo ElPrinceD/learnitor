@@ -1,0 +1,73 @@
+/* Header.css */
+
+header {
+    background-color: #ffffff;
+    padding: 1px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #ac449b;
+    box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+  }
+  
+  nav {
+    display: flex;
+    align-items: center;
+  }
+  
+  nav ul {
+    list-style-type: none;
+    display: flex;
+    margin-left: 20px;
+  }
+  
+  nav ul li {
+    margin-right: 20px;
+  }
+  
+  nav ul li a {
+    text-decoration: none;
+    color: #232323;
+    font-weight: lighter;
+    font-family: 'Poppins', sans-serif;
+    transition: color 0.3s ease;
+  }
+  
+  nav ul li a:hover {
+    color: #ac449b;
+    text-decoration: wavy;
+  }
+  
+  h1 {
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    color: #ac449b;
+    padding-right: 40px;
+    font-family: 'Poppins', sans-serif;
+  }
+  
+  p {
+    margin-bottom: 20px;
+    color: #ac449b;
+  }
+  
+  button {
+    padding: 10px 20px;
+    border-radius: 20px;
+    border: none;
+    background-color: #ac449b;
+    color: #ffffff;
+    font-weight: bold;
+    cursor: pointer;
+    font-family: 'Poppins', sans-serif;
+    transition: background-color 0.3s ease;
+  }
+
+  .search{
+    background-color: #d8d8d9;
+  }
+  
+  button:hover {
+    background-color:#ac449b;
+  }
+  
