@@ -1,0 +1,17 @@
+{
+  "files": {
+    "main.css": "/learnitor/static/css/main.64d13292.css",
+    "main.js": "/learnitor/static/js/main.ddbb6a1f.js",
+    "static/js/453.e8bd644c.chunk.js": "/learnitor/static/js/453.e8bd644c.chunk.js",
+    "static/media/Lady.jpg": "/learnitor/static/media/Lady.58892533b06ff8b161b5.jpg",
+    "static/media/profile.png": "/learnitor/static/media/profile.d285ae08e79d65a6c85a.png",
+    "index.html": "/learnitor/index.html",
+    "main.64d13292.css.map": "/learnitor/static/css/main.64d13292.css.map",
+    "main.ddbb6a1f.js.map": "/learnitor/static/js/main.ddbb6a1f.js.map",
+    "453.e8bd644c.chunk.js.map": "/learnitor/static/js/453.e8bd644c.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.64d13292.css",
+    "static/js/main.ddbb6a1f.js"
+  ]
+}
