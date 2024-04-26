@@ -4,6 +4,7 @@ import { StyleSheet } from "react-native";
 import RecommendedCoursesList from "@/components/Recommended";
 import StreakList from "@/components/Streak";
 import { Text, View } from "@/components/Themed";
+import CoursesData from "../../components/CoursesData.json";
 
 interface Streak {
   name: string;
@@ -27,51 +28,13 @@ const HomeScreen = () => {
     { name: "Streak 7", streak: false },
     // Add more streaks as needed
   ];
-  const coursesData: Course[] = [
-    {
-      name: "Course 1",
-      program: "Computer Science",
-      level: "Beginner",
-      image:
-        "https://e1.pxfuel.com/desktop-wallpaper/355/972/desktop-wallpaper-stock-of-reading-%C2%B7-pexels-coffee-winter-and-books.jpg",
-    },
-    {
-      name: "Course 2",
-      program: "Mathematics",
-      level: "Intermediate",
-      image:
-        "https://e1.pxfuel.com/desktop-wallpaper/355/972/desktop-wallpaper-stock-of-reading-%C2%B7-pexels-coffee-winter-and-books.jpg",
-    },
-    {
-      name: "Course 3",
-      program: "Physics",
-      level: "Advanced",
-      image:
-        "https://e1.pxfuel.com/desktop-wallpaper/355/972/desktop-wallpaper-stock-of-reading-%C2%B7-pexels-coffee-winter-and-books.jpg",
-    },
-    {
-      name: "Course 4",
-      program: "Biology",
-      level: "Intermediate",
-      image:
-        "https://e1.pxfuel.com/desktop-wallpaper/355/972/desktop-wallpaper-stock-of-reading-%C2%B7-pexels-coffee-winter-and-books.jpg",
-    },
-    {
-      name: "Course 5",
-      program: "Chemistry",
-      level: "Advanced",
-      image:
-        "https://e1.pxfuel.com/desktop-wallpaper/355/972/desktop-wallpaper-stock-of-reading-%C2%B7-pexels-coffee-winter-and-books.jpg",
-    },
-    {
-      name: "Course 6",
-      program: "History",
-      level: "Beginner",
-      image:
-        "https://e1.pxfuel.com/desktop-wallpaper/355/972/desktop-wallpaper-stock-of-reading-%C2%B7-pexels-coffee-winter-and-books.jpg",
-    },
-  ];
-
+  const coursesData: Course[] = CoursesData.map((course: any) => ({
+    name: course.title,
+    program: course.description,
+    level: "",
+    image:
+      "https://e1.pxfuel.com/desktop-wallpaper/355/972/desktop-wallpaper-stock-of-reading-%C2%B7-pexels-coffee-winter-and-books.jpg",
+  }));
   return (
     <View style={styles.container}>
       <View style={{ flex: 1, padding: 20 }}>

@@ -15,12 +15,16 @@ interface Course {
   level: string;
   image: string;
 }
-
+interface Category {
+  id: number;
+  name: string;
+}
 interface Props {
   courses: Course[];
+  categories: Category[];
 }
 
-const CoursesList: React.FC<Props> = ({ courses }) => {
+const CoursesList: React.FC<Props> = ({ courses, categories }) => {
   const colorScheme = useColorScheme();
 
   // Determine styles based on color scheme
@@ -86,16 +90,14 @@ const CoursesList: React.FC<Props> = ({ courses }) => {
   });
 
   // Extract unique program categories from the list of courses
-  const categories: string[] = Array.from(
-    new Set(courses.map((course) => course.program))
-  );
+  const uniqueCategories = categories.map((category) => category.name);
 
   return (
     <View style={styles.container}>
       {/* Category Container */}
       <View style={styles.categoryContainer}>
         <FlatList
-          data={categories}
+          data={uniqueCategories}
           horizontal
           showsHorizontalScrollIndicator={false}
           renderItem={({ item }) => (
