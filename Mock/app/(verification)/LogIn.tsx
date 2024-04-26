@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { StyleSheet, TouchableOpacity, View, TextInput } from "react-native";
+import { StyleSheet, TouchableOpacity, View, TextInput, Image } from "react-native";
 import { Text } from "@/components/Themed";
 import { Ionicons } from "@expo/vector-icons";
 import { useThemeColor } from "@/components/Themed";
@@ -64,6 +64,83 @@ const LogIn = () => {
         { backgroundColor: useThemeColor({}, "background") },
       ]}
     >
+      
+      <Image
+        source={require("../../assets/images/3071357.jpg")} // Replace with your image path
+        style={styles.image}
+      />
+      
+    
+      
+      <View style={styles.inputContainer}>
+       
+      
+        <TextInput
+          style={[
+            styles.input,
+            {
+              backgroundColor: buttonBackgroundColor,
+              borderColor: buttonBorderColor,
+              color: buttonTextColor,
+              borderTopWidth: 0, // Hide top border
+              borderRightWidth: 0, // Hide right border
+              borderLeftWidth: 0,
+              borderBottomWidth: 1,
+              
+            },
+          ]}
+          placeholder="Email"
+          placeholderTextColor={buttonTextColor}
+          value={email}
+          onChangeText={(text) => setEmail(text)}
+        />
+        
+        <TextInput
+          style={[
+            styles.input,
+            {
+              backgroundColor: buttonBackgroundColor,
+              borderColor: buttonBorderColor,
+              color: buttonTextColor,
+              borderTopWidth: 0, // Hide top border
+              borderRightWidth: 0, // Hide right border
+              borderLeftWidth: 0,
+              borderBottomWidth: 1,
+            },
+          ]}
+          placeholder="Password"
+          placeholderTextColor={buttonTextColor}
+          secureTextEntry={true}
+          value={password}
+          onChangeText={(text) => setPassword(text)}
+        />
+        {error ? <Text style={styles.errorMessage}>{error}</Text> : null}
+      </View>
+      <TouchableOpacity
+        style={[
+          styles.button,
+          styles.loginButton,
+          {
+            backgroundColor: buttonBackgroundColor,
+            borderColor: buttonBorderColor,
+          },
+        ]}
+        onPress={handleLogin}
+      >
+        <Text style={[styles.buttonText, { color: buttonTextColor }]}>
+          Log in
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={handleForgotPassword}>
+        <Text style={[styles.forgotPasswordText, { color: dividerTextColor }]}>
+          Forgot password?
+        </Text>
+      </TouchableOpacity>
+      <View style={styles.dividerRow}>
+        <Text style={[styles.dividerText, { color: dividerTextColor }]}>
+          ---------------------OR----------------------
+        </Text>
+      </View>
       <View style={styles.buttonRow}>
         <TouchableOpacity
           style={[
@@ -99,63 +176,6 @@ const LogIn = () => {
           <Ionicons name="logo-twitter" size={25} color={buttonTextColor} />
         </TouchableOpacity>
       </View>
-      <View style={styles.dividerRow}>
-        <Text style={[styles.dividerText, { color: dividerTextColor }]}>
-          ---------------- or ----------------
-        </Text>
-      </View>
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={[
-            styles.input,
-            {
-              backgroundColor: buttonBackgroundColor,
-              borderColor: buttonBorderColor,
-              color: buttonTextColor,
-            },
-          ]}
-          placeholder="Email"
-          placeholderTextColor={buttonTextColor}
-          value={email}
-          onChangeText={(text) => setEmail(text)}
-        />
-        <TextInput
-          style={[
-            styles.input,
-            {
-              backgroundColor: buttonBackgroundColor,
-              borderColor: buttonBorderColor,
-              color: buttonTextColor,
-            },
-          ]}
-          placeholder="Password"
-          placeholderTextColor={buttonTextColor}
-          secureTextEntry={true}
-          value={password}
-          onChangeText={(text) => setPassword(text)}
-        />
-        {error ? <Text style={styles.errorMessage}>{error}</Text> : null}
-      </View>
-      <TouchableOpacity
-        style={[
-          styles.button,
-          styles.loginButton,
-          {
-            backgroundColor: buttonBackgroundColor,
-            borderColor: buttonBorderColor,
-          },
-        ]}
-        onPress={handleLogin}
-      >
-        <Text style={[styles.buttonText, { color: buttonTextColor }]}>
-          Log in
-        </Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={handleForgotPassword}>
-        <Text style={[styles.forgotPasswordText, { color: dividerTextColor }]}>
-          Forgot password?
-        </Text>
-      </TouchableOpacity>
       <View style={styles.bottomContainer}>
         <Text
           style={[styles.existingText, { color: useThemeColor({}, "text") }]}
@@ -184,6 +204,7 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: "row",
     marginBottom: 16,
+    paddingTop: 16, 
   },
   dividerRow: {
     flexDirection: "row",
@@ -198,6 +219,12 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginRight: 9,
   },
+  emailSign: {
+    fontSize: 30, // Customize font size of email sign
+    color: 'grey', // Customize color of email sign
+    marginHorizontal: 5, // Add margin around the email sign
+  
+  },
   appleButton: {
     borderWidth: 1,
     width: 120,
@@ -206,6 +233,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     width: 120,
   },
+ 
   twitterButton: {
     borderWidth: 1,
     width: 120,
@@ -213,6 +241,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     width: "100%",
     marginBottom: 16,
+    
   },
   input: {
     borderWidth: 2,
@@ -220,12 +249,13 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     color: "#000",
+    
   },
   dividerText: {
     fontSize: 16,
     fontWeight: "bold",
     opacity: 0.4,
-    marginBottom: 16,
+    marginTop: 20,
   },
   buttonText: {
     fontSize: 16,
@@ -240,12 +270,19 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     width: 300,
   },
+  image: {
+    width: 400, // Make the image bigger
+    height: 350,
+    resizeMode: "contain", // Maintain aspect ratio
+    marginBottom: 16, // Bring the image down a little
+  },
   forgotPasswordText: {
     fontSize: 16,
     fontWeight: "bold",
     textDecorationLine: "underline",
     marginTop: 8,
   },
+ 
   bottomContainer: {
     position: "absolute",
     bottom: 16,
