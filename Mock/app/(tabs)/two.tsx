@@ -1,92 +1,9 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, useColorScheme } from "react-native";
+import { View, StyleSheet, useColorScheme } from "react-native";
 import SearchBar from "../../components/SearchBar";
 import CoursesList from "../../components/CoursesList";
-
-// Sample data for courses
-const coursesData: Course[] = [
-  {
-    name: "Course 1",
-    program: "Computer Science",
-    level: "Beginner",
-    image:
-      "https://e1.pxfuel.com/desktop-wallpaper/355/972/desktop-wallpaper-stock-of-reading-%C2%B7-pexels-coffee-winter-and-books.jpg",
-  },
-  {
-    name: "Course 2",
-    program: "Mathematics",
-    level: "Intermediate",
-    image:
-      "https://e1.pxfuel.com/desktop-wallpaper/355/972/desktop-wallpaper-stock-of-reading-%C2%B7-pexels-coffee-winter-and-books.jpg",
-  },
-  {
-    name: "Course 3",
-    program: "Physics",
-    level: "Advanced",
-    image:
-      "https://e1.pxfuel.com/desktop-wallpaper/355/972/desktop-wallpaper-stock-of-reading-%C2%B7-pexels-coffee-winter-and-books.jpg",
-  },
-  {
-    name: "Course 4",
-    program: "Biology",
-    level: "Intermediate",
-    image:
-      "https://e1.pxfuel.com/desktop-wallpaper/355/972/desktop-wallpaper-stock-of-reading-%C2%B7-pexels-coffee-winter-and-books.jpg",
-  },
-  {
-    name: "Course 5",
-    program: "Chemistry",
-    level: "Advanced",
-    image:
-      "https://e1.pxfuel.com/desktop-wallpaper/355/972/desktop-wallpaper-stock-of-reading-%C2%B7-pexels-coffee-winter-and-books.jpg",
-  },
-  {
-    name: "Course 6",
-    program: "History",
-    level: "Beginner",
-    image:
-      "https://e1.pxfuel.com/desktop-wallpaper/355/972/desktop-wallpaper-stock-of-reading-%C2%B7-pexels-coffee-winter-and-books.jpg",
-  },
-  {
-    name: "Course 7",
-    program: "Geography",
-    level: "Intermediate",
-    image:
-      "https://e1.pxfuel.com/desktop-wallpaper/355/972/desktop-wallpaper-stock-of-reading-%C2%B7-pexels-coffee-winter-and-books.jpg",
-  },
-  {
-    name: "Course 8",
-    program: "Literature",
-    level: "Advanced",
-    image:
-      "https://e1.pxfuel.com/desktop-wallpaper/355/972/desktop-wallpaper-stock-of-reading-%C2%B7-pexels-coffee-winter-and-books.jpg",
-  },
-  {
-    name: "Course 9",
-    program: "Art",
-    level: "Beginner",
-    image:
-      "https://e1.pxfuel.com/desktop-wallpaper/355/972/desktop-wallpaper-stock-of-reading-%C2%B7-pexels-coffee-winter-and-books.jpg",
-  },
-  {
-    name: "Course 10",
-    program: "Music",
-    level: "Intermediate",
-    image:
-      "https://e1.pxfuel.com/desktop-wallpaper/355/972/desktop-wallpaper-stock-of-reading-%C2%B7-pexels-coffee-winter-and-books.jpg",
-  },
-
-  // Add more courses here...
-];
-
-// Sample data for categories
-const categories: string[] = [
-  "Computer Science",
-  "Mathematics",
-  "Physics",
-  "Biology",
-  "Chemistry",
-];
+import CoursesData from "../../components/CoursesData.json"; // Assuming the correct path
+import CategoryData from "../../components/Category.json"; // Assuming the correct path
 
 interface Course {
   name: string;
@@ -94,6 +11,24 @@ interface Course {
   level: string;
   image: string;
 }
+
+interface Category {
+  id: number;
+  name: string;
+}
+
+const coursesData: Course[] = CoursesData.map((course: any) => ({
+  name: course.title,
+  program: course.description,
+  level: "",
+  image:
+    "https://e1.pxfuel.com/desktop-wallpaper/355/972/desktop-wallpaper-stock-of-reading-%C2%B7-pexels-coffee-winter-and-books.jpg",
+}));
+
+const categoryData: Category[] = CategoryData.map((category: any) => ({
+  id: category.id,
+  name: category.name,
+}));
 
 const CoursesScreen: React.FC = () => {
   const [filteredCourses, setFilteredCourses] = useState<Course[]>(coursesData);
@@ -123,9 +58,8 @@ const CoursesScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* <Text style={styles.headerText}>What do you want to learn today?</Text> */}
       <SearchBar onSearch={handleSearch} />
-      <CoursesList courses={filteredCourses} />
+      <CoursesList courses={filteredCourses} categories={categoryData} />
     </View>
   );
 };
