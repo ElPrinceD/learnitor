@@ -1,35 +1,57 @@
 import React, { useState } from "react";
-import { StyleSheet, TouchableOpacity, View, TextInput } from "react-native";
+import {
+  StyleSheet,
+  TouchableOpacity,
+  View,
+  TextInput,
+  useColorScheme,
+  ActivityIndicator,
+} from "react-native";
 import { Text } from "@/components/Themed";
 import { Ionicons } from "@expo/vector-icons";
 import { useThemeColor } from "@/components/Themed";
 import { router } from "expo-router";
+// import KeyboardAvoidingWrapper from "../../components/KeyboardAvoidingWrapper";
 
 const LogIn = () => {
+  const colorScheme = useColorScheme();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false); // State to manage loading
 
   const handleSignUpWithApple = () => {
+    // Set loading state to true
     // Handle sign up with Apple ID
+    // After completion, setLoading(false);
   };
 
   const handleSignUpWithGoogle = () => {
+    // Set loading state to true
     // Handle sign up with Google Account
+    // After completion, setLoading(false);
   };
 
   const handleSignUpWithTwitter = () => {
+    // Set loading state to true
     // Handle sign up with Twitter
+    // After completion, setLoading(false);
   };
 
   const handleLogin = () => {
-    if (email === "yawopokugyamerah@gmail.com" || password === "12345678") {
-      setError("Please enter email and password");
-    } else if (email === "wrong" || password === "wrong") {
-      setError("Email and/or password is incorrect");
-    } else {
-      router.navigate("(tabs)");
-    }
+    setLoading(true); // Set loading state to true
+    // Simulate API call
+    setTimeout(() => {
+      if (email === "yawopokugyamerah@gmail.com" || password === "12345678") {
+        setError("Please enter email and password");
+      } else if (email === "wrong" || password === "wrong") {
+        setError("Email and/or password is incorrect");
+      } else {
+        router.navigate("(tabs)");
+      }
+      setLoading(false); // Set loading state to false after API call
+    }, 2000); // Simulating API delay of 2 seconds
   };
 
   const handleForgotPassword = () => {
@@ -58,6 +80,7 @@ const LogIn = () => {
   );
 
   return (
+    // <KeyboardAvoidingWrapper>
     <View
       style={[
         styles.container,
@@ -75,8 +98,9 @@ const LogIn = () => {
             },
           ]}
           onPress={handleSignUpWithApple}
+          disabled={loading} // Disable button when loading
         >
-          <Ionicons name="logo-apple" size={25} color={buttonTextColor} />
+          {<Ionicons name="logo-apple" size={25} color={buttonTextColor} />}
         </TouchableOpacity>
         <TouchableOpacity
           style={[
@@ -85,8 +109,9 @@ const LogIn = () => {
             { borderColor: buttonBorderColor },
           ]}
           onPress={handleSignUpWithGoogle}
+          disabled={loading} // Disable button when loading
         >
-          <Ionicons name="logo-google" size={25} color={buttonTextColor} />
+          {<Ionicons name="logo-google" size={25} color={buttonTextColor} />}
         </TouchableOpacity>
         <TouchableOpacity
           style={[
@@ -95,8 +120,9 @@ const LogIn = () => {
             { borderColor: buttonBorderColor },
           ]}
           onPress={handleSignUpWithTwitter}
+          disabled={loading} // Disable button when loading
         >
-          <Ionicons name="logo-twitter" size={25} color={buttonTextColor} />
+          {<Ionicons name="logo-twitter" size={25} color={buttonTextColor} />}
         </TouchableOpacity>
       </View>
       <View style={styles.dividerRow}>
@@ -141,15 +167,20 @@ const LogIn = () => {
           styles.button,
           styles.loginButton,
           {
-            backgroundColor: buttonBackgroundColor,
+            backgroundColor: colorScheme === "dark" ? "#333" : "#808080",
             borderColor: buttonBorderColor,
           },
         ]}
         onPress={handleLogin}
+        disabled={loading} // Disable button when loading
       >
-        <Text style={[styles.buttonText, { color: buttonTextColor }]}>
-          Log in
-        </Text>
+        {loading ? (
+          <ActivityIndicator size="small" color={buttonTextColor} />
+        ) : (
+          <Text style={[styles.buttonText, { color: buttonTextColor }]}>
+            Log in
+          </Text>
+        )}
       </TouchableOpacity>
       <TouchableOpacity onPress={handleForgotPassword}>
         <Text style={[styles.forgotPasswordText, { color: dividerTextColor }]}>
@@ -171,6 +202,7 @@ const LogIn = () => {
         </TouchableOpacity>
       </View>
     </View>
+    // </KeyboardAvoidingWrapper>
   );
 };
 
@@ -232,13 +264,13 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   loginButton: {
-    backgroundColor: "#808080",
     borderRadius: 30,
     paddingVertical: 16,
     paddingHorizontal: 32,
     marginBottom: 16,
-    borderWidth: 0.5,
-    width: 300,
+    // borderWidth: 0.5,
+    width: "100%",
+    alignItems: "center",
   },
   forgotPasswordText: {
     fontSize: 16,

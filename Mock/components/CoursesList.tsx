@@ -14,6 +14,7 @@ interface Course {
   program: string;
   level: string;
   image: string;
+  category: number;
 }
 interface Category {
   id: number;

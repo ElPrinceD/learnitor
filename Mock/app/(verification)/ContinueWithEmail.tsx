@@ -8,15 +8,19 @@ import {
   useColorScheme,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router, useLocalSearchParams } from "expo-router";
 import { useNavigation } from "expo-router";
 import { RootParamList } from "../../components/types";
+
+import DateTimePicker from "@react-native-community/datetimepicker";
+import axios from "axios";
+
+// import KeyboardAvoidingWrapper from "../../components/KeyboardAvoidingWrapper";
+
 const ContinueWithEmail = () => {
   const [firstName, setFirstName] = useState("");
   const [surname, setSurname] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [age, setAge] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [emailError, setEmailError] = useState("");
@@ -28,7 +32,7 @@ const ContinueWithEmail = () => {
     setPasswordError("");
     setEmailError("");
     setAllFieldsError("");
-    if (!firstName || !surname || !email || !password || !age) {
+    if (!firstName || !surname || !email || !password || !dateOfBirth) {
       setAllFieldsError("Please fill in all fields");
     } else if (password.length < 8) {
       setPasswordError("Password must be at least 8 characters long");
@@ -39,7 +43,23 @@ const ContinueWithEmail = () => {
       setPasswordError("");
       setAllFieldsError("");
     } else {
-      navigation.navigate("Verification", { params: { email: email } });
+      try {
+        axios.post(
+          "http://192.168.83.198:8000/'api/register/', UserRegistrationAPIView.as_view(), name='user-registration'",
+          {
+            first_Name: firstName,
+            last_name: surname,
+            email: email,
+            password: password,
+            dateOfBirth: "dob",
+          }
+        );
+        // Assuming successful registration will navigate to another screen
+        navigation.navigate("Verification", { email });
+      } catch (error) {
+        // Handle error here (e.g., display error message)
+        console.error("Registration failed:", error);
+      }
     }
   };
 
@@ -47,7 +67,22 @@ const ContinueWithEmail = () => {
     setShowPassword(!showPassword);
   };
 
+  const [show, setShow] = useState(false);
+  const [dateOfBirth, setdateOfBirth] = useState(new Date(2000, 0, 1));
+  const [dob, setDob] = useState<Date | null>(null);
+
+  const onChange = (event: any, selectedDate: Date | undefined) => {
+    const currentDate = selectedDate || dateOfBirth;
+    setShow(false);
+    setdateOfBirth(currentDate);
+    setDob(currentDate);
+  };
+  const showDatePicker = () => {
+    setShow(true);
+  };
+
   return (
+    // <KeyboardAvoidingWrapper>
     <View
       style={[
         styles.container,
@@ -133,21 +168,33 @@ const ContinueWithEmail = () => {
       {passwordError && (
         <Text style={styles.errorMessage}>{passwordError}</Text>
       )}
-      <TextInput
-        style={[
-          styles.input,
-          {
-            width: "100%",
-            color: colorScheme === "dark" ? "#fff" : "#000",
-            borderColor: colorScheme === "dark" ? "#fff" : "#000",
-          },
-        ]}
-        placeholder="Age"
-        value={age}
-        onChangeText={setAge}
-        keyboardType="numeric"
-        placeholderTextColor={colorScheme === "dark" ? "#fff" : "#666"}
-      />
+      {show && (
+        <DateTimePicker
+          testID="dateTimePicker"
+          value={dateOfBirth}
+          mode="date"
+          is24Hour={true}
+          onChange={onChange}
+        />
+      )}
+      <TouchableOpacity onPress={showDatePicker}>
+        <View style={styles.passwordContainer}>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                width: "100%",
+                color: colorScheme === "dark" ? "#fff" : "#000",
+                borderColor: colorScheme === "dark" ? "#fff" : "#000",
+              },
+            ]}
+            placeholder="Date of Birth"
+            value={dob ? dob.toDateString() : ""}
+            placeholderTextColor={colorScheme === "dark" ? "#fff" : "#666"}
+            editable={false}
+          />
+        </View>
+      </TouchableOpacity>
       {allFieldsError && (
         <Text style={styles.centeredErrorMessage}>{allFieldsError}</Text>
       )}
@@ -191,6 +238,7 @@ const ContinueWithEmail = () => {
         .
       </Text>
     </View>
+    // </KeyboardAvoidingWrapper>
   );
 };
 

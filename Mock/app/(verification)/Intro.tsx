@@ -3,9 +3,6 @@ import { StyleSheet, View, Text, Image, TouchableOpacity } from "react-native";
 import { router } from "expo-router";
 import { useThemeColor } from "../../components/Themed";
 
-// Define the type for the navigation prop
-// type IntroProps = StackScreenProps<RootStackParamList, 'Intro'>;
-
 const Intro = () => {
   // Get theme colors for text and background
   const textColor = useThemeColor({}, "text");
