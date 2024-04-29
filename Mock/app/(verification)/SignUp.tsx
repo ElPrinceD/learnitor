@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View, Image } from "react-native";
 import { Text } from "@/components/Themed";
 import { Ionicons } from "@expo/vector-icons";
 import { useThemeColor } from "@/components/Themed";
@@ -41,6 +41,12 @@ const SignUp = () => {
     "text"
   );
 
+  const themeColor = useThemeColor(
+    {
+      dark: "#0063cd", light: "#0063cd"
+    }, "background"
+  )
+
   // Function to navigate to the login page
   const handleNavigateToLogin = () => {
     router.navigate("LogIn"); // Navigate to the Login screen
@@ -53,6 +59,10 @@ const SignUp = () => {
         { backgroundColor: useThemeColor({}, "background") },
       ]}
     >
+       <Image
+        source={require("../../assets/images/account.jpg")} 
+        style={styles.image}
+      />
       <Text style={[styles.title, { color: useThemeColor({}, "text") }]}>
         Create a free account to discover your personalized learning path
       </Text>
@@ -109,13 +119,12 @@ const SignUp = () => {
           styles.button,
           styles.emailButton,
           {
-            backgroundColor: buttonBackgroundColor,
-            borderColor: buttonBorderColor,
+            backgroundColor: themeColor,  
           },
         ]}
         onPress={handleSignUpWithEmail}
       >
-        <Text style={[styles.buttonText, { color: buttonTextColor }]}>
+        <Text style={[styles.buttonText, { color: "white" }]}>
           Continue with email
         </Text>
       </TouchableOpacity>
@@ -128,11 +137,11 @@ const SignUp = () => {
           Existing User?
         </Text>
         <TouchableOpacity
-          style={styles.loginButton}
+          style={[styles.loginButton, ] }
           onPress={handleNavigateToLogin}
         >
           <Text
-            style={[styles.loginText, { color: useThemeColor({}, "text") }]}
+            style={[styles.loginText, { color: themeColor }]}
           >
             Log in
           </Text>
@@ -183,7 +192,6 @@ const styles = StyleSheet.create({
     width: 120,
   },
   emailButton: {
-    borderColor: "buttonBorder",
     borderWidth: 2,
     width: 350,
   },
@@ -212,7 +220,14 @@ const styles = StyleSheet.create({
   loginText: {
     fontSize: 16,
     fontWeight: "bold",
-    textDecorationLine: "underline",
+    textDecorationLine: "none",
+   
+  },
+  image: {
+    width: 400, // Make the image bigger
+    height: 350,
+    resizeMode: "contain", // Maintain aspect ratio
+    marginBottom: 16, // Bring the image down a little
   },
 });
 

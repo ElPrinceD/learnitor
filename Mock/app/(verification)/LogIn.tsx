@@ -4,6 +4,7 @@ import { Text } from "@/components/Themed";
 import { Ionicons } from "@expo/vector-icons";
 import { useThemeColor } from "@/components/Themed";
 import { router } from "expo-router";
+import axios from 'axios';
 
 const LogIn = () => {
   const [email, setEmail] = useState("");
@@ -28,7 +29,21 @@ const LogIn = () => {
     } else if (email === "wrong" || password === "wrong") {
       setError("Email and/or password is incorrect");
     } else {
-      router.navigate("(tabs)");
+      axios.post('http://172.20.10.2:8000/api/login/', {
+        email: email,
+        password: password,
+  })
+  .then(response => {
+    // Handle successful response from backend
+    console.log(response.data);
+    router.navigate("(tabs)");
+  })
+  .catch(error => {
+    // Handle error
+    console.error(error);
+    setError("Email and/or password is incorrect")
+  });
+      
     }
   };
 
@@ -44,6 +59,18 @@ const LogIn = () => {
     { light: "#000", dark: "#fff" },
     "text"
   );
+
+  const themeColor = useThemeColor(
+    {
+      dark: "#0063cd", light: "#0063cd"
+    }, "background"
+  )
+  const themeColorText = useThemeColor(
+    {
+      dark: "#919396", light: "#919396"
+    }, "background"
+  )
+  
   const buttonBackgroundColor = useThemeColor(
     { light: "#fff", dark: "#000" },
     "background"
@@ -66,7 +93,7 @@ const LogIn = () => {
     >
       
       <Image
-        source={require("../../assets/images/3071357.jpg")} // Replace with your image path
+        source={require("../../assets/images/Login-rafiki.png")} // Replace with your image path
         style={styles.image}
       />
       
@@ -121,18 +148,19 @@ const LogIn = () => {
           styles.button,
           styles.loginButton,
           {
-            backgroundColor: buttonBackgroundColor,
+            backgroundColor: themeColor,
+
             borderColor: buttonBorderColor,
           },
         ]}
         onPress={handleLogin}
       >
-        <Text style={[styles.buttonText, { color: buttonTextColor }]}>
+        <Text style={[styles.buttonText, { color: "white" }]}>
           Log in
         </Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={handleForgotPassword}>
-        <Text style={[styles.forgotPasswordText, { color: dividerTextColor }]}>
+        <Text style={[styles.forgotPasswordText, { color: themeColor, textDecorationLine: "none" }]}>
           Forgot password?
         </Text>
       </TouchableOpacity>
@@ -178,15 +206,15 @@ const LogIn = () => {
       </View>
       <View style={styles.bottomContainer}>
         <Text
-          style={[styles.existingText, { color: useThemeColor({}, "text") }]}
+          style={[styles.existingText, { color: themeColorText }]}
         >
           No account yet?
         </Text>
         <TouchableOpacity style={styles.signupButton} onPress={handleSignUp}>
           <Text
-            style={[styles.loginText, { color: useThemeColor({}, "text") }]}
+            style={[styles.loginText, { color: themeColor , textDecorationLine: "none"}]}
           >
-            Sign up
+            Register
           </Text>
         </TouchableOpacity>
       </View>
@@ -258,16 +286,16 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   buttonText: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: "bold",
   },
   loginButton: {
-    backgroundColor: "#808080",
+    
     borderRadius: 30,
     paddingVertical: 16,
     paddingHorizontal: 32,
     marginBottom: 16,
-    borderWidth: 0.5,
+    
     width: 300,
   },
   image: {

@@ -11,6 +11,13 @@ const Intro = () => {
   const textColor = useThemeColor({}, "text");
   const backgroundColor = useThemeColor({}, "background");
 
+
+  const themeColor = useThemeColor(
+    {
+      dark: "#0063cd", light: "#0063cd"
+    }, "background"
+  )
+
   // Navigate to the sign up page
   const handleSignUp = () => {
     router.navigate("SignUp");
@@ -24,7 +31,7 @@ const Intro = () => {
     <View style={[styles.container, { backgroundColor }]}>
       {/* Image */}
       <Image
-        source={require("../../assets/images/IntroPageImage.png")} // Replace with your image path
+        source={require("../../assets/images/Learn.png")} // Replace with your image path
         style={styles.image}
       />
 
@@ -44,7 +51,7 @@ const Intro = () => {
       <View style={styles.buttonContainer}>
         {/* Sign Up Button */}
         <TouchableOpacity
-          style={[styles.button, { backgroundColor: textColor }]}
+          style={[styles.button, { backgroundColor: themeColor }]}
           onPress={handleSignUp}
         >
           <Text style={[styles.buttonText, { color: backgroundColor }]}>
@@ -111,7 +118,7 @@ const styles = StyleSheet.create({
   loginText: {
     fontSize: 16,
     fontWeight: "bold",
-    textDecorationLine: "underline", // Underline to resemble a link
+    textDecorationLine: "none", // Underline to resemble a link
   },
 });
 

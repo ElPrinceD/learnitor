@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, Linking, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, Button, Linking, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useThemeColor } from '@/components/Themed';
+import { useNavigation } from "expo-router";
+import { RootParamList } from "../../components/types";
+import axios from 'axios';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -9,30 +12,84 @@ const ForgotPassword = () => {
   const [resetCode, setResetCode] = useState('');
   const [resettingPassword, setResettingPassword] = useState(false);
   const [newPassword, setNewPassword] = useState('');
+  const navigation = useNavigation<RootParamList>();
   const [resetCodeError, setResetCodeError] = useState(''); // New state variable
 
   const handleSendCode = () => {
-    // Simulate sending a code to the email
-    if (email === 'yawopokugyamerah@gmail.com') {
-      setSent(true);
-      setError('');
-    } else {
-      setError('Email not found');
-    }
+    
+    axios.post('http://192.168.137.115:8000/api/forgetpassword',
+        {email})
+        .then(response => {
+          // Handle successful response from backend
+          setSent(true);
+          setError('');
+          
+        })
+        .catch(error => {
+          // Handle error
+          setError('Email not found');
+        });
+
+      
+    } 
+  
+
+  const themeColor = useThemeColor(
+    {
+      dark: "#0063cd", light: "#0063cd"
+    }, "background"
+  )
+
+  const themeColorText = useThemeColor(
+    {
+      dark: "#919396", light: "#919396"
+    }, "background"
+  )
+
+  const CheckVerificationCode = () => {
+    
+    axios.post('http://192.168.137.115:8000/api/verify-code',
+        {email, verification_code : resetCode})
+        .then(response => {
+          // Handle successful response from backend
+          setResettingPassword(true);
+          setSent(true)
+          setError('');
+          
+        })
+        .catch(error => {
+          // Handle error
+          setResetCodeError('Invalid reset code');
+        });
+   
+      
+      
+     
+      
+   
   };
 
-  const handleResetPassword = () => {
-    // Simulate resetting the password
-    if (resetCode === '123456') {
-      setResettingPassword(true);
-      // Simulate resetting the password process
-      setTimeout(() => {
-        setResettingPassword(false);
-        setSent(false);
-      }, 2000);
-    } else {
-      setResetCodeError('Invalid reset code'); // Update the new state variable
-    }
+  const ConfirmNewPassword = () => {
+    
+    axios.post('http://192.168.137.115:8000/api/reset-password',
+        {new_password: newPassword, verification_code : resetCode})
+        .then(response => {
+          navigation.navigate("LogIn");
+          setResettingPassword(true);
+          setSent(true)
+          setError('');
+          
+        })
+        .catch(error => {
+          // Handle error
+          setResetCodeError('Invalid Password');
+        });
+   
+      
+      
+     
+      
+   
   };
 
   const textColor = useThemeColor({}, 'text');
@@ -43,8 +100,12 @@ const ForgotPassword = () => {
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
+      <Image
+        source={require("../../assets/images/3293465.jpg")} // Replace with your image path
+        style={styles.image}
+      />
       {/* <Text style={[styles.title, { color: textColor, alignSelf: 'flex-start', marginLeft: 16, }]}>Learnitor</Text> */}
-      <Text style={[styles.title, { fontSize: 24, marginBottom: 16, color: textColor }]}>Forgot your password?</Text>
+      <Text style={[styles.title, { fontSize: 24, marginBottom: 16, color: themeColor }]}>Forgot your password?</Text>
       <TextInput
         style={[styles.input, { borderColor: textColor, color: textColor }]}
         placeholder="Email"
@@ -74,7 +135,7 @@ const ForgotPassword = () => {
       )}
       {sent ? (
         <TextInput
-          style={[styles.input, { borderColor: textColor, color: textColor }]}
+          style={[styles.input, { borderColor: themeColor, color: textColor }]}
           placeholder="Reset code"
           value={resetCode}
           onChangeText={(text) => setResetCode(text)}
@@ -87,14 +148,14 @@ const ForgotPassword = () => {
       {sent ? (
         <Button
           title="Reset Password"
-          onPress={handleResetPassword}
-          color={buttonBackgroundColor}
+          onPress={CheckVerificationCode}
+          color={themeColor}
         />
       ) : null}
       {resettingPassword ? (
         <Text style={[styles.sentMessage, { color: textColor }]}>Resetting password...</Text>
       ) : null}
-      {resettingPassword && !sent ? (
+      {resettingPassword && sent ? (
         <TextInput
           style={[styles.input, { borderColor: textColor, color: textColor }]}
           placeholder="New password"
@@ -103,12 +164,20 @@ const ForgotPassword = () => {
           secureTextEntry
           placeholderTextColor={textColor}
         />
+        
       ) : null}
-      <Text style={[styles.support, { color: textColor }]}>
+      {resettingPassword ? (
+        <Button
+          title="Confirm Password"
+          onPress={ConfirmNewPassword}
+          color={themeColor}
+        />
+      ) : null}
+      <Text style={[styles.support, { color: themeColorText }]}>
         If you have trouble resetting your password, contact us at{' '}
         <Text
           onPress={() => Linking.openURL('mailto:support@learnitor.org')}
-          style={[styles.supportLink, { color: textColor }]}>
+          style={[styles.supportLink, { color: themeColor }]}>
           support@learnitor.org
         </Text>
       </Text>
@@ -132,6 +201,10 @@ const styles = StyleSheet.create({
       padding: 16,
       width: '100%',
       marginBottom: 16,
+      borderTopWidth: 0, // Hide top border
+      borderRightWidth: 0, // Hide right border
+      borderLeftWidth: 0,
+      borderBottomWidth: 1,
     },
     errorMessage: {
       fontSize: 16,
@@ -167,7 +240,14 @@ const styles = StyleSheet.create({
     buttonText: {
       fontSize: 16,
       fontWeight: 'bold',
+    }, 
+    image: {
+      width: 400, // Make the image bigger
+      height: 350,
+      resizeMode: "contain", // Maintain aspect ratio
+      marginBottom: 16, // Bring the image down a little
     },
+    
   });
   
   export default ForgotPassword;

@@ -7,10 +7,13 @@ import {
   useColorScheme,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 
-const Verification = () => {
-  // const email = route?.params?.email || ""; // Handle undefined email
+import { useLocalSearchParams } from "expo-router";
+
+const Verification = () => { 
+  const params = useLocalSearchParams();
+  const email = params.email;
+  console.log("Received email:", email);
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === "dark";
 
@@ -40,7 +43,7 @@ const Verification = () => {
         >
           We've sent an email to:
         </Text>
-        {/* <Text style={styles.email}>{email}</Text> */}
+        <Text style={styles.email}>{email}</Text>
       </View>
       <Text style={[styles.text, { color: isDarkMode ? "#fff" : "#666" }]}>
         Just tap on the link in that email to complete your sign up.
