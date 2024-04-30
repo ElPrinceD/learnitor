@@ -16,11 +16,11 @@ const LogIn = () => {
   const [error, setError] = useState("");
 
   const handleSignUpWithApple = () => {
-    // Handle sign up with Apple ID
+    
   };
 
   const handleSignUpWithGoogle = () => {
-    // Handle sign up with Google Account
+    
   };
 
   const handleSignUpWithTwitter = () => {
