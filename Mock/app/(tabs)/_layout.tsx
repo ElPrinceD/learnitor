@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { useColorScheme } from "@/components/useColorScheme";
 import { useClientOnlyValue } from "@/components/useClientOnlyValue";
+import { useLocalSearchParams } from "expo-router";
 
 // You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
 function TabBarIcon(props: {
@@ -17,6 +18,8 @@ function TabBarIcon(props: {
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const params = useLocalSearchParams();
+  const user = params.user
 
   return (
     <Tabs
@@ -46,7 +49,7 @@ export default function TabLayout() {
               </Pressable>
             </Link>
           ),
-          headerTitle: "Welcome, Yaw!",
+          headerTitle: "Welcome, {user.first_name}",
         }}
       />
       <Tabs.Screen

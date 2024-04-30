@@ -5,8 +5,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useThemeColor } from "@/components/Themed";
 import { router } from "expo-router";
 import axios from 'axios';
+import { RootParamList } from "../../components/types";
+
 
 const LogIn = () => {
+
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -24,11 +28,7 @@ const LogIn = () => {
   };
 
   const handleLogin = () => {
-    if (email === "yawopokugyamerah@gmail.com" || password === "12345678") {
-      setError("Please enter email and password");
-    } else if (email === "wrong" || password === "wrong") {
-      setError("Email and/or password is incorrect");
-    } else {
+   
       axios.post('http://172.20.10.2:8000/api/login/', {
         email: email,
         password: password,
@@ -44,7 +44,7 @@ const LogIn = () => {
     setError("Email and/or password is incorrect")
   });
       
-    }
+    
   };
 
   const handleForgotPassword = () => {

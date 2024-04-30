@@ -12,7 +12,6 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "expo-router";
-import Index from '../(tabs)/index';
 import { RootParamList } from "../../components/types";
 import { useThemeColor } from "@/components/Themed";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -46,20 +45,19 @@ const ContinueWithEmail = () => {
       setAllFieldsError("");
     } else {
       
-      axios.post('http://192.168.137.115:8000/api/register/', {
+      axios.post('http://172.20.10.2:8000/api/register/', {
         first_name: firstName,
         last_name: surname,
         email: email,
         password: password,
-        dob: dateOfBirth.toISOString().substring(0,10),
+        dob: dateOfBirth.toISOString().substring(0,10)
   })
   .then(response => {
     // Handle successful response from backend
-    
+    console.log(response.data);
     setUser(response.data.user)
-    // I was trying to send this page straight to the homepage but I couldnt so please do it
-    //I am return the user, so you can accept the user information in the homepage and use it
-    // navigation.navigate('Index', { user });
+
+    navigation.navigate("(tabs)", { user });
   })
   .catch(error => {
     // Handle error

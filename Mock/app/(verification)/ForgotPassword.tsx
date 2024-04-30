@@ -17,7 +17,7 @@ const ForgotPassword = () => {
 
   const handleSendCode = () => {
     
-    axios.post('http://192.168.137.115:8000/api/forgetpassword',
+    axios.post('http://172.20.10.2:8000/api/forgetpassword',
         {email})
         .then(response => {
           // Handle successful response from backend
@@ -48,7 +48,7 @@ const ForgotPassword = () => {
 
   const CheckVerificationCode = () => {
     
-    axios.post('http://192.168.137.115:8000/api/verify-code',
+    axios.post('http://172.20.10.2:8000/api/verify-code',
         {email, verification_code : resetCode})
         .then(response => {
           // Handle successful response from backend
@@ -71,7 +71,7 @@ const ForgotPassword = () => {
 
   const ConfirmNewPassword = () => {
     
-    axios.post('http://192.168.137.115:8000/api/reset-password',
+    axios.post('http://172.20.10.2:8000/api/reset-password',
         {new_password: newPassword, verification_code : resetCode})
         .then(response => {
           navigation.navigate("LogIn");
