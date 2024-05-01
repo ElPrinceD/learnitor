@@ -22,8 +22,8 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
 
   const params = useGlobalSearchParams();
-  const user = params.user;
-  console.log("Received User:", user);
+  const firstName = params.firstName;
+  console.log("Received User:", firstName);
 
   const currentHour = new Date().getHours();
   let greeting = "";
@@ -81,7 +81,7 @@ export default function TabLayout() {
                 fontWeight: "bold",
               }}
             >
-              {greeting}, {user}!
+              {greeting}, {firstName}!
             </Text>
           ), // Adjusted the font size to 24
         }}

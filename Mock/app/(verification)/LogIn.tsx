@@ -57,7 +57,10 @@ const LogIn = () => {
         setUser(response.data.user);
         // Handle successful response from backend
         console.log(response.data.user);
-        navigation.navigate("(tabs)", { user });
+
+        navigation.navigate("(tabs)", {
+          firstName: response.data.user.first_name,
+        });
       })
       .catch((error) => {
         setLoading(false);
