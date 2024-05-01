@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import axios from 'axios';
+import axios from "axios";
 
 import {
   View,
@@ -12,17 +12,18 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "expo-router";
-import Index from '../(tabs)/index';
+import Index from "../(tabs)/index";
 import { RootParamList } from "../../components/types";
 import { useThemeColor } from "@/components/Themed";
 import DateTimePicker from "@react-native-community/datetimepicker";
+
 const ContinueWithEmail = () => {
   const [firstName, setFirstName] = useState("");
   const [surname, setSurname] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [dob, setDob] = useState<Date | null>(null);
-  const [user, setUser] = useState('');
+  const [user, setUser] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [emailError, setEmailError] = useState("");
@@ -45,28 +46,27 @@ const ContinueWithEmail = () => {
       setPasswordError("");
       setAllFieldsError("");
     } else {
-      
-      axios.post('http://192.168.137.115:8000/api/register/', {
-        first_name: firstName,
-        last_name: surname,
-        email: email,
-        password: password,
-        dob: dateOfBirth.toISOString().substring(0,10),
-  })
-  .then(response => {
-    // Handle successful response from backend
-    
-    setUser(response.data.user)
-    // I was trying to send this page straight to the homepage but I couldnt so please do it
-    //I am return the user, so you can accept the user information in the homepage and use it
-    // navigation.navigate('Index', { user });
-  })
-  .catch(error => {
-    // Handle error
-    console.error("Registration failed:", error);
-  });
-  };
-    
+      axios
+        .post("http://192.168.187.198:8000/api/register/", {
+          first_name: firstName,
+          last_name: surname,
+          email: email,
+          password: password,
+          dob: dateOfBirth.toISOString().substring(0, 10),
+        })
+        .then((response) => {
+          // Handle successful response from backend
+
+          setUser(response.data.user);
+          // I was trying to send this page straight to the homepage but I couldnt so please do it
+          //I am return the user, so you can accept the user information in the homepage and use it
+          navigation.navigate("(tabs)", { user });
+        })
+        .catch((error) => {
+          // Handle error
+          console.error("Registration failed:", error);
+        });
+    }
   };
 
   const toggleShowPassword = () => {
@@ -75,7 +75,6 @@ const ContinueWithEmail = () => {
 
   const [show, setShow] = useState(false);
   const [dateOfBirth, setdateOfBirth] = useState(new Date(2000, 0, 1));
-  
 
   const onChange = (event: any, selectedDate: Date | undefined) => {
     const currentDate = selectedDate || dateOfBirth;
@@ -84,19 +83,20 @@ const ContinueWithEmail = () => {
     setDob(currentDate);
   };
 
-
   const showDatePicker = () => {
-    console.log("touched")
+    console.log("touched");
     setShow(true);
   };
 
   const themeColor = useThemeColor(
     {
-      dark: "#0063cd", light: "#0063cd"
-    }, "background"
-  )
+      dark: "#0063cd",
+      light: "#0063cd",
+    },
+    "background"
+  );
 
-  return ( 
+  return (
     <View
       style={[
         styles.container,
@@ -106,7 +106,7 @@ const ContinueWithEmail = () => {
       ]}
     >
       <Image
-        source={require("../../assets/images/Register.png")} 
+        source={require("../../assets/images/Register.png")}
         style={styles.image}
       />
       <View style={styles.inputRow}>
@@ -196,7 +196,7 @@ const ContinueWithEmail = () => {
         />
       )}
       <TouchableOpacity onPress={showDatePicker}>
-      <View style={styles.passwordContainer}>
+        <View style={styles.passwordContainer}>
           <TextInput
             style={[
               styles.input,
@@ -220,7 +220,7 @@ const ContinueWithEmail = () => {
         style={[
           styles.button,
           {
-             backgroundColor: themeColor
+            backgroundColor: themeColor,
           },
         ]}
         onPress={handleSignUp}
@@ -287,7 +287,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   passwordInput: {
-    
     borderRadius: 10,
     padding: 12,
     width: "90%",
@@ -309,8 +308,6 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     width: "100%",
     alignItems: "center",
-    
-     
   },
   buttonText: {
     fontSize: 16,

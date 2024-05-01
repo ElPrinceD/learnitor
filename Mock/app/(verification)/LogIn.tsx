@@ -1,15 +1,31 @@
 import React, { useState } from "react";
-import { StyleSheet, TouchableOpacity, View, TextInput, Image } from "react-native";
+import {
+  StyleSheet,
+  TouchableOpacity,
+  View,
+  TextInput,
+  Image,
+  useColorScheme,
+  ActivityIndicator,
+} from "react-native";
 import { Text } from "@/components/Themed";
 import { Ionicons } from "@expo/vector-icons";
 import { useThemeColor } from "@/components/Themed";
-import { router } from "expo-router";
-import axios from 'axios';
+import { router, useNavigation } from "expo-router";
+import axios from "axios";
+import { RootParamList } from "../../components/types";
 
 const LogIn = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [user, setUser] = useState("");
+  const [loading, setLoading] = useState(false);
+  const colorScheme = useColorScheme();
+
+  const [showPassword, setShowPassword] = useState(false);
+
+  const navigation = useNavigation<RootParamList>();
 
   const handleSignUpWithApple = () => {
     // Handle sign up with Apple ID
@@ -24,27 +40,35 @@ const LogIn = () => {
   };
 
   const handleLogin = () => {
-    if (email === "yawopokugyamerah@gmail.com" || password === "12345678") {
-      setError("Please enter email and password");
-    } else if (email === "wrong" || password === "wrong") {
-      setError("Email and/or password is incorrect");
-    } else {
-      axios.post('http://172.20.10.2:8000/api/login/', {
+    if (!email || !password) {
+      setError("Please enter email and/or password");
+      return;
+    }
+
+    setLoading(true);
+
+    axios
+      .post("http://192.168.83.198:8000/api/login/", {
         email: email,
         password: password,
-  })
-  .then(response => {
-    // Handle successful response from backend
-    console.log(response.data);
-    router.navigate("(tabs)");
-  })
-  .catch(error => {
-    // Handle error
-    console.error(error);
-    setError("Email and/or password is incorrect")
-  });
-      
-    }
+      })
+      .then((response) => {
+        setLoading(false);
+        setUser(response.data.user);
+        // Handle successful response from backend
+        console.log(response.data.user);
+        navigation.navigate("(tabs)", { user });
+      })
+      .catch((error) => {
+        setLoading(false);
+        // Handle error
+        console.error(error);
+        setError("Email and/or password is incorrect");
+      });
+  };
+
+  const toggleShowPassword = () => {
+    setShowPassword(!showPassword);
   };
 
   const handleForgotPassword = () => {
@@ -62,15 +86,12 @@ const LogIn = () => {
 
   const themeColor = useThemeColor(
     {
-      dark: "#0063cd", light: "#0063cd"
-    }, "background"
-  )
-  const themeColorText = useThemeColor(
-    {
-      dark: "#919396", light: "#919396"
-    }, "background"
-  )
-  
+      dark: "#0063cd",
+      light: "#0063cd",
+    },
+    "background"
+  );
+
   const buttonBackgroundColor = useThemeColor(
     { light: "#fff", dark: "#000" },
     "background"
@@ -91,17 +112,12 @@ const LogIn = () => {
         { backgroundColor: useThemeColor({}, "background") },
       ]}
     >
-      
       <Image
         source={require("../../assets/images/Login-rafiki.png")} // Replace with your image path
         style={styles.image}
       />
-      
-    
-      
+
       <View style={styles.inputContainer}>
-       
-      
         <TextInput
           style={[
             styles.input,
@@ -109,11 +125,6 @@ const LogIn = () => {
               backgroundColor: buttonBackgroundColor,
               borderColor: buttonBorderColor,
               color: buttonTextColor,
-              borderTopWidth: 0, // Hide top border
-              borderRightWidth: 0, // Hide right border
-              borderLeftWidth: 0,
-              borderBottomWidth: 1,
-              
             },
           ]}
           placeholder="Email"
@@ -121,26 +132,34 @@ const LogIn = () => {
           value={email}
           onChangeText={(text) => setEmail(text)}
         />
-        
-        <TextInput
-          style={[
-            styles.input,
-            {
-              backgroundColor: buttonBackgroundColor,
-              borderColor: buttonBorderColor,
-              color: buttonTextColor,
-              borderTopWidth: 0, // Hide top border
-              borderRightWidth: 0, // Hide right border
-              borderLeftWidth: 0,
-              borderBottomWidth: 1,
-            },
-          ]}
-          placeholder="Password"
-          placeholderTextColor={buttonTextColor}
-          secureTextEntry={true}
-          value={password}
-          onChangeText={(text) => setPassword(text)}
-        />
+
+        <View style={styles.passwordContainer}>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: buttonBackgroundColor,
+                borderColor: buttonBorderColor,
+                color: buttonTextColor,
+              },
+            ]}
+            placeholder="Password"
+            placeholderTextColor={buttonTextColor}
+            secureTextEntry={!showPassword}
+            value={password}
+            onChangeText={(text) => setPassword(text)}
+          />
+          <TouchableOpacity
+            onPress={toggleShowPassword}
+            style={styles.toggleIcon}
+          >
+            <Ionicons
+              name={showPassword ? "eye-off" : "eye"}
+              size={24}
+              color={colorScheme === "dark" ? "#fff" : "gray"}
+            />
+          </TouchableOpacity>
+        </View>
         {error ? <Text style={styles.errorMessage}>{error}</Text> : null}
       </View>
       <TouchableOpacity
@@ -149,18 +168,25 @@ const LogIn = () => {
           styles.loginButton,
           {
             backgroundColor: themeColor,
-
             borderColor: buttonBorderColor,
           },
         ]}
         onPress={handleLogin}
+        disabled={loading}
       >
-        <Text style={[styles.buttonText, { color: "white" }]}>
-          Log in
-        </Text>
+        {loading ? (
+          <ActivityIndicator color="white" />
+        ) : (
+          <Text style={[styles.buttonText, { color: "white" }]}>Log in</Text>
+        )}
       </TouchableOpacity>
       <TouchableOpacity onPress={handleForgotPassword}>
-        <Text style={[styles.forgotPasswordText, { color: themeColor, textDecorationLine: "none" }]}>
+        <Text
+          style={[
+            styles.forgotPasswordText,
+            { color: themeColor, textDecorationLine: "none" },
+          ]}
+        >
           Forgot password?
         </Text>
       </TouchableOpacity>
@@ -180,6 +206,7 @@ const LogIn = () => {
             },
           ]}
           onPress={handleSignUpWithApple}
+          disabled={loading}
         >
           <Ionicons name="logo-apple" size={25} color={buttonTextColor} />
         </TouchableOpacity>
@@ -190,6 +217,7 @@ const LogIn = () => {
             { borderColor: buttonBorderColor },
           ]}
           onPress={handleSignUpWithGoogle}
+          disabled={loading}
         >
           <Ionicons name="logo-google" size={25} color={buttonTextColor} />
         </TouchableOpacity>
@@ -200,19 +228,21 @@ const LogIn = () => {
             { borderColor: buttonBorderColor },
           ]}
           onPress={handleSignUpWithTwitter}
+          disabled={loading}
         >
           <Ionicons name="logo-twitter" size={25} color={buttonTextColor} />
         </TouchableOpacity>
       </View>
       <View style={styles.bottomContainer}>
-        <Text
-          style={[styles.existingText, { color: themeColorText }]}
-        >
+        <Text style={[styles.existingText, { color: dividerTextColor }]}>
           No account yet?
         </Text>
         <TouchableOpacity style={styles.signupButton} onPress={handleSignUp}>
           <Text
-            style={[styles.loginText, { color: themeColor , textDecorationLine: "none"}]}
+            style={[
+              styles.loginText,
+              { color: themeColor, textDecorationLine: "none" },
+            ]}
           >
             Register
           </Text>
@@ -232,7 +262,7 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: "row",
     marginBottom: 16,
-    paddingTop: 16, 
+    paddingTop: 16,
   },
   dividerRow: {
     flexDirection: "row",
@@ -247,12 +277,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginRight: 9,
   },
-  emailSign: {
-    fontSize: 30, // Customize font size of email sign
-    color: 'grey', // Customize color of email sign
-    marginHorizontal: 5, // Add margin around the email sign
-  
-  },
   appleButton: {
     borderWidth: 1,
     width: 120,
@@ -261,7 +285,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     width: 120,
   },
- 
+
   twitterButton: {
     borderWidth: 1,
     width: 120,
@@ -269,7 +293,6 @@ const styles = StyleSheet.create({
   inputContainer: {
     width: "100%",
     marginBottom: 16,
-    
   },
   input: {
     borderWidth: 2,
@@ -277,7 +300,11 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     color: "#000",
-    
+  },
+  toggleIcon: {
+    position: "absolute",
+    right: 10,
+    top: 20,
   },
   dividerText: {
     fontSize: 16,
@@ -290,19 +317,17 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   loginButton: {
-    
     borderRadius: 30,
     paddingVertical: 16,
     paddingHorizontal: 32,
     marginBottom: 16,
-    
     width: 300,
   },
   image: {
-    width: 400, // Make the image bigger
+    width: 400,
     height: 350,
-    resizeMode: "contain", // Maintain aspect ratio
-    marginBottom: 16, // Bring the image down a little
+    resizeMode: "contain",
+    marginBottom: 16,
   },
   forgotPasswordText: {
     fontSize: 16,
@@ -310,7 +335,7 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
     marginTop: 8,
   },
- 
+
   bottomContainer: {
     position: "absolute",
     bottom: 16,
@@ -333,6 +358,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "red",
     marginBottom: 16,
+  },
+  passwordContainer: {
+    position: "relative",
   },
 });
 

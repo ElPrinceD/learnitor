@@ -10,7 +10,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { useLocalSearchParams } from "expo-router";
 
-const Verification = () => { 
+const Verification = () => {
   const params = useLocalSearchParams();
   const email = params.email;
   console.log("Received email:", email);

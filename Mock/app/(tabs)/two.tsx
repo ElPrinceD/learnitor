@@ -10,6 +10,7 @@ interface Course {
   program: string;
   level: string;
   image: string;
+  id: number[];
 }
 
 interface Category {
@@ -19,6 +20,7 @@ interface Category {
 
 const coursesData: Course[] = CoursesData.map((course: any) => ({
   name: course.title,
+  id: course.category,
   program: course.description,
   level: "",
   image:

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   FlatList,
@@ -14,6 +14,7 @@ interface Course {
   program: string;
   level: string;
   image: string;
+  id: number[];
 }
 interface Category {
   id: number;
@@ -27,6 +28,10 @@ interface Props {
 const CoursesList: React.FC<Props> = ({ courses, categories }) => {
   const colorScheme = useColorScheme();
 
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
+    null
+  );
+
   // Determine styles based on color scheme
   const styles = StyleSheet.create({
     container: {
@@ -38,18 +43,28 @@ const CoursesList: React.FC<Props> = ({ courses, categories }) => {
     },
     categoryList: {
       flexGrow: 0, // Disable auto resizing
-      marginBottom: 10,
+      marginBottom: 7,
     },
     categoryItem: {
       paddingHorizontal: 15,
       paddingVertical: 10,
       marginRight: 10,
       borderRadius: 20,
-      backgroundColor: colorScheme === "dark" ? "#333" : "#f0f0f0",
+      borderWidth: 1, // Add border width
+      borderColor: colorScheme === "dark" ? "#555" : "#ccc", // Initial border color
+      backgroundColor: "transparent", // Set background color to transparent
+    },
+    selectedCategoryItem: {
+      borderColor: colorScheme === "dark" ? "#ffffff" : "#000000", // Selected border color
+      borderWidth: 2,
     },
     categoryText: {
       fontSize: 16,
-      color: colorScheme === "dark" ? "#fff" : "#333",
+      color: colorScheme === "dark" ? "#888" : "#666", // Initial text color
+    },
+    selectedCategoryText: {
+      color: colorScheme === "dark" ? "#ffffff" : "#000000", // Selected text color
+      fontWeight: "bold",
     },
     courseList: {
       paddingHorizontal: 10,
@@ -89,30 +104,52 @@ const CoursesList: React.FC<Props> = ({ courses, categories }) => {
     },
   });
 
-  // Extract unique program categories from the list of courses
-  const uniqueCategories = categories.map((category) => category.name);
+  const filteredCourses = selectedCategoryId
+    ? courses
+        .filter((course) => course.id.includes(selectedCategoryId))
+        .sort((a, b) => a.id[0] - b.id[0])
+    : courses.sort((a, b) => a.id[0] - b.id[0]);
 
   return (
     <View style={styles.container}>
       {/* Category Container */}
       <View style={styles.categoryContainer}>
         <FlatList
-          data={uniqueCategories}
+          data={categories}
           horizontal
           showsHorizontalScrollIndicator={false}
           renderItem={({ item }) => (
-            <TouchableOpacity style={styles.categoryItem}>
-              <Text style={styles.categoryText}>{item}</Text>
+            <TouchableOpacity
+              style={[
+                styles.categoryItem,
+                item.id === selectedCategoryId &&
+                  item.id === selectedCategoryId &&
+                  styles.selectedCategoryItem,
+              ]}
+              onPress={() =>
+                setSelectedCategoryId(
+                  item.id === selectedCategoryId ? null : item.id
+                )
+              }
+            >
+              <Text
+                style={[
+                  styles.categoryText,
+                  item.id === selectedCategoryId && styles.selectedCategoryText,
+                ]}
+              >
+                {item.name}
+              </Text>
             </TouchableOpacity>
           )}
-          keyExtractor={(item) => item}
+          keyExtractor={(item, index) => index.toString()}
           contentContainerStyle={styles.categoryList}
         />
       </View>
 
       {/* Course List */}
       <FlatList
-        data={courses}
+        data={filteredCourses}
         numColumns={2}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
