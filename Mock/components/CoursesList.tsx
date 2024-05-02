@@ -8,13 +8,14 @@ import {
   StyleSheet,
   useColorScheme,
 } from "react-native";
-
+import { router } from "expo-router";
 interface Course {
-  name: string;
-  program: string;
+  title: string;
+  description: string;
   level: string;
-  image: string;
-  id: number[];
+  url: string;
+  category: number[];
+  id: string;
 }
 interface Category {
   id: number;
@@ -39,11 +40,11 @@ const CoursesList: React.FC<Props> = ({ courses, categories }) => {
       backgroundColor: colorScheme === "dark" ? "#000" : "#fff",
     },
     categoryContainer: {
-      height: 50, // Adjust the height as needed
+      height: 53, // Adjust the height as needed
     },
     categoryList: {
-      flexGrow: 0, // Disable auto resizing
-      marginBottom: 7,
+      // flexGrow: 0, // Disable auto resizing
+      marginBottom: "2%",
     },
     categoryItem: {
       paddingHorizontal: 15,
@@ -106,9 +107,9 @@ const CoursesList: React.FC<Props> = ({ courses, categories }) => {
 
   const filteredCourses = selectedCategoryId
     ? courses
-        .filter((course) => course.id.includes(selectedCategoryId))
-        .sort((a, b) => a.id[0] - b.id[0])
-    : courses.sort((a, b) => a.id[0] - b.id[0]);
+        .filter((course) => course.category.includes(selectedCategoryId))
+        .sort((a, b) => a.category[0] - b.category[0])
+    : courses.sort((a, b) => a.category[0] - b.category[0]);
 
   return (
     <View style={styles.container}>
@@ -154,26 +155,32 @@ const CoursesList: React.FC<Props> = ({ courses, categories }) => {
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
           <TouchableOpacity
-            onPress={() => console.log("Course clicked")}
+            onPress={() => {
+              // Push the CourseDetails route and set parameters
+              router.navigate("/(tabs)/(two)/CourseDetails");
+              router.setParams({
+                course: JSON.stringify(item),
+              });
+            }}
             activeOpacity={0.5}
             style={styles.courseItem}
           >
             <View style={styles.container}>
               <View style={styles.imageContainer}>
-                <Image source={{ uri: item.image }} style={styles.image} />
+                <Image source={{ uri: item.url }} style={styles.image} />
               </View>
               <View style={styles.textContainer}>
                 <Text style={styles.details} numberOfLines={2}>
-                  {item.program} · {item.level}
+                  {item.description} · {item.level}
                 </Text>
                 <Text style={styles.name} numberOfLines={1}>
-                  {item.name}
+                  {item.title}
                 </Text>
               </View>
             </View>
           </TouchableOpacity>
         )}
-        keyExtractor={(item, index) => index.toString()}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={styles.courseList}
       />
     </View>

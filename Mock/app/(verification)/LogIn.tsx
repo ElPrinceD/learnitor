@@ -303,6 +303,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     color: "#000",
+    height: 65,
   },
   toggleIcon: {
     position: "absolute",

@@ -181,12 +181,24 @@ const ForgotPassword = () => {
         </Text>
       ) : null}
       {sent ? (
-        <Button
-          title="Reset Password"
+        <TouchableOpacity
+          style={[
+            styles.button,
+            {
+              backgroundColor: themeColor,
+            },
+          ]}
           onPress={CheckVerificationCode}
-          color={themeColor}
           disabled={loading}
-        />
+        >
+          {loading ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={[styles.buttonText, { color: "white" }]}>
+              Reset Password
+            </Text>
+          )}
+        </TouchableOpacity>
       ) : null}
       {resettingPassword ? (
         <Text style={[styles.sentMessage, { color: textColor }]}>
@@ -204,12 +216,24 @@ const ForgotPassword = () => {
         />
       ) : null}
       {resettingPassword ? (
-        <Button
-          title="Set New Password"
+        <TouchableOpacity
+          style={[
+            styles.button,
+            {
+              backgroundColor: themeColor,
+            },
+          ]}
           onPress={ConfirmNewPassword}
-          color={themeColor}
           disabled={loading}
-        />
+        >
+          {loading ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={[styles.buttonText, { color: "white" }]}>
+              Set New Password
+            </Text>
+          )}
+        </TouchableOpacity>
       ) : null}
       <Text style={[styles.support, { color: textColor }]}>
         If you have trouble resetting your password, contact us at{" "}

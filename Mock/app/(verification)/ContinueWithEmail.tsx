@@ -60,7 +60,9 @@ const ContinueWithEmail = () => {
           setUser(response.data.user);
           // I was trying to send this page straight to the homepage but I couldnt so please do it
           //I am return the user, so you can accept the user information in the homepage and use it
-          navigation.navigate("(tabs)", { user });
+          navigation.navigate("(tabs)", {
+            firstName: response.data.user.first_name,
+          });
         })
         .catch((error) => {
           // Handle error

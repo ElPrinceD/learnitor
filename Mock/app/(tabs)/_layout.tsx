@@ -8,7 +8,7 @@ import { useColorScheme } from "@/components/useColorScheme";
 import { useClientOnlyValue } from "@/components/useClientOnlyValue";
 import { useThemeColor } from "../../components/Themed";
 
-import { useGlobalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 
 // You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
 function TabBarIcon(props: {
@@ -21,7 +21,7 @@ function TabBarIcon(props: {
 export default function TabLayout() {
   const colorScheme = useColorScheme();
 
-  const params = useGlobalSearchParams();
+  const params = useLocalSearchParams();
   const firstName = params.firstName;
   console.log("Received User:", firstName);
 
@@ -87,7 +87,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="two"
+        name="(two)"
         options={{
           title: "Courses",
           tabBarIcon: ({ color }) => <TabBarIcon name="book" color={color} />,

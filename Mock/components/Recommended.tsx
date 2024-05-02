@@ -8,48 +8,57 @@ import {
   StyleSheet,
   useColorScheme,
 } from "react-native";
+import { router } from "expo-router";
 
 interface Course {
-  name: string;
-  program: string;
+  title: string;
+  description: string;
   level: string;
-  image: string;
+  url: string;
+  id: string;
 }
 
 interface Props {
-  coursesData: Course[];
+  RecommendedCoursesData: Course[];
 }
 
-const RecommendedCoursesList: React.FC<Props> = ({ coursesData }) => {
+const RecommendedCoursesList: React.FC<Props> = ({
+  RecommendedCoursesData,
+}) => {
   const colorScheme = useColorScheme();
 
   return (
     <FlatList
       horizontal
-      data={coursesData}
+      data={RecommendedCoursesData}
       renderItem={({ item }) => (
         <TouchableOpacity
-          onPress={() => console.log("Course clicked")}
+          onPress={() => {
+            router.push("/(tabs)/(two)/CourseDetails");
+            router.setParams({
+              course: JSON.stringify(item),
+            });
+          }}
           activeOpacity={0.5} // Set activeOpacity to 1 to remove white overlay
           style={styles.touchable}
         >
           <View style={styles.container}>
             <View style={styles.imageContainer}>
-              <Image source={{ uri: item.image }} style={styles.image} />
+              <Image source={{ uri: item.url }} style={styles.image} />
               <View style={styles.overlay} />
             </View>
             <View style={styles.textContainer}>
               <Text style={styles.details} numberOfLines={1}>
-                {item.program} · {item.level}
+                {item.description} · {item.level}
               </Text>
               <Text style={styles.name} numberOfLines={1}>
-                {item.name}
+                {item.title}
               </Text>
             </View>
           </View>
         </TouchableOpacity>
       )}
-      keyExtractor={(item, index) => index.toString()}
+      keyExtractor={(item) => item.id}
       showsHorizontalScrollIndicator={false} // Hide horizontal scroll indicator
     />
   );

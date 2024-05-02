@@ -1,20 +1,21 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { StyleSheet } from "react-native";
 
 import RecommendedCoursesList from "@/components/Recommended";
 import StreakList from "@/components/Streak";
 import { Text, View } from "@/components/Themed";
-import CoursesData from "../../components/CoursesData.json";
+import axios from "axios";
 
 interface Streak {
   name: string;
   streak: boolean;
 }
 interface Course {
-  name: string;
-  program: string;
+  title: string;
+  description: string;
   level: string;
-  image: string;
+  url: string;
+  id: string;
 }
 
 const HomeScreen = () => {
@@ -28,13 +29,26 @@ const HomeScreen = () => {
     { name: "Streak 7", streak: false },
     // Add more streaks as needed
   ];
-  const coursesData: Course[] = CoursesData.map((course: any) => ({
-    name: course.title,
-    program: course.description,
-    level: "",
-    image:
-      "https://e1.pxfuel.com/desktop-wallpaper/355/972/desktop-wallpaper-stock-of-reading-%C2%B7-pexels-coffee-winter-and-books.jpg",
-  }));
+
+  const [RecommendedCoursesData, setRecommendedCoursesData] = useState<
+    Course[]
+  >([]);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const course = await axios.get(
+        "http://192.168.83.198:8000/api/course/all"
+      );
+      setRecommendedCoursesData(course.data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={{ flex: 1, padding: 20 }}>
@@ -58,7 +72,7 @@ const HomeScreen = () => {
       >
         Recommended for you
       </Text>
-      <RecommendedCoursesList coursesData={coursesData} />
+      <RecommendedCoursesList RecommendedCoursesData={RecommendedCoursesData} />
     </View>
   );
 };
