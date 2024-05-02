@@ -23,7 +23,7 @@ export default function TabLayout() {
 
   const params = useLocalSearchParams();
   const firstName = params.firstName;
-  console.log("Received User:", firstName);
+
 
   const currentHour = new Date().getHours();
   let greeting = "";
@@ -98,15 +98,15 @@ export default function TabLayout() {
       <Tabs.Screen
         name="three"
         options={{
-          title: "Don't Know",
+          title: "Timeline",
           tabBarIcon: ({ color }) => (
             <TabBarIcon name="history" color={color} />
           ),
-          headerTitle: "Unknown",
+          headerTitle: "Timeline",
         }}
       />
       <Tabs.Screen
-        name="four"
+        name="(account)"
         options={{
           title: "Profile",
           tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,

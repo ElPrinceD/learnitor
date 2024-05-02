@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { View, StyleSheet, useColorScheme } from "react-native";
+import { useLocalSearchParams, useGlobalSearchParams } from "expo-router";
 import SearchBar from "../../../components/SearchBar";
 import CoursesList from "../../../components/CoursesList";
 import axios from "axios";
+import ApiUrl from "../../../config"
 
 interface Course {
   title: string;
@@ -23,6 +25,9 @@ const CoursesScreen: React.FC = () => {
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
   const [categoryData, setCategoryData] = useState<Category[]>([]);
   const colorScheme = useColorScheme();
+  const { course } = useLocalSearchParams();
+  const params = useGlobalSearchParams();
+  const token = params.token;
 
   useEffect(() => {
     fetchData();
@@ -31,10 +36,18 @@ const CoursesScreen: React.FC = () => {
   const fetchData = async () => {
     try {
       const course = await axios.get(
-        "http://192.168.83.198:8000/api/course/all"
+        `${ApiUrl}:8000/api/course/all`,{
+          headers: {
+            Authorization: `Token ${token}`,
+          },
+        } 
       );
       const categories = await axios.get(
-        "http://192.168.83.198:8000/api/category/all"
+        `${ApiUrl}:8000/api/category/all`,{
+          headers: {
+            Authorization: `Token ${token}`,
+          },
+        } 
       );
       setCoursesData(course.data);
       setFilteredCourses(course.data);

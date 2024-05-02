@@ -14,6 +14,8 @@ import { useThemeColor } from "@/components/Themed";
 import { useNavigation } from "expo-router";
 import { RootParamList } from "../../components/types";
 import axios from "axios";
+import ApiUrl from "../../config"
+import apiUrl from "../../config";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -30,7 +32,7 @@ const ForgotPassword = () => {
     setLoading(true);
 
     axios
-      .post("http://192.168.83.198:8000/api/forgetpassword", { email })
+      .post(`${apiUrl}:8000/api/forgetpassword`, { email })
       .then((response) => {
         setLoading(false);
         setSent(true);
@@ -66,7 +68,7 @@ const ForgotPassword = () => {
     setLoading(true);
 
     axios
-      .post("http://192.168.83.198:8000/api/verify-code", {
+      .post(`${apiUrl}:8000/api/verify-code`, {
         email,
         verification_code: resetCode,
       })
@@ -88,7 +90,7 @@ const ForgotPassword = () => {
     setLoading(true);
 
     axios
-      .post("http://192.168.83.198:8000/api/reset-password", {
+      .post(`${apiUrl}:8000/api/reset-password`, {
         new_password: newPassword,
         verification_code: resetCode,
       })

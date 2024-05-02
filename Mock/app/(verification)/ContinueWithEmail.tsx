@@ -16,6 +16,7 @@ import Index from "../(tabs)/index";
 import { RootParamList } from "../../components/types";
 import { useThemeColor } from "@/components/Themed";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import ApiUrl from "../../config"
 
 const ContinueWithEmail = () => {
   const [firstName, setFirstName] = useState("");
@@ -47,7 +48,7 @@ const ContinueWithEmail = () => {
       setAllFieldsError("");
     } else {
       axios
-        .post("http://192.168.187.198:8000/api/register/", {
+        .post(`${ApiUrl}:8000/api/register/`, {
           first_name: firstName,
           last_name: surname,
           email: email,
@@ -55,7 +56,6 @@ const ContinueWithEmail = () => {
           dob: dateOfBirth.toISOString().substring(0, 10),
         })
         .then((response) => {
-          // Handle successful response from backend
 
           setUser(response.data.user);
           // I was trying to send this page straight to the homepage but I couldnt so please do it

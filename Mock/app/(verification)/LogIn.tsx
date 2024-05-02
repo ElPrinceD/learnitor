@@ -13,10 +13,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { useThemeColor } from "@/components/Themed";
 import { router, useNavigation } from "expo-router";
 import axios from "axios";
+import ApiUrl from "../../config"
 import { RootParamList } from "../../components/types";
+import { useGlobalSearchParams } from "expo-router";
 
 const LogIn = () => {
-  const [email, setEmail] = useState("");
+
+  const params = useGlobalSearchParams();
+  const registeredEmail = params.email
+  const [email, setEmail] = useState(registeredEmail);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [user, setUser] = useState("");
@@ -48,18 +53,21 @@ const LogIn = () => {
     setLoading(true);
 
     axios
-      .post("http://192.168.83.198:8000/api/login/", {
+      .post(`${ApiUrl}:8000/api/login/`, {
         email: email,
         password: password,
       })
       .then((response) => {
         setLoading(false);
         setUser(response.data.user);
+        console.log(response.data)
         // Handle successful response from backend
-        console.log(response.data.user);
+        
 
         navigation.navigate("(tabs)", {
+          token: response.data.token,
           firstName: response.data.user.first_name,
+          lastName: response.data.user.last_name,
         });
       })
       .catch((error) => {

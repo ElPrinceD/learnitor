@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { View } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { View , StyleSheet, ScrollView} from "react-native";
+import { useLocalSearchParams, useGlobalSearchParams } from "expo-router";
 import axios from "axios";
 import CourseInformation from "../../../components/CourseInformation";
 import CourseTopics from "../../../components/CourseTopics";
+import ApiUrl from "../../../config"
+
 
 interface Course {
   title: string;
@@ -20,6 +22,8 @@ interface Topic {
 
 const CourseDetails: React.FC = () => {
   const { course } = useLocalSearchParams();
+  const params = useGlobalSearchParams();
+  const token = params.token;
   const [topics, setTopics] = useState<Topic[]>([]);
 
   // Parse course into a Course object
@@ -33,7 +37,12 @@ const CourseDetails: React.FC = () => {
   const fetchData = async () => {
     try {
       const response = await axios.get(
-        `http://192.168.83.198:8000/api/course/${parsedCourse.id}/topics`
+        `${ApiUrl}:8000/api/course/${parsedCourse.id}/topics`, 
+      {
+        headers: {
+          Authorization: `Token ${token}`,
+        },
+      } 
       );
       setTopics(response.data);
     } catch (error) {
@@ -42,12 +51,24 @@ const CourseDetails: React.FC = () => {
   };
 
   return (
+    
     <View>
-      {/* Pass parsedCourse to CourseInformation */}
+      
+      
       <CourseInformation course={parsedCourse} />
       <CourseTopics topics={topics} />
     </View>
+     
   );
+
+
 };
+
+const styles = StyleSheet.create({
+
+  scrollViewContainer: {
+    flexGrow: 1,
+  },
+})
 
 export default CourseDetails;
