@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { StyleSheet } from "react-native";
-
-import RecommendedCoursesList from "@/components/Recommended";
-import StreakList from "@/components/Streak";
+import RecommendedCoursesList from "../../components/Recommended";
+import StreakList from "../../components/Streak";
 import { Text, View } from "@/components/Themed";
 import axios from "axios";
+import ApiUrl from "../../config";
+import { useAuth } from "../../components/AuthContext";
 
 interface Streak {
   name: string;
@@ -15,6 +16,7 @@ interface Course {
   description: string;
   level: string;
   url: string;
+  category: number[];
   id: string;
 }
 
@@ -30,6 +32,8 @@ const HomeScreen = () => {
     // Add more streaks as needed
   ];
 
+  const { userToken } = useAuth();
+
   const [RecommendedCoursesData, setRecommendedCoursesData] = useState<
     Course[]
   >([]);
@@ -40,9 +44,11 @@ const HomeScreen = () => {
 
   const fetchData = async () => {
     try {
-      const course = await axios.get(
-        "http://192.168.83.198:8000/api/course/all"
-      );
+      const course = await axios.get(`${ApiUrl}:8000/api/course/all`, {
+        headers: {
+          Authorization: `Token ${userToken?.token}`,
+        },
+      });
       setRecommendedCoursesData(course.data);
     } catch (error) {
       console.error("Error fetching data:", error);

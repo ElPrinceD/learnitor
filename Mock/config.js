@@ -1,3 +1,3 @@
 // config.js
-const apiUrl = 'http:172.20.10.2';
+const apiUrl = 'http:192.168.83.198';
 export default apiUrl;

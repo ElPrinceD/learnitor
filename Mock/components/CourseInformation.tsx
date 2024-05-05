@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   useColorScheme,
   Image,
 } from "react-native";
+import { router } from "expo-router";
 
 interface Course {
   title: string;
@@ -14,9 +15,44 @@ interface Course {
   id: string;
   url: string;
 }
+interface Topic {
+  title: string;
+  description: string;
+  id: string;
+}
 
-const CourseInformation: React.FC<{ course: Course }> = ({ course }) => {
+interface CourseInformationProps {
+  course: Course;
+  selectedTopics: Topic[];
+}
+
+const CourseInformation: React.FC<CourseInformationProps> = ({
+  course,
+  selectedTopics,
+}) => {
   const colorScheme = useColorScheme();
+  const [enrollDisabled, setEnrollDisabled] = useState(true);
+
+  useEffect(() => {
+    // Enable enroll button only if selectedTopics are received
+    if (selectedTopics.length > 0) {
+      setEnrollDisabled(false);
+    } else {
+      setEnrollDisabled(true);
+    }
+  }, [selectedTopics]);
+
+  const handleEnroll = () => {
+    router.navigate("EnrolledCourse");
+    router.setParams({
+      selectedTopics: JSON.stringify(selectedTopics),
+    });
+  };
+
+  // Log selectedTopics when the component receives new props
+  useEffect(() => {
+    console.log("Selected Topics:", selectedTopics);
+  }, [selectedTopics]);
 
   const styles = StyleSheet.create({
     container: {
@@ -44,12 +80,13 @@ const CourseInformation: React.FC<{ course: Course }> = ({ course }) => {
       height: 100,
     },
     enrollButton: {
-      backgroundColor: "transparent",
+      backgroundColor: enrollDisabled ? "#ccc" : "transparent",
       paddingVertical: 10,
       paddingHorizontal: 20,
       borderRadius: 20,
       borderWidth: 2,
       borderColor: colorScheme === "dark" ? "#fff" : "#000",
+      opacity: enrollDisabled ? 0.5 : 1,
     },
     enrollButtonText: {
       color: colorScheme === "dark" ? "#fff" : "#000",
@@ -73,7 +110,12 @@ const CourseInformation: React.FC<{ course: Course }> = ({ course }) => {
 
       <Text style={styles.title}>{course.title}</Text>
       <Text style={styles.description}>{course.description}</Text>
-      <TouchableOpacity style={styles.enrollButton} activeOpacity={0.3}>
+      <TouchableOpacity
+        style={styles.enrollButton}
+        activeOpacity={0.3}
+        onPress={handleEnroll}
+        disabled={enrollDisabled}
+      >
         <Text style={styles.enrollButtonText}>Enroll</Text>
       </TouchableOpacity>
     </View>

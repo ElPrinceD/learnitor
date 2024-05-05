@@ -12,11 +12,10 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "expo-router";
-import Index from "../(tabs)/index";
 import { RootParamList } from "../../components/types";
 import { useThemeColor } from "@/components/Themed";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import ApiUrl from "../../config"
+import ApiUrl from "../../config";
 
 const ContinueWithEmail = () => {
   const [firstName, setFirstName] = useState("");
@@ -56,12 +55,11 @@ const ContinueWithEmail = () => {
           dob: dateOfBirth.toISOString().substring(0, 10),
         })
         .then((response) => {
-
           setUser(response.data.user);
           // I was trying to send this page straight to the homepage but I couldnt so please do it
           //I am return the user, so you can accept the user information in the homepage and use it
-          navigation.navigate("(tabs)", {
-            firstName: response.data.user.first_name,
+          navigation.navigate("LogIn", {
+            email: response.data.user.email,
           });
         })
         .catch((error) => {

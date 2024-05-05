@@ -1,28 +1,25 @@
+import React, { useEffect } from "react";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { useFonts } from "expo-font";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import {
+  ThemeProvider,
   DarkTheme,
   DefaultTheme,
-  ThemeProvider,
 } from "@react-navigation/native";
-import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import { AuthProvider, useAuth } from "../components/AuthContext"; // Update the path
 
 import { useColorScheme } from "@/components/useColorScheme";
+import { View, ActivityIndicator } from "react-native";
 
-export {
-  // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
-} from "expo-router";
+export { ErrorBoundary } from "expo-router";
 
 export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: "(verification)",
+  initialRouteName: "",
 };
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -31,7 +28,6 @@ export default function RootLayout() {
     ...FontAwesome.font,
   });
 
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
     if (error) throw error;
   }, [error]);
@@ -46,11 +42,29 @@ export default function RootLayout() {
     return null;
   }
 
-  return <RootLayoutNav />;
+  return (
+    <AuthProvider>
+      <RootLayoutNav />
+    </AuthProvider>
+  );
 }
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
+  const { userToken, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (isLoading) {
+      // If still loading, do nothing
+      return;
+    }
+
+    if (!userToken) {
+      router.push("./Intro");
+    } else {
+      router.navigate("(tabs)");
+    }
+  }, [userToken, isLoading]);
 
   return (
     <SafeAreaProvider>

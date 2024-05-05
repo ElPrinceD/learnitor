@@ -15,6 +15,7 @@ interface Course {
   description: string;
   level: string;
   url: string;
+  category: number[];
   id: string;
 }
 
@@ -25,8 +26,6 @@ interface Props {
 const RecommendedCoursesList: React.FC<Props> = ({
   RecommendedCoursesData,
 }) => {
-  const colorScheme = useColorScheme();
-
   return (
     <FlatList
       horizontal
@@ -34,7 +33,7 @@ const RecommendedCoursesList: React.FC<Props> = ({
       renderItem={({ item }) => (
         <TouchableOpacity
           onPress={() => {
-            router.push("/(tabs)/(two)/CourseDetails");
+            router.navigate("/(tabs)/(two)/CourseDetails");
             router.setParams({
               course: JSON.stringify(item),
             });

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import {
   StyleSheet,
   TouchableOpacity,
@@ -13,14 +13,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { useThemeColor } from "@/components/Themed";
 import { router, useNavigation } from "expo-router";
 import axios from "axios";
-import ApiUrl from "../../config"
+import ApiUrl from "../../config";
 import { RootParamList } from "../../components/types";
 import { useGlobalSearchParams } from "expo-router";
+import { useAuth } from "../../components/AuthContext"; // Adjust the path
 
 const LogIn = () => {
-
+  const { login } = useAuth(); // Accessing login function from AuthProvider
   const params = useGlobalSearchParams();
-  const registeredEmail = params.email
+  const registeredEmail = params.email;
   const [email, setEmail] = useState(registeredEmail);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -60,14 +61,14 @@ const LogIn = () => {
       .then((response) => {
         setLoading(false);
         setUser(response.data.user);
-        console.log(response.data)
+        console.log(response.data);
         // Handle successful response from backend
-        
+        login(response.data, response.data.token); // Logging in user with token
 
         navigation.navigate("(tabs)", {
-          token: response.data.token,
-          firstName: response.data.user.first_name,
-          lastName: response.data.user.last_name,
+          // token: response.data.token,
+          // firstName: response.data.user.first_name,
+          // lastName: response.data.user.last_name,
         });
       })
       .catch((error) => {
@@ -123,11 +124,6 @@ const LogIn = () => {
         { backgroundColor: useThemeColor({}, "background") },
       ]}
     >
-      <Image
-        source={require("../../assets/images/Login-rafiki.png")} // Replace with your image path
-        style={styles.image}
-      />
-
       <View style={styles.inputContainer}>
         <TextInput
           style={[

@@ -8,7 +8,7 @@ import { useColorScheme } from "@/components/useColorScheme";
 import { useClientOnlyValue } from "@/components/useClientOnlyValue";
 import { useThemeColor } from "../../components/Themed";
 
-import { useLocalSearchParams } from "expo-router";
+import { useAuth } from "../../components/AuthContext";
 
 // You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
 function TabBarIcon(props: {
@@ -20,10 +20,6 @@ function TabBarIcon(props: {
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-
-  const params = useLocalSearchParams();
-  const firstName = params.firstName;
-
 
   const currentHour = new Date().getHours();
   let greeting = "";
@@ -44,6 +40,8 @@ export default function TabLayout() {
     },
     "text"
   );
+
+  const { userInfo } = useAuth();
 
   return (
     <Tabs
@@ -81,7 +79,7 @@ export default function TabLayout() {
                 fontWeight: "bold",
               }}
             >
-              {greeting}, {firstName}!
+              {greeting}, {userInfo?.user.first_name}!
             </Text>
           ), // Adjusted the font size to 24
         }}
@@ -91,7 +89,8 @@ export default function TabLayout() {
         options={{
           title: "Courses",
           tabBarIcon: ({ color }) => <TabBarIcon name="book" color={color} />,
-          headerTitle: "What do you want to learn today?",
+          headerTitle: "",
+          // headerTransparent: true,
         }}
       />
 
