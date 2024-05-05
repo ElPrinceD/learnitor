@@ -40,7 +40,6 @@ const CreateNewTime = ({ route }) => {
     const handleSaveTime = async () => {
 
     
-      console.log(learner_id)
       const data = {
         title,
         description,
