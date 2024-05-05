@@ -5,6 +5,7 @@ import { Pressable, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { useColorScheme } from "@/components/useColorScheme";
+
 import { useClientOnlyValue } from "@/components/useClientOnlyValue";
 import { useThemeColor } from "../../components/Themed";
 
@@ -95,11 +96,25 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="three"
+        name="(reminder)"
         options={{
           title: "Timeline",
           tabBarIcon: ({ color }) => (
             <TabBarIcon name="history" color={color} />
+          ),
+          headerRight: () => (
+            <Link href="../(reminder)/Categories" asChild>
+              <Pressable>
+                {({ pressed }) => (
+                  <Ionicons
+                    name="add"
+                    size={25}
+                    color={Colors[colorScheme ?? "light"].text}
+                    style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
+                  />
+                )}
+              </Pressable>
+            </Link>
           ),
           headerTitle: "Timeline",
         }}

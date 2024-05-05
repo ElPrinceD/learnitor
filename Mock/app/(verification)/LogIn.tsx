@@ -12,6 +12,7 @@ import { Text } from "@/components/Themed";
 import { Ionicons } from "@expo/vector-icons";
 import { useThemeColor } from "@/components/Themed";
 import { router, useNavigation } from "expo-router";
+
 import axios from "axios";
 import ApiUrl from "../../config";
 import { RootParamList } from "../../components/types";
@@ -61,15 +62,17 @@ const LogIn = () => {
       .then((response) => {
         setLoading(false);
         setUser(response.data.user);
-        console.log(response.data);
+        
         // Handle successful response from backend
         login(response.data, response.data.token); // Logging in user with token
 
         navigation.navigate("(tabs)", {
-          // token: response.data.token,
-          // firstName: response.data.user.first_name,
-          // lastName: response.data.user.last_name,
+          token: response.data.token,
+          id: response.data.user.id,
+          firstName: response.data.user.first_name,
+          lastName: response.data.user.last_name,
         });
+        console.log(response.data.user)
       })
       .catch((error) => {
         setLoading(false);

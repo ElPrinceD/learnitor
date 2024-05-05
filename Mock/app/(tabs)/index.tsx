@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { StyleSheet } from "react-native";
-import RecommendedCoursesList from "../../components/Recommended";
-import StreakList from "../../components/Streak";
+import { useLocalSearchParams, useGlobalSearchParams } from "expo-router";
+import RecommendedCoursesList from "@/components/Recommended";
+import StreakList from "@/components/Streak";
 import { Text, View } from "@/components/Themed";
 import axios from "axios";
-import ApiUrl from "../../config";
-import { useAuth } from "../../components/AuthContext";
+import ApiUrl from "../../config"
 
 interface Streak {
   name: string;
@@ -32,7 +32,8 @@ const HomeScreen = () => {
     // Add more streaks as needed
   ];
 
-  const { userToken } = useAuth();
+  const params = useGlobalSearchParams();
+  const token = params.token;
 
   const [RecommendedCoursesData, setRecommendedCoursesData] = useState<
     Course[]
@@ -44,11 +45,14 @@ const HomeScreen = () => {
 
   const fetchData = async () => {
     try {
-      const course = await axios.get(`${ApiUrl}:8000/api/course/all`, {
-        headers: {
-          Authorization: `Token ${userToken?.token}`,
-        },
-      });
+      const course = await axios.get(
+        `${ApiUrl}:8000/api/course/all`, 
+        {
+          headers: {
+            Authorization: `Token ${token}`,
+          },
+        } 
+      );
       setRecommendedCoursesData(course.data);
     } catch (error) {
       console.error("Error fetching data:", error);
