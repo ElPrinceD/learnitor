@@ -116,7 +116,7 @@ export default function TabLayout() {
               </Pressable>
             </Link>
           ),
-          headerTitle: "Timeline",
+          headerTitle: "",
         }}
       />
       <Tabs.Screen

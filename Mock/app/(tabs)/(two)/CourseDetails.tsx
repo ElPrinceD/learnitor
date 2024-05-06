@@ -69,9 +69,7 @@ const CourseDetails: React.FC = () => {
       <ScrollView contentContainerStyle={styles.scrollViewContainer}>
         {/* Display selected topics */}
         {selectedTopics.map((topic) => (
-          <View key={topic.id}>
-            <Text>{topic.title}</Text>
-          </View>
+          <View key={topic.id}></View>
         ))}
       </ScrollView>
     </View>

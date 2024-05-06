@@ -63,7 +63,7 @@ const CoursesScreen: React.FC = () => {
     container: {
       flex: 1,
       padding: 10,
-      backgroundColor: colorScheme === "dark" ? "#000" : "#fff",
+      // backgroundColor: colorScheme === "dark" ? "#000" : "#fff",
     },
     headerText: {
       fontSize: 18,

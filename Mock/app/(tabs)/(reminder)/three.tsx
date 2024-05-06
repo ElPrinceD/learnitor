@@ -1,68 +1,70 @@
-import React, {useEffect, useState} from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, Image, ScrollView } from "react-native";
-import {  useGlobalSearchParams } from "expo-router";
-import axios from 'axios';
-import apiUrl from '@/config';
+import axios from "axios";
+import ApiUrl from "../../../config";
+
+import { useAuth } from "../../../components/AuthContext";
 
 const Timeline = () => {
   const [todayPlans, setTodayPlans] = useState([]);
   const [categoryNames, setCategoryNames] = useState({});
-  const params = useGlobalSearchParams();
-  const token = params.token;
- 
+
+  const { userToken } = useAuth();
 
   // Mapping plan types to colors for the blocks
   const getCategoryColor = (type) => {
-    console.log(type)
+    console.log(type);
     switch (type) {
-      case 'Assignments & Projects':
-        return '#FF6347'; // Red
-      case 'TimeTable':
-        return '#FFA500'; // Orange
-      case 'Study TimeTable':
-        return '#00BFFF'; // Blue
-      case 'Exams TimeTable':
-        return '#8A2BE2'; // Purple
+      case "Assignments & Projects":
+        return "#FF6347"; // Red
+      case "TimeTable":
+        return "#FFA500"; // Orange
+      case "Study TimeTable":
+        return "#00BFFF"; // Blue
+      case "Exams TimeTable":
+        return "#8A2BE2"; // Purple
       default:
-        return '#000000'; // Black (default color)
+        return "#000000"; // Black (default color)
     }
   };
   useEffect(() => {
     const fetchTodayPlans = async () => {
       try {
-        const currentDate = new Date().toISOString().split('T')[0];
-        const response = await axios.get(`${apiUrl}:8000/api/learner/tasks/`, {
+        const currentDate = new Date().toISOString().split("T")[0];
+        const response = await axios.get(`${ApiUrl}:8000/api/learner/tasks/`, {
           // Add any necessary headers, such as authentication token
           headers: {
-            Authorization: `Token ${token}` // Replace with your actual token
+            Authorization: `Token ${userToken?.token}`, // Replace with your actual token
           },
         });
         setTodayPlans(response.data);
       } catch (error) {
-        console.error('Error fetching today\'s plans:', error);
+        console.error("Error fetching today's plans:", error);
       }
-    };const fetchCategoryNames = async () => {
+    };
+    const fetchCategoryNames = async () => {
       try {
-        const response = await axios.get(`${apiUrl}:8000/api/task/categories/`, {
-          headers: {
-            Authorization: `Token ${token}`,
-          },
-        });
+        const response = await axios.get(
+          `${ApiUrl}:8000/api/task/categories/`,
+          {
+            headers: {
+              Authorization: `Token ${userToken?.token}`,
+            },
+          }
+        );
         const categories = {};
-        response.data.forEach(category => {
+        response.data.forEach((category) => {
           categories[category.id] = category.name;
         });
         setCategoryNames(categories);
       } catch (error) {
-        console.error('Error fetching category names:', error);
+        console.error("Error fetching category names:", error);
       }
     };
 
     fetchTodayPlans();
     fetchCategoryNames();
-
   }, []);
-
 
   const getDateComponents = () => {
     const today = new Date();
@@ -97,27 +99,35 @@ const Timeline = () => {
         </View>
       </View>
       <Text style={styles.sectionTitle}>Today's Plans</Text>
-      <ScrollView  contentContainerStyle={styles.scrollViewContent}>
+      <ScrollView contentContainerStyle={styles.scrollViewContent}>
         {todayPlans.map((plan, index) => (
           <View key={index} style={styles.planContainer}>
             <View
               style={[
                 styles.timeMarker,
-                { backgroundColor: getCategoryColor(categoryNames[plan.category]) },
+                {
+                  backgroundColor: getCategoryColor(
+                    categoryNames[plan.category]
+                  ),
+                },
               ]}
             >
               <Text
-                style={[
-                  styles.typeText,
-                  { transform: [{ rotate: "180deg" }] },
-                ]}
+                style={[styles.typeText, { transform: [{ rotate: "180deg" }] }]}
               >
-                {categoryNames[plan.category] || 'Unknown Category'}
+                {categoryNames[plan.category] || "Unknown Category"}
               </Text>
             </View>
             <View style={styles.planContent}>
               <Text style={styles.planTitle}>{plan.title}</Text>
-              <Text style={styles.planTime}>{plan.duedate ? new Date(plan.duedate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</Text>
+              <Text style={styles.planTime}>
+                {plan.duedate
+                  ? new Date(plan.duedate).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : ""}
+              </Text>
             </View>
           </View>
         ))}
@@ -227,7 +237,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#fff",
   },
-  
+
   scrollViewContent: {
     flexGrow: 1, // Ensure the ScrollView fills its container vertically
   },

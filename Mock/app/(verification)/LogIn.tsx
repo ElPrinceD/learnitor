@@ -62,17 +62,17 @@ const LogIn = () => {
       .then((response) => {
         setLoading(false);
         setUser(response.data.user);
-        
+
         // Handle successful response from backend
         login(response.data, response.data.token); // Logging in user with token
 
         navigation.navigate("(tabs)", {
-          token: response.data.token,
-          id: response.data.user.id,
-          firstName: response.data.user.first_name,
-          lastName: response.data.user.last_name,
+          // token: response.data.token,
+          // id: response.data.user.id,
+          // firstName: response.data.user.first_name,
+          // lastName: response.data.user.last_name,
         });
-        console.log(response.data.user)
+        console.log(response.data.user);
       })
       .catch((error) => {
         setLoading(false);

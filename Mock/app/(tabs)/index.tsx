@@ -5,7 +5,9 @@ import RecommendedCoursesList from "@/components/Recommended";
 import StreakList from "@/components/Streak";
 import { Text, View } from "@/components/Themed";
 import axios from "axios";
-import ApiUrl from "../../config"
+import ApiUrl from "../../config";
+
+import { useAuth } from "../../components/AuthContext";
 
 interface Streak {
   name: string;
@@ -32,32 +34,29 @@ const HomeScreen = () => {
     // Add more streaks as needed
   ];
 
-  const params = useGlobalSearchParams();
-  const token = params.token;
+  const { userToken } = useAuth();
 
   const [RecommendedCoursesData, setRecommendedCoursesData] = useState<
     Course[]
   >([]);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = async () => {
+    console.log("Rec: " + userToken);
     try {
-      const course = await axios.get(
-        `${ApiUrl}:8000/api/course/all`, 
-        {
-          headers: {
-            Authorization: `Token ${token}`,
-          },
-        } 
-      );
+      const course = await axios.get(`${ApiUrl}:8000/api/course/all`, {
+        headers: {
+          Authorization: `Token ${userToken?.token}`,
+        },
+      });
       setRecommendedCoursesData(course.data);
     } catch (error) {
       console.error("Error fetching data:", error);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   return (
     <View style={styles.container}>

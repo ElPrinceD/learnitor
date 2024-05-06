@@ -37,7 +37,7 @@ const CoursesList: React.FC<Props> = ({ courses, categories }) => {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colorScheme === "dark" ? "#000" : "#fff",
+      // backgroundColor: colorScheme === "dark" ? "#000" : "#fff",
     },
     categoryContainer: {
       height: 53, // Adjust the height as needed
@@ -77,8 +77,8 @@ const CoursesList: React.FC<Props> = ({ courses, categories }) => {
       margin: 10,
       borderRadius: 10,
       overflow: "hidden",
-      elevation: 3,
-      backgroundColor: colorScheme === "dark" ? "#333" : "#fff",
+      elevation: 1,
+      backgroundColor: colorScheme === "dark" ? "#181818" : "#fff",
     },
     imageContainer: {
       flex: 1,

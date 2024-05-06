@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker'; // Import datetimepicker
 import { useGlobalSearchParams } from "expo-router";
 import axios from 'axios';
 import { useNavigation } from '@react-navigation/native';
-import { RootParamList } from "../../../components/types"; 
 
 import apiUrl from '@/config';
+import { useAuth } from "../../../components/AuthContext";
 
 const CreateNewTime = ({ route }) => {
     const params = useGlobalSearchParams();
     const category_name = params.name;
     const category_id = params.category_id;
-    const token = params.token;
-    const learner_id = params.id
+   
+
+      const { userToken, userInfo } = useAuth();
+
     const navigation = useNavigation();
     
    
@@ -45,16 +47,17 @@ const CreateNewTime = ({ route }) => {
         description,
         duedate: datetime.toISOString(),
         category: category_id,
-        learner: learner_id
+        learner: userInfo?.user.id
         
-    };
+        };
+        console.log(data)
       try {
       
     
 
     const response = await axios.post(`${apiUrl}:8000/api/learner/task/create/`, data, {
       headers: {
-        Authorization: `Token ${token}`,
+        Authorization: `Token ${userToken?.token}`,
       },
     });
     navigation.goBack();
@@ -64,7 +67,7 @@ const CreateNewTime = ({ route }) => {
 }}  
 
     return (
-        <View style={styles.container}>
+        <ScrollView style={styles.container}>
             <Text style={styles.title}>Create New Schedule</Text>
 
             {/* Title Input */}
@@ -146,7 +149,7 @@ const CreateNewTime = ({ route }) => {
             <TouchableOpacity style={styles.saveButton} onPress={handleSaveTime}>
                 <Text style={styles.saveButtonText}>Add Schedule</Text>
             </TouchableOpacity>
-        </View>
+        </ScrollView>
     );
 };
 
@@ -188,6 +191,7 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         borderRadius: 5,
         alignItems: 'center',
+        marginBottom: 50,
     },
     saveButtonText: {
         color: '#fff',

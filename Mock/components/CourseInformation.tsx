@@ -8,6 +8,9 @@ import {
   Image,
 } from "react-native";
 import { router } from "expo-router";
+import axios, { AxiosError } from "axios";
+import ApiUrl from "../config";
+import { useAuth } from "./AuthContext";
 
 interface Course {
   title: string;
@@ -31,28 +34,62 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
   selectedTopics,
 }) => {
   const colorScheme = useColorScheme();
-  const [enrollDisabled, setEnrollDisabled] = useState(true);
+  const [enrolled, setEnrolled] = useState(false); // Track if user is enrolled
+  const [progress, setProgress] = useState(0); // Progress of the user
+  const [loading, setLoading] = useState(false);
+  const [enrollDisabled, setEnrollDisabled] = useState(true); // Disable enroll button initially
+  const { userToken, userInfo } = useAuth();
+
+  const enrollCourse = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.post(
+        `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/course/${course.id}/enroll`,
+        {
+          headers: {
+            Authorization: `Token ${userToken?.token}`,
+          },
+        }
+      );
+      if (response.status === 200) {
+        setEnrolled(true);
+      } else {
+        console.error("Failed to enroll:", response);
+      }
+    } catch (error) {
+      const axiosError = error as AxiosError;
+      if (axiosError.response) {
+        console.error("Failed to enroll:", axiosError.response.data);
+      } else {
+        console.error("Error enrolling:", axiosError.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Enable enroll button only if selectedTopics are received
-    if (selectedTopics.length > 0) {
+    // Enable enroll button only if selectedTopics are received and user is not enrolled
+    if (selectedTopics.length > 0 && !enrolled) {
       setEnrollDisabled(false);
     } else {
       setEnrollDisabled(true);
     }
-  }, [selectedTopics]);
+  }, [selectedTopics, enrolled]);
 
-  const handleEnroll = () => {
-    router.navigate("EnrolledCourse");
-    router.setParams({
-      selectedTopics: JSON.stringify(selectedTopics),
-    });
-  };
-
-  // Log selectedTopics when the component receives new props
   useEffect(() => {
-    console.log("Selected Topics:", selectedTopics);
-  }, [selectedTopics]);
+    if (enrolled) {
+      // Fetch user progress once enrolled (assuming there's an API to fetch progress)
+      // Set progress based on the response
+      const fakeProgress = 50; // Assuming progress is fetched from backend
+      setProgress(fakeProgress);
+    }
+  }, [enrolled]);
+
+  const handleContinue = () => {
+    // Navigate to practice sessions page
+    router.navigate("EnrolledCourse");
+  };
 
   const styles = StyleSheet.create({
     container: {
@@ -79,6 +116,11 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
       width: "30%",
       height: 100,
     },
+    buttonContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: 20,
+    },
     enrollButton: {
       backgroundColor: enrollDisabled ? "#ccc" : "transparent",
       paddingVertical: 10,
@@ -88,36 +130,77 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
       borderColor: colorScheme === "dark" ? "#fff" : "#000",
       opacity: enrollDisabled ? 0.5 : 1,
     },
-    enrollButtonText: {
-      color: colorScheme === "dark" ? "#fff" : "#000",
+    continueButton: {
+      backgroundColor: "#007bff",
+      paddingVertical: 10,
+      paddingHorizontal: 20,
+      borderRadius: 20,
+    },
+    buttonText: {
+      color: "#fff",
       fontSize: 16,
       fontWeight: "bold",
       textAlign: "center",
     },
+    progressContainer: {
+      marginTop: 20,
+    },
+    progressBar: {
+      height: 10,
+      backgroundColor: "#ccc",
+      borderRadius: 5,
+    },
+    progressFill: {
+      height: "100%",
+      backgroundColor: "#007bff",
+      borderRadius: 5,
+    },
   });
 
   return (
-    <View style={styles.container}>
-      <View style={styles.imageContainer}>
-        <Image
-          source={{
-            uri: course.url,
-          }}
-          style={styles.image}
-          resizeMode="cover"
-        />
-      </View>
+    <View>
+      <View style={styles.container}>
+        <View style={styles.imageContainer}>
+          <Image
+            source={{
+              uri: course.url,
+            }}
+            style={styles.image}
+            resizeMode="cover"
+          />
+        </View>
+        <Text style={styles.title}>{course.title}</Text>
+        <Text style={styles.description}>{course.description}</Text>
 
-      <Text style={styles.title}>{course.title}</Text>
-      <Text style={styles.description}>{course.description}</Text>
-      <TouchableOpacity
-        style={styles.enrollButton}
-        activeOpacity={0.3}
-        onPress={handleEnroll}
-        disabled={enrollDisabled}
-      >
-        <Text style={styles.enrollButtonText}>Enroll</Text>
-      </TouchableOpacity>
+        {enrolled ? (
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={styles.continueButton}
+              activeOpacity={0.3}
+              onPress={handleContinue}
+            >
+              <Text style={styles.buttonText}>Continue</Text>
+            </TouchableOpacity>
+            <View style={styles.progressContainer}>
+              <View style={styles.progressBar}>
+                <View
+                  style={[styles.progressFill, { width: `${progress}%` }]}
+                />
+              </View>
+              <Text>{`${progress}% Completed`}</Text>
+            </View>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.enrollButton}
+            activeOpacity={0.3}
+            onPress={enrollCourse}
+            disabled={enrollDisabled}
+          >
+            <Text style={styles.buttonText}>Enroll</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 };

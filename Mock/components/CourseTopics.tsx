@@ -41,10 +41,8 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
     if (isSelected) {
       const updatedTopics = selectedTopics.filter((t) => t.id !== id);
       setSelectedTopics(updatedTopics);
-      console.log("Deselected topic:", topic);
     } else {
       setSelectedTopics([...selectedTopics, topic]);
-      console.log("Selected topic:", topic);
     }
 
     setShowClearButton(true);
@@ -59,22 +57,22 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
     topicsContainer: {
       paddingVertical: 20,
       paddingHorizontal: 10,
-      backgroundColor: colorScheme === "dark" ? "#000" : "#fff",
+      // backgroundColor: colorScheme === "dark" ? "#080808" : "#F0F0F0",
     },
     topicCard: {
-      marginBottom: 23,
-      backgroundColor: colorScheme === "dark" ? "#202020" : "#FFFFFF",
+      marginBottom: 15,
+      backgroundColor: colorScheme === "dark" ? "#181818" : "#FFFFFF",
       padding: 25,
-      margin: 10,
+      margin: 5,
       borderRadius: 40,
-      shadowColor: colorScheme === "dark" ? "#fff" : "#000",
+      shadowColor: colorScheme === "dark" ? "#696969" : "#000",
       shadowOffset: {
         width: 0,
         height: 4,
       },
       shadowOpacity: 1,
       shadowRadius: 9.84,
-      elevation: 5,
+      elevation: 1,
       position: "relative",
     },
     topicTitle: {
@@ -120,7 +118,10 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
   });
 
   return (
-    <ScrollView contentContainerStyle={styles.topicsContainer}>
+    <ScrollView
+      contentContainerStyle={styles.topicsContainer}
+      showsVerticalScrollIndicator={false}
+    >
       <Text style={styles.instructionText}>
         Select your topics in the order in which you want to learn them.
       </Text>

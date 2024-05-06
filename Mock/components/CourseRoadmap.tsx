@@ -26,7 +26,7 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({ selectedTopics }) => {
     <ScrollView
       style={[
         styles.container,
-        { backgroundColor: colorScheme === "dark" ? "#000" : "#fff" },
+        // { backgroundColor: colorScheme === "dark" ? "#000" : "#fff" },
       ]}
     >
       <Text
@@ -48,7 +48,7 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({ selectedTopics }) => {
                 onPress={() => {
                   // Handle press if needed
                 }}
-                activeOpacity={0.3} // Adjust the opacity if needed
+                activeOpacity={0.8} // Adjust the opacity if needed
               >
                 <View style={styles.topicNumberContainer}>
                   <View
@@ -84,7 +84,7 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({ selectedTopics }) => {
                 onPress={() => {
                   // Handle press if needed
                 }}
-                activeOpacity={0.3} // Adjust the opacity if needed
+                activeOpacity={0.5} // Adjust the opacity if needed
               >
                 <View style={styles.topicNumberContainer}>
                   <View
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.27,
     shadowRadius: 4.65,
-    elevation: 5,
+    elevation: 1,
   },
   errorText: {
     fontSize: 16,
