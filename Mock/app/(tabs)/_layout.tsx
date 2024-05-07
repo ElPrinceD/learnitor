@@ -26,7 +26,7 @@ export default function TabLayout() {
   let greeting = "";
 
   // Determine the appropriate greeting based on the current hour
-  if (currentHour >= 5 && currentHour < 12) {
+  if (currentHour >= 4 && currentHour < 12) {
     greeting = "Good Morning";
   } else if (currentHour >= 12 && currentHour < 18) {
     greeting = "Good Afternoon";

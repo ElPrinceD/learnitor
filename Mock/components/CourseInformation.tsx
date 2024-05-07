@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import axios, { AxiosError } from "axios";
+import { FontAwesome5 } from "@expo/vector-icons";
 import ApiUrl from "../config";
 import { useAuth } from "./AuthContext";
 
@@ -45,6 +46,7 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
     try {
       const response = await axios.post(
         `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/course/${course.id}/enroll`,
+        {},
         {
           headers: {
             Authorization: `Token ${userToken?.token}`,
@@ -53,8 +55,9 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
       );
       if (response.status === 200) {
         setEnrolled(true);
+        setEnrollDisabled(true); // Disable enroll button after successful enrollment
       } else {
-        console.error("Failed to enroll:", response);
+        console.error("Failed to enroll:", response.data.detail);
       }
     } catch (error) {
       const axiosError = error as AxiosError;
@@ -69,19 +72,19 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
   };
 
   useEffect(() => {
-    // Enable enroll button only if selectedTopics are received and user is not enrolled
-    if (selectedTopics.length > 0 && !enrolled) {
-      setEnrollDisabled(false);
-    } else {
-      setEnrollDisabled(true);
-    }
-  }, [selectedTopics, enrolled]);
+    // Check if the user is already enrolled in the course
+    // You can implement this logic based on your application's requirements
+    // For example, you can fetch the user's enrollment status from the backend
+    const userAlreadyEnrolled = true; // Replace this with your actual logic to check if the user is enrolled
+    setEnrolled(userAlreadyEnrolled);
+    setEnrollDisabled(userAlreadyEnrolled); // Disable enroll button if user is already enrolled
+  }, []);
 
   useEffect(() => {
     if (enrolled) {
       // Fetch user progress once enrolled (assuming there's an API to fetch progress)
       // Set progress based on the response
-      const fakeProgress = 50; // Assuming progress is fetched from backend
+      const fakeProgress = 35; // Assuming progress is fetched from backend
       setProgress(fakeProgress);
     }
   }, [enrolled]);
@@ -89,6 +92,9 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
   const handleContinue = () => {
     // Navigate to practice sessions page
     router.navigate("EnrolledCourse");
+    router.setParams({
+      selectedTopics: JSON.stringify(selectedTopics),
+    });
   };
 
   const styles = StyleSheet.create({
@@ -127,33 +133,51 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
       paddingHorizontal: 20,
       borderRadius: 20,
       borderWidth: 2,
+      alignItems: "center",
       borderColor: colorScheme === "dark" ? "#fff" : "#000",
       opacity: enrollDisabled ? 0.5 : 1,
     },
     continueButton: {
-      backgroundColor: "#007bff",
+      flex: 1,
+      backgroundColor: "transparent",
       paddingVertical: 10,
       paddingHorizontal: 20,
       borderRadius: 20,
+      borderWidth: 2,
+      borderColor: colorScheme === "dark" ? "#fff" : "#000",
+
+      marginTop: -20,
+      flexDirection: "row",
+      justifyContent: "center", // Center the text horizontally
     },
-    buttonText: {
-      color: "#fff",
+    continueText: {
+      color: colorScheme === "dark" ? "#fff" : "#000",
       fontSize: 16,
       fontWeight: "bold",
-      textAlign: "center",
+    },
+    arrowIcon: {
+      marginLeft: 5,
+      color: colorScheme === "dark" ? "#fff" : "#000",
     },
     progressContainer: {
       marginTop: 20,
+      flexDirection: "row",
+      alignItems: "center",
     },
     progressBar: {
+      flex: 1,
       height: 10,
       backgroundColor: "#ccc",
       borderRadius: 5,
+      marginRight: 10,
     },
     progressFill: {
       height: "100%",
-      backgroundColor: "#007bff",
+      backgroundColor: colorScheme === "dark" ? "#fff" : "#000",
       borderRadius: 5,
+    },
+    progressText: {
+      color: colorScheme === "dark" ? "#fff" : "#000",
     },
   });
 
@@ -173,21 +197,33 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
         <Text style={styles.description}>{course.description}</Text>
 
         {enrolled ? (
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={styles.continueButton}
-              activeOpacity={0.3}
-              onPress={handleContinue}
-            >
-              <Text style={styles.buttonText}>Continue</Text>
-            </TouchableOpacity>
+          <View>
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={styles.continueButton}
+                activeOpacity={0.3}
+                onPress={handleContinue}
+              >
+                <Text style={styles.continueText}>
+                  Continue{" "}
+                  <FontAwesome5
+                    style={styles.arrowIcon}
+                    name="arrow-alt-circle-right"
+                    size={15}
+                    color="black"
+                  />
+                </Text>
+              </TouchableOpacity>
+            </View>
             <View style={styles.progressContainer}>
               <View style={styles.progressBar}>
                 <View
                   style={[styles.progressFill, { width: `${progress}%` }]}
                 />
               </View>
-              <Text>{`${progress}% Completed`}</Text>
+              <Text
+                style={styles.progressText}
+              >{`${progress}% Completed`}</Text>
             </View>
           </View>
         ) : (
@@ -197,7 +233,7 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
             onPress={enrollCourse}
             disabled={enrollDisabled}
           >
-            <Text style={styles.buttonText}>Enroll</Text>
+            <Text style={styles.continueText}>Enroll</Text>
           </TouchableOpacity>
         )}
       </View>

@@ -17,6 +17,10 @@ export default function Tab2Layout() {
           name="EnrolledCourse"
           options={{ headerShown: false }} // Hide the header
         />
+        <Stack.Screen
+          name="Topic"
+          options={{ headerShown: false }} // Hide the header
+        />
       </Stack>
     </SafeAreaProvider>
   );

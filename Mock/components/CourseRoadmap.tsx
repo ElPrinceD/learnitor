@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   useColorScheme,
 } from "react-native";
+import { router } from "expo-router";
 
 interface Topic {
   title: string;
@@ -82,7 +83,8 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({ selectedTopics }) => {
             ) : (
               <TouchableOpacity
                 onPress={() => {
-                  // Handle press if needed
+                  router.navigate("Topic");
+                  router.setParams({ topic: JSON.stringify(topic) });
                 }}
                 activeOpacity={0.5} // Adjust the opacity if needed
               >
