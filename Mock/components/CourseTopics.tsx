@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import {
   View,
   Text,
@@ -18,15 +18,15 @@ interface Topic {
 interface CourseTopicsProps {
   topics: Topic[];
   onSelectedTopicsChange: (selectedTopics: Topic[]) => void;
+  selectedTopics: Topic[]; // Define selectedTopics prop
 }
 
 const CourseTopics: React.FC<CourseTopicsProps> = ({
   topics,
   onSelectedTopicsChange,
+  selectedTopics,
 }) => {
   const colorScheme = useColorScheme();
-  const [selectedTopics, setSelectedTopics] = useState<Topic[]>([]);
-  const [showClearButton, setShowClearButton] = useState(false);
 
   useEffect(() => {
     onSelectedTopicsChange(selectedTopics);
@@ -40,19 +40,15 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
 
     if (isSelected) {
       const updatedTopics = selectedTopics.filter((t) => t.id !== id);
-      setSelectedTopics(updatedTopics);
+      onSelectedTopicsChange(updatedTopics);
     } else {
-      setSelectedTopics([...selectedTopics, topic]);
+      onSelectedTopicsChange([...selectedTopics, topic]);
     }
-
-    setShowClearButton(true);
   };
 
   const clearSelection = () => {
-    setSelectedTopics([]);
-    setShowClearButton(false);
+    onSelectedTopicsChange([]);
   };
-
   const styles = StyleSheet.create({
     topicsContainer: {
       paddingVertical: 20,
@@ -93,21 +89,21 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
       fontWeight: "bold",
       color: colorScheme === "dark" ? "#ccc" : "#666",
     },
-    clearButton: {
-      position: "absolute",
-      top: 45,
-      right: 20,
-      backgroundColor: showClearButton
-        ? colorScheme === "dark"
-          ? "#666"
-          : "#ddd"
-        : "transparent",
-      borderRadius: 50,
-      padding: 1,
-    },
-    clearButtonIcon: {
-      color: colorScheme === "dark" ? "#fff" : "#333",
-    },
+    // clearButton: {
+    //   position: "absolute",
+    //   top: 45,
+    //   right: 20,
+    //   backgroundColor: showClearButton
+    //     ? colorScheme === "dark"
+    //       ? "#666"
+    //       : "#ddd"
+    //     : "transparent",
+    //   borderRadius: 50,
+    //   padding: 1,
+    // },
+    // clearButtonIcon: {
+    //   color: colorScheme === "dark" ? "#fff" : "#333",
+    // },
     instructionText: {
       fontSize: 18,
       fontWeight: "bold",
@@ -125,7 +121,7 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
       <Text style={styles.instructionText}>
         Select your topics in the order in which you want to learn them.
       </Text>
-      {showClearButton && (
+      {/* {showClearButton && (
         <TouchableOpacity
           style={styles.clearButton}
           onPress={clearSelection}
@@ -133,7 +129,7 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
         >
           <Ionicons name="close" size={27} style={styles.clearButtonIcon} />
         </TouchableOpacity>
-      )}
+      )} */}
       {topics.map((topic, index) => {
         const isSelected = selectedTopics.some((t) => t.id === topic.id);
         const orderNumber =

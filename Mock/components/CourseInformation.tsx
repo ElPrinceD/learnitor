@@ -35,30 +35,29 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
   selectedTopics,
 }) => {
   const colorScheme = useColorScheme();
-  const [enrolled, setEnrolled] = useState(false); // Track if user is enrolled
-  const [progress, setProgress] = useState(0); // Progress of the user
-  const [loading, setLoading] = useState(false);
-  const [enrollDisabled, setEnrollDisabled] = useState(true); // Disable enroll button initially
   const { userToken, userInfo } = useAuth();
+  const [enrolled, setEnrolled] = useState<boolean>(false);
+  const [progress, setProgress] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [enrollDisabled, setEnrollDisabled] = useState<boolean>(true);
 
   const enrollCourse = async () => {
     setLoading(true);
+    console.log("Nyinna:", userInfo?.user.id, course.id);
+
     try {
+      const topicIds = selectedTopics.map((topic) => topic.id); // Extract IDs from selectedTopics
       const response = await axios.post(
-        `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/course/${course.id}/enroll`,
-        {},
+        `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/course/${course.id}/enroll/`,
+        { selectedTopics: topicIds }, // Pass only the IDs of selected topics
         {
           headers: {
             Authorization: `Token ${userToken?.token}`,
           },
         }
       );
-      if (response.status === 200) {
-        setEnrolled(true);
-        setEnrollDisabled(true); // Disable enroll button after successful enrollment
-      } else {
-        console.error("Failed to enroll:", response.data.detail);
-      }
+      setEnrolled(true);
+      setEnrollDisabled(true);
     } catch (error) {
       const axiosError = error as AxiosError;
       if (axiosError.response) {
@@ -72,25 +71,40 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
   };
 
   useEffect(() => {
-    // Check if the user is already enrolled in the course
-    // You can implement this logic based on your application's requirements
-    // For example, you can fetch the user's enrollment status from the backend
-    const userAlreadyEnrolled = true; // Replace this with your actual logic to check if the user is enrolled
-    setEnrolled(userAlreadyEnrolled);
-    setEnrollDisabled(userAlreadyEnrolled); // Disable enroll button if user is already enrolled
+    const fetchData = async () => {
+      try {
+        const response = await axios.get(
+          `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/course/${course.id}/enrollment/`,
+          {
+            headers: {
+              Authorization: `Token ${userToken?.token}`,
+            },
+          }
+        );
+        const userAlreadyEnrolled = response.data.enrolled;
+        setEnrolled(userAlreadyEnrolled);
+        setEnrollDisabled(userAlreadyEnrolled);
+      } catch (error) {
+        console.error("Error fetching enrollment status:", error);
+      }
+    };
+
+    fetchData();
   }, []);
 
   useEffect(() => {
     if (enrolled) {
-      // Fetch user progress once enrolled (assuming there's an API to fetch progress)
-      // Set progress based on the response
-      const fakeProgress = 35; // Assuming progress is fetched from backend
+      const fakeProgress = 35;
       setProgress(fakeProgress);
     }
   }, [enrolled]);
 
+  useEffect(() => {
+    // Enable enroll button if at least one topic is selected
+    setEnrollDisabled(selectedTopics.length === 0);
+  }, [selectedTopics]);
+
   const handleContinue = () => {
-    // Navigate to practice sessions page
     router.navigate("EnrolledCourse");
     router.setParams({
       selectedTopics: JSON.stringify(selectedTopics),
@@ -228,7 +242,7 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
           </View>
         ) : (
           <TouchableOpacity
-            style={styles.enrollButton}
+            style={[styles.enrollButton, { opacity: enrollDisabled ? 0.5 : 1 }]}
             activeOpacity={0.3}
             onPress={enrollCourse}
             disabled={enrollDisabled}

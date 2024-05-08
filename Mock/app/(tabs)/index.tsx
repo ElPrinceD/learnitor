@@ -34,11 +34,12 @@ const HomeScreen = () => {
     // Add more streaks as needed
   ];
 
-  const { userToken } = useAuth();
+  const { userToken, userInfo } = useAuth();
 
   const [RecommendedCoursesData, setRecommendedCoursesData] = useState<
     Course[]
   >([]);
+  const [EnrolledCoursesData, setEnrolledCoursesData] = useState<Course[]>([]);
 
   const fetchData = async () => {
     console.log("Rec: " + userToken);
@@ -48,6 +49,16 @@ const HomeScreen = () => {
           Authorization: `Token ${userToken?.token}`,
         },
       });
+      const enrolled = await axios.get(
+        `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/courses`,
+        {
+          headers: {
+            Authorization: `Token ${userToken?.token}`,
+          },
+        }
+      );
+      console.log("Enrolled:", enrolled.data);
+      setEnrolledCoursesData(enrolled.data);
       setRecommendedCoursesData(course.data);
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -83,6 +94,7 @@ const HomeScreen = () => {
       >
         Enrolled Courses
       </Text>
+      <EnrolledCoursesList enrolledCoursesData={EnrolledCoursesData} />
       <Text
         style={{
           fontSize: 25,

@@ -31,7 +31,7 @@ const EnrolledCoursesList: React.FC<Props> = ({ enrolledCoursesData }) => {
       renderItem={({ item }) => (
         <TouchableOpacity
           onPress={() => {
-            router.navigate("/(tabs)/(two)/CourseDetails");
+            router.navigate("EnrolledCourse");
             router.setParams({
               course: JSON.stringify(item),
             });
@@ -76,8 +76,8 @@ const styles = StyleSheet.create({
     overflow: "hidden", // Clip overflow content
   },
   image: {
-    width: 250,
-    height: 250,
+    width: 150,
+    height: 150,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,

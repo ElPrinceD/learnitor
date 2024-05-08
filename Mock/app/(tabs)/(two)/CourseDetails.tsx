@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { View, StyleSheet, ScrollView, Text } from "react-native";
+import { View, StyleSheet, ScrollView } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams } from "expo-router";
 import axios from "axios";
 import CourseInformation from "../../../components/CourseInformation";
@@ -32,6 +33,7 @@ const CourseDetails: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+    loadSelectedTopics(); // Load selected topics when component mounts
   }, []);
 
   const fetchData = async () => {
@@ -50,11 +52,34 @@ const CourseDetails: React.FC = () => {
     }
   };
 
-  const handleSelectedTopicsChange = (selectedTopics: Topic[]) => {
-    setSelectedTopics(selectedTopics);
-    console.log("Selected Topics:", selectedTopics); // Log selectedTopics
+  const loadSelectedTopics = async () => {
+    try {
+      const storedTopics = await AsyncStorage.getItem("selectedTopics");
+      console.log("Stored selectedTopics:", storedTopics); // Log the stored topics
+      if (storedTopics !== null) {
+        setSelectedTopics(JSON.parse(storedTopics));
+      }
+    } catch (error) {
+      console.error("Error loading selected topics:", error);
+    }
   };
 
+  const saveSelectedTopics = async (selectedTopics: Topic[]) => {
+    try {
+      await AsyncStorage.setItem(
+        "selectedTopics",
+        JSON.stringify(selectedTopics)
+      );
+    } catch (error) {
+      console.error("Error saving selected topics:", error);
+    }
+  };
+
+  const handleSelectedTopicsChange = (selectedTopics: Topic[]) => {
+    setSelectedTopics(selectedTopics);
+    saveSelectedTopics(selectedTopics); // Save selected topics whenever they change
+  };
+  console.log("that:", selectedTopics);
   return (
     <View style={styles.container}>
       <CourseInformation
@@ -64,6 +89,7 @@ const CourseDetails: React.FC = () => {
 
       <CourseTopics
         topics={topics}
+        selectedTopics={selectedTopics} // Pass selected topics to CourseTopics component
         onSelectedTopicsChange={handleSelectedTopicsChange}
       />
       <ScrollView contentContainerStyle={styles.scrollViewContainer}>
