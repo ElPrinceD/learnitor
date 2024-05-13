@@ -157,7 +157,7 @@ const CoursesList: React.FC<Props> = ({ courses, categories }) => {
           <TouchableOpacity
             onPress={() => {
               // Push the CourseDetails route and set parameters
-              router.navigate("/(tabs)/(two)/CourseDetails");
+              router.navigate("CourseDetails");
               router.setParams({
                 course: JSON.stringify(item),
               });

@@ -16,8 +16,10 @@ import { useAuth } from "./AuthContext";
 interface Course {
   title: string;
   description: string;
-  id: string;
+  level: string;
   url: string;
+  category: number[];
+  id: string;
 }
 interface Topic {
   title: string;
@@ -34,16 +36,24 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
   course,
   selectedTopics,
 }) => {
+  if (!course) {
+    return (
+      <View>
+        <Text>No course data available</Text>
+      </View>
+    );
+  }
+
   const colorScheme = useColorScheme();
   const { userToken, userInfo } = useAuth();
   const [enrolled, setEnrolled] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
   const [enrollDisabled, setEnrollDisabled] = useState<boolean>(true);
+  const [enrollmentResponse, setEnrollmentResponse] = useState<any>(null); // State to hold enrollment response
 
   const enrollCourse = async () => {
     setLoading(true);
-    console.log("Nyinna:", userInfo?.user.id, course.id);
 
     try {
       const topicIds = selectedTopics.map((topic) => topic.id); // Extract IDs from selectedTopics
@@ -58,6 +68,7 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
       );
       setEnrolled(true);
       setEnrollDisabled(true);
+      setEnrollmentResponse(response.data.enrolled_topics); // Store the response data
     } catch (error) {
       const axiosError = error as AxiosError;
       if (axiosError.response) {
@@ -67,6 +78,26 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const unenrollCourse = async () => {
+    try {
+      const response = await axios.post(
+        `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/course/${course.id}/unenroll/`,
+        {},
+        {
+          headers: {
+            Authorization: `Token ${userToken?.token}`,
+          },
+        }
+      );
+      setEnrolled(false);
+      setEnrollDisabled(false);
+      setEnrollmentResponse(null);
+      console.log("Unenrollment response:", response.data);
+    } catch (error) {
+      console.error("Error unenrolling:", error);
     }
   };
 
@@ -83,7 +114,7 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
         );
         const userAlreadyEnrolled = response.data.enrolled;
         setEnrolled(userAlreadyEnrolled);
-        setEnrollDisabled(userAlreadyEnrolled);
+        setEnrollDisabled(userAlreadyEnrolled || selectedTopics.length === 0); // Disable enroll button if user is already enrolled or no topic is selected
       } catch (error) {
         console.error("Error fetching enrollment status:", error);
       }
@@ -107,7 +138,7 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
   const handleContinue = () => {
     router.navigate("EnrolledCourse");
     router.setParams({
-      selectedTopics: JSON.stringify(selectedTopics),
+      enrolledTopics: JSON.stringify(enrollmentResponse),
     });
   };
 
@@ -152,17 +183,17 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
       opacity: enrollDisabled ? 0.5 : 1,
     },
     continueButton: {
-      flex: 1,
       backgroundColor: "transparent",
       paddingVertical: 10,
       paddingHorizontal: 20,
       borderRadius: 20,
       borderWidth: 2,
       borderColor: colorScheme === "dark" ? "#fff" : "#000",
-
       marginTop: -20,
       flexDirection: "row",
       justifyContent: "center", // Center the text horizontally
+      width: "48%",
+      marginRight: 10,
     },
     continueText: {
       color: colorScheme === "dark" ? "#fff" : "#000",
@@ -205,6 +236,7 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
             }}
             style={styles.image}
             resizeMode="cover"
+            onError={(error) => console.log("Image error:", error)}
           />
         </View>
         <Text style={styles.title}>{course.title}</Text>
@@ -213,6 +245,13 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
         {enrolled ? (
           <View>
             <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={styles.continueButton}
+                activeOpacity={0.3}
+                onPress={unenrollCourse}
+              >
+                <Text style={styles.continueText}>Unenroll</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.continueButton}
                 activeOpacity={0.3}

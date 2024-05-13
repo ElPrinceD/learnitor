@@ -1,5 +1,7 @@
 import React from "react";
+import { View, StyleSheet } from "react-native";
 import CourseRoadmap from "../../../components/CourseRoadmap";
+import RoadmapTitle from "@/components/RoadmapTitle";
 import { useLocalSearchParams } from "expo-router";
 
 interface Topic {
@@ -9,16 +11,24 @@ interface Topic {
 }
 
 const EnrolledCourse: React.FC = () => {
-  const { selectedTopics } = useLocalSearchParams();
-  const parsedTopics: Topic[] = Array.isArray(selectedTopics)
-    ? selectedTopics
-    : JSON.parse(selectedTopics);
+  const { enrolledTopics } = useLocalSearchParams();
+  // Provide a default empty string if enrolledTopics is undefined
+  const parsedTopics: Topic[] = Array.isArray(enrolledTopics)
+    ? enrolledTopics
+    : JSON.parse(enrolledTopics || "[]");
 
   return (
-    <>
-      <CourseRoadmap selectedTopics={parsedTopics} />
-    </>
+    <View style={styles.container}>
+      <RoadmapTitle />
+
+      <CourseRoadmap enrolledTopics={parsedTopics} />
+    </View>
   );
 };
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});
 
 export default EnrolledCourse;

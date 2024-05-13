@@ -22,7 +22,7 @@ interface Course {
   id: string;
 }
 
-const HomeScreen = () => {
+const index = () => {
   const streakData: Streak[] = [
     { name: "Streak 1", streak: true },
     { name: "Streak 2", streak: false },
@@ -42,13 +42,13 @@ const HomeScreen = () => {
   const [EnrolledCoursesData, setEnrolledCoursesData] = useState<Course[]>([]);
 
   const fetchData = async () => {
-    console.log("Rec: " + userToken);
     try {
-      const course = await axios.get(`${ApiUrl}:8000/api/course/all`, {
+      const courses = await axios.get(`${ApiUrl}:8000/api/course/all`, {
         headers: {
           Authorization: `Token ${userToken?.token}`,
         },
       });
+      setRecommendedCoursesData(courses.data);
       const enrolled = await axios.get(
         `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/courses`,
         {
@@ -57,14 +57,11 @@ const HomeScreen = () => {
           },
         }
       );
-      console.log("Enrolled:", enrolled.data);
       setEnrolledCoursesData(enrolled.data);
-      setRecommendedCoursesData(course.data);
     } catch (error) {
       console.error("Error fetching data:", error);
     }
   };
-
   useEffect(() => {
     fetchData();
   }, []);
@@ -127,4 +124,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default HomeScreen;
+export default index;

@@ -13,7 +13,7 @@ import { AuthProvider, useAuth } from "../components/AuthContext"; // Update the
 
 import { useColorScheme } from "@/components/useColorScheme";
 import { View, ActivityIndicator } from "react-native";
-
+import "react-native-reanimated";
 export { ErrorBoundary } from "expo-router";
 
 export const unstable_settings = {
@@ -54,17 +54,12 @@ function RootLayoutNav() {
   const { userToken, isLoading } = useAuth();
 
   useEffect(() => {
-    if (isLoading) {
-      // If still loading, do nothing
-      return;
-    }
-
-    if (!userToken) {
-      router.push("./Intro");
-    } else {
+    if (!isLoading && userToken) {
       router.navigate("(tabs)");
+    } else if (!isLoading) {
+      router.push("./Intro");
     }
-  }, [userToken, isLoading]);
+  }, [isLoading, userToken]);
 
   return (
     <SafeAreaProvider>
@@ -75,7 +70,10 @@ function RootLayoutNav() {
             options={{ headerShown: false }}
           />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: "modal" }} />
+          <Stack.Screen
+            name="modal"
+            options={{ presentation: "modal", headerShown: false }}
+          />
         </Stack>
       </ThemeProvider>
     </SafeAreaProvider>

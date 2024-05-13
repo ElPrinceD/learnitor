@@ -8,6 +8,7 @@ import {
   useColorScheme,
 } from "react-native";
 import { router } from "expo-router";
+import { FontAwesome6 } from "@expo/vector-icons";
 
 interface Topic {
   title: string;
@@ -17,87 +18,34 @@ interface Topic {
 }
 
 interface CourseRoadmapProps {
-  selectedTopics: Topic[];
+  enrolledTopics: Topic[];
 }
 
-const CourseRoadmap: React.FC<CourseRoadmapProps> = ({ selectedTopics }) => {
+const CourseRoadmap: React.FC<CourseRoadmapProps> = ({ enrolledTopics }) => {
   const colorScheme = useColorScheme();
 
+  const handleTopicPress = (topic: Topic) => {
+    router.navigate("Topic");
+    router.setParams({ topic: JSON.stringify(topic) });
+  };
+
+  const handleQuestionPress = (topic: Topic) => {
+    router.navigate("Practice");
+    router.setParams({ topic: JSON.stringify(topic) });
+  };
+
   return (
-    <ScrollView
-      style={[
-        styles.container,
-        // { backgroundColor: colorScheme === "dark" ? "#000" : "#fff" },
-      ]}
-    >
-      <Text
-        style={[
-          styles.heading,
-          { color: colorScheme === "dark" ? "#fff" : "#000" },
-        ]}
-      >
-        Roadmap
-      </Text>
-      <View style={styles.roadmap}>
-        {selectedTopics.map((topic: Topic, index: number) => (
-          <View
-            key={index}
-            style={[styles.topicItem, index % 2 === 0 && styles.zigzag]}
-          >
-            {topic.completed ? (
-              <TouchableOpacity
-                onPress={() => {
-                  // Handle press if needed
-                }}
-                activeOpacity={0.8} // Adjust the opacity if needed
-              >
-                <View style={styles.topicNumberContainer}>
-                  <View
-                    style={[
-                      styles.completedCircle,
-                      {
-                        backgroundColor:
-                          colorScheme === "dark" ? "#333" : "#fff",
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.completedIcon,
-                        { color: colorScheme === "dark" ? "#fff" : "#000" },
-                      ]}
-                    >
-                      ✓
-                    </Text>
-                    <Text
-                      style={[
-                        styles.topicTitle,
-                        { color: colorScheme === "dark" ? "#fff" : "#000" },
-                      ]}
-                    >
-                      {topic.title}
-                    </Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                onPress={() => {
-                  router.navigate("Topic");
-                  router.setParams({ topic: JSON.stringify(topic) });
-                }}
-                activeOpacity={0.5} // Adjust the opacity if needed
-              >
-                <View style={styles.topicNumberContainer}>
-                  <View
-                    style={[
-                      styles.circle,
-                      {
-                        backgroundColor:
-                          colorScheme === "dark" ? "#333" : "#fff",
-                      },
-                    ]}
-                  >
+    <View style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.row}>
+          <View style={styles.column}>
+            {enrolledTopics.map((topic, index) => (
+              <View key={index} style={styles.topicItem}>
+                <TouchableOpacity
+                  onPress={() => handleTopicPress(topic)}
+                  activeOpacity={0.5}
+                >
+                  <View style={styles.circle}>
                     <Text
                       style={[
                         styles.topicNumber,
@@ -106,84 +54,88 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({ selectedTopics }) => {
                     >
                       {index + 1}
                     </Text>
+                  </View>
+                </TouchableOpacity>
+                <Text
+                  numberOfLines={3}
+                  ellipsizeMode="tail"
+                  style={[
+                    styles.topicTitle,
+                    {
+                      color: colorScheme === "dark" ? "#fff" : "#000",
+                      width: 100,
+                    },
+                  ]}
+                >
+                  {topic.title}
+                </Text>
+              </View>
+            ))}
+          </View>
+          <View style={(styles.column, { marginTop: 120 })}>
+            {enrolledTopics.map((topic, index) => (
+              <View key={index} style={styles.topicItem}>
+                <TouchableOpacity
+                  onPress={() => handleQuestionPress(topic)}
+                  activeOpacity={0.5}
+                >
+                  <View style={styles.questionCircle}>
                     <Text
                       style={[
-                        styles.topicTitle,
+                        styles.topicNumber,
                         { color: colorScheme === "dark" ? "#fff" : "#000" },
                       ]}
                     >
-                      {topic.title}
+                      <FontAwesome6 name="dumbbell" size={24} color="black" />
                     </Text>
                   </View>
-                </View>
-              </TouchableOpacity>
-            )}
+                </TouchableOpacity>
+                <Text
+                  numberOfLines={3}
+                  style={[
+                    styles.topicTitle,
+                    {
+                      color: colorScheme === "dark" ? "#fff" : "#000",
+                      width: 150,
+                    },
+                  ]}
+                >
+                  Practice {topic.title}
+                </Text>
+              </View>
+            ))}
           </View>
-        ))}
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 30,
-  },
-  heading: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
+    marginRight: 20,
+    marginLeft: -60,
+    marginTop: 3,
   },
   roadmap: {
     flexDirection: "column",
   },
-  topicItem: {
+  row: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 40,
+    justifyContent: "space-between",
   },
-  zigzag: {
-    flexDirection: "row-reverse",
+  column: {
+    flex: 1,
   },
-  topicNumberContainer: {
-    marginRight: 10,
-    marginLeft: 10,
+  topicItem: {
+    marginBottom: 120, // Add this line
     alignItems: "center",
-    justifyContent: "center",
-  },
-  topicNumber: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  topicTitle: {
-    fontSize: 14,
-    fontWeight: "bold",
-    marginBottom: 5,
-  },
-  completedCircle: {
-    width: 150,
-    height: 120,
-    borderRadius: 60,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.27,
-    shadowRadius: 4.65,
-    elevation: 5,
-  },
-  completedIcon: {
-    fontSize: 16,
-    fontWeight: "bold",
   },
   circle: {
-    width: 150,
-    height: 120,
-    borderRadius: 60,
+    width: 100, // Adjusted size of the circle
+    height: 100, // Adjusted size of the circle
+    borderRadius: 50, // Adjusted border radius
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
@@ -194,10 +146,37 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.27,
     shadowRadius: 4.65,
     elevation: 1,
+    backgroundColor: "grey", // Adjust color as needed
   },
-  errorText: {
-    fontSize: 16,
-    color: "red",
+  questionCircle: {
+    width: 100, // Adjusted size of the circle
+    height: 100, // Adjusted size of the circle
+    borderRadius: 50, // Adjusted border radius
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.27,
+    shadowRadius: 4.65,
+    elevation: 5,
+    backgroundColor: "orange", // Adjust color as needed
+  },
+  emptyItem: {
+    width: 150,
+    height: 120,
+    // Placeholder for even rows
+  },
+  topicNumber: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  topicTitle: {
+    fontSize: 14,
+    marginBottom: 5,
+    textAlign: "center", // Center align the text
   },
 });
 

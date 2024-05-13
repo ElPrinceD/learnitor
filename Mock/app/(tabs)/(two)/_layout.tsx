@@ -5,21 +5,22 @@ export default function Tab2Layout() {
   return (
     <SafeAreaProvider>
       <Stack>
+        <Stack.Screen name="two" options={{ headerShown: false }} />
+        <Stack.Screen name="CourseDetails" options={{ headerShown: false }} />
+        <Stack.Screen name="EnrolledCourse" options={{ headerShown: false }} />
+        <Stack.Screen name="Topic" options={{ headerShown: false }} />
+        <Stack.Screen name="Practice" options={{ headerShown: false }} />
         <Stack.Screen
-          name="two"
-          options={{ headerShown: false }} // Hide the header
+          name="PracticeInstructions"
+          options={{ headerShown: false, presentation: "modal" }}
         />
         <Stack.Screen
-          name="CourseDetails"
-          options={{ headerShown: false }} // Hide the header
+          name="PracticeQuestions"
+          options={{ headerShown: false, presentation: "modal" }}
         />
         <Stack.Screen
-          name="EnrolledCourse"
-          options={{ headerShown: false }} // Hide the header
-        />
-        <Stack.Screen
-          name="Topic"
-          options={{ headerShown: false }} // Hide the header
+          name="ScorePage"
+          options={{ headerShown: false, presentation: "modal" }}
         />
       </Stack>
     </SafeAreaProvider>

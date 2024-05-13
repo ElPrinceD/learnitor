@@ -11,15 +11,28 @@ export default function Tab3Layout() {
         />
         <Stack.Screen
           name="Categories"
-          options={{ headerShown: true, presentation: 'modal', headerTitle: "Categories", }} 
-          
+          options={{
+            headerShown: true,
+            presentation: "modal",
+            headerTitle: "Categories",
+          }}
         />
         <Stack.Screen
           name="createNewTime"
-          options={{ headerShown: true, presentation: 'modal', headerTitle: "Create New Schedule", }} 
-          
+          options={{
+            headerShown: true,
+            presentation: "modal",
+            headerTitle: "Create New Schedule",
+          }}
         />
-      
+        <Stack.Screen
+          name="EditTaskScreen"
+          options={{
+            headerShown: true,
+            presentation: "modal",
+            headerTitle: "Edit Task",
+          }}
+        />
       </Stack>
     </SafeAreaProvider>
   );

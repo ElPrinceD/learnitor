@@ -11,8 +11,10 @@ import { useAuth } from "../../../components/AuthContext";
 interface Course {
   title: string;
   description: string;
-  id: string;
+  level: string;
   url: string;
+  category: number[];
+  id: string;
 }
 
 interface Topic {
@@ -33,7 +35,6 @@ const CourseDetails: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-    loadSelectedTopics(); // Load selected topics when component mounts
   }, []);
 
   const fetchData = async () => {
@@ -52,32 +53,8 @@ const CourseDetails: React.FC = () => {
     }
   };
 
-  const loadSelectedTopics = async () => {
-    try {
-      const storedTopics = await AsyncStorage.getItem("selectedTopics");
-      console.log("Stored selectedTopics:", storedTopics); // Log the stored topics
-      if (storedTopics !== null) {
-        setSelectedTopics(JSON.parse(storedTopics));
-      }
-    } catch (error) {
-      console.error("Error loading selected topics:", error);
-    }
-  };
-
-  const saveSelectedTopics = async (selectedTopics: Topic[]) => {
-    try {
-      await AsyncStorage.setItem(
-        "selectedTopics",
-        JSON.stringify(selectedTopics)
-      );
-    } catch (error) {
-      console.error("Error saving selected topics:", error);
-    }
-  };
-
   const handleSelectedTopicsChange = (selectedTopics: Topic[]) => {
     setSelectedTopics(selectedTopics);
-    saveSelectedTopics(selectedTopics); // Save selected topics whenever they change
   };
   console.log("that:", selectedTopics);
   return (

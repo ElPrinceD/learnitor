@@ -11,6 +11,8 @@ import { useThemeColor } from "../../components/Themed";
 
 import { useAuth } from "../../components/AuthContext";
 
+import { SafeAreaProvider } from "react-native-safe-area-context";
+
 // You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>["name"];
@@ -45,88 +47,91 @@ export default function TabLayout() {
   const { userInfo } = useAuth();
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
-        // Disable the static render of the header on web
-        // to prevent a hydration error in React Navigation v6.
-        headerShown: useClientOnlyValue(false, true),
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Home",
-          tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
-          headerRight: () => (
-            <Link href="/modal" asChild>
-              <Pressable>
-                {({ pressed }) => (
-                  <Ionicons
-                    name="notifications"
-                    size={25}
-                    color={Colors[colorScheme ?? "light"].text}
-                    style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
-                  />
-                )}
-              </Pressable>
-            </Link>
-          ),
-          headerTitle: () => (
-            <Text
-              style={{
-                color: themeTextColor,
-                fontSize: 20,
-                fontWeight: "bold",
-              }}
-            >
-              {greeting}, {userInfo?.user.first_name}!
-            </Text>
-          ), // Adjusted the font size to 24
+    <SafeAreaProvider>
+      <Tabs
+        screenOptions={{
+          tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
+          // Disable the static render of the header on web
+          // to prevent a hydration error in React Navigation v6.
+          headerShown: useClientOnlyValue(false, true),
         }}
-      />
-      <Tabs.Screen
-        name="(two)"
-        options={{
-          title: "Courses",
-          tabBarIcon: ({ color }) => <TabBarIcon name="book" color={color} />,
-          headerTitle: "",
-          // headerTransparent: true,
-        }}
-      />
+      >
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: "Home",
+            tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
+            headerRight: () => (
+              <Link href="/modal" asChild>
+                <Pressable>
+                  {({ pressed }) => (
+                    <Ionicons
+                      name="notifications"
+                      size={25}
+                      color={Colors[colorScheme ?? "light"].text}
+                      style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
+                    />
+                  )}
+                </Pressable>
+              </Link>
+            ),
+            headerTitle: () => (
+              <Text
+                style={{
+                  color: themeTextColor,
+                  fontSize: 20,
+                  fontWeight: "bold",
+                }}
+              >
+                {greeting}, {userInfo?.user.first_name}!
+              </Text>
+            ), // Adjusted the font size to 24
+          }}
+        />
+        <Tabs.Screen
+          name="(two)"
+          options={{
+            title: "Courses",
+            tabBarIcon: ({ color }) => <TabBarIcon name="book" color={color} />,
+            headerShown: true,
+            headerTitle: "",
+            // headerTransparent: true,
+          }}
+        />
 
-      <Tabs.Screen
-        name="(reminder)"
-        options={{
-          title: "Timeline",
-          tabBarIcon: ({ color }) => (
-            <TabBarIcon name="history" color={color} />
-          ),
-          headerRight: () => (
-            <Link href="../(reminder)/Categories" asChild>
-              <Pressable>
-                {({ pressed }) => (
-                  <Ionicons
-                    name="add"
-                    size={25}
-                    color={Colors[colorScheme ?? "light"].text}
-                    style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
-                  />
-                )}
-              </Pressable>
-            </Link>
-          ),
-          headerTitle: "",
-        }}
-      />
-      <Tabs.Screen
-        name="(account)"
-        options={{
-          title: "Profile",
-          tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
-          headerTitle: "Account Settings",
-        }}
-      />
-    </Tabs>
+        <Tabs.Screen
+          name="(reminder)"
+          options={{
+            title: "Timeline",
+            tabBarIcon: ({ color }) => (
+              <TabBarIcon name="history" color={color} />
+            ),
+            headerRight: () => (
+              <Link href="../(reminder)/Categories" asChild>
+                <Pressable>
+                  {({ pressed }) => (
+                    <Ionicons
+                      name="add"
+                      size={25}
+                      color={Colors[colorScheme ?? "light"].text}
+                      style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
+                    />
+                  )}
+                </Pressable>
+              </Link>
+            ),
+            headerTitle: "",
+          }}
+        />
+        <Tabs.Screen
+          name="(account)"
+          options={{
+            title: "Profile",
+            tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
+            headerTitle: "Account Settings",
+          }}
+        />
+      </Tabs>
+    </SafeAreaProvider>
   );
 }

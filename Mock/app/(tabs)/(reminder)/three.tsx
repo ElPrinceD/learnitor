@@ -1,88 +1,182 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Image, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+} from "react-native";
 import axios from "axios";
+import { Feather } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import { RootParamList } from "../../../components/types";
 import ApiUrl from "../../../config";
-
+import { useLocalSearchParams } from "expo-router";
 import { useAuth } from "../../../components/AuthContext";
 
-const Timeline = () => {
-  const [todayPlans, setTodayPlans] = useState([]);
-  const [categoryNames, setCategoryNames] = useState({});
+interface Plan {
+  id: number;
+  title: string;
+  duedate: string;
+  category: number;
+}
+
+const Timeline: React.FC = () => {
+  const navigation = useNavigation<RootParamList>();
+  const { newPlan } = useLocalSearchParams();
+  const [todayPlans, setTodayPlans] = useState<Plan[]>([]);
+  const [categoryNames, setCategoryNames] = useState<{ [key: number]: string }>(
+    {}
+  );
+  const [loading, setLoading] = useState<boolean>(false);
 
   const { userToken } = useAuth();
 
-  // Mapping plan types to colors for the blocks
-  const getCategoryColor = (type) => {
-    console.log(type);
+  const getCategoryColor = (type: string): string => {
     switch (type) {
       case "Assignments & Projects":
-        return "#FF6347"; // Red
+        return "#FF6347";
       case "TimeTable":
-        return "#FFA500"; // Orange
+        return "#FFA500";
       case "Study TimeTable":
-        return "#00BFFF"; // Blue
+        return "#00BFFF";
       case "Exams TimeTable":
-        return "#8A2BE2"; // Purple
+        return "#8A2BE2";
       default:
-        return "#000000"; // Black (default color)
+        return "#000000";
     }
   };
-  useEffect(() => {
-    const fetchTodayPlans = async () => {
-      try {
-        const currentDate = new Date().toISOString().split("T")[0];
-        const response = await axios.get(`${ApiUrl}:8000/api/learner/tasks/`, {
-          // Add any necessary headers, such as authentication token
-          headers: {
-            Authorization: `Token ${userToken?.token}`, // Replace with your actual token
-          },
-        });
-        setTodayPlans(response.data);
-      } catch (error) {
-        console.error("Error fetching today's plans:", error);
-      }
-    };
-    const fetchCategoryNames = async () => {
-      try {
-        const response = await axios.get(
-          `${ApiUrl}:8000/api/task/categories/`,
-          {
-            headers: {
-              Authorization: `Token ${userToken?.token}`,
-            },
-          }
-        );
-        const categories = {};
-        response.data.forEach((category) => {
-          categories[category.id] = category.name;
-        });
-        setCategoryNames(categories);
-      } catch (error) {
-        console.error("Error fetching category names:", error);
-      }
-    };
 
+  const fetchTodayPlans = async (): Promise<void> => {
+    setLoading(true);
+    try {
+      const currentDate = new Date().toISOString().split("T")[0];
+      const response = await axios.get<Plan[]>(
+        `${ApiUrl}:8000/api/learner/tasks/`,
+        {
+          headers: {
+            Authorization: `Token ${userToken?.token}`,
+          },
+        }
+      );
+      setTodayPlans(response.data);
+    } catch (error) {
+      console.error("Error fetching today's plans:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchTodayPlans();
     fetchCategoryNames();
-  }, []);
+  }, [userToken]);
 
-  const getDateComponents = () => {
-    const today = new Date();
-    const dayInMilliseconds = 24 * 60 * 60 * 1000;
-    const pastThreeDays = [
-      today,
-      new Date(today.getTime() - dayInMilliseconds),
-      new Date(today.getTime() - 2 * dayInMilliseconds),
-    ];
-    const upcomingTwoDays = [
-      new Date(today.getTime() + dayInMilliseconds),
-      new Date(today.getTime() + 2 * dayInMilliseconds),
-    ];
-    const dateComponents = [...pastThreeDays, today, ...upcomingTwoDays];
-    return dateComponents.map((date) =>
-      date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+  useEffect(() => {
+    if (isPlan(newPlan)) {
+      setTodayPlans([...todayPlans, newPlan]);
+    }
+  }, [newPlan]);
+
+  // Type guard function to check if an object is of type Plan
+  const isPlan = (obj: any): obj is Plan => {
+    return (
+      typeof obj === "object" &&
+      obj !== null &&
+      "id" in obj &&
+      "title" in obj &&
+      "duedate" in obj &&
+      "category" in obj
     );
   };
+
+  const fetchCategoryNames = async (): Promise<void> => {
+    try {
+      const response = await axios.get<{ id: number; name: string }[]>(
+        `${ApiUrl}:8000/api/task/categories/`,
+        {
+          headers: {
+            Authorization: `Token ${userToken?.token}`,
+          },
+        }
+      );
+      const categories = response.data.reduce((acc, category) => {
+        acc[category.id] = category.name;
+        return acc;
+      }, {} as { [key: number]: string });
+      setCategoryNames(categories);
+    } catch (error) {
+      console.error("Error fetching category names:", error);
+    }
+  };
+
+  const handleDeletePlan = async (planId: number): Promise<void> => {
+    try {
+      await axios.delete(`${ApiUrl}:8000/api/tasks/${planId}/`, {
+        headers: {
+          Authorization: `Token ${userToken?.token}`,
+        },
+      });
+      fetchTodayPlans();
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      Alert.alert("Error", "Failed to delete task");
+    }
+  };
+
+  const handleEditPlan = (planId: number): void => {
+    navigation.navigate("EditTouchScreen", { taskId: planId });
+  };
+
+  // const renderSwipeableContent = (plan: Plan, index: number): JSX.Element => {
+  //   return (
+  //     <Swipeable
+  //       key={index}
+  //       rightButtons={[
+  //         <TouchableOpacity onPress={() => handleEditPlan(plan.id)}>
+  //           <View style={[styles.actionButton, styles.editButton]}>
+  //             <Feather name="edit" size={24} color="white" />
+  //           </View>
+  //         </TouchableOpacity>,
+  //         <TouchableOpacity onPress={() => handleDeletePlan(plan.id)}>
+  //           <View style={[styles.actionButton, styles.deleteButton]}>
+  //             <Feather name="trash-2" size={24} color="white" />
+  //           </View>
+  //         </TouchableOpacity>,
+  //       ]}
+  //     >
+  //       <View style={styles.planContainer}>
+  //         <View
+  //           style={[
+  //             styles.timeMarker,
+  //             {
+  //               backgroundColor: getCategoryColor(categoryNames[plan.category]),
+  //             },
+  //           ]}
+  //         >
+  //           <Text
+  //             style={[styles.typeText, { transform: [{ rotate: "180deg" }] }]}
+  //           >
+  //             {categoryNames[plan.category] || "Unknown Category"}
+  //           </Text>
+  //         </View>
+  //         <View style={styles.planContent}>
+  //           <Text style={styles.planTitle}>{plan.title}</Text>
+  //           <Text style={styles.planTime}>
+  //             {plan.duedate
+  //               ? new Date(plan.duedate).toLocaleTimeString([], {
+  //                   hour: "2-digit",
+  //                   minute: "2-digit",
+  //                 })
+  //               : ""}
+  //           </Text>
+  //         </View>
+  //       </View>
+  //     </Swipeable>
+  //   );
+  // };
 
   return (
     <View style={styles.container}>
@@ -90,47 +184,16 @@ const Timeline = () => {
         <View style={styles.cylinder}>
           <View style={styles.cylinderContent}>
             <Text style={styles.cylinderText}>Easy way to note your task</Text>
-            {/* Date components */}
           </View>
           <Image
-            source={require("../../../assets/images/Notes-amico.png")} // Replace with your image path
+            source={require("../../../assets/images/Notes-amico.png")}
             style={styles.image}
           />
         </View>
       </View>
       <Text style={styles.sectionTitle}>Today's Plans</Text>
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        {todayPlans.map((plan, index) => (
-          <View key={index} style={styles.planContainer}>
-            <View
-              style={[
-                styles.timeMarker,
-                {
-                  backgroundColor: getCategoryColor(
-                    categoryNames[plan.category]
-                  ),
-                },
-              ]}
-            >
-              <Text
-                style={[styles.typeText, { transform: [{ rotate: "180deg" }] }]}
-              >
-                {categoryNames[plan.category] || "Unknown Category"}
-              </Text>
-            </View>
-            <View style={styles.planContent}>
-              <Text style={styles.planTitle}>{plan.title}</Text>
-              <Text style={styles.planTime}>
-                {plan.duedate
-                  ? new Date(plan.duedate).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                  : ""}
-              </Text>
-            </View>
-          </View>
-        ))}
+        {/* {todayPlans.map((plan, index) => renderSwipeableContent(plan, index))} */}
       </ScrollView>
     </View>
   );
@@ -140,18 +203,81 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingBottom: 20, // Add paddingBottom to accommodate the plans touching the bottom
-  },
-  image: {
-    width: 200, // Make the image bigger
-    height: 200,
-    resizeMode: "contain", // Maintain aspect ratio
-    marginBottom: 16, // Bring the image down a little
+    paddingBottom: 20,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 10,
+  },
+  planContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  planContent: {
+    flex: 1,
+    backgroundColor: "#f0f0f0",
+    padding: 10,
+    marginLeft: -18,
+    borderRadius: 8,
+    borderColor: "#e0e0e0",
+    borderWidth: 1,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  planTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 5,
+  },
+  planTime: {
+    fontSize: 14,
+    color: "#777",
+  },
+  timeMarker: {
+    width: 59,
+    height: 30,
+    borderTopLeftRadius: 9,
+    justifyContent: "center",
+    alignItems: "center",
+    transform: [{ rotate: "270deg" }],
+  },
+  typeText: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#fff",
+  },
+  actionButton: {
+    justifyContent: "center",
+    alignItems: "center",
+    width: 50,
+    height: "85%",
+    borderRadius: 10,
+  },
+  editButton: {
+    backgroundColor: "green",
+    borderTopRightRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+  deleteButton: {
+    backgroundColor: "red",
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
+  },
+  scrollViewContent: {
+    flexGrow: 1,
+  },
+  image: {
+    width: 200,
+    height: 200,
+    resizeMode: "contain",
+    marginBottom: 16,
   },
   cylinderContainer: {
     alignItems: "center",
@@ -192,54 +318,6 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     margin: 10,
     fontWeight: "bold",
-  },
-  planContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  planContent: {
-    flex: 1,
-    backgroundColor: "#f0f0f0",
-    padding: 10,
-    marginLeft: -18,
-    borderRadius: 8,
-    borderColor: "#e0e0e0",
-    borderWidth: 1,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  planTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 5,
-  },
-  planTime: {
-    fontSize: 14,
-    color: "#777", // Lighter color for time text
-  },
-  timeMarker: {
-    width: 59,
-    height: 30,
-    borderTopLeftRadius: 9,
-    marginRight: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    transform: [{ rotate: "270deg" }],
-  },
-  typeText: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: "#fff",
-  },
-
-  scrollViewContent: {
-    flexGrow: 1, // Ensure the ScrollView fills its container vertically
   },
 });
 

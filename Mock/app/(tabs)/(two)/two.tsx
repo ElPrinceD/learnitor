@@ -5,6 +5,7 @@ import CoursesList from "../../../components/CoursesList";
 import axios from "axios";
 import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
+import { Stack } from "expo-router";
 
 interface Course {
   title: string;
@@ -74,10 +75,15 @@ const CoursesScreen: React.FC = () => {
   });
 
   return (
-    <View style={styles.container}>
-      <SearchBar onSearch={handleSearch} />
-      <CoursesList courses={filteredCourses} categories={categoryData} />
-    </View>
+    <>
+      <Stack.Screen
+        options={{ headerTitle: "What do you want to learn today?" }}
+      />
+      <View style={styles.container}>
+        <SearchBar onSearch={handleSearch} />
+        <CoursesList courses={filteredCourses} categories={categoryData} />
+      </View>
+    </>
   );
 };
 
