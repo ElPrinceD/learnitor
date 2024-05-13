@@ -1,80 +1,81 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker'; // Import datetimepicker
 import { useGlobalSearchParams } from "expo-router";
 import axios from 'axios';
-import { useNavigation } from '@react-navigation/native';
 import {router} from 'expo-router'
-import apiUrl from '../../../config.js';
+import apiUrl from '../../../config';
 import { useAuth } from "../../../components/AuthContext";
 
-const CreateNewTime = () => {
+interface EditPlanProps {
+    category_name: string;
+  }
+  const EditPlan: React.FC<EditPlanProps> = ({ category_name }) => {
+    const [categoryName, setCategoryName] = useState(category_name || '');
     const params = useGlobalSearchParams();
-    const category_name = params.name;
-    const category_id = params.category_id;
-   
+    const category = params.category_name;
+    const taskId = params.taskId;
+    const oldDescription = params.description;
+    const oldTitle = params.title;
+    const oldDate = params.duedate;
+    const oldTime = params.duetime;
+    const categories = params.categoryNames;
 
-      const { userToken, userInfo } = useAuth();
+    console.log(categories)
 
-    const navigation = useNavigation();
-    
-   
-    
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
-    const [date, setDate] = useState(new Date()); // Initialize date state with current date
-    const [time, setTime] = useState(new Date()); // Initialize time state with current time
+    function parseTimeString(timeString) {
+        const [hours, minutes, seconds] = timeString.split(':').map(Number);
+        return new Date(0, 0, 0, hours, minutes, seconds);
+    }
+    const oldtime = parseTimeString(oldTime);
+
+    const { userToken, userInfo } = useAuth();
+    const [title, setTitle] = useState(oldTitle || '');
+    const [task, setTask] = useState('');
+    const [description, setDescription] = useState(oldDescription || '');
+    const [category_id, setCategory_id] = useState(params.category_id || ''); // Initialize with the provided category ID
+    const [date, setDate] = useState(new Date(oldDate)); // Initialize date state with the provided due date
+    const [time, setTime] = useState(parseTimeString(oldTime)); // Initialize time state with the provided due time
     const [showDatePicker, setShowDatePicker] = useState(false); // State to control visibility of date picker
     const [showTimePicker, setShowTimePicker] = useState(false); // State to control visibility of time picker
 
-    const datetime = new Date(
-      date.getFullYear(),
-      date.getMonth(),
-      date.getDate(),
-      time.getHours(),
-      time.getMinutes(),
-      time.getSeconds()
-    );
 
-    
-  
-    
-    
-    // Function to handle saving the new time
+
+    const formatTime = (time) => {
+        const hours = time.getHours().toString().padStart(2, '0');
+        const minutes = time.getMinutes().toString().padStart(2, '0');
+        return `${hours}:${minutes}`;
+    };
+
+
     const handleSaveTime = async () => {
-
-    
-      const data = {
-        title,
-        description,
-        due_date: date.toISOString().split('T')[0],
-        due_time: time.toISOString().split('T')[1].slice(0, 5),
-        category: category_id,
-        learner: userInfo?.user.id
-        
+        console.log(category_id)
+        const formattedDueDate = date.toISOString().split('T')[0]; // Get the date portion
+        const formattedDueTime = formatTime(time); // Format the time
+        const data = {
+            title,
+            description,
+            due_date: formattedDueDate,
+            due_time: formattedDueTime,
+            category: category_id,
+            learner: userInfo?.user.id
         };
-        console.log(data)
-      try {
-      
+        try {
+            const response = await axios.put(`${apiUrl}:8000/api/learner/tasks/update/${taskId}/`, data, {
+                headers: {
+                    Authorization: `Token ${userToken?.token}`,
+                },
+            });
+            router.navigate("three")
+            console.log('Schedule updated:', response.data);
+        } catch (error) {
+            console.error('Error updating schedule:', error);
+        }
+    };
     
-
-    const response = await axios.post(`${apiUrl}:8000/api/learner/task/create/`, data, {
-      headers: {
-        Authorization: `Token ${userToken?.token}`,
-      },
-    });
-    router.navigate("three")
-    router.setParams({newPlan: response.data});
-    }  catch (error) {
-
-    console.error('Error adding schedule:', error);
-}}  
 
     return (
         <ScrollView style={styles.container}>
-            <Text style={styles.title}>Create New Schedule</Text>
-
-            {/* Title Input */}
             <View style={styles.inputContainer}>
                 <Text style={styles.label}>Title</Text>
                 <TextInput
@@ -89,7 +90,7 @@ const CreateNewTime = () => {
             <View style={styles.inputContainer}>
                 <Text style={styles.label}>Description</Text>
                 <TextInput
-                    style={[styles.input, styles.input]}
+                    style={[styles.input, styles.descriptionInput]}
                     placeholder="Description"
                     value={description}
                     onChangeText={setDescription}
@@ -100,7 +101,7 @@ const CreateNewTime = () => {
             <View style={styles.inputContainer}>
                 <Text style={styles.label}>Date</Text>
                 <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
-                    <Text>{date.toLocaleDateString()}</Text>
+                    <Text>{date.toDateString()}</Text>
                 </TouchableOpacity>
                 {showDatePicker && (
                     <DateTimePicker
@@ -119,14 +120,15 @@ const CreateNewTime = () => {
 
             {/* Category Input */}
             <View style={styles.inputContainer}>
-                <Text style={styles.label}>Category</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder={category_id}
-                    value={category_name} // Display the category name
-                    editable={false} // Make the input non-editable
-                />
-            </View>
+        <Text style={styles.label}>Category</Text>
+        <TextInput
+            style={styles.input}
+            placeholder="Category"
+            value={category}
+            onChangeText={setCategoryName}
+            editable={false} // Make the input non-editable
+        />
+    </View>
 
             {/* Time Input */}
             <View style={styles.inputContainer}>
@@ -157,25 +159,13 @@ const CreateNewTime = () => {
     );
 };
 
-// Function to format time without seconds
-const formatTime = (time) => {
-    const hours = time.getHours().toString().padStart(2, '0');
-    const minutes = time.getMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
-};
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         padding: 20,
     },
-    title: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        marginBottom: 20,
-    },
     inputContainer: {
-        marginBottom: 40,
+        marginBottom: 20,
     },
     label: {
         fontSize: 16,
@@ -195,13 +185,11 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         borderRadius: 5,
         alignItems: 'center',
-        marginBottom: 50,
     },
     saveButtonText: {
         color: '#fff',
         fontSize: 16,
-        fontWeight: 'bold',
     },
 });
 
-export default CreateNewTime;
+export default EditPlan;

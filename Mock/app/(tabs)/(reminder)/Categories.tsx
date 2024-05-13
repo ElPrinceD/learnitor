@@ -12,7 +12,7 @@ import { useGlobalSearchParams } from "expo-router";
 import axios from "axios";
 import { useNavigation } from "@react-navigation/native";
 import { RootParamList } from "../../../components/types";
-import apiUrl from "@/config";
+import apiUrl from "../../../config";
 
 import { useAuth } from "../../../components/AuthContext";
 

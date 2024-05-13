@@ -10,8 +10,8 @@ import {
 import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { AuthProvider, useAuth } from "../components/AuthContext"; // Update the path
-
-import { useColorScheme } from "@/components/useColorScheme";
+import 'react-native-reanimated'
+import { useColorScheme } from "../components/useColorScheme";
 import { View, ActivityIndicator } from "react-native";
 import "react-native-reanimated";
 export { ErrorBoundary } from "expo-router";

@@ -8,25 +8,62 @@ import {
   StyleSheet,
 } from "react-native";
 import { useAuth } from "../../../components/AuthContext";
+import ApiUrl from "../../../config.js";
+import axios from "axios";
 
 const AccountSettings = () => {
   // State variables for input fields
-  const { userInfo } = useAuth();
+  const { userInfo, userToken } = useAuth();
   const defaultFirstName = userInfo?.user.first_name;
   const defaultLastName = userInfo?.user.last_name;
+  const defaultemail = userInfo?.user.email;
+  const defaultdob = userInfo?.user.dob;
+  const defaultStreet1 = userInfo?.user.street_1;
+  const defaultStreet2 = userInfo?.user.street_2;
+  const defaultCity = userInfo?.user.city;
+  const defaultCountry = userInfo?.user.city;
   const [firstName, setFirstName] = useState(defaultFirstName);
   const [lastName, setLastName] = useState(defaultLastName);
-  const [dob, setDOB] = useState("");
-  const [email, setEmail] = useState("");
-  const [street1, setStreet1] = useState("");
-  const [street2, setStreet2] = useState("");
-  const [city, setCity] = useState("");
-  const [region, setRegion] = useState("");
-  const [country, setCountry] = useState("");
+  const [dob, setDOB] = useState(defaultdob);
+  const [email, setEmail] = useState(defaultemail);
+  const [street1, setStreet1] = useState(defaultStreet1);
+  const [street2, setStreet2] = useState(defaultStreet2);
+  const [city, setCity] = useState(defaultCity);
+  const [region, setRegion] = useState(defaultCity);
+  const [country, setCountry] = useState(defaultCountry);
   const [instituteName, setInstituteName] = useState("");
 
-  const handleUpdateInfo = () => {
-    // Handle logout functionality
+  const handleUpdateInfo = async () => {
+    
+    const config = {
+      headers: {
+        Authorization: `Token ${userToken}`,
+      },
+    };  
+    try {
+      // Send update request to the user update endpoint
+      await axios.put(`${ApiUrl}:8000/api/update/user/`, {
+        first_name: firstName,
+        last_name: lastName,
+        email: email,
+        dob: dob,
+      }, config);
+
+      // Send update request to the address update endpoint
+      await axios.put(`${ApiUrl}:8000/api/update/user/address/`, {
+        street_1: street1,
+        street_2: street2,
+        city: city,
+        region: region,
+        country: country,
+      }, config);
+
+      // Handle success scenario
+      console.log("Update successful");
+    } catch (error) {
+      // Handle error scenario
+      console.error("Error updating information:", error);
+    }
   };
 
   return (

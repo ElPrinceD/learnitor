@@ -1,4 +1,5 @@
 import { Stack } from "expo-router";
+import React from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 export default function Tab3Layout() {
@@ -8,6 +9,11 @@ export default function Tab3Layout() {
         <Stack.Screen
           name="three"
           options={{ headerShown: false }} // Hide the header
+        />
+         <Stack.Screen
+          name="EditPlan"
+          options={{ headerShown: true, presentation: 'modal', headerTitle: "Edit Task", }} 
+          
         />
         <Stack.Screen
           name="Categories"
