@@ -5,8 +5,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  useColorScheme,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 
 interface Question {
   text: string;
@@ -30,6 +31,9 @@ const Questions: React.FC<QuestionProps> = ({
   practiceQuestions,
   practiceAnswers,
 }) => {
+  const colorScheme = useColorScheme();
+  const { isTimed, duration } = useLocalSearchParams();
+
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<{
     [key: number]: number[];
@@ -38,9 +42,33 @@ const Questions: React.FC<QuestionProps> = ({
     questionsWithMultipleCorrectAnswers,
     setQuestionsWithMultipleCorrectAnswers,
   ] = useState<number[]>([]);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   useEffect(() => {
-    // Determine questions with multiple correct answers
+    if (isTimed === "true" && duration) {
+      const durationInMinutes = Number(duration);
+      setTimeLeft(durationInMinutes * 60); // Convert minutes to seconds
+    }
+  }, [isTimed, duration]);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (timeLeft !== null) {
+      timer = setInterval(() => {
+        setTimeLeft((prevTime) => {
+          if (prevTime === 0) {
+            clearInterval(timer);
+            handleSubmit(); // Trigger submission when timer reaches zero
+            return 0;
+          }
+          return prevTime! - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer); // Cleanup interval on unmount
+  }, [timeLeft]);
+
+  useEffect(() => {
     const questionsWithMultipleCorrect: number[] = [];
     practiceQuestions.forEach((question) => {
       const correctAnswersCount = practiceAnswers.filter(
@@ -58,7 +86,6 @@ const Questions: React.FC<QuestionProps> = ({
       const updatedAnswers = { ...prevSelectedAnswers };
 
       if (questionsWithMultipleCorrectAnswers.includes(questionId)) {
-        // If the question allows multiple correct answers
         const selected = updatedAnswers[questionId] || [];
         const index = selected.indexOf(answerId);
         if (index !== -1) {
@@ -68,9 +95,7 @@ const Questions: React.FC<QuestionProps> = ({
         }
         updatedAnswers[questionId] = selected;
       } else {
-        // If the question allows only single selection
         if (updatedAnswers[questionId]?.[0] === answerId) {
-          // Deselect if already selected
           updatedAnswers[questionId] = [];
         } else {
           updatedAnswers[questionId] = [answerId];
@@ -90,34 +115,53 @@ const Questions: React.FC<QuestionProps> = ({
   };
 
   const handleSubmit = () => {
-    // Calculate score
     let totalQuestions = practiceQuestions.length;
     let correctAnswers = 0;
 
-    practiceQuestions.forEach((question) => {
+    const results = practiceQuestions.map((question) => {
       const selectedAnswerIds = selectedAnswers[question.id] || [];
       const correctAnswerIds = practiceAnswers
         .filter((answer) => answer.question === question.id && answer.isRight)
         .map((answer) => answer.id);
 
-      if (
+      const isCorrect =
         selectedAnswerIds.length === correctAnswerIds.length &&
-        selectedAnswerIds.every((id) => correctAnswerIds.includes(id))
-      ) {
+        selectedAnswerIds.every((id) => correctAnswerIds.includes(id));
+
+      if (isCorrect) {
         correctAnswers++;
       }
+
+      const allAnswers = practiceAnswers
+        .filter((answer) => answer.question === question.id)
+        .map((answer) => ({
+          id: answer.id,
+          text: answer.text,
+          isSelected: selectedAnswerIds.includes(answer.id),
+          isCorrect: answer.isRight,
+        }));
+
+      return {
+        question: question.text,
+        allAnswers,
+        isCorrect,
+      };
     });
 
-    // Calculate score percentage
     let scorePercentage = (correctAnswers / totalQuestions) * 100;
 
-    // Navigate to Score Page
-    router.navigate("ScorePage");
-    router.setParams({
-      score: scorePercentage.toFixed(2) + "%",
-      practiceQuestions: JSON.stringify(practiceQuestions),
-      practiceAnswers: JSON.stringify(practiceAnswers),
-    });
+    // Defer the navigation call to avoid potential re-renders
+    setTimeout(() => {
+      router.replace({
+        pathname: "ScorePage",
+        params: {
+          score: scorePercentage.toFixed(2),
+          results: JSON.stringify(results),
+          practiceQuestions: JSON.stringify(practiceQuestions),
+          practiceAnswers: JSON.stringify(practiceAnswers),
+        },
+      });
+    }, 0);
   };
 
   const isAnswerSelected = (questionId: number, answerId: number) => {
@@ -127,7 +171,6 @@ const Questions: React.FC<QuestionProps> = ({
     );
   };
 
-  // Check if all questions are answered
   const allQuestionsAnswered = practiceQuestions.every(
     (question) =>
       selectedAnswers[question.id] && selectedAnswers[question.id].length > 0
@@ -135,9 +178,97 @@ const Questions: React.FC<QuestionProps> = ({
 
   const isSubmitDisabled = !allQuestionsAnswered;
 
+  // Calculate progress percentage
+  const progress = (currentQuestion + 1) / practiceQuestions.length;
+
+  const styles = StyleSheet.create({
+    container: {
+      marginTop: "50%",
+      padding: 20,
+      borderRadius: 10,
+      elevation: 1,
+      backgroundColor: colorScheme === "dark" ? "#181818" : "#fff",
+    },
+    progressBarContainer: {
+      height: 10,
+      width: "100%",
+      backgroundColor: "#e0e0e0",
+      borderRadius: 5,
+      overflow: "hidden",
+      marginBottom: 20,
+    },
+    progressBar: {
+      height: "100%",
+      backgroundColor: "#76c7c0",
+      width: `${progress * 100}%`,
+    },
+    questionText: {
+      fontSize: 16,
+      marginBottom: 5,
+      color: colorScheme === "dark" ? "#fff" : "#555",
+    },
+    answersContainer: {
+      marginTop: 5,
+      color: colorScheme === "dark" ? "#fff" : "#181818",
+    },
+    answerTouchable: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 5,
+      backgroundColor: colorScheme === "dark" ? "#333" : "#f0f0f0",
+      padding: 10,
+      borderRadius: 5,
+    },
+    selectedAnswer: {
+      backgroundColor: colorScheme === "dark" ? "#555" : "#ccc",
+    },
+    answerText: {
+      fontSize: 14,
+      color: colorScheme === "dark" ? "#fff" : "#444",
+      marginLeft: 10,
+    },
+    checkBox: {
+      width: 20,
+      height: 20,
+      borderWidth: 2,
+      borderColor: "#888",
+      borderRadius: 3,
+      marginRight: 10,
+    },
+    checkedBox: {
+      backgroundColor: "#888",
+    },
+    buttonContainer: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginTop: 20,
+    },
+    buttonText: {
+      fontSize: 16,
+      color: colorScheme === "dark" ? "#bbb" : "#337ab7",
+    },
+    disabledButtonText: {
+      color: "#ccc",
+    },
+    timer: {
+      fontSize: 18,
+      textAlign: "center",
+      marginVertical: 10,
+    },
+  });
+
   return (
     <ScrollView>
       <View style={styles.container}>
+        <View style={styles.progressBarContainer}>
+          <View style={styles.progressBar} />
+        </View>
+        {timeLeft !== null && (
+          <Text style={styles.timer}>
+            Time Left: {Math.floor(timeLeft / 60)}:
+            {timeLeft % 60 < 10 ? `0${timeLeft % 60}` : timeLeft % 60}
+          </Text>
+        )}
         {practiceQuestions.length > 0 && (
           <View key={currentQuestion}>
             {practiceQuestions[currentQuestion] &&
@@ -226,69 +357,5 @@ const Questions: React.FC<QuestionProps> = ({
     </ScrollView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    marginTop: "50%",
-    padding: 20,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  questionText: {
-    fontSize: 16,
-    marginBottom: 5,
-    color: "#555",
-  },
-  answersContainer: {
-    marginTop: 5,
-  },
-  answerTouchable: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 5,
-    backgroundColor: "#f0f0f0",
-    padding: 10,
-    borderRadius: 5,
-  },
-  selectedAnswer: {
-    backgroundColor: "#ccc",
-  },
-  answerText: {
-    fontSize: 14,
-    color: "#444",
-    marginLeft: 10,
-  },
-  checkBox: {
-    width: 20,
-    height: 20,
-    borderWidth: 2,
-    borderColor: "#888",
-    borderRadius: 3,
-    marginRight: 10,
-  },
-  checkedBox: {
-    backgroundColor: "#888",
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 20,
-  },
-  buttonText: {
-    fontSize: 16,
-    color: "#337ab7",
-  },
-  disabledButtonText: {
-    color: "#ccc",
-  },
-});
 
 export default Questions;

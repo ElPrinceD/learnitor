@@ -69,7 +69,10 @@ function RootLayoutNav() {
             name="(verification)"
             options={{ headerShown: false }}
           />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="(tabs)"
+            options={{ headerShown: false, headerShadowVisible: false }}
+          />
           <Stack.Screen
             name="modal"
             options={{ presentation: "modal", headerShown: false }}

@@ -1,20 +1,13 @@
 import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  useColorScheme,
-} from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { View } from "react-native";
+import { useGlobalSearchParams } from "expo-router";
 import axios from "axios";
 
-import ApiUrl from "../../../config";
+import ApiUrl from "../../../../config";
 
-import { useAuth } from "../../../components/AuthContext";
+import { useAuth } from "../../../../components/AuthContext";
 import TopicInformation from "@/components/TopicInformation";
-import Materials from "@/components/Materials";
+import Videos from "@/components/Videos";
 interface Topic {
   title: string;
   description: string;
@@ -23,17 +16,17 @@ interface Topic {
 }
 interface Material {
   name: string;
-  type: "video" | "book" | "journal"; // Define the types of materials
+  type: "video"; // Define the types of materials
   link: string;
 }
 
-interface TopicProps {
+interface VideoMaterialsProps {
   topic: Topic[];
   topicMaterials: Material[];
 }
 
-const Topic: React.FC<TopicProps> = () => {
-  const { topic } = useLocalSearchParams();
+const VideoMaterials: React.FC<VideoMaterialsProps> = () => {
+  const { topic } = useGlobalSearchParams();
   const { userToken } = useAuth();
   const [selectedTopicMaterials, setSelectedTopicMaterials] = useState<
     Material[]
@@ -41,7 +34,6 @@ const Topic: React.FC<TopicProps> = () => {
 
   const parsedTopic: Topic =
     typeof topic === "string" ? JSON.parse(topic) : topic;
-  console.log("That topic:", topic);
 
   useEffect(() => {
     fetchData();
@@ -64,11 +56,11 @@ const Topic: React.FC<TopicProps> = () => {
 
   return (
     <View>
-      <TopicInformation topic={parsedTopic} />
+      {/* <TopicInformation topic={parsedTopic} /> */}
 
-      <Materials topicMaterials={selectedTopicMaterials} />
+      <Videos videoMaterials={selectedTopicMaterials} />
     </View>
   );
 };
 
-export default Topic;
+export default VideoMaterials;

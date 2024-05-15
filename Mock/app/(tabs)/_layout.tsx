@@ -61,6 +61,7 @@ export default function TabLayout() {
           options={{
             title: "Home",
             tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
+            headerShadowVisible: false,
             headerRight: () => (
               <Link href="/modal" asChild>
                 <Pressable>
@@ -96,6 +97,7 @@ export default function TabLayout() {
             headerShown: true,
             headerTitle: "",
             // headerTransparent: true,
+            headerShadowVisible: false,
           }}
         />
 
@@ -106,6 +108,7 @@ export default function TabLayout() {
             tabBarIcon: ({ color }) => (
               <TabBarIcon name="history" color={color} />
             ),
+            headerShadowVisible: false,
             headerRight: () => (
               <Link href="../(reminder)/Categories" asChild>
                 <Pressable>
@@ -128,7 +131,8 @@ export default function TabLayout() {
           options={{
             title: "Profile",
             tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
-            headerTitle: "Account Settings",
+            headerTitle: "",
+            headerShadowVisible: false,
           }}
         />
       </Tabs>

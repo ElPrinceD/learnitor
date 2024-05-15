@@ -25,7 +25,7 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({ enrolledTopics }) => {
   const colorScheme = useColorScheme();
 
   const handleTopicPress = (topic: Topic) => {
-    router.navigate("Topic");
+    router.navigate("VideoMaterials");
     router.setParams({ topic: JSON.stringify(topic) });
   };
 

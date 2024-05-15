@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { View, StyleSheet, ScrollView } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams } from "expo-router";
 import axios from "axios";
 import CourseInformation from "../../../components/CourseInformation";
@@ -56,7 +55,6 @@ const CourseDetails: React.FC = () => {
   const handleSelectedTopicsChange = (selectedTopics: Topic[]) => {
     setSelectedTopics(selectedTopics);
   };
-  console.log("that:", selectedTopics);
   return (
     <View style={styles.container}>
       <CourseInformation

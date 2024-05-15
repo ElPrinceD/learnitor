@@ -1,22 +1,31 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   useColorScheme,
+  Switch,
 } from "react-native";
+import { Picker } from "@react-native-picker/picker";
 import { router, useLocalSearchParams } from "expo-router";
 
 const PracticeInstructions = () => {
   const colorScheme = useColorScheme();
   const { topic, level } = useLocalSearchParams();
 
+  const [isTimed, setIsTimed] = useState(false);
+  const [duration, setDuration] = useState(10); // Default to 10 minutes
+
   const handleStartQuiz = () => {
-    router.navigate("PracticeQuestions");
-    router.setParams({
-      level: level?.toString(), // Ensure level is treated as a string
-      topic: topic?.toString(),
+    router.navigate({
+      pathname: "PracticeQuestions",
+      params: {
+        level: level?.toString(), // Ensure level is treated as a string
+        topic: topic?.toString(),
+        isTimed: isTimed.toString(), // Convert boolean to string
+        duration: duration.toString(), // Convert number to string
+      },
     });
   };
 
@@ -72,6 +81,28 @@ const PracticeInstructions = () => {
       fontWeight: "bold",
       color: colorScheme === "dark" ? "#FFF" : "#000",
     },
+    timerContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginVertical: 10,
+      justifyContent: "space-between",
+    },
+    timerText: {
+      fontSize: 16,
+      color: colorScheme === "dark" ? "#FFF" : "#000",
+      marginRight: 10,
+    },
+    pickerContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginVertical: 10,
+      justifyContent: "space-between",
+    },
+    picker: {
+      height: 50,
+      width: 150,
+      color: colorScheme === "dark" ? "#FFF" : "#000",
+    },
   });
 
   return (
@@ -84,18 +115,43 @@ const PracticeInstructions = () => {
         </Text>
         <View style={styles.instructionContainer}>
           <Text style={styles.instruction}>
-            1. This quiz consists of 10 questions.
+            1. This quiz consists of 30 questions.
           </Text>
           <Text style={styles.instruction}>
             2. Each question has multiple-choice options.
           </Text>
           <Text style={styles.instruction}>
-            3. Select the correct answer for each question.
+            3. Select the correct answer(s) for each question.
           </Text>
           <Text style={styles.instruction}>
-            4. You have a limited time to complete the quiz.
+            4.Quiz progress will be displayed at the top.
+          </Text>
+          <Text style={styles.instruction}>
+            5. Score will be displayed at the end.
+          </Text>
+          <Text style={styles.instruction}>
+            6. You have the option to set a time limit for completing the quiz.
           </Text>
         </View>
+        <View style={styles.timerContainer}>
+          <Text style={styles.timerText}>Timed Quiz:</Text>
+          <Switch value={isTimed} onValueChange={setIsTimed} />
+        </View>
+        {isTimed && (
+          <View style={styles.pickerContainer}>
+            <Text style={styles.timerText}>Select Duration:</Text>
+            <Picker
+              selectedValue={duration}
+              style={styles.picker}
+              onValueChange={(itemValue) => setDuration(itemValue)}
+            >
+              <Picker.Item label="10 minutes" value={10} />
+              <Picker.Item label="15 minutes" value={15} />
+              <Picker.Item label="30 minutes" value={30} />
+              <Picker.Item label="45 minutes" value={45} />
+            </Picker>
+          </View>
+        )}
         <TouchableOpacity
           style={styles.startButton}
           onPress={handleStartQuiz} // Call handleStartQuiz function onPress
