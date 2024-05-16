@@ -139,6 +139,7 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
     router.navigate("EnrolledCourse");
     router.setParams({
       enrolledTopics: JSON.stringify(enrollmentResponse),
+      course: JSON.stringify(course),
     });
   };
 

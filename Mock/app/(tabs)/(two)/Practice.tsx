@@ -14,7 +14,7 @@ interface Level {
   title: string;
   image: ImageSourcePropType;
 }
-const Topic: React.FC = () => {
+const Practice: React.FC = () => {
   const { topic } = useLocalSearchParams();
 
   const parsedTopic: Topic =
@@ -43,4 +43,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Topic;
+export default Practice;

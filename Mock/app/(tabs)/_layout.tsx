@@ -61,6 +61,7 @@ export default function TabLayout() {
           options={{
             title: "Home",
             tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
+            headerShadowVisible: false,
             headerRight: () => (
               <Link href="/modal" asChild>
                 <Pressable>
@@ -96,9 +97,11 @@ export default function TabLayout() {
             headerShown: true,
             headerTitle: "",
             // headerTransparent: true,
+            headerShadowVisible: false,
           }}
         />
 
+<<<<<<< HEAD
       <Tabs.Screen
         name="(reminder)"
         options={{
@@ -139,6 +142,43 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+=======
+        <Tabs.Screen
+          name="(reminder)"
+          options={{
+            title: "Timeline",
+            tabBarIcon: ({ color }) => (
+              <TabBarIcon name="history" color={color} />
+            ),
+            headerShadowVisible: false,
+            headerRight: () => (
+              <Link href="../(reminder)/Categories" asChild>
+                <Pressable>
+                  {({ pressed }) => (
+                    <Ionicons
+                      name="add"
+                      size={25}
+                      color={Colors[colorScheme ?? "light"].text}
+                      style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
+                    />
+                  )}
+                </Pressable>
+              </Link>
+            ),
+            headerTitle: "",
+          }}
+        />
+        <Tabs.Screen
+          name="(account)"
+          options={{
+            title: "Profile",
+            tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
+            headerTitle: "",
+            headerShadowVisible: false,
+          }}
+        />
+      </Tabs>
+>>>>>>> d91fe319587c0905b1d81d6ab45ecc54323136d5
     </SafeAreaProvider>
   );
 }

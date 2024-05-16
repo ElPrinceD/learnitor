@@ -4,19 +4,17 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   Linking,
 } from "react-native";
 
 interface Material {
   name: string;
-  type: "video" | "book" | "journal";
+  type: "video";
   link: string;
-  thumbnail?: string; // Add thumbnail property
 }
 
-interface MaterialsProps {
-  topicMaterials: Material[];
+interface VideosProps {
+  videoMaterials: Material[];
 }
 
 const handleMaterialPress = (material: Material) => {
@@ -29,28 +27,20 @@ const handleMaterialPress = (material: Material) => {
   }
 };
 
-const Materials: React.FC<MaterialsProps> = ({ topicMaterials }) => {
+const Videos: React.FC<VideosProps> = ({ videoMaterials }) => {
+  // Filter materials to only include videos
+  const videos = videoMaterials.filter((material) => material.type === "video");
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Materials</Text>
-      {topicMaterials.map((material, index) => (
+      {videos.map((material, index) => (
         <TouchableOpacity
           key={index}
           onPress={() => handleMaterialPress(material)}
         >
           <View style={styles.material}>
-            {material.thumbnail && (
-              <Image
-                source={{ uri: material.thumbnail }}
-                style={styles.thumbnail}
-              />
-            )}
             <View style={styles.detailsContainer}>
               <Text style={styles.materialName}>{material.name}</Text>
-              <Text style={styles.materialType}>
-                Type:{" "}
-                {material.type.charAt(0).toUpperCase() + material.type.slice(1)}
-              </Text>
             </View>
           </View>
         </TouchableOpacity>
@@ -75,12 +65,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 10,
   },
-  thumbnail: {
-    width: 80,
-    height: 80,
-    marginRight: 10,
-    borderRadius: 5,
-  },
   detailsContainer: {
     flex: 1,
   },
@@ -88,9 +72,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
-  materialType: {
-    fontSize: 14,
-  },
 });
 
-export default Materials;
+export default Videos;

@@ -9,7 +9,7 @@ export default function Tab2Layout() {
         <Stack.Screen name="two" options={{ headerShown: false }} />
         <Stack.Screen name="CourseDetails" options={{ headerShown: false }} />
         <Stack.Screen name="EnrolledCourse" options={{ headerShown: false }} />
-        <Stack.Screen name="Topic" options={{ headerShown: false }} />
+        <Stack.Screen name="(topic)" options={{ headerShown: false }} />
         <Stack.Screen name="Practice" options={{ headerShown: false }} />
         <Stack.Screen
           name="PracticeInstructions"
