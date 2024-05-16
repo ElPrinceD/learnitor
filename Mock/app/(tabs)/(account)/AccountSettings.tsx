@@ -18,10 +18,11 @@ const AccountSettings = () => {
   const defaultLastName = userInfo?.user.last_name;
   const defaultemail = userInfo?.user.email;
   const defaultdob = userInfo?.user.dob;
-  const defaultStreet1 = userInfo?.user.street_1;
-  const defaultStreet2 = userInfo?.user.street_2;
-  const defaultCity = userInfo?.user.city;
-  const defaultCountry = userInfo?.user.city;
+  const defaultStreet1 = userInfo?.user.address.street_1;
+  const defaultStreet2 = userInfo?.user.address.street_2;
+  const defaultRegion = userInfo?.user.address.region
+  const defaultCity = userInfo?.user.address.city;
+  const defaultCountry = userInfo?.user.address.country;
   const [firstName, setFirstName] = useState(defaultFirstName);
   const [lastName, setLastName] = useState(defaultLastName);
   const [dob, setDOB] = useState(defaultdob);
@@ -29,7 +30,7 @@ const AccountSettings = () => {
   const [street1, setStreet1] = useState(defaultStreet1);
   const [street2, setStreet2] = useState(defaultStreet2);
   const [city, setCity] = useState(defaultCity);
-  const [region, setRegion] = useState(defaultCity);
+  const [region, setRegion] = useState(defaultRegion);
   const [country, setCountry] = useState(defaultCountry);
   const [instituteName, setInstituteName] = useState("");
 
@@ -37,12 +38,12 @@ const AccountSettings = () => {
     
     const config = {
       headers: {
-        Authorization: `Token ${userToken}`,
+        Authorization: `Token ${userToken?.token}`,
       },
     };  
     try {
       // Send update request to the user update endpoint
-      await axios.put(`${ApiUrl}:8000/api/update/user/`, {
+      await axios.put(`${ApiUrl}:8000/api/update/user/${userInfo?.user.id}/`, {
         first_name: firstName,
         last_name: lastName,
         email: email,

@@ -4,6 +4,14 @@ import * as SecureStore from "expo-secure-store";
 interface UserToken {
   token: string | null;
 }
+interface Address{
+
+  street_1: string,
+  street_2: string
+  city: string,
+  region: string,
+  country: string
+}
 interface UserInfo {
   user: {
     id: number;
@@ -12,11 +20,8 @@ interface UserInfo {
     token: string;
     email: string;
     dob: string;
-    street_1: string,
-    street_2: string
-    city: string,
-    region: string,
-    country: string
+    address: Address
+   
   };
 }
 

@@ -101,48 +101,6 @@ export default function TabLayout() {
           }}
         />
 
-<<<<<<< HEAD
-      <Tabs.Screen
-        name="(reminder)"
-        options={{
-          title: "Timeline",
-          tabBarIcon: ({ color }) => (
-            <TabBarIcon name="history" color={color} />
-          ),
-          headerRight: () => (
-            <Link href="../(reminder)/Categories" asChild>
-              <Pressable>
-                {({ pressed }) => (
-                  <Ionicons
-                    name="add"
-                    size={25}
-                    color={Colors[colorScheme ?? "light"].text}
-                    style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
-                  />
-                )}
-              </Pressable>
-            </Link>
-          ),
-          headerTitle: "",
-          
-          headerStyle: {
-            backgroundColor: "#065806",
-            borderBottomWidth: 0, // Remove bottom border
-            elevation: 0, // Remove shadow on Android
-            shadowOpacity: 0, // Set the background color of the header
-          },
-        }}
-      />
-      <Tabs.Screen
-        name="(account)"
-        options={{
-          title: "Profile",
-          tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
-          headerTitle: "Account Settings",
-        }}
-      />
-    </Tabs>
-=======
         <Tabs.Screen
           name="(reminder)"
           options={{
@@ -178,7 +136,6 @@ export default function TabLayout() {
           }}
         />
       </Tabs>
->>>>>>> d91fe319587c0905b1d81d6ab45ecc54323136d5
     </SafeAreaProvider>
   );
 }

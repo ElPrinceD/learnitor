@@ -68,7 +68,7 @@ const Profile = () => {
   };
 
   const handleReportProblem = () => {
-    // Handle navigation to Report Problem screen
+    router.navigate("ReportProblem");
   };
 
   const handleHelpCenter = () => {

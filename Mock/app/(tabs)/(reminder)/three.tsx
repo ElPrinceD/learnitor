@@ -1,21 +1,10 @@
 import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-} from "react-native";
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Alert } from "react-native";
 import axios from "axios";
-import { Feather } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
-import { RootParamList } from "../../../components/types";
+import { Feather } from '@expo/vector-icons';
 import ApiUrl from "../../../config";
-import { useLocalSearchParams } from "expo-router";
 import { useAuth } from "../../../components/AuthContext";
-import {router} from 'expo-router'
+import { router, useFocusEffect } from 'expo-router';
 import { Swipeable, GestureHandlerRootView } from 'react-native-gesture-handler';
 
 interface Plan {
@@ -23,29 +12,21 @@ interface Plan {
   title: string;
   description: string;
   due_date: string;
-  due_time: string,
-  category: number;
-}
-
-interface Plan {
-  id: number;
-  title: string;
-  duedate: string;
+  due_time: string;
   category: number;
 }
 
 const Timeline: React.FC = () => {
-  const navigation = useNavigation<RootParamList>();
-  const { newPlan } = useLocalSearchParams();
+ 
+  const days = ['Mon', 'Tue', 'Wed', 'Thur', 'Fri', 'Sat', 'Sun'];
   const [todayPlans, setTodayPlans] = useState<Plan[]>([]);
-  const [categoryNames, setCategoryNames] = useState<{ [key: number]: string }>(
-    {}
-  );
-  const [loading, setLoading] = useState<boolean>(false);
+  const [categoryNames, setCategoryNames] = useState<{ [key: number]: string }>({});
+  const [selectedDay, setSelectedDay] = useState(days[(new Date().getDay() - 1) % 7]);
+  const [loading, setLoading] = useState(false);
 
   const { userToken } = useAuth();
 
-  const getCategoryColor = (type: string): string => {
+  const getCategoryColor = (type: string) => {
     switch (type) {
       case "Assignments & Projects":
         return "#FF6347";
@@ -60,59 +41,15 @@ const Timeline: React.FC = () => {
     }
   };
 
-  const fetchTodayPlans = async (): Promise<void> => {
-    setLoading(true);
+  console.log(selectedDay);
+
+  const fetchCategoryNames = async () => {
     try {
-      const currentDate = new Date().toISOString().split("T")[0];
-      const response = await axios.get<Plan[]>(
-        `${ApiUrl}:8000/api/learner/tasks/`,
-        {
-          headers: {
-            Authorization: `Token ${userToken?.token}`,
-          },
-        }
-      );
-      setTodayPlans(response.data);
-    } catch (error) {
-      console.error("Error fetching today's plans:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTodayPlans();
-    fetchCategoryNames();
-  }, [userToken]);
-
-  useEffect(() => {
-    if (isPlan(newPlan)) {
-      setTodayPlans([...todayPlans, newPlan]);
-    }
-  }, [newPlan]);
-
-  // Type guard function to check if an object is of type Plan
-  const isPlan = (obj: any): obj is Plan => {
-    return (
-      typeof obj === "object" &&
-      obj !== null &&
-      "id" in obj &&
-      "title" in obj &&
-      "duedate" in obj &&
-      "category" in obj
-    );
-  };
-
-  const fetchCategoryNames = async (): Promise<void> => {
-    try {
-      const response = await axios.get<{ id: number; name: string }[]>(
-        `${ApiUrl}:8000/api/task/categories/`,
-        {
-          headers: {
-            Authorization: `Token ${userToken?.token}`,
-          },
-        }
-      );
+      const response = await axios.get<{ id: number; name: string }[]>(`${ApiUrl}:8000/api/task/categories/`, {
+        headers: {
+          Authorization: `Token ${userToken?.token}`,
+        },
+      });
       const categories = response.data.reduce((acc, category) => {
         acc[category.id] = category.name;
         return acc;
@@ -123,71 +60,109 @@ const Timeline: React.FC = () => {
     }
   };
 
-  const handleDeletePlan = async (planId: number): Promise<void> => {
+  const fetchTodayPlans = async (formattedDate: string) => {
+    setLoading(true);
     try {
-      await axios.delete(`${ApiUrl}:8000/api/tasks/${planId}/`, {
+      const response = await axios.get<Plan[]>(`${ApiUrl}:8000/api/learner/tasks/?due_date=${formattedDate}`, {
         headers: {
           Authorization: `Token ${userToken?.token}`,
         },
       });
-      fetchTodayPlans();
+      setTodayPlans(response.data);
+    } catch (error) {
+      console.error("Error fetching today's plans:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const selectedIndex = days.indexOf(selectedDay);
+      const currentDate = new Date();
+      const firstDayOfWeek = currentDate.getDate() - currentDate.getDay() + 1;
+      const selectedDate = new Date(currentDate.setDate(firstDayOfWeek + selectedIndex));
+      const formattedDate = selectedDate.toISOString().split('T')[0];
+
+      fetchCategoryNames();
+      fetchTodayPlans(formattedDate);
+    }, [selectedDay, userToken])
+  );
+
+  const handleDeletePlan = async (plan: Plan) => {
+    try {
+      await axios.delete(`${ApiUrl}:8000/api/tasks/${plan.id}/`, {
+        headers: {
+          Authorization: `Token ${userToken?.token}`,
+        },
+      });
+      const selectedIndex = days.indexOf(selectedDay);
+      const currentDate = new Date();
+      currentDate.setDate(currentDate.getDate() + selectedIndex);
+      const formattedDate = currentDate.toISOString().split('T')[0];
+      fetchTodayPlans(formattedDate);
     } catch (error) {
       console.error("Error deleting task:", error);
       Alert.alert("Error", "Failed to delete task");
     }
   };
 
-  const handleEditPlan = (planId: number): void => {
-    navigation.navigate("EditTouchScreen", { taskId: planId });
+  const handleEditPlan = (plan: Plan) => {
+    router.navigate("EditPlan");
+    console.log(categoryNames);
+    const taskIdString: string = String(plan.id);
+    router.setParams({taskId: taskIdString, title: plan.title, description: plan.description, 
+      duedate: plan.due_date, category_id: String(plan.category), duetime: plan.due_time, category_name: categoryNames[plan.category]});
   };
 
-  // const renderSwipeableContent = (plan: Plan, index: number): JSX.Element => {
-  //   return (
-  //     <Swipeable
-  //       key={index}
-  //       rightButtons={[
-  //         <TouchableOpacity onPress={() => handleEditPlan(plan.id)}>
-  //           <View style={[styles.actionButton, styles.editButton]}>
-  //             <Feather name="edit" size={24} color="white" />
-  //           </View>
-  //         </TouchableOpacity>,
-  //         <TouchableOpacity onPress={() => handleDeletePlan(plan.id)}>
-  //           <View style={[styles.actionButton, styles.deleteButton]}>
-  //             <Feather name="trash-2" size={24} color="white" />
-  //           </View>
-  //         </TouchableOpacity>,
-  //       ]}
-  //     >
-  //       <View style={styles.planContainer}>
-  //         <View
-  //           style={[
-  //             styles.timeMarker,
-  //             {
-  //               backgroundColor: getCategoryColor(categoryNames[plan.category]),
-  //             },
-  //           ]}
-  //         >
-  //           <Text
-  //             style={[styles.typeText, { transform: [{ rotate: "180deg" }] }]}
-  //           >
-  //             {categoryNames[plan.category] || "Unknown Category"}
-  //           </Text>
-  //         </View>
-  //         <View style={styles.planContent}>
-  //           <Text style={styles.planTitle}>{plan.title}</Text>
-  //           <Text style={styles.planTime}>
-  //             {plan.duedate
-  //               ? new Date(plan.duedate).toLocaleTimeString([], {
-  //                   hour: "2-digit",
-  //                   minute: "2-digit",
-  //                 })
-  //               : ""}
-  //           </Text>
-  //         </View>
-  //       </View>
-  //     </Swipeable>
-  //   );
-  // };
+  const renderPlanContent = (plan: Plan, index: number) => {
+    return (
+      <GestureHandlerRootView key={index}>
+        <Swipeable    
+          renderRightActions={() => (
+            <>     
+              <TouchableOpacity  
+                onPress={() => handleDeletePlan(plan)}
+                style={styles.deleteButton}
+              >
+                <Feather name="trash-2" size={24} color="white" />
+              </TouchableOpacity>
+            </>
+          )}
+          renderLeftActions={() =>  
+            <TouchableOpacity
+              onPress={() => handleEditPlan(plan)}
+              style={styles.editButton}
+            >
+              <Feather name="edit" size={24} color="white" />
+            </TouchableOpacity>
+          }
+        >
+          <View style={styles.planContainer}>
+            <View
+              style={[
+                styles.timeMarker,
+                {
+                  backgroundColor: getCategoryColor(categoryNames[plan.category]),
+                },
+              ]}
+            >
+              <Text style={[styles.typeText, { transform: [{ rotate: "180deg" }] }]}>
+                {categoryNames[plan.category] || "Unknown Category"}
+              </Text>
+            </View>
+            
+            <View style={styles.planContent}>
+              <Text style={styles.planTitle}>{plan.title}</Text>
+              <Text style={styles.planTime}>
+                {plan.due_time ? plan.due_time.slice(0, 5) : ""}        
+              </Text>
+            </View>
+          </View>
+        </Swipeable>
+      </GestureHandlerRootView>
+    ); 
+  };
 
   return (
     <View style={styles.container}>
@@ -202,9 +177,19 @@ const Timeline: React.FC = () => {
           />
         </View>
       </View>
-      <Text style={styles.sectionTitle}>Today's Plans</Text>
+      <View style={styles.touchableContainer}>
+        {days.map((day, index) => (
+          <TouchableOpacity key={index} style={[
+            styles.touchableButton,
+            selectedDay === day && { backgroundColor: 'orange', padding: 10, borderRadius: 17 }
+          ]}
+          onPress={() => setSelectedDay(day)}>
+            <Text style={styles.touchableText}>{day}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        {/* {todayPlans.map((plan, index) => renderSwipeableContent(plan, index))} */}
+        {todayPlans.map((plan, index) => renderPlanContent(plan, index))}
       </ScrollView>
     </View>
   );
@@ -268,21 +253,51 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     width: 50,
-    height: "85%",
     borderRadius: 10,
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
+  touchableContainer: {
+    marginTop: -70,
+    flexDirection: 'row',
+    backgroundColor: "#f4f7f3",
+    alignSelf: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingBottom: 10,
+    borderRadius: 30,
+    width: '100%',
+  },
+  touchableButton: {
+    borderRadius: 10,
+  },
+  touchableText: {
+    color: '#145714',
+    fontSize: 24,
+    fontWeight: 'bold',
+    padding: 5,
   },
   editButton: {
     backgroundColor: "green",
-    borderTopRightRadius: 0,
-    borderBottomRightRadius: 0,
+    height: "75%",
+    justifyContent: "center",
+    alignItems: "center",
+    width: 50,
+    borderRadius: 10,
   },
   deleteButton: {
     backgroundColor: "red",
-    borderTopLeftRadius: 0,
-    borderBottomLeftRadius: 0,
+    height: "75%",
+    justifyContent: "center",
+    alignItems: "center",
+    width: 50,
+    borderRadius: 10,
   },
   scrollViewContent: {
     flexGrow: 1,
+    marginBottom: 200
   },
   image: {
     width: 200,
