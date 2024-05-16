@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-<<<<<<< Updated upstream
 import {
   View,
   Text,
@@ -15,14 +14,6 @@ import { useNavigation } from "@react-navigation/native";
 import { RootParamList } from "../../../components/types";
 import ApiUrl from "../../../config";
 import { useLocalSearchParams } from "expo-router";
-=======
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Alert } from "react-native";
-import axios from "axios";
-import { Feather } from '@expo/vector-icons';
-import { useNavigation } from "@react-navigation/native";
-import { RootParamList } from "../../../components/types";
-import ApiUrl from "../../../config";
->>>>>>> Stashed changes
 import { useAuth } from "../../../components/AuthContext";
 import {router} from 'expo-router'
 import { Swipeable, GestureHandlerRootView } from 'react-native-gesture-handler';
