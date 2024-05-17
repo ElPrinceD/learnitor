@@ -5,8 +5,9 @@
 
 import { Text as DefaultText, View as DefaultView } from 'react-native';
 
-import Colors from '@/constants/Colors';
+import Colors from '../constants/Colors';
 import { useColorScheme } from './useColorScheme';
+import React from 'react';
 
 type ThemeProps = {
   lightColor?: string;
@@ -24,9 +25,9 @@ export function useThemeColor(
   const colorFromProps = props[theme];
 
   if (colorFromProps) {
-    return colorFromProps;
+    return `linear-gradient(to right, ${colorFromProps} 0%, ${colorFromProps} 100%)`;
   } else {
-    return Colors[theme][colorName];
+    return `linear-gradient(to right, ${colorFromProps} 0%, ${colorFromProps} 100%)`;
   }
 }
 

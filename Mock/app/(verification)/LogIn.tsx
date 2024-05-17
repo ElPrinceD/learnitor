@@ -1,18 +1,17 @@
-import React, { useState, useContext } from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   TouchableOpacity,
   View,
   TextInput,
-  Image,
-  useColorScheme,
   ActivityIndicator,
+  useColorScheme,
 } from "react-native";
-import { Text } from "@/components/Themed";
+import { Text } from "../../components/Themed";
 import { Ionicons } from "@expo/vector-icons";
-import { useThemeColor } from "@/components/Themed";
+import { LinearGradient } from 'expo-linear-gradient';
+import { useThemeColor } from "../../components/Themed";
 import { router, useNavigation } from "expo-router";
-
 import axios from "axios";
 import ApiUrl from "../../config";
 import { RootParamList } from "../../components/types";
@@ -26,12 +25,9 @@ const LogIn = () => {
   const [email, setEmail] = useState(registeredEmail);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [user, setUser] = useState("");
   const [loading, setLoading] = useState(false);
   const colorScheme = useColorScheme();
-
   const [showPassword, setShowPassword] = useState(false);
-
   const navigation = useNavigation<RootParamList>();
 
   const handleSignUpWithApple = () => {
@@ -61,18 +57,9 @@ const LogIn = () => {
       })
       .then((response) => {
         setLoading(false);
-        setUser(response.data.user);
-
         // Handle successful response from backend
         login(response.data, response.data.token); // Logging in user with token
-
-        navigation.navigate("(tabs)", {
-          // token: response.data.token,
-          // id: response.data.user.id,
-          // firstName: response.data.user.first_name,
-          // lastName: response.data.user.last_name,
-        });
-        console.log(response.data.user);
+        navigation.navigate("(tabs)", {});
       })
       .catch((error) => {
         setLoading(false);
@@ -101,8 +88,8 @@ const LogIn = () => {
 
   const themeColor = useThemeColor(
     {
-      dark: "#0063cd",
-      light: "#0063cd",
+      dark: "#9a580d",
+      light: "#9a580d",
     },
     "background"
   );
@@ -112,7 +99,7 @@ const LogIn = () => {
     "background"
   );
   const buttonBorderColor = useThemeColor(
-    { light: "#000", dark: "#fff" },
+    { light: "#120404", dark: "#fff" },
     "tint"
   );
   const dividerTextColor = useThemeColor(
@@ -121,39 +108,40 @@ const LogIn = () => {
   );
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: useThemeColor({}, "background") },
-      ]}
+    <LinearGradient
+      colors={['#FFFFFF', '#ffffff']}
+      style={styles.container}
     >
       <View style={styles.inputContainer}>
-        <TextInput
-          style={[
-            styles.input,
-            {
-              backgroundColor: buttonBackgroundColor,
-              borderColor: buttonBorderColor,
-              color: buttonTextColor,
-            },
-          ]}
-          placeholder="Email"
-          placeholderTextColor={buttonTextColor}
-          value={email}
-          onChangeText={(text) => setEmail(text)}
-        />
-
-        <View style={styles.passwordContainer}>
+        <View style={styles.inputWrapper}>
+          <Text style={styles.label}>Email</Text>
           <TextInput
             style={[
               styles.input,
               {
                 backgroundColor: buttonBackgroundColor,
-                borderColor: buttonBorderColor,
+                
                 color: buttonTextColor,
               },
             ]}
-            placeholder="Password"
+            placeholder="Myemail@learnitor.com"
+            placeholderTextColor={buttonTextColor}
+            value={email}
+            onChangeText={(text) => setEmail(text)}
+          />
+        </View>
+        
+        <View style={styles.inputWrapper}>
+          <Text style={styles.label}>Password</Text>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: buttonBackgroundColor,
+                color: buttonTextColor,
+              },
+            ]}
+            placeholder="*************"
             placeholderTextColor={buttonTextColor}
             secureTextEntry={!showPassword}
             value={password}
@@ -170,41 +158,65 @@ const LogIn = () => {
             />
           </TouchableOpacity>
         </View>
+        
         {error ? <Text style={styles.errorMessage}>{error}</Text> : null}
       </View>
+      <View style={styles.forgotPasswordContainer}>
+        <TouchableOpacity onPress={handleForgotPassword}>
+          <Text
+            style={[
+              styles.forgotPasswordText,
+              {textDecorationLine: "none" },
+            ]}
+          >
+            Forgot password?
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <TouchableOpacity
-        style={[
-          styles.button,
-          styles.loginButton,
-          {
-            backgroundColor: themeColor,
-            borderColor: buttonBorderColor,
-          },
-        ]}
+        
         onPress={handleLogin}
         disabled={loading}
       >
+        <LinearGradient
+            colors={['#c17319', '#9a580d']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={[styles.button, styles.loginButton]}
+          >
         {loading ? (
           <ActivityIndicator color="white" />
         ) : (
-          <Text style={[styles.buttonText, { color: "white" }]}>Log in</Text>
+          <Text style={[styles.buttonText, { color: "white" }]}>Login</Text>
         )}
+        </LinearGradient>
       </TouchableOpacity>
-      <TouchableOpacity onPress={handleForgotPassword}>
-        <Text
-          style={[
-            styles.forgotPasswordText,
-            { color: themeColor, textDecorationLine: "none" },
-          ]}
-        >
-          Forgot password?
+
+      <View style={styles.bottomContainer}>
+        <Text style={[styles.existingText, { color: dividerTextColor }]}>
+          Don't have an account?
         </Text>
-      </TouchableOpacity>
-      <View style={styles.dividerRow}>
+        <TouchableOpacity style={styles.signupButton} onPress={handleSignUp}>
+          <Text
+            style={[
+              styles.loginText,
+              { color: "#9a580d", textDecorationLine: "none" },
+            ]}
+          >
+            Register
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      
+
+      {/* <View style={styles.dividerRow}>
         <Text style={[styles.dividerText, { color: dividerTextColor }]}>
           ---------------------OR----------------------
         </Text>
       </View>
+
       <View style={styles.buttonRow}>
         <TouchableOpacity
           style={[
@@ -220,6 +232,7 @@ const LogIn = () => {
         >
           <Ionicons name="logo-apple" size={25} color={buttonTextColor} />
         </TouchableOpacity>
+        
         <TouchableOpacity
           style={[
             styles.button,
@@ -231,6 +244,7 @@ const LogIn = () => {
         >
           <Ionicons name="logo-google" size={25} color={buttonTextColor} />
         </TouchableOpacity>
+        
         <TouchableOpacity
           style={[
             styles.button,
@@ -242,23 +256,10 @@ const LogIn = () => {
         >
           <Ionicons name="logo-twitter" size={25} color={buttonTextColor} />
         </TouchableOpacity>
-      </View>
-      <View style={styles.bottomContainer}>
-        <Text style={[styles.existingText, { color: dividerTextColor }]}>
-          No account yet?
-        </Text>
-        <TouchableOpacity style={styles.signupButton} onPress={handleSignUp}>
-          <Text
-            style={[
-              styles.loginText,
-              { color: themeColor, textDecorationLine: "none" },
-            ]}
-          >
-            Register
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+      </View> */}
+
+      
+    </LinearGradient>
   );
 };
 
@@ -268,6 +269,45 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 16,
+  },
+  inputContainer: {
+    width: "100%",
+    marginBottom: 16,
+  },
+  inputWrapper: {
+    position: "relative",
+    marginBottom: 16,
+  },
+  label: {
+    position: "absolute",
+    top: -8,
+    left: 17,
+    backgroundColor: 'white', // Make the label background transparent
+    paddingHorizontal: 8,
+    zIndex: 1,
+    fontSize: 16,
+    color: '#515050',
+    fontWeight: 'light',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#bdbbb9",
+    borderRadius: 12.5,
+    padding: 16,
+    marginBottom: 25,
+    color: "#000",
+    height: 65,
+    position: 'relative',
+    zIndex: 0,
+  },
+  passwordContainer: {
+    position: "relative",
+    
+  },
+  toggleIcon: {
+    position: "absolute",
+    right: 10,
+    top: 20,
   },
   buttonRow: {
     flexDirection: "row",
@@ -279,9 +319,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
+  dividerText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    opacity: 0.4,
+    marginTop: 20,
+  },
   button: {
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent : "center",
     padding: 16,
     marginBottom: 16,
     borderRadius: 20,
@@ -295,44 +341,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     width: 120,
   },
-
   twitterButton: {
     borderWidth: 1,
     width: 120,
-  },
-  inputContainer: {
-    width: "100%",
-    marginBottom: 16,
-  },
-  input: {
-    borderWidth: 2,
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 16,
-    color: "#000",
-    height: 65,
-  },
-  toggleIcon: {
-    position: "absolute",
-    right: 10,
-    top: 20,
-  },
-  dividerText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    opacity: 0.4,
-    marginTop: 20,
   },
   buttonText: {
     fontSize: 20,
     fontWeight: "bold",
   },
   loginButton: {
-    borderRadius: 30,
+    borderRadius: 10,
     paddingVertical: 16,
     paddingHorizontal: 32,
-    marginBottom: 16,
-    width: 300,
+    marginBottom: 1,
+    width: 350,
   },
   image: {
     width: 400,
@@ -340,22 +362,32 @@ const styles = StyleSheet.create({
     resizeMode: "contain",
     marginBottom: 16,
   },
+  forgotPasswordContainer: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    marginTop: -50,
+    
+    paddingBottom:50,
+    
+  },
   forgotPasswordText: {
     fontSize: 16,
+    color: "#9a580d",
     fontWeight: "bold",
-    textDecorationLine: "underline",
-    marginTop: 8,
+    
+    
+    
   },
-
   bottomContainer: {
-    position: "absolute",
-    bottom: 16,
+    marginTop: 30,
     flexDirection: "row",
     alignItems: "center",
   },
   existingText: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "light",
   },
   signupButton: {
     marginLeft: 8,
@@ -370,9 +402,7 @@ const styles = StyleSheet.create({
     color: "red",
     marginBottom: 16,
   },
-  passwordContainer: {
-    position: "relative",
-  },
 });
 
 export default LogIn;
+

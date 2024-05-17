@@ -55,7 +55,7 @@ function RootLayoutNav() {
 
   useEffect(() => {
     if (!isLoading && userToken) {
-      router.navigate("(tabs)");
+      router.navigate("./Intro");
     } else if (!isLoading) {
       router.push("./Intro");
     }

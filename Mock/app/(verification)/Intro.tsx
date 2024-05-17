@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, View, Text, Image, TouchableOpacity } from "react-native";
 import { router } from "expo-router";
+import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeColor } from "../../components/Themed";
 
 // Define the type for the navigation prop
@@ -8,27 +9,26 @@ import { useThemeColor } from "../../components/Themed";
 
 const Intro = () => {
   // Get theme colors for text and background
-  const textColor = useThemeColor({}, "text");
+  const textColor = useThemeColor({light: "white", dark: "white"}, "text");
   const backgroundColor = useThemeColor({}, "background");
-
-
-  const themeColor = useThemeColor(
-    {
-      dark: "#0063cd", light: "#0063cd"
-    }, "background"
-  )
 
   // Navigate to the sign up page
   const handleSignUp = () => {
     router.navigate("SignUp");
   };
+
   // Navigate to the log in modal page
   const handleLogIn = () => {
     router.navigate("LogIn");
   };
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
+    <LinearGradient
+      colors={['#ffffff', '#fdecd2']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.container}
+    >
       {/* Image */}
       <Image
         source={require("../../assets/images/Learn.png")} // Replace with your image path
@@ -50,13 +50,17 @@ const Intro = () => {
       {/* Button Container */}
       <View style={styles.buttonContainer}>
         {/* Sign Up Button */}
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: themeColor }]}
-          onPress={handleSignUp}
-        >
-          <Text style={[styles.buttonText, { color: backgroundColor }]}>
-            Sign Up
-          </Text>
+        <TouchableOpacity onPress={handleSignUp}>
+          <LinearGradient
+            colors={['#cd7e24', '#b16f24']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.button}
+          >
+            <Text style={[styles.buttonText, { color: "white" }]}>
+              Sign Up
+            </Text>
+          </LinearGradient>
         </TouchableOpacity>
 
         {/* Log In Link */}
@@ -64,7 +68,7 @@ const Intro = () => {
           <Text style={[styles.loginText, { color: textColor }]}>Log In</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </LinearGradient>
   );
 };
 
@@ -100,10 +104,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   button: {
-    width: 350, // Make the button wider
+    width: 300, // Make the button wider
     paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: 25, // More rounded edges
+    borderRadius: 7, // More rounded edges
     marginBottom: 12,
     alignItems: "center",
     justifyContent: "center",
