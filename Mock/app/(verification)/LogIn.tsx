@@ -81,10 +81,7 @@ const LogIn = () => {
     router.navigate("ContinueWithEmail");
   };
 
-  const buttonTextColor = useThemeColor(
-    { light: "#454444", dark: "#fff" },
-    "text"
-  );
+
 
   const themeColor = useThemeColor(
     {
@@ -94,14 +91,18 @@ const LogIn = () => {
     "background"
   );
 
+
+
+  const buttonTextColor = useThemeColor(
+    { light: "#b9b9b9", dark: "#fff" },
+    "text"
+  );
   const buttonBackgroundColor = useThemeColor(
     { light: "#fff", dark: "#000" },
     "background"
+    
   );
-  const buttonBorderColor = useThemeColor(
-    { light: "#120404", dark: "#fff" },
-    "tint"
-  );
+
   const dividerTextColor = useThemeColor(
     { light: "#292929", dark: "#fff" },
     "text"
@@ -122,8 +123,7 @@ const LogIn = () => {
               {
                 backgroundColor: buttonBackgroundColor,
                 
-                color: buttonTextColor,
-              },
+                color: "#4d4c4c",              },
             ]}
             placeholder="Myemail@learnitor.com"
             placeholderTextColor={buttonTextColor}
@@ -139,7 +139,7 @@ const LogIn = () => {
               styles.input,
               {
                 backgroundColor: buttonBackgroundColor,
-                color: buttonTextColor,
+                color: "#4d4c4c",
               },
             ]}
             placeholder="*************"

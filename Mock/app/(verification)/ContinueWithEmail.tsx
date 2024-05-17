@@ -135,7 +135,7 @@ const ContinueWithEmail = () => {
               {
                 backgroundColor: buttonBackgroundColor,
                 
-                color: buttonTextColor,
+                color: "#4d4c4c",
               },
             ]}
             placeholder="Arch"
@@ -154,7 +154,7 @@ const ContinueWithEmail = () => {
               {
                 backgroundColor: buttonBackgroundColor,
                 
-                color: buttonTextColor,
+                color: "#4d4c4c",
               },
             ]}
             placeholder="Levy"
@@ -174,7 +174,7 @@ const ContinueWithEmail = () => {
               {
                 backgroundColor: buttonBackgroundColor,
                 
-                color: buttonTextColor,
+                color: "#4d4c4c",
               },
             ]}
             placeholder="ArchLevy@learnitor.com"
@@ -193,7 +193,7 @@ const ContinueWithEmail = () => {
               styles.input,
               {
                 backgroundColor: buttonBackgroundColor,
-                color: buttonTextColor,
+                color: "#4d4c4c",
               },
             ]}
             placeholder="*************"
@@ -236,8 +236,8 @@ const ContinueWithEmail = () => {
               styles.input,
               {
                 width: "100%",
-                color: colorScheme === "dark" ? "#fff" : "#000",
-                borderColor: colorScheme === "dark" ? "#fff" : "#bdbbb9",
+                color: "#4d4c4c",
+                                borderColor: colorScheme === "dark" ? "#fff" : "#bdbbb9",
               },
             ]}
             placeholder="Date of Birth"
@@ -253,7 +253,7 @@ const ContinueWithEmail = () => {
       )}
       <TouchableOpacity
         
-        onPress={handleLogin}
+        onPress={handleSignUp}
         
       >
         <LinearGradient
@@ -271,7 +271,7 @@ const ContinueWithEmail = () => {
         <Text style={[styles.existingText, { color: dividerTextColor }]}>
           Don't have an account?
         </Text>
-        <TouchableOpacity style={styles.signupButton} onPress={handleSignUp}>
+        <TouchableOpacity style={styles.signupButton} onPress={handleLogin}>
           <Text
             style={[
               styles.loginText,
