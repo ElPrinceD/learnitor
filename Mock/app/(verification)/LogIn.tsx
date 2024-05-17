@@ -78,11 +78,11 @@ const LogIn = () => {
   };
 
   const handleSignUp = () => {
-    router.navigate("SignUp");
+    router.navigate("ContinueWithEmail");
   };
 
   const buttonTextColor = useThemeColor(
-    { light: "#000", dark: "#fff" },
+    { light: "#454444", dark: "#fff" },
     "text"
   );
 
@@ -103,7 +103,7 @@ const LogIn = () => {
     "tint"
   );
   const dividerTextColor = useThemeColor(
-    { light: "#000", dark: "#fff" },
+    { light: "#292929", dark: "#fff" },
     "text"
   );
 
@@ -112,6 +112,7 @@ const LogIn = () => {
       colors={['#FFFFFF', '#ffffff']}
       style={styles.container}
     >
+       <Text style={[styles.header, {color: buttonTextColor}]}>Sign in</Text>
       <View style={styles.inputContainer}>
         <View style={styles.inputWrapper}>
           <Text style={styles.label}>Email</Text>
@@ -270,6 +271,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 16,
   },
+  header: {
+    fontSize: 20,
+    fontWeight: "normal",
+    position: "absolute",
+    top: 70
+    },
   inputContainer: {
     width: "100%",
     marginBottom: 16,

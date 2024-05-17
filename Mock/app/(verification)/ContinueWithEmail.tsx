@@ -5,17 +5,18 @@ import {
   View,
   TextInput,
   Text,
-  Image,
+  ScrollView,
   TouchableOpacity,
   StyleSheet,
   useColorScheme,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "expo-router";
+import { router, useNavigation } from "expo-router";
 import { RootParamList } from "../../components/types";
-import { useThemeColor } from "@/components/Themed";
+import { useThemeColor } from "../../components/Themed";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import ApiUrl from "../../config";
+import { LinearGradient } from "expo-linear-gradient";
 
 const ContinueWithEmail = () => {
   const [firstName, setFirstName] = useState("");
@@ -69,6 +70,10 @@ const ContinueWithEmail = () => {
     }
   };
 
+  const handleLogin = () => {
+    router.navigate("LogIn");
+  };
+
   const toggleShowPassword = () => {
     setShowPassword(!showPassword);
   };
@@ -90,13 +95,29 @@ const ContinueWithEmail = () => {
 
   const themeColor = useThemeColor(
     {
-      dark: "#0063cd",
-      light: "#0063cd",
+      dark: "#9a580d",
+      light: "#9a580d",
     },
     "background"
   );
 
+  const buttonTextColor = useThemeColor(
+    { light: "#b9b9b9", dark: "#fff" },
+    "text"
+  );
+  const buttonBackgroundColor = useThemeColor(
+    { light: "#fff", dark: "#000" },
+    "background"
+    
+  );
+
+  const dividerTextColor = useThemeColor(
+    { light: "#292929", dark: "#fff" },
+    "text"
+  );
+
   return (
+    
     <View
       style={[
         styles.container,
@@ -105,84 +126,95 @@ const ContinueWithEmail = () => {
         },
       ]}
     >
-      <Image
-        source={require("../../assets/images/Register.png")}
-        style={styles.image}
-      />
-      <View style={styles.inputRow}>
-        <TextInput
-          style={[
-            styles.input,
-            {
-              width: "48%",
-              color: colorScheme === "dark" ? "#fff" : "#000",
-              borderColor: colorScheme === "dark" ? "#fff" : "#000",
-            },
-          ]}
-          placeholder="First Name"
-          value={firstName}
-          onChangeText={setFirstName}
-          placeholderTextColor={colorScheme === "dark" ? "#fff" : "#666"}
-        />
-        <View style={{ width: 16 }} />
-        <TextInput
-          style={[
-            styles.input,
-            {
-              width: "48%",
-              color: colorScheme === "dark" ? "#fff" : "#000",
-              borderColor: colorScheme === "dark" ? "#fff" : "#000",
-            },
-          ]}
-          placeholder="Surname"
-          value={surname}
-          onChangeText={setSurname}
-          placeholderTextColor={colorScheme === "dark" ? "#fff" : "#666"}
-        />
-      </View>
-      <TextInput
-        style={[
-          styles.input,
-          {
-            width: "100%",
-            color: colorScheme === "dark" ? "#fff" : "#000",
-            borderColor: colorScheme === "dark" ? "#fff" : "#000",
-          },
-        ]}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        placeholderTextColor={colorScheme === "dark" ? "#fff" : "#666"}
-      />
-      {emailError && <Text style={styles.errorMessage}>{emailError}</Text>}
-      <View style={styles.passwordContainer}>
-        <TextInput
-          style={[
-            styles.passwordInput,
-            {
-              width: "100%",
-              color: colorScheme === "dark" ? "#fff" : "#000",
-              borderColor: colorScheme === "dark" ? "#fff" : "#000",
-            },
-          ]}
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={!showPassword}
-          placeholderTextColor={colorScheme === "dark" ? "#fff" : "#666"}
-        />
-        <TouchableOpacity
-          onPress={toggleShowPassword}
-          style={styles.toggleIcon}
-        >
-          <Ionicons
-            name={showPassword ? "eye-off" : "eye"}
-            size={24}
-            color={colorScheme === "dark" ? "#fff" : "gray"}
+    
+    <View style={styles.inputWrapper}>
+          <Text style={styles.label}>First Name</Text>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: buttonBackgroundColor,
+                
+                color: buttonTextColor,
+              },
+            ]}
+            placeholder="Arch"
+            placeholderTextColor={buttonTextColor}
+            value={firstName}
+            onChangeText={setFirstName}
+            
+            
           />
-        </TouchableOpacity>
-      </View>
+        </View>
+    <View style={styles.inputWrapper}>
+          <Text style={styles.label}>Last Name</Text>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: buttonBackgroundColor,
+                
+                color: buttonTextColor,
+              },
+            ]}
+            placeholder="Levy"
+            placeholderTextColor={buttonTextColor}
+            value={surname}
+            onChangeText={setSurname}
+            
+            
+          />
+        </View>
+
+    <View style={styles.inputWrapper}>
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: buttonBackgroundColor,
+                
+                color: buttonTextColor,
+              },
+            ]}
+            placeholder="ArchLevy@learnitor.com"
+            placeholderTextColor={buttonTextColor}
+            value={email}
+            onChangeText={setEmail}
+            
+            
+          />
+        </View>
+
+        <View style={styles.inputWrapper}>
+          <Text style={styles.label}>Password</Text>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: buttonBackgroundColor,
+                color: buttonTextColor,
+              },
+            ]}
+            placeholder="*************"
+            placeholderTextColor={buttonTextColor}
+            secureTextEntry={!showPassword}
+            value={password}
+            onChangeText={(text) => setPassword(text)}
+          />
+          <TouchableOpacity
+            onPress={toggleShowPassword}
+            style={styles.toggleIcon}
+          >
+            <Ionicons
+              name={showPassword ? "eye-off" : "eye"}
+              size={24}
+              color={colorScheme === "dark" ? "#fff" : "gray"}
+            />
+          </TouchableOpacity>
+        </View>
+      {emailError && <Text style={styles.errorMessage}>{emailError}</Text>}
+    
       {passwordError && (
         <Text style={styles.errorMessage}>{passwordError}</Text>
       )}
@@ -195,6 +227,8 @@ const ContinueWithEmail = () => {
           onChange={onChange}
         />
       )}
+      <View style={styles.inputWrapper}>
+          <Text style={styles.label}>Date Of Birth</Text>
       <TouchableOpacity onPress={showDatePicker}>
         <View style={styles.passwordContainer}>
           <TextInput
@@ -203,7 +237,7 @@ const ContinueWithEmail = () => {
               {
                 width: "100%",
                 color: colorScheme === "dark" ? "#fff" : "#000",
-                borderColor: colorScheme === "dark" ? "#fff" : "#000",
+                borderColor: colorScheme === "dark" ? "#fff" : "#bdbbb9",
               },
             ]}
             placeholder="Date of Birth"
@@ -213,20 +247,41 @@ const ContinueWithEmail = () => {
           />
         </View>
       </TouchableOpacity>
+      </View>
       {allFieldsError && (
         <Text style={styles.centeredErrorMessage}>{allFieldsError}</Text>
       )}
       <TouchableOpacity
-        style={[
-          styles.button,
-          {
-            backgroundColor: themeColor,
-          },
-        ]}
-        onPress={handleSignUp}
+        
+        onPress={handleLogin}
+        
       >
-        <Text style={styles.buttonText}>Sign Up</Text>
+        <LinearGradient
+            colors={['#c17319', '#9a580d']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={[styles.button, styles.loginButton]}
+          >
+         
+          <Text style={[styles.buttonText, { color: "white" }]}>Register</Text>
+        
+        </LinearGradient>
       </TouchableOpacity>
+      <View style={styles.bottomContainer}>
+        <Text style={[styles.existingText, { color: dividerTextColor }]}>
+          Don't have an account?
+        </Text>
+        <TouchableOpacity style={styles.signupButton} onPress={handleSignUp}>
+          <Text
+            style={[
+              styles.loginText,
+              { color: "#9a580d", textDecorationLine: "none" },
+            ]}
+          >
+            Login
+          </Text>
+        </TouchableOpacity>
+      </View>
       <Text
         style={[
           styles.agreementText,
@@ -256,6 +311,7 @@ const ContinueWithEmail = () => {
         .
       </Text>
     </View>
+ 
   );
 };
 
@@ -266,21 +322,42 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 16,
   },
+  
+  inputWrapper: {
+    position: "relative",
+    marginBottom: 16,
+    width: "100%",
+  },
+  label: {
+    position: "absolute",
+    top: -8,
+    left: 17,
+    borderRadius: 70,
+    backgroundColor: 'white', // Make the label background transparent
+    paddingHorizontal: 8,
+    zIndex: 1,
+    fontSize: 16,
+    color: '#515050',
+    fontWeight: 'light',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#bdbbb9",
+    borderRadius: 12.5,
+    padding: 16,
+    marginBottom: 25,
+    color: "#000",
+    height: 65,
+    position: 'relative',
+    
+    zIndex: 0,
+  },
   inputRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 16,
   },
-  input: {
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 16,
-    borderTopWidth: 0, // Hide top border
-    borderRightWidth: 0, // Hide right border
-    borderLeftWidth: 0,
-    borderBottomWidth: 1,
-  },
+ 
   passwordContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -307,12 +384,30 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 0.5,
     width: "100%",
+    backgroundColor: "#9a580d",
     alignItems: "center",
   },
   buttonText: {
     fontSize: 16,
     fontWeight: "bold",
     color: "#fff",
+  },
+  bottomContainer: {
+    marginTop: 20,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  existingText: {
+    fontSize: 16,
+    fontWeight: "light",
+  },
+  signupButton: {
+    marginLeft: 8,
+  },
+  loginText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    textDecorationLine: "underline",
   },
   errorMessage: {
     fontSize: 12,
@@ -333,6 +428,13 @@ const styles = StyleSheet.create({
   },
   link: {
     textDecorationLine: "underline",
+  },
+  loginButton: {
+    borderRadius: 10,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    marginBottom: 1,
+    width: 350,
   },
   image: {
     width: 400, // Make the image bigger

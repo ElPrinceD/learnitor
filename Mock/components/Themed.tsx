@@ -25,9 +25,9 @@ export function useThemeColor(
   const colorFromProps = props[theme];
 
   if (colorFromProps) {
-    return `linear-gradient(to right, ${colorFromProps} 0%, ${colorFromProps} 100%)`;
+    return colorFromProps;
   } else {
-    return `linear-gradient(to right, ${colorFromProps} 0%, ${colorFromProps} 100%)`;
+    return Colors[theme][colorName];
   }
 }
 

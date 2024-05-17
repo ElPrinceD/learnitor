@@ -9,12 +9,12 @@ import { useThemeColor } from "../../components/Themed";
 
 const Intro = () => {
   // Get theme colors for text and background
-  const textColor = useThemeColor({light: "white", dark: "white"}, "text");
+  const textColor = useThemeColor({light: "black", dark: "white"}, "text");
   const backgroundColor = useThemeColor({}, "background");
 
   // Navigate to the sign up page
   const handleSignUp = () => {
-    router.navigate("SignUp");
+    router.navigate("ContinueWithEmail");
   };
 
   // Navigate to the log in modal page
