@@ -59,7 +59,9 @@ const LogIn = () => {
         setLoading(false);
         // Handle successful response from backend
         login(response.data, response.data.token); // Logging in user with token
-        navigation.navigate("(tabs)", {});
+
+        navigation.replace("(tabs)", {});
+        console.log(response.data.user);
       })
       .catch((error) => {
         setLoading(false);

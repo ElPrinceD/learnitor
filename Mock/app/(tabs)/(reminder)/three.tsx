@@ -259,6 +259,14 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
   },
+
+  touchableButton: {
+    borderRadius: 10,
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
   touchableContainer: {
     marginTop: -70,
     flexDirection: 'row',
@@ -266,19 +274,19 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingBottom: 10,
+    paddingBottom: 10, 
     borderRadius: 30,
     width: '100%',
+    
   },
-  touchableButton: {
-    borderRadius: 10,
-  },
+ 
   touchableText: {
     color: '#145714',
     fontSize: 24,
     fontWeight: 'bold',
     padding: 5,
   },
+
   editButton: {
     backgroundColor: "green",
     height: "75%",

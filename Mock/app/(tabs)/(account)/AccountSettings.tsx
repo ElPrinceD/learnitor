@@ -16,6 +16,7 @@ const AccountSettings = () => {
   const { userInfo, userToken } = useAuth();
   const defaultFirstName = userInfo?.user.first_name;
   const defaultLastName = userInfo?.user.last_name;
+  const id = userInfo?.user.id
   const defaultemail = userInfo?.user.email;
   const defaultdob = userInfo?.user.dob;
   const defaultStreet1 = userInfo?.user.address.street_1;

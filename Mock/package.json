@@ -45,8 +45,8 @@
     "react-native-share": "^10.2.0",
     "react-native-svg": "15.2.0-rc.0",
     "react-native-swipeable": "^0.6.0",
-    "react-native-tab-view": "^3.5.2",
-    "react-native-web": "~0.19.6"
+    "react-native-web": "~0.19.6",
+    "expo-blur": "~13.0.2"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

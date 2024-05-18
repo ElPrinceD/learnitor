@@ -9,6 +9,22 @@ import {
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 
+interface Topic {
+  title: string;
+  description: string;
+  id: string;
+  completed?: boolean;
+}
+
+interface Course {
+  title: string;
+  description: string;
+  level: string;
+  url: string;
+  category: number[];
+  id: string;
+}
+
 interface Question {
   text: string;
   id: number;
@@ -25,11 +41,15 @@ interface Answer {
 interface QuestionProps {
   practiceQuestions: Question[];
   practiceAnswers: Answer[];
+  topic: Topic;
+  course: Course;
 }
 
 const Questions: React.FC<QuestionProps> = ({
   practiceQuestions,
   practiceAnswers,
+  topic,
+  course,
 }) => {
   const colorScheme = useColorScheme();
   const { isTimed, duration } = useLocalSearchParams();
@@ -159,6 +179,8 @@ const Questions: React.FC<QuestionProps> = ({
           results: JSON.stringify(results),
           practiceQuestions: JSON.stringify(practiceQuestions),
           practiceAnswers: JSON.stringify(practiceAnswers),
+          topic: JSON.stringify(topic),
+          course: JSON.stringify(course),
         },
       });
     }, 0);
@@ -255,6 +277,9 @@ const Questions: React.FC<QuestionProps> = ({
       textAlign: "center",
       marginVertical: 10,
     },
+    timerRed: {
+      color: "red",
+    },
   });
 
   return (
@@ -264,7 +289,12 @@ const Questions: React.FC<QuestionProps> = ({
           <View style={styles.progressBar} />
         </View>
         {timeLeft !== null && (
-          <Text style={styles.timer}>
+          <Text
+            style={[
+              styles.timer,
+              timeLeft <= 60 && styles.timerRed, // Apply the red color when time is less than or equal to 60 seconds
+            ]}
+          >
             Time Left: {Math.floor(timeLeft / 60)}:
             {timeLeft % 60 < 10 ? `0${timeLeft % 60}` : timeLeft % 60}
           </Text>

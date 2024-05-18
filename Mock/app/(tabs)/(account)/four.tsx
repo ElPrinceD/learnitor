@@ -34,7 +34,7 @@ const Profile = () => {
         }
       );
       logout();
-      router.navigate("Intro");
+      router.replace("Intro");
     } catch (error) {
       console.error("Error logging out:", error);
       // Handle error scenarios, such as displaying an error message to the user

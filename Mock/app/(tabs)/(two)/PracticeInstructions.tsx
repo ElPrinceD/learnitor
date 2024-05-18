@@ -12,10 +12,10 @@ import { router, useLocalSearchParams } from "expo-router";
 
 const PracticeInstructions = () => {
   const colorScheme = useColorScheme();
-  const { topic, level } = useLocalSearchParams();
+  const { topic, level, course } = useLocalSearchParams();
 
   const [isTimed, setIsTimed] = useState(false);
-  const [duration, setDuration] = useState(10); // Default to 10 minutes
+  const [duration, setDuration] = useState(0.3); // Default to 10 minutes
 
   const handleStartQuiz = () => {
     router.navigate({
@@ -25,6 +25,7 @@ const PracticeInstructions = () => {
         topic: topic?.toString(),
         isTimed: isTimed.toString(), // Convert boolean to string
         duration: duration.toString(), // Convert number to string
+        course: course?.toString(),
       },
     });
   };

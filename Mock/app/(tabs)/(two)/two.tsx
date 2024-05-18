@@ -91,7 +91,6 @@ const CoursesScreen: React.FC = () => {
 
    
   });
-
   return (
     <>
     

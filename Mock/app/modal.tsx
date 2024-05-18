@@ -1,18 +1,24 @@
 import { StatusBar } from "expo-status-bar";
 import { Platform, StyleSheet } from "react-native";
-
+import Notification from "../components/notification";
 import { Text, View } from "@/components/Themed";
 import React from "react";
 
 export default function ModalScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Modal</Text>
-      <View
-        style={styles.separator}
-        lightColor="#eee"
-        darkColor="rgba(255,255,255,0.1)"
-      />
+      <View style={styles.notificationsContainer}>
+        <Notification
+          image={require('./../assets/images/splash.png')}
+          message="This is a notification message!"
+          onPress={() => console.log('Notification dismissed!')}
+        />
+        <Notification
+          image={require('./../assets/images/splash.png')}
+          message="This is a notification!"
+          onPress={() => console.log('Notification dismissed!')}
+        />
+      </View>
 
       {/* Use a light status bar on iOS to account for the black space above the modal */}
       <StatusBar style={Platform.OS === "ios" ? "light" : "auto"} />
@@ -23,16 +29,13 @@ export default function ModalScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "flex-start",
+    justifyContent: "flex-start", // Align items at the top
+    paddingTop: Platform.OS === 'ios' ? 40 : 0, // Adjust paddingTop for iOS to avoid status bar overlap
   },
-  title: {
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-  separator: {
-    marginVertical: 30,
-    height: 1,
-    width: "80%",
+  notificationsContainer: {
+    width: '100%', // Ensure notifications take full width
+    paddingHorizontal: 16, // Add horizontal padding
+    marginTop: Platform.OS === 'ios' ? 20 : 0, // Adjust marginTop for iOS to avoid status bar overlap
   },
 });

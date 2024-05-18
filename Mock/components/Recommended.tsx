@@ -26,7 +26,6 @@ interface Props {
 const RecommendedCoursesList: React.FC<Props> = ({
   RecommendedCoursesData,
 }) => {
-  console.log("Received RecommendedCoursesData:", RecommendedCoursesData);
   return (
     <FlatList
       horizontal
@@ -34,11 +33,10 @@ const RecommendedCoursesList: React.FC<Props> = ({
       renderItem={({ item }) => (
         <TouchableOpacity
           onPress={() => {
-            router.navigate("CourseDetails");
-            router.setParams({
-              course: JSON.stringify(item),
+            router.navigate({
+              pathname: "CourseDetails",
+              params: { course: JSON.stringify(item) },
             });
-            console.log("Course URL:", item.url);
           }}
           activeOpacity={0.5} // Set activeOpacity to 1 to remove white overlay
           style={styles.touchable}

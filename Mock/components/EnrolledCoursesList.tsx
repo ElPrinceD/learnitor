@@ -31,9 +31,9 @@ const EnrolledCoursesList: React.FC<Props> = ({ enrolledCoursesData }) => {
       renderItem={({ item }) => (
         <TouchableOpacity
           onPress={() => {
-            router.navigate("EnrolledCourse");
-            router.setParams({
-              course: JSON.stringify(item),
+            router.navigate({
+              pathname: "EnrolledCourse",
+              params: { course: JSON.stringify(item) },
             });
           }}
           activeOpacity={0.5} // Set activeOpacity to 1 to remove white overlay

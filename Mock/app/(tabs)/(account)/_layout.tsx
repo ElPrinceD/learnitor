@@ -15,6 +15,11 @@ export default function Tab2Layout() {
           options={{ headerShown: true, presentation: 'modal', headerTitle: "Account Settings", }} 
           
         />
+         <Stack.Screen
+          name="ReportProblem"
+          options={{ headerShown: true, presentation: 'modal', headerTitle: "Account Settings", }} 
+          
+        />
       </Stack>
     </SafeAreaProvider>
   );
