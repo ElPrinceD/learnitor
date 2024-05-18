@@ -9,6 +9,7 @@ import { Text, View } from "../../components/Themed";
 import ApiUrl from "../../config";
 import { useAuth } from "../../components/AuthContext";
 import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 
 const index = () => {
   const streakData = [
@@ -87,7 +88,11 @@ const index = () => {
         style={styles.backgroundGradient}
       >
         <View style={styles.topContainer}>
-          {/* <View style={{ flex: 1, padding: 20 }}>
+          
+          
+        </View>
+        <View style={styles.bottomContainer}>
+        <View style={{ flex: 1, marginLeft: -10 }}>
             <LinearGradient
               colors={['#d8cdc1', '#8c6130']}
               start={{ x: 0, y: 0 }}
@@ -100,10 +105,7 @@ const index = () => {
                 <Ionicons name="chevron-forward-circle" size={35} color="white" />
               </View>
             </LinearGradient>
-          </View> */}
-          
-        </View>
-        <View style={styles.bottomContainer}>
+          </View>
           <Text style={[styles.sectionTitle]}>
             Enrolled Courses
           </Text>
@@ -178,6 +180,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 25,
     fontWeight: "bold",
+    marginTop: 40,
     marginBottom: 10,
   },
 });

@@ -1,5 +1,5 @@
-const tintColorLight = '#2f95dc';
-const tintColorDark = '#fff';
+const tintColorLight = '#8c6130';
+const tintColorDark = '#8c6130';
 const gradientButton = 'linear-gradient(to right, #447A7A 0%, #F9E866 100%)';
 
 export default {

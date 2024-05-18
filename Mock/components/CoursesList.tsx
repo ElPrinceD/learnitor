@@ -9,6 +9,7 @@ import {
   useColorScheme,
 } from "react-native";
 import { router } from "expo-router";
+
 interface Course {
   title: string;
   description: string;
@@ -17,10 +18,12 @@ interface Course {
   category: number[];
   id: string;
 }
+
 interface Category {
   id: number;
   name: string;
 }
+
 interface Props {
   courses: Course[];
   categories: Category[];
@@ -28,7 +31,6 @@ interface Props {
 
 const CoursesList: React.FC<Props> = ({ courses, categories }) => {
   const colorScheme = useColorScheme();
-
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
     null
   );
@@ -44,12 +46,9 @@ const CoursesList: React.FC<Props> = ({ courses, categories }) => {
       backgroundColor: colorScheme === "dark" ? "#000" : "#fffdfd",
     },
     categoryContainer: {
-      height: 53, // Adjust the height as needed
-      // marginTop:-70,
-      // marginBottom: 30,
+      height: 53,
     },
     categoryList: {
-      // flexGrow: 0, // Disable auto resizing
       marginBottom: "2%",
     },
     categoryItem: {
@@ -57,20 +56,20 @@ const CoursesList: React.FC<Props> = ({ courses, categories }) => {
       paddingVertical: 10,
       marginRight: 10,
       borderRadius: 20,
-      borderWidth: 1, // Add border width
-      borderColor: colorScheme === "dark" ? "#555" : "#ccc", // Initial border color
-      backgroundColor: "transparent", // Set background color to transparent
+      borderWidth: 1,
+      borderColor: colorScheme === "dark" ? "#555" : "#ccc",
+      backgroundColor: "transparent",
     },
     selectedCategoryItem: {
-      borderColor: colorScheme === "dark" ? "#9a580d" : "#9a580d", // Selected border color
+      borderColor: "#9a580d",
       borderWidth: 1,
     },
     categoryText: {
       fontSize: 16,
-      color: colorScheme === "dark" ? "#888" : "#666", // Initial text color
+      color: colorScheme === "dark" ? "#888" : "#666",
     },
     selectedCategoryText: {
-      color: colorScheme === "dark" ? "#9a580d" : "#9a580d", // Selected text color
+      color: "#9a580d",
       fontWeight: "bold",
     },
     courseList: {
@@ -94,6 +93,20 @@ const CoursesList: React.FC<Props> = ({ courses, categories }) => {
     image: {
       width: "100%",
       height: 150,
+    },
+    newLabelContainer: {
+      position: "absolute",
+      top: 10,
+      right: 0,
+      backgroundColor: "#c99252",
+      paddingHorizontal: 5,
+      paddingVertical: 2,
+      
+    },
+    newLabelText: {
+      color: "white",
+      fontSize: 12,
+      fontWeight: "bold",
     },
     textContainer: {
       flex: 1,
@@ -129,9 +142,7 @@ const CoursesList: React.FC<Props> = ({ courses, categories }) => {
             <TouchableOpacity
               style={[
                 styles.categoryItem,
-                item.id === selectedCategoryId &&
-                  item.id === selectedCategoryId &&
-                  styles.selectedCategoryItem,
+                item.id === selectedCategoryId && styles.selectedCategoryItem,
               ]}
               onPress={() =>
                 setSelectedCategoryId(
@@ -142,7 +153,8 @@ const CoursesList: React.FC<Props> = ({ courses, categories }) => {
               <Text
                 style={[
                   styles.categoryText,
-                  item.id === selectedCategoryId && styles.selectedCategoryText,
+                  item.id === selectedCategoryId &&
+                    styles.selectedCategoryText,
                 ]}
               >
                 {item.name}
@@ -174,6 +186,9 @@ const CoursesList: React.FC<Props> = ({ courses, categories }) => {
             <View style={styles.container}>
               <View style={styles.imageContainer}>
                 <Image source={{ uri: item.url }} style={styles.image} />
+                <View style={styles.newLabelContainer}>
+                  <Text style={styles.newLabelText}>NEW</Text>
+                </View>
               </View>
               <View style={styles.textContainer}>
                 <Text style={styles.name} numberOfLines={1}>

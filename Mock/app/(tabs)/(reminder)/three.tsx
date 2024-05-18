@@ -1,8 +1,19 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Alert } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+} from "react-native";
 import axios from "axios";
-import { Feather } from '@expo/vector-icons';
+import { Feather } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import { RootParamList } from "../../../components/types";
 import ApiUrl from "../../../config";
+import { useLocalSearchParams } from "expo-router";
 import { useAuth } from "../../../components/AuthContext";
 import { router, useFocusEffect } from 'expo-router';
 import { Swipeable, GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -12,14 +23,15 @@ interface Plan {
   title: string;
   description: string;
   due_date: string;
-  due_time: string;
+  due_time: string,
   category: number;
 }
 
 const Timeline: React.FC = () => {
- 
+  const navigation = useNavigation<RootParamList>();
   const days = ['Mon', 'Tue', 'Wed', 'Thur', 'Fri', 'Sat', 'Sun'];
   const [todayPlans, setTodayPlans] = useState<Plan[]>([]);
+  const [openSwipeable, setOpenSwipeable] = useState(null);
   const [categoryNames, setCategoryNames] = useState<{ [key: number]: string }>({});
   const [selectedDay, setSelectedDay] = useState(days[(new Date().getDay() - 1) % 7]);
   const [loading, setLoading] = useState(false);
@@ -41,7 +53,37 @@ const Timeline: React.FC = () => {
     }
   };
 
-  console.log(selectedDay);
+  console.log(selectedDay)
+
+
+ const fetchTodayPlans = async (formattedDate: string) => {
+    setLoading(true);
+    try {
+      const selectedIndex = days.indexOf(selectedDay);
+      const currentDate = new Date();
+      currentDate.setDate(currentDate.getDate() + selectedIndex);
+      const formattedDate = currentDate.toISOString().split('T')[0];
+      const response = await axios.get<Plan[]>(`${ApiUrl}:8000/api/learner/tasks/?due_date=${formattedDate}`, {
+        headers: {
+          Authorization: `Token ${userToken?.token}` 
+        },
+      });
+      setTodayPlans(response.data);
+    } catch (error) {
+      console.error("Error fetching today's plans:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const selectedIndex = days.indexOf(selectedDay);
+    const currentDate = new Date();
+    currentDate.setDate(currentDate.getDate() + selectedIndex);
+    const formattedDate = currentDate.toISOString().split('T')[0];
+    fetchCategoryNames();
+    fetchTodayPlans(formattedDate);
+  }, [selectedDay, userToken]);
 
   const fetchCategoryNames = async () => {
     try {
@@ -60,46 +102,18 @@ const Timeline: React.FC = () => {
     }
   };
 
-  const fetchTodayPlans = async (formattedDate: string) => {
-    setLoading(true);
+  const handleDeletePlan = async (planId: number) => {
+    const selectedIndex = days.indexOf(selectedDay);
+      const currentDate = new Date();
+      currentDate.setDate(currentDate.getDate() + selectedIndex);
+      const formattedDate = currentDate.toISOString().split('T')[0];
     try {
       const response = await axios.get<Plan[]>(`${ApiUrl}:8000/api/learner/tasks/?due_date=${formattedDate}`, {
         headers: {
           Authorization: `Token ${userToken?.token}`,
         },
       });
-      setTodayPlans(response.data);
-    } catch (error) {
-      console.error("Error fetching today's plans:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useFocusEffect(
-    React.useCallback(() => {
-      const selectedIndex = days.indexOf(selectedDay);
-      const currentDate = new Date();
-      const firstDayOfWeek = currentDate.getDate() - currentDate.getDay() + 1;
-      const selectedDate = new Date(currentDate.setDate(firstDayOfWeek + selectedIndex));
-      const formattedDate = selectedDate.toISOString().split('T')[0];
-
-      fetchCategoryNames();
-      fetchTodayPlans(formattedDate);
-    }, [selectedDay, userToken])
-  );
-
-  const handleDeletePlan = async (plan: Plan) => {
-    try {
-      await axios.delete(`${ApiUrl}:8000/api/tasks/${plan.id}/`, {
-        headers: {
-          Authorization: `Token ${userToken?.token}`,
-        },
-      });
-      const selectedIndex = days.indexOf(selectedDay);
-      const currentDate = new Date();
-      currentDate.setDate(currentDate.getDate() + selectedIndex);
-      const formattedDate = currentDate.toISOString().split('T')[0];
+      
       fetchTodayPlans(formattedDate);
     } catch (error) {
       console.error("Error deleting task:", error);
@@ -108,37 +122,42 @@ const Timeline: React.FC = () => {
   };
 
   const handleEditPlan = (plan: Plan) => {
-    router.navigate("EditPlan");
-    console.log(categoryNames);
+    router.navigate("EditPlan")
+    console.log(categoryNames)
     const taskIdString: string = String(plan.id);
-    router.setParams({taskId: taskIdString, title: plan.title, description: plan.description, 
-      duedate: plan.due_date, category_id: String(plan.category), duetime: plan.due_time, category_name: categoryNames[plan.category]});
+    router.setParams({taskId: taskIdString, title: plan.title,description: plan.description, 
+      duedate: plan.due_date,
+      category_id: String(plan.category),
+      duetime: plan.due_time, category_name: categoryNames[plan.category]})
   };
 
+  
+
   const renderPlanContent = (plan: Plan, index: number) => {
+   
     return (
-      <GestureHandlerRootView key={index}>
+      <GestureHandlerRootView>
         <Swipeable    
           renderRightActions={() => (
             <>     
               <TouchableOpacity  
-                onPress={() => handleDeletePlan(plan)}
                 style={styles.deleteButton}
+                onPress={() => handleDeletePlan(plan.id)}
               >
                 <Feather name="trash-2" size={24} color="white" />
               </TouchableOpacity>
             </>
           )}
-          renderLeftActions={() =>  
-            <TouchableOpacity
-              onPress={() => handleEditPlan(plan)}
-              style={styles.editButton}
-            >
-              <Feather name="edit" size={24} color="white" />
-            </TouchableOpacity>
-          }
+
+
+          renderLeftActions={() =>  <TouchableOpacity
+                onPress={() => handleEditPlan(plan)}
+                style={styles.editButton}
+              >
+                <Feather name="edit" size={24} color="white" />
+              </TouchableOpacity>}
         >
-          <View style={styles.planContainer}>
+          <View style={styles.planContainer} key={index}>
             <View
               style={[
                 styles.timeMarker,
@@ -155,14 +174,18 @@ const Timeline: React.FC = () => {
             <View style={styles.planContent}>
               <Text style={styles.planTitle}>{plan.title}</Text>
               <Text style={styles.planTime}>
-                {plan.due_time ? plan.due_time.slice(0, 5) : ""}        
+              {plan.due_time ? plan.due_time.slice(0, 5) : ""}        
               </Text>
             </View>
           </View>
         </Swipeable>
       </GestureHandlerRootView>
-    ); 
+    );
+    
   };
+
+  
+  
 
   return (
     <View style={styles.container}>
@@ -259,14 +282,6 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
   },
-
-  touchableButton: {
-    borderRadius: 10,
-    position: "absolute",
-    right: 0,
-    top: 0,
-    bottom: 0,
-  },
   touchableContainer: {
     marginTop: -70,
     flexDirection: 'row',
@@ -279,13 +294,18 @@ const styles = StyleSheet.create({
     width: '100%',
     
   },
- 
+  touchableButton: {
+    borderRadius: 10,
+  },
   touchableText: {
     color: '#145714',
     fontSize: 24,
     fontWeight: 'bold',
     padding: 5,
   },
+
+ 
+
 
   editButton: {
     backgroundColor: "green",
