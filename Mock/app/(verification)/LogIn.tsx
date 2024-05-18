@@ -66,12 +66,7 @@ const LogIn = () => {
         // Handle successful response from backend
         login(response.data, response.data.token); // Logging in user with token
 
-        navigation.navigate("(tabs)", {
-          // token: response.data.token,
-          // id: response.data.user.id,
-          // firstName: response.data.user.first_name,
-          // lastName: response.data.user.last_name,
-        });
+        navigation.replace("(tabs)", {});
         console.log(response.data.user);
       })
       .catch((error) => {

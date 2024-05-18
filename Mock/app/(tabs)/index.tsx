@@ -1,70 +1,80 @@
-import React, { useState, useEffect } from "react";
+import axios, { AxiosError } from "axios";
+import React, { useState, useEffect, useCallback } from "react";
 import { StyleSheet } from "react-native";
 import RecommendedCoursesList from "@/components/Recommended";
 import EnrolledCoursesList from "../../components/EnrolledCoursesList";
 import StreakList from "@/components/Streak";
 import { Text, View } from "@/components/Themed";
-import axios from "axios";
 import ApiUrl from "../../config";
-
 import { useAuth } from "../../components/AuthContext";
-
-interface Streak {
-  name: string;
-  streak: boolean;
-}
-interface Course {
-  title: string;
-  description: string;
-  level: string;
-  url: string;
-  category: number[];
-  id: string;
-}
+import { useFocusEffect } from "@react-navigation/native";
 
 const index = () => {
-  const streakData: Streak[] = [
+  const streakData = [
     { name: "Streak 1", streak: true },
-    { name: "Streak 2", streak: false },
-    { name: "Streak 3", streak: false },
+    { name: "Streak 2", streak: true },
+    { name: "Streak 3", streak: true },
     { name: "Streak 4", streak: false },
     { name: "Streak 5", streak: false },
     { name: "Streak 6", streak: false },
     { name: "Streak 7", streak: false },
-    // Add more streaks as needed
   ];
 
   const { userToken, userInfo } = useAuth();
 
-  const [RecommendedCoursesData, setRecommendedCoursesData] = useState<
-    Course[]
-  >([]);
-  const [EnrolledCoursesData, setEnrolledCoursesData] = useState<Course[]>([]);
+  const [recommendedCoursesData, setRecommendedCoursesData] = useState([]);
+  const [enrolledCoursesData, setEnrolledCoursesData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (userToken && userInfo) {
+        fetchData();
+      }
+    }, [userToken, userInfo])
+  );
 
   const fetchData = async () => {
     try {
-      const courses = await axios.get(`${ApiUrl}:8000/api/course/all`, {
+      const token = userToken?.token;
+      const coursesUrl = `${ApiUrl}:8000/api/course/all/`;
+      const coursesResponse = await axios.get(coursesUrl, {
         headers: {
-          Authorization: `Token ${userToken?.token}`,
+          Authorization: `Token ${token}`,
         },
       });
-      setRecommendedCoursesData(courses.data);
-      const enrolled = await axios.get(
-        `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/courses`,
-        {
-          headers: {
-            Authorization: `Token ${userToken?.token}`,
-          },
-        }
-      );
-      setEnrolledCoursesData(enrolled.data);
+      setRecommendedCoursesData(coursesResponse.data);
+
+      const enrolledCoursesUrl = `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/courses`;
+      const enrolledResponse = await axios.get(enrolledCoursesUrl, {
+        headers: {
+          Authorization: `Token ${token}`,
+        },
+      });
+      setEnrolledCoursesData(enrolledResponse.data);
     } catch (error) {
-      console.error("Error fetching data:", error);
+      if (axios.isAxiosError(error)) {
+        console.error(
+          "Error fetching data:",
+          error.response?.status,
+          error.response?.data
+        );
+        if (error.response?.status === 404) {
+          console.log(
+            "Enrolled courses not found for user ID:",
+            userInfo?.user.id
+          );
+        }
+      } else {
+        console.error("Unexpected error:", error);
+      }
+    } finally {
+      setLoading(false);
     }
   };
-  useEffect(() => {
-    fetchData();
-  }, []);
+
+  if (loading) {
+  }
 
   return (
     <View style={styles.container}>
@@ -91,7 +101,7 @@ const index = () => {
       >
         Enrolled Courses
       </Text>
-      <EnrolledCoursesList enrolledCoursesData={EnrolledCoursesData} />
+      <EnrolledCoursesList enrolledCoursesData={enrolledCoursesData} />
       <Text
         style={{
           fontSize: 25,
@@ -102,7 +112,7 @@ const index = () => {
       >
         Recommended for you
       </Text>
-      <RecommendedCoursesList RecommendedCoursesData={RecommendedCoursesData} />
+      <RecommendedCoursesList RecommendedCoursesData={recommendedCoursesData} />
     </View>
   );
 };

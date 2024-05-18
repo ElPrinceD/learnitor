@@ -39,7 +39,7 @@ const EnrolledCourse: React.FC = () => {
   const fetchData = async () => {
     try {
       const response = await axios.get(
-        `${ApiUrl}:8000/api/learners/${userInfo?.user.id}/courses/${parsedCourse.id}/topics/`,
+        `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/course/${parsedCourse.id}/topics/`,
         {
           headers: {
             Authorization: `Token ${userToken?.token}`,
@@ -75,7 +75,7 @@ const EnrolledCourse: React.FC = () => {
   return (
     <View style={styles.container}>
       <RoadmapTitle />
-      <CourseRoadmap enrolledTopics={enrolledTopics} />
+      <CourseRoadmap enrolledTopics={enrolledTopics} course={parsedCourse} />
     </View>
   );
 };

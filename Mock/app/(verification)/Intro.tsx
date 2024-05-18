@@ -11,12 +11,13 @@ const Intro = () => {
   const textColor = useThemeColor({}, "text");
   const backgroundColor = useThemeColor({}, "background");
 
-
   const themeColor = useThemeColor(
     {
-      dark: "#0063cd", light: "#0063cd"
-    }, "background"
-  )
+      dark: "#0063cd",
+      light: "#0063cd",
+    },
+    "background"
+  );
 
   // Navigate to the sign up page
   const handleSignUp = () => {
@@ -39,11 +40,11 @@ const Intro = () => {
       <View style={styles.textContainer}>
         {/* Text */}
         <Text style={[styles.title, { color: textColor }]}>
-          The Best Way to Learn
+          The Best Educational Guide
         </Text>
         <Text style={[styles.subtitle, { color: textColor }]}>
-          Engage in effective, interactive learning tailored to your level
-          through guided, bite-sized lessons.
+          Make learning easier by following our study guides curated uniquely
+          for your field of choice.
         </Text>
       </View>
 

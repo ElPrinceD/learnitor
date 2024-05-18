@@ -13,6 +13,15 @@ interface Topic {
   completed?: boolean;
 }
 
+interface Course {
+  title: string;
+  description: string;
+  level: string;
+  url: string;
+  category: number[];
+  id: string;
+}
+
 interface Question {
   text: string;
   id: number;
@@ -26,7 +35,7 @@ interface Answer {
 }
 
 const PracticeQuestions: React.FC = () => {
-  const { topic, level } = useLocalSearchParams();
+  const { topic, level, course } = useLocalSearchParams();
   const { userToken } = useAuth();
   const [practiceQuestions, setPracticeQuestions] = useState<Question[]>([]);
   const [practiceAnswers, setPracticeAnswers] = useState<Answer[]>([]);
@@ -36,6 +45,9 @@ const PracticeQuestions: React.FC = () => {
 
   const parsedTopic: Topic =
     typeof topic === "string" ? JSON.parse(topic) : topic;
+
+  const parsedCourse: Course =
+    typeof course === "string" ? JSON.parse(course) : course;
 
   console.log("NAT:", parsedTopic.id, parsedLevel);
   useEffect(() => {
@@ -88,6 +100,8 @@ const PracticeQuestions: React.FC = () => {
       <Questions
         practiceQuestions={practiceQuestions}
         practiceAnswers={practiceAnswers}
+        topic={parsedTopic}
+        course={parsedCourse}
       />
     </View>
   );

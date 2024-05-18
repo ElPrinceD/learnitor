@@ -21,6 +21,7 @@ interface Course {
   category: number[];
   id: string;
 }
+
 interface Topic {
   title: string;
   description: string;
@@ -95,9 +96,27 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
       setEnrolled(false);
       setEnrollDisabled(false);
       setEnrollmentResponse(null);
+      setProgress(0); // Reset progress to 0 on unenroll
       console.log("Unenrollment response:", response.data);
     } catch (error) {
       console.error("Error unenrolling:", error);
+    }
+  };
+
+  const fetchProgress = async () => {
+    try {
+      const response = await axios.get(
+        `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/course/${course.id}/progress/`,
+        {
+          headers: {
+            Authorization: `Token ${userToken?.token}`,
+          },
+        }
+      );
+
+      setProgress(response.data.course_progress);
+    } catch (error) {
+      console.error("Error fetching progress:", error);
     }
   };
 
@@ -115,18 +134,21 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
         const userAlreadyEnrolled = response.data.enrolled;
         setEnrolled(userAlreadyEnrolled);
         setEnrollDisabled(userAlreadyEnrolled || selectedTopics.length === 0); // Disable enroll button if user is already enrolled or no topic is selected
+
+        if (userAlreadyEnrolled) {
+          await fetchProgress();
+        }
       } catch (error) {
         console.error("Error fetching enrollment status:", error);
       }
     };
 
     fetchData();
-  }, []);
+  }, [userInfo, userToken, course.id, selectedTopics.length]);
 
   useEffect(() => {
     if (enrolled) {
-      const fakeProgress = 35;
-      setProgress(fakeProgress);
+      fetchProgress();
     }
   }, [enrolled]);
 
@@ -275,9 +297,10 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
                   style={[styles.progressFill, { width: `${progress}%` }]}
                 />
               </View>
-              <Text
-                style={styles.progressText}
-              >{`${progress}% Completed`}</Text>
+
+              <Text style={styles.progressText}>
+                {`${progress.toFixed(2)}% Completed`}
+              </Text>
             </View>
           </View>
         ) : (

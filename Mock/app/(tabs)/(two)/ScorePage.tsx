@@ -7,8 +7,29 @@ import {
   ScrollView,
   useColorScheme,
 } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import {
+  router,
+  useGlobalSearchParams,
+  useLocalSearchParams,
+} from "expo-router";
+import axios from "axios";
+import ApiUrl from "../../../config";
+import { useAuth } from "../../../components/AuthContext";
 
+interface Topic {
+  title: string;
+  description: string;
+  id: number;
+  completed?: boolean;
+}
+interface Course {
+  title: string;
+  description: string;
+  level: string;
+  url: string;
+  category: number[];
+  id: number;
+}
 interface Answer {
   text: string;
   id: number;
@@ -25,6 +46,9 @@ interface Result {
 }
 
 const ScorePage: React.FC = () => {
+  const { userToken, userInfo } = useAuth();
+  const { topic, course } = useGlobalSearchParams();
+
   const colorScheme = useColorScheme();
   const [showAnswers, setShowAnswers] = useState(false);
 
@@ -117,11 +141,34 @@ const ScorePage: React.FC = () => {
   const results: Result[] =
     typeof params.results === "string" ? JSON.parse(params.results) : [];
 
+  const parsedTopic: Topic =
+    typeof topic === "string" ? JSON.parse(topic) : topic;
+
+  const parsedCourse: Course =
+    typeof course === "string" ? JSON.parse(course) : course;
+
   const handleToggleAnswers = () => {
     setShowAnswers((prevShowAnswers) => !prevShowAnswers);
   };
 
-  const handleDone = () => {
+  const handleDone = async () => {
+    {
+      {
+        try {
+          await axios.post(
+            `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/course/${parsedCourse.id}/topic/${parsedTopic.id}/mark-completed/`,
+            {},
+            {
+              headers: {
+                Authorization: `Token ${userToken?.token}`,
+              },
+            }
+          );
+        } catch (error) {
+          console.error("Error marking topic as completed:", error);
+        }
+      }
+    }
     router.dismiss(2);
   };
 

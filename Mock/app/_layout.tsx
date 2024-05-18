@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useFonts } from "expo-font";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
@@ -32,12 +32,6 @@ export default function RootLayout() {
     if (error) throw error;
   }, [error]);
 
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
   if (!loaded) {
     return null;
   }
@@ -52,14 +46,28 @@ export default function RootLayout() {
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const { userToken, isLoading } = useAuth();
+  const [navigationCompleted, setNavigationCompleted] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && userToken) {
-      router.navigate("(tabs)");
-    } else if (!isLoading) {
-      router.push("./Intro");
-    }
+    const initializeApp = async () => {
+      if (!isLoading) {
+        if (userToken) {
+          router.navigate("(tabs)");
+        } else {
+          router.push("./Intro");
+        }
+        setNavigationCompleted(true); // Set navigation completion flag
+      }
+    };
+
+    initializeApp();
   }, [isLoading, userToken]);
+
+  useEffect(() => {
+    if (navigationCompleted) {
+      SplashScreen.hideAsync();
+    }
+  }, [navigationCompleted]);
 
   return (
     <SafeAreaProvider>

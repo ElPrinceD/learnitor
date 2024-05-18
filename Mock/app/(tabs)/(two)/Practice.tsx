@@ -10,12 +10,20 @@ interface Topic {
   id: string;
   completed?: boolean;
 }
+interface Course {
+  title: string;
+  description: string;
+  level: string;
+  url: string;
+  category: number[];
+  id: string;
+}
 interface Level {
   title: string;
   image: ImageSourcePropType;
 }
 const Practice: React.FC = () => {
-  const { topic } = useLocalSearchParams();
+  const { topic, course } = useLocalSearchParams();
 
   const parsedTopic: Topic =
     typeof topic === "string" ? JSON.parse(topic) : topic;
@@ -25,6 +33,7 @@ const Practice: React.FC = () => {
     router.setParams({
       level: level.title,
       topic: JSON.stringify(parsedTopic),
+      course: course?.toString(),
     });
     console.log("Level pressed:", level);
   };

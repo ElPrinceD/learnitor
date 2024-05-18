@@ -16,12 +16,24 @@ interface Topic {
   id: string;
   completed?: boolean;
 }
+interface Course {
+  title: string;
+  description: string;
+  level: string;
+  url: string;
+  category: number[];
+  id: string;
+}
 
 interface CourseRoadmapProps {
   enrolledTopics: Topic[];
+  course: Course;
 }
 
-const CourseRoadmap: React.FC<CourseRoadmapProps> = ({ enrolledTopics }) => {
+const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
+  enrolledTopics,
+  course,
+}) => {
   const colorScheme = useColorScheme();
 
   const handleTopicPress = (topic: Topic) => {
@@ -31,7 +43,10 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({ enrolledTopics }) => {
 
   const handleQuestionPress = (topic: Topic) => {
     router.navigate("Practice");
-    router.setParams({ topic: JSON.stringify(topic) });
+    router.setParams({
+      topic: JSON.stringify(topic),
+      course: JSON.stringify(course),
+    });
   };
 
   return (
