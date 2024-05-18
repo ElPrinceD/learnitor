@@ -6,6 +6,7 @@ import axios from "axios";
 import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
 import { Stack } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 
 interface Course {
   title: string;
@@ -35,12 +36,12 @@ const CoursesScreen: React.FC = () => {
 
   const fetchData = async () => {
     try {
-      const course = await axios.get(`${ApiUrl}:8000/api/course/all`, {
+      const course = await axios.get(`${ApiUrl}:8000/api/course/all/`, {
         headers: {
           Authorization: `Token ${userToken?.token}`,
         },
       });
-      const categories = await axios.get(`${ApiUrl}:8000/api/category/all`, {
+      const categories = await axios.get(`${ApiUrl}:8000/api/category/all/`, {
         headers: {
           Authorization: `Token ${userToken?.token}`,
         },
@@ -62,8 +63,10 @@ const CoursesScreen: React.FC = () => {
 
   const styles = StyleSheet.create({
     container: {
-      flex: 1,
-      padding: 10,
+      flex: 2,
+      // marginTop: -150,
+      backgroundColor: "#ffffff",
+      
       // backgroundColor: colorScheme === "dark" ? "#000" : "#fff",
     },
     headerText: {
@@ -72,19 +75,42 @@ const CoursesScreen: React.FC = () => {
       marginBottom: 10,
       color: colorScheme === "dark" ? "#fff" : "#000",
     },
+    
+    backgroundGradient: {
+      flex: 1,
+      width: "100%",
+      height: "100%",
+    },
+    topContainer: {
+      flex: 1,
+      backgroundColor: "transparent",
+      justifyContent: "center",
+      alignItems: "center",
+      height: "10.33%", 
+    },
+
+   
   });
 
   return (
     <>
+    
       <Stack.Screen
         options={{ headerTitle: "What do you want to learn today?" }}
       />
+      {/* <View style={styles.topContainer}>
+
+      </View> */}
       <View style={styles.container}>
-        <SearchBar onSearch={handleSearch} />
+      <SearchBar onSearch={handleSearch} />
         <CoursesList courses={filteredCourses} categories={categoryData} />
       </View>
     </>
-  );
-};
+  )
+
+}
+
+ 
+  
 
 export default CoursesScreen;

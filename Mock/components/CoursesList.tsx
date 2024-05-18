@@ -36,11 +36,17 @@ const CoursesList: React.FC<Props> = ({ courses, categories }) => {
   // Determine styles based on color scheme
   const styles = StyleSheet.create({
     container: {
-      flex: 1,
-      // backgroundColor: colorScheme === "dark" ? "#000" : "#fff",
+      flex: 4,
+      marginTop: -20,
+      borderTopLeftRadius: 30,
+      borderTopRightRadius: 30,
+      padding: 10,
+      backgroundColor: colorScheme === "dark" ? "#000" : "#fffdfd",
     },
     categoryContainer: {
       height: 53, // Adjust the height as needed
+      marginTop:-70,
+      marginBottom: 30,
     },
     categoryList: {
       // flexGrow: 0, // Disable auto resizing
@@ -170,11 +176,11 @@ const CoursesList: React.FC<Props> = ({ courses, categories }) => {
                 <Image source={{ uri: item.url }} style={styles.image} />
               </View>
               <View style={styles.textContainer}>
-                <Text style={styles.details} numberOfLines={2}>
-                  {item.description} · {item.level}
-                </Text>
                 <Text style={styles.name} numberOfLines={1}>
                   {item.title}
+                </Text>
+                <Text style={styles.details} numberOfLines={2}>
+                  {item.description} · {item.level}
                 </Text>
               </View>
             </View>

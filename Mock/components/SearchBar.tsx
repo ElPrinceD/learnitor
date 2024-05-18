@@ -7,6 +7,8 @@ import {
   useColorScheme,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+
 
 interface Props {
   onSearch: (query: string) => void;
@@ -29,6 +31,12 @@ const SearchBar: React.FC<Props> = ({ onSearch }) => {
   const isDarkMode = colorScheme === "dark";
 
   return (
+    <LinearGradient
+        colors={['#fdecd2', '#FFFFFF']} 
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 5 }}
+        style={styles.backgroundGradient}
+      >
     <View
       style={[
         styles.searchBarContainer,
@@ -56,6 +64,7 @@ const SearchBar: React.FC<Props> = ({ onSearch }) => {
         />
       </TouchableOpacity>
     </View>
+    </LinearGradient>
   );
 };
 
@@ -69,6 +78,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 10,
     marginBottom: 10,
+    backgroundColor: "transparent",
+    justifyContent: "center",
+    // height: "10.33%", 
+  },
+  backgroundGradient: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
   },
   searchIcon: {
     marginLeft: 10,

@@ -3,10 +3,10 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { Link, Tabs } from "expo-router";
 import { Pressable, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import Colors from "@/constants/Colors";
-import { useColorScheme } from "@/components/useColorScheme";
+import Colors from "../../constants/Colors";
+import { useColorScheme } from "../../components/useColorScheme";
 
-import { useClientOnlyValue } from "@/components/useClientOnlyValue";
+import { useClientOnlyValue } from "../../components/useClientOnlyValue";
 import { useThemeColor } from "../../components/Themed";
 
 import { useAuth } from "../../components/AuthContext";
@@ -82,11 +82,14 @@ export default function TabLayout() {
                   color: themeTextColor,
                   fontSize: 20,
                   fontWeight: "bold",
+                  
                 }}
               >
                 {greeting}, {userInfo?.user.first_name}!
               </Text>
-            ), // Adjusted the font size to 24
+            ),  headerStyle: {
+              backgroundColor: '#fdecd2', // Add this line
+            },
           }}
         />
         <Tabs.Screen
@@ -98,6 +101,9 @@ export default function TabLayout() {
             headerTitle: "",
             // headerTransparent: true,
             headerShadowVisible: false,
+            headerStyle: {
+              backgroundColor: '#fdecd2', // Add this line
+            },
           }}
         />
 
