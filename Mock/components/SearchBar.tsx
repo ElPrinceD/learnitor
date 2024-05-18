@@ -60,7 +60,8 @@ const SearchBar: React.FC<Props> = ({ onSearch }) => {
         <Ionicons
           name="search"
           size={24}
-          color={isDarkMode ? "#fff" : "#666"} // Icon color based on the color scheme
+          // style= {styles.searchIcon}
+          color={isDarkMode ? "#9a580d" : "#9a580d"} // Icon color based on the color scheme
         />
       </TouchableOpacity>
     </View>
@@ -73,25 +74,29 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 30,
+    borderColor: "#9a580d",
+    borderRadius: 15,
     paddingHorizontal: 15,
+    width: "85%",
     paddingVertical: 10,
-    marginBottom: 10,
+    marginTop: 15,
     backgroundColor: "transparent",
     justifyContent: "center",
     // height: "10.33%", 
   },
   backgroundGradient: {
     flex: 1,
+    alignItems: "center",
     width: "100%",
     height: "100%",
   },
   searchIcon: {
     marginLeft: 10,
+    height:"100%"
   },
   searchInput: {
     flex: 1,
+    
     fontSize: 16,
   },
 });

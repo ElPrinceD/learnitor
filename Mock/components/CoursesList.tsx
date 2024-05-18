@@ -45,8 +45,8 @@ const CoursesList: React.FC<Props> = ({ courses, categories }) => {
     },
     categoryContainer: {
       height: 53, // Adjust the height as needed
-      marginTop:-70,
-      marginBottom: 30,
+      // marginTop:-70,
+      // marginBottom: 30,
     },
     categoryList: {
       // flexGrow: 0, // Disable auto resizing
@@ -62,15 +62,15 @@ const CoursesList: React.FC<Props> = ({ courses, categories }) => {
       backgroundColor: "transparent", // Set background color to transparent
     },
     selectedCategoryItem: {
-      borderColor: colorScheme === "dark" ? "#ffffff" : "#000000", // Selected border color
-      borderWidth: 2,
+      borderColor: colorScheme === "dark" ? "#9a580d" : "#9a580d", // Selected border color
+      borderWidth: 1,
     },
     categoryText: {
       fontSize: 16,
       color: colorScheme === "dark" ? "#888" : "#666", // Initial text color
     },
     selectedCategoryText: {
-      color: colorScheme === "dark" ? "#ffffff" : "#000000", // Selected text color
+      color: colorScheme === "dark" ? "#9a580d" : "#9a580d", // Selected text color
       fontWeight: "bold",
     },
     courseList: {
@@ -179,9 +179,9 @@ const CoursesList: React.FC<Props> = ({ courses, categories }) => {
                 <Text style={styles.name} numberOfLines={1}>
                   {item.title}
                 </Text>
-                <Text style={styles.details} numberOfLines={2}>
+                {/* <Text style={styles.details} numberOfLines={2}>
                   {item.description} · {item.level}
-                </Text>
+                </Text> */}
               </View>
             </View>
           </TouchableOpacity>
