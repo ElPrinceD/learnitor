@@ -13,7 +13,7 @@ const GradientCard = ({ card }) => {
     >
       <View style={styles.cardCategory}>
       <Ionicons name="sparkles" size={15} color="#D96B06" />
-      <Text style={styles.categoryText}>Timeline</Text>
+      <Text style={styles.categoryText}>{card.category}</Text>
       </View>
       <Text style={styles.cardTitle}>{card.title}</Text>
       <Text style={styles.cardDescription}>{card.description}</Text>

@@ -20,9 +20,9 @@ const Index = () => {
   const [cardIndex, setCardIndex] = useState(0);
 
   const dummyCardData = [
-    { title: "Find all your academic schedules in one place", description: "Timetables, Study timetables, Assignment deadlines", colors: ['#00BB80', '#6ccfb0'] },
-    { title: "Card 2", description: "This is the description for card 2.", colors: ['#D96B06', '#c4a589'] },
-    { title: "Card 3", description: "This is the description for card 3.", colors: ['#4a4969', '#08185e'] },
+    { title: "Find all your academic schedules in one place", description: "Timetables, Study timetables, Assignment deadlines", colors: ['#ace2d1', '#54b093'], category: "Timeline" },
+    { title: "Tailor your topics according to your course description", description: "Variety of course topics, topic material & questions", colors: ['#dabda2', '#9b7a5d'], category: "Courses" },
+    { title: "Card 3", description: "This is the description for card 3.", colors: ['#b1afe3', '#3d4e9b'], category: "Timeline" },
   ];
 
   useFocusEffect(
