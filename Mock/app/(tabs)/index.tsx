@@ -1,32 +1,29 @@
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 import React, { useState, useEffect, useCallback } from "react";
 import { StyleSheet } from "react-native";
 import RecommendedCoursesList from "../../components/Recommended";
 import EnrolledCoursesList from "../../components/EnrolledCoursesList";
-import StreakList from "../../components/Streak";
 import { LinearGradient } from "expo-linear-gradient";
 import { Text, View } from "../../components/Themed";
 import ApiUrl from "../../config";
 import { useAuth } from "../../components/AuthContext";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
+import Swiper from 'react-native-deck-swiper';
+import GradientCard from '../../components/InfoCard'; 
 
-const index = () => {
-  const streakData = [
-    { name: "Streak 1", streak: true },
-    { name: "Streak 2", streak: true },
-    { name: "Streak 3", streak: true },
-    { name: "Streak 4", streak: false },
-    { name: "Streak 5", streak: false },
-    { name: "Streak 6", streak: false },
-    { name: "Streak 7", streak: false },
-  ];
-
+const Index = () => {
   const { userToken, userInfo } = useAuth();
-
   const [recommendedCoursesData, setRecommendedCoursesData] = useState([]);
   const [enrolledCoursesData, setEnrolledCoursesData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [cardIndex, setCardIndex] = useState(0);
+
+  const dummyCardData = [
+    { title: "Find all your academic schedules in one place", description: "Timetables, Study timetables, Assignment deadlines", colors: ['#00BB80', '#6ccfb0'] },
+    { title: "Card 2", description: "This is the description for card 2.", colors: ['#D96B06', '#c4a589'] },
+    { title: "Card 3", description: "This is the description for card 3.", colors: ['#4a4969', '#08185e'] },
+  ];
 
   useFocusEffect(
     useCallback(() => {
@@ -79,21 +76,23 @@ const index = () => {
     fetchData();
   }, []);
 
+  const handleSwiped = () => {
+    setCardIndex((prevIndex) => (prevIndex + 1) % dummyCardData.length);
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#fdecd2', '#FFFFFF']} 
+        colors={['#fdecd2', '#FFFFFF']}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={styles.backgroundGradient}
       >
-        <View style={styles.topContainer}>
-          
-          
-        </View>
+        <View style={styles.topContainer}></View>
         <View style={styles.bottomContainer}>
-        <View style={{ flex: 1, marginLeft: -10 }}>
-            <LinearGradient
+        
+          <View style={{ flex: 1, marginLeft: -10 }}>
+            {/* <LinearGradient
               colors={['#d8cdc1', '#8c6130']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
@@ -101,19 +100,39 @@ const index = () => {
             >
               <View style={styles.textWithIcon}>
                 <Ionicons name="sparkles" size={30} color="white" />
-                <Text style={styles.gradientText}>Checkout your Schdeule for the Day</Text>
+                <Text style={styles.gradientText}>Checkout your Schedule for the Day</Text>
                 <Ionicons name="chevron-forward-circle" size={35} color="white" />
               </View>
-            </LinearGradient>
+            </LinearGradient> */}
+              {loading ? (
+            <Text>Loading...</Text>
+          ) : (
+            <Swiper
+              cards={dummyCardData}
+              renderCard={(card) =>
+                card ? (
+                  <GradientCard card={card} />
+                ) : (
+                  <View style={styles.cardPlaceholder}>
+                    <Text>No more cards</Text>
+                  </View>
+                )
+              }
+              onSwiped={handleSwiped}
+              verticalSwipe={false}
+              cardIndex={cardIndex}
+              stackSize={3}
+              stackSeparation={1}
+              stackScale={1}
+              backgroundColor="transparent"
+              infinite={true}
+              
+            />
+          )}
           </View>
-          <Text style={[styles.sectionTitle]}>
-            Enrolled Courses
-          </Text>
+          <Text style={[styles.sectionTitle, {marginTop: 120}]}>Enrolled Courses</Text>
           <EnrolledCoursesList enrolledCoursesData={enrolledCoursesData} />
-      
-          <Text style={[styles.sectionTitle]}>
-            Recommended for you
-          </Text>
+          <Text style={[styles.sectionTitle]}>Recommended for you</Text>
           <RecommendedCoursesList RecommendedCoursesData={recommendedCoursesData} />
         </View>
       </LinearGradient>
@@ -137,7 +156,7 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    height: "10.33%", 
+    height: "10.33%",
   },
   bottomContainer: {
     flex: 2,
@@ -179,10 +198,16 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 25,
+    color: "#D96B06",
     fontWeight: "bold",
-    marginTop: 40,
     marginBottom: 10,
   },
+  cardPlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 40,
+  }
 });
 
-export default index;
+export default Index;
