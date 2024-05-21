@@ -97,12 +97,15 @@ export default function TabLayout() {
           options={{
             title: "Courses",
             tabBarIcon: ({ color }) => <TabBarIcon name="book" color={color} />,
-            headerShown: true,
-            headerTitle: "",
+            headerShown: false,
+            headerTitle: "Details",
+    
             // headerTransparent: true,
             headerShadowVisible: false,
             headerStyle: {
               backgroundColor: '#fdecd2', // Add this line
+              
+              
             },
           }}
         />

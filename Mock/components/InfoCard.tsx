@@ -1,9 +1,10 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from 'expo-linear-gradient';
 
-const GradientCard = ({ card }) => {
+
+const GradientCard = ({ card, handleCardPress }) => {
   return (
     <LinearGradient
       colors={card.colors}
@@ -12,12 +13,16 @@ const GradientCard = ({ card }) => {
       style={styles.card}
     >
       <View style={styles.cardCategory}>
-      <Ionicons name="sparkles" size={15} color="#D96B06" />
-      <Text style={styles.categoryText}>{card.category}</Text>
+        <Ionicons name="sparkles" size={15} color="#D96B06" />
+        <Text style={styles.categoryText}>{card.category}</Text>
       </View>
+      <Image source={card.image} style={styles.cardImage} />
       <Text style={styles.cardTitle}>{card.title}</Text>
       <Text style={styles.cardDescription}>{card.description}</Text>
-      <Ionicons name="arrow-forward-circle" style={styles.forward} size={30}  color="#D96B06" />
+      
+      <TouchableOpacity onPress={handleCardPress} style={styles.forward}>
+        <Ionicons name="arrow-forward-circle" size={30} color="#D96B06" />
+      </TouchableOpacity>
     </LinearGradient>
   );
 };
@@ -45,36 +50,48 @@ const styles = StyleSheet.create({
     opacity: 0.8,
     flexDirection: "row",
     alignItems: "center",
-    padding:6,
-    
+    padding: 6,
     borderRadius: 20,
     position: "absolute",
     top: 20,
     color: "#313030",
     left: 15,
   },
-  categoryText:{
+  categoryText: {
     fontSize: 18,
     fontWeight: "normal",
     paddingHorizontal: 6,
-   
   },
   cardTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     marginTop: 30,
     marginBottom: 10,
+    zIndex: 2,
   },
   cardDescription: {
     fontSize: 16,
     color: '#333',
     textAlign: 'left',
     marginLeft: -20,
+    zIndex: 2,
   },
+
+    cardImage: {
+      width: 180, // Increased width
+      height: 200, // Increased height
+      position: 'absolute',
+      right: 6,
+      bottom: 0,
+      opacity: 0.5, // Optional: adjust opacity to make it blend better with the card background
+      zIndex: 1, // Ensures it stays behind other elements
+    },
+  
   forward: {
     position: 'absolute',
     bottom: 7,
     right: 15,
+    zIndex: 2,
   }
 });
 

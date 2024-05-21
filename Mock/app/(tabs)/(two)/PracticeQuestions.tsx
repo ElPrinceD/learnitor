@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { View, StyleSheet } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import axios from "axios";
-import Questions from "@/components/Questions";
+import Questions from "../../../components/Questions";
 import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
 

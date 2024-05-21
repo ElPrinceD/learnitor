@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { View, StyleSheet, Text, ActivityIndicator } from "react-native";
 import axios from "axios";
 import CourseRoadmap from "../../../components/CourseRoadmap";
-import RoadmapTitle from "@/components/RoadmapTitle";
+import RoadmapTitle from "../../../components/RoadmapTitle";
 import { useLocalSearchParams } from "expo-router";
 import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
@@ -63,6 +63,7 @@ const EnrolledCourse: React.FC = () => {
       </View>
     );
   }
+  
 
   if (error) {
     return (

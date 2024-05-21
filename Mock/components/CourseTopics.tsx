@@ -7,6 +7,7 @@ import {
   useColorScheme,
   TouchableOpacity,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 interface Topic {
   title: string;
@@ -51,34 +52,49 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
   const styles = StyleSheet.create({
     topicsContainer: {
       paddingVertical: 20,
+      borderTopColor: "#757373",
+  
       paddingHorizontal: 10,
-      // backgroundColor: colorScheme === "dark" ? "#080808" : "#F0F0F0",
+      //backgroundColor: colorScheme === "dark" ? "#080808" : "#761818",
     },
     topicCard: {
       marginBottom: 15,
-      backgroundColor: colorScheme === "dark" ? "#181818" : "#FFFFFF",
-      padding: 25,
+      backgroundColor: colorScheme === "dark" ? "#181818" : "#f7f2f2",
+      padding: 10,
       margin: 5,
-      borderRadius: 40,
+      borderRadius: 10,
       shadowColor: colorScheme === "dark" ? "#696969" : "#000",
       shadowOffset: {
         width: 0,
-        height: 4,
+        height: 1,
       },
-      shadowOpacity: 1,
+      shadowOpacity: 0.4,
       shadowRadius: 9.84,
       elevation: 1,
       position: "relative",
     },
+    icon:{
+      backgroundColor: "#b3834d",
+      padding: 5,
+      borderRadius: 50,
+      
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.4,
+        shadowRadius: 2,
+      
+    },
     topicTitle: {
-      fontSize: 20,
+      fontSize: 17,
       fontWeight: "bold",
-      color: colorScheme === "dark" ? "#fff" : "#333",
+      paddingLeft: 10,
+      color: colorScheme === "dark" ? "#fff" : "#5a5858",
     },
     topicDescription: {
       fontSize: 16,
       color: colorScheme === "dark" ? "#ccc" : "#666",
-      marginTop: 10,
+      marginTop: -10,
+      marginLeft: 40
     },
     orderNumber: {
       position: "absolute",
@@ -117,9 +133,9 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
       contentContainerStyle={styles.topicsContainer}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={styles.instructionText}>
+      {/* <Text style={styles.instructionText}>
         Select your topics in the order in which you want to learn them.
-      </Text>
+      </Text> */}
       {/* {showClearButton && (
         <TouchableOpacity
           style={styles.clearButton}
@@ -136,22 +152,30 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
 
         return (
           <TouchableOpacity
-            key={index}
-            style={[
-              styles.topicCard,
-              isSelected && {
-                backgroundColor: colorScheme === "dark" ? "#666" : "#ddd",
-              },
-            ]}
-            onPress={() => toggleTopicSelection(topic.id)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.orderNumber}>
-              {isSelected ? orderNumber : ""}
-            </Text>
-            <Text style={styles.topicTitle}>{topic.title}</Text>
-            <Text style={styles.topicDescription}>{topic.description}</Text>
-          </TouchableOpacity>
+  key={index}
+  style={[
+    styles.topicCard,
+    isSelected && {
+      backgroundColor: colorScheme === "dark" ? "#666" : "#ddd",
+    },
+  ]}
+  onPress={() => toggleTopicSelection(topic.id)}
+  activeOpacity={0.7}
+>
+  <Text style={styles.orderNumber}>
+    {isSelected ? orderNumber : ""} 
+  </Text>
+  <View style={{ flexDirection: 'row' }}>
+    <Ionicons
+      name="play-circle"
+      size={20}
+      color={"white"}
+      style= {styles.icon}
+    />
+    <Text style={styles.topicTitle}>{topic.title}</Text>
+  </View>
+  <Text style={styles.topicDescription}>{topic.description}</Text>
+</TouchableOpacity>
         );
       })}
     </ScrollView>

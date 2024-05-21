@@ -63,7 +63,7 @@ const CoursesScreen: React.FC = () => {
 
   const styles = StyleSheet.create({
     container: {
-      flex: 2,
+      flex: 1,
       // marginTop: -150,
       backgroundColor: "#ffffff",
       
@@ -95,7 +95,13 @@ const CoursesScreen: React.FC = () => {
     <>
     
       <Stack.Screen
-        options={{ headerTitle: "What do you want to learn today?" }}
+
+        options={{ headerTitle: "What do you want to learn today?",  headerStyle: {
+          backgroundColor: '#fdecd2',  // Add this line
+        },
+        headerShadowVisible: false,
+      }}
+        
       />
       {/* <View style={styles.topContainer}>
 
