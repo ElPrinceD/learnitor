@@ -2,25 +2,11 @@ import React, { useState, useEffect } from "react";
 import { View, StyleSheet, Text, ActivityIndicator } from "react-native";
 import axios from "axios";
 import CourseRoadmap from "../../../components/CourseRoadmap";
-import RoadmapTitle from "@/components/RoadmapTitle";
+import RoadmapTitle from "../../../components/RoadmapTitle";
 import { useLocalSearchParams } from "expo-router";
 import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
-
-interface Topic {
-  title: string;
-  description: string;
-  id: string;
-}
-
-interface Course {
-  title: string;
-  description: string;
-  level: string;
-  url: string;
-  category: number[];
-  id: string;
-}
+import { Topic, Course } from "../../../components/types";
 
 const EnrolledCourse: React.FC = () => {
   const { userToken, userInfo } = useAuth();
@@ -28,6 +14,7 @@ const EnrolledCourse: React.FC = () => {
   const [enrolledTopics, setEnrolledTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<number>(0);
 
   const parsedCourse: Course =
     typeof course === "string" ? JSON.parse(course) : course;
@@ -55,6 +42,25 @@ const EnrolledCourse: React.FC = () => {
       setLoading(false);
     }
   };
+  const fetchProgress = async () => {
+    try {
+      const response = await axios.get(
+        `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/course/${parsedCourse.id}/progress/`,
+        {
+          headers: {
+            Authorization: `Token ${userToken?.token}`,
+          },
+        }
+      );
+
+      setProgress(response.data.course_progress);
+    } catch (error) {
+      console.error("Error fetching progress:", error);
+    }
+  };
+  useEffect(() => {
+    fetchProgress();
+  });
 
   if (loading) {
     return (
@@ -74,7 +80,8 @@ const EnrolledCourse: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <RoadmapTitle />
+      <RoadmapTitle course={parsedCourse} progress={progress} />
+
       <CourseRoadmap enrolledTopics={enrolledTopics} course={parsedCourse} />
     </View>
   );

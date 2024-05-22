@@ -2,37 +2,10 @@ import React, { useState, useEffect } from "react";
 import { View, StyleSheet } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import axios from "axios";
-import Questions from "@/components/Questions";
+import Questions from "../../../components/Questions";
 import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
-
-interface Topic {
-  title: string;
-  description: string;
-  id: string;
-  completed?: boolean;
-}
-
-interface Course {
-  title: string;
-  description: string;
-  level: string;
-  url: string;
-  category: number[];
-  id: string;
-}
-
-interface Question {
-  text: string;
-  id: number;
-  level: string;
-}
-interface Answer {
-  text: string;
-  id: number;
-  isRight: boolean;
-  question: number;
-}
+import { Course, Topic, Question, Answer } from "../../../components/types";
 
 const PracticeQuestions: React.FC = () => {
   const { topic, level, course } = useLocalSearchParams();

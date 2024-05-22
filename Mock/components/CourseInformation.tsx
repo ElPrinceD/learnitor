@@ -12,21 +12,7 @@ import axios, { AxiosError } from "axios";
 import { FontAwesome5 } from "@expo/vector-icons";
 import ApiUrl from "../config";
 import { useAuth } from "./AuthContext";
-
-interface Course {
-  title: string;
-  description: string;
-  level: string;
-  url: string;
-  category: number[];
-  id: string;
-}
-
-interface Topic {
-  title: string;
-  description: string;
-  id: string;
-}
+import { Course, Topic } from "./types";
 
 interface CourseInformationProps {
   course: Course;

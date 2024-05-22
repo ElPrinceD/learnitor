@@ -8,18 +8,7 @@ import ApiUrl from "../../../../config";
 import { useAuth } from "../../../../components/AuthContext";
 import TopicInformation from "@/components/TopicInformation";
 import Books from "@/components/Books";
-
-interface Topic {
-  title: string;
-  description: string;
-  id: string;
-  completed?: boolean;
-}
-interface BookMaterial {
-  name: string;
-  type: "book"; // Define the types of materials
-  link: string;
-}
+import { Topic, BookMaterial } from "../../../../components/types";
 
 interface BookMaterialsProps {
   topic: Topic[];

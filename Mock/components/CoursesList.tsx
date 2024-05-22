@@ -9,20 +9,7 @@ import {
   useColorScheme,
 } from "react-native";
 import { router } from "expo-router";
-
-interface Course {
-  title: string;
-  description: string;
-  level: string;
-  url: string;
-  category: number[];
-  id: string;
-}
-
-interface Category {
-  id: number;
-  name: string;
-}
+import { Course, Category } from "./types";
 
 interface Props {
   courses: Course[];
@@ -101,7 +88,6 @@ const CoursesList: React.FC<Props> = ({ courses, categories }) => {
       backgroundColor: "#c99252",
       paddingHorizontal: 5,
       paddingVertical: 2,
-      
     },
     newLabelText: {
       color: "white",
@@ -153,8 +139,7 @@ const CoursesList: React.FC<Props> = ({ courses, categories }) => {
               <Text
                 style={[
                   styles.categoryText,
-                  item.id === selectedCategoryId &&
-                    styles.selectedCategoryText,
+                  item.id === selectedCategoryId && styles.selectedCategoryText,
                 ]}
               >
                 {item.name}

@@ -1,11 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, useColorScheme } from "react-native";
-
-interface Topic {
-  title: string;
-  description: string;
-  id: string;
-}
+import { Topic } from "./types";
 
 interface PracticeInformationProps {
   topic: Topic;

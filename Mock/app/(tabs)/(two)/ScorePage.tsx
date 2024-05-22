@@ -15,35 +15,7 @@ import {
 import axios from "axios";
 import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
-
-interface Topic {
-  title: string;
-  description: string;
-  id: number;
-  completed?: boolean;
-}
-interface Course {
-  title: string;
-  description: string;
-  level: string;
-  url: string;
-  category: number[];
-  id: number;
-}
-interface Answer {
-  text: string;
-  id: number;
-  isRight: boolean;
-  question: number;
-  isSelected: boolean;
-  isCorrect: boolean;
-}
-
-interface Result {
-  question: string;
-  allAnswers: Answer[];
-  isCorrect: boolean;
-}
+import { Course, Topic, Result } from "../../../components/types";
 
 const ScorePage: React.FC = () => {
   const { userToken, userInfo } = useAuth();

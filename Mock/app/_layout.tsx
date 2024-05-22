@@ -10,7 +10,7 @@ import {
 import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { AuthProvider, useAuth } from "../components/AuthContext"; // Update the path
-import 'react-native-reanimated'
+import "react-native-reanimated";
 import { useColorScheme } from "../components/useColorScheme";
 import { View, ActivityIndicator } from "react-native";
 import "react-native-reanimated";

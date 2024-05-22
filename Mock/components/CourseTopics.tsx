@@ -7,12 +7,7 @@ import {
   useColorScheme,
   TouchableOpacity,
 } from "react-native";
-
-interface Topic {
-  title: string;
-  description: string;
-  id: string;
-}
+import { Topic } from "./types";
 
 interface CourseTopicsProps {
   topics: Topic[];

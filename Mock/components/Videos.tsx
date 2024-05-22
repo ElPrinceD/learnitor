@@ -6,12 +6,7 @@ import {
   TouchableOpacity,
   Linking,
 } from "react-native";
-
-interface Material {
-  name: string;
-  type: "video";
-  link: string;
-}
+import { Material } from "./types";
 
 interface VideosProps {
   videoMaterials: Material[];

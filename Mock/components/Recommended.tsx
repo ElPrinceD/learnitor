@@ -6,18 +6,9 @@ import {
   TouchableOpacity,
   Image,
   StyleSheet,
-  useColorScheme,
 } from "react-native";
 import { router } from "expo-router";
-
-interface Course {
-  title: string;
-  description: string;
-  level: string;
-  url: string;
-  category: number[];
-  id: string;
-}
+import { Course } from "./types";
 
 interface Props {
   RecommendedCoursesData: Course[];

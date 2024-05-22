@@ -1,27 +1,10 @@
 import React from "react";
 import { View, StyleSheet, ImageSourcePropType } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import PracticeInformation from "@/components/PracticeInformation";
-import PracticeLevel from "@/components/PracticeLevel";
+import PracticeInformation from "../../../components/PracticeInformation";
+import PracticeLevel from "../../../components/PracticeLevel";
+import { Topic, Level } from "../../../components/types";
 
-interface Topic {
-  title: string;
-  description: string;
-  id: string;
-  completed?: boolean;
-}
-interface Course {
-  title: string;
-  description: string;
-  level: string;
-  url: string;
-  category: number[];
-  id: string;
-}
-interface Level {
-  title: string;
-  image: ImageSourcePropType;
-}
 const Practice: React.FC = () => {
   const { topic, course } = useLocalSearchParams();
 

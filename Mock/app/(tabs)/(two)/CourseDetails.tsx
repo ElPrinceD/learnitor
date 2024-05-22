@@ -6,21 +6,7 @@ import CourseInformation from "../../../components/CourseInformation";
 import CourseTopics from "../../../components/CourseTopics";
 import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
-
-interface Course {
-  title: string;
-  description: string;
-  level: string;
-  url: string;
-  category: number[];
-  id: string;
-}
-
-interface Topic {
-  title: string;
-  description: string;
-  id: string;
-}
+import { Topic, Course } from "../../../components/types";
 
 const CourseDetails: React.FC = () => {
   const { course } = useLocalSearchParams();

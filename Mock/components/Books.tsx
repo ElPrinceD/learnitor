@@ -6,12 +6,7 @@ import {
   TouchableOpacity,
   Linking,
 } from "react-native";
-
-interface BookMaterial {
-  name: string;
-  type: "book";
-  link: string;
-}
+import { BookMaterial } from "./types";
 
 interface BooksProps {
   bookMaterials: BookMaterial[];

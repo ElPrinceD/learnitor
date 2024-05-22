@@ -8,35 +8,7 @@ import {
   useColorScheme,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-
-interface Topic {
-  title: string;
-  description: string;
-  id: string;
-  completed?: boolean;
-}
-
-interface Course {
-  title: string;
-  description: string;
-  level: string;
-  url: string;
-  category: number[];
-  id: string;
-}
-
-interface Question {
-  text: string;
-  id: number;
-  level: string;
-}
-
-interface Answer {
-  text: string;
-  id: number;
-  isRight: boolean;
-  question: number;
-}
+import { Course, Topic, Question, Answer } from "./types";
 
 interface QuestionProps {
   practiceQuestions: Question[];

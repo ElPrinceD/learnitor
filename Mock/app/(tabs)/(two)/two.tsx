@@ -7,20 +7,7 @@ import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
 import { Stack } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-
-interface Course {
-  title: string;
-  description: string;
-  level: string;
-  url: string;
-  category: number[];
-  id: string;
-}
-
-interface Category {
-  id: number;
-  name: string;
-}
+import { Course, Category } from "../../../components/types";
 
 const CoursesScreen: React.FC = () => {
   const [coursesData, setCoursesData] = useState<Course[]>([]);
@@ -41,7 +28,7 @@ const CoursesScreen: React.FC = () => {
           Authorization: `Token ${userToken?.token}`,
         },
       });
-      const categories = await axios.get(`${ApiUrl}:8000/api/category/all/`, {
+      const categories = await axios.get(`${ApiUrl}:8000/api/category/all`, {
         headers: {
           Authorization: `Token ${userToken?.token}`,
         },
@@ -66,7 +53,7 @@ const CoursesScreen: React.FC = () => {
       flex: 2,
       // marginTop: -150,
       backgroundColor: "#ffffff",
-      
+
       // backgroundColor: colorScheme === "dark" ? "#000" : "#fff",
     },
     headerText: {
@@ -75,7 +62,7 @@ const CoursesScreen: React.FC = () => {
       marginBottom: 10,
       color: colorScheme === "dark" ? "#fff" : "#000",
     },
-    
+
     backgroundGradient: {
       flex: 1,
       width: "100%",
@@ -86,14 +73,11 @@ const CoursesScreen: React.FC = () => {
       backgroundColor: "transparent",
       justifyContent: "center",
       alignItems: "center",
-      height: "10.33%", 
+      height: "10.33%",
     },
-
-   
   });
   return (
     <>
-    
       <Stack.Screen
         options={{ headerTitle: "What do you want to learn today?" }}
       />
@@ -101,15 +85,11 @@ const CoursesScreen: React.FC = () => {
 
       </View> */}
       <View style={styles.container}>
-      <SearchBar onSearch={handleSearch} />
+        <SearchBar onSearch={handleSearch} />
         <CoursesList courses={filteredCourses} categories={categoryData} />
       </View>
     </>
-  )
-
-}
-
- 
-  
+  );
+};
 
 export default CoursesScreen;

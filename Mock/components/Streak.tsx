@@ -1,11 +1,7 @@
 import React from "react";
 import { View, FlatList, Text, useColorScheme } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-
-interface Streak {
-  name: string;
-  streak: boolean;
-}
+import { Streak } from "./types";
 
 interface Props {
   streakData: Streak[];

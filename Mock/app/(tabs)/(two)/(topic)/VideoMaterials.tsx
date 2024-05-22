@@ -8,17 +8,8 @@ import ApiUrl from "../../../../config";
 import { useAuth } from "../../../../components/AuthContext";
 import TopicInformation from "@/components/TopicInformation";
 import Videos from "@/components/Videos";
-interface Topic {
-  title: string;
-  description: string;
-  id: string;
-  completed?: boolean;
-}
-interface Material {
-  name: string;
-  type: "video"; // Define the types of materials
-  link: string;
-}
+
+import { Topic, Material } from "../../../../components/types";
 
 interface VideoMaterialsProps {
   topic: Topic[];

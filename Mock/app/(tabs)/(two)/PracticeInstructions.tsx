@@ -15,7 +15,7 @@ const PracticeInstructions = () => {
   const { topic, level, course } = useLocalSearchParams();
 
   const [isTimed, setIsTimed] = useState(false);
-  const [duration, setDuration] = useState(0.3); // Default to 10 minutes
+  const [duration, setDuration] = useState(10); // Default to 10 minutes
 
   const handleStartQuiz = () => {
     router.navigate({

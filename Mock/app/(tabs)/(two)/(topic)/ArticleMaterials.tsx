@@ -6,19 +6,8 @@ import axios from "axios";
 import ApiUrl from "../../../../config";
 
 import { useAuth } from "../../../../components/AuthContext";
-import Articles from "@/components/Articles";
-
-interface Topic {
-  title: string;
-  description: string;
-  id: string;
-  completed?: boolean;
-}
-interface ArticleMaterial {
-  name: string;
-  type: "journal"; // Define the types of materials
-  link: string;
-}
+import Articles from "../../../../components/Articles";
+import { Topic, ArticleMaterial } from "../../../../components/types";
 
 interface ArticleMaterialsProps {
   topic: Topic[];

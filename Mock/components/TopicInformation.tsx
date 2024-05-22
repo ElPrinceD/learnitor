@@ -3,11 +3,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 
-interface Topic {
-  title: string;
-  description: string;
-  id: string;
-}
+import { Topic } from "./types";
 
 interface TopicInformationProps {
   topic: Topic;

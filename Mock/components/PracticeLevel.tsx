@@ -9,11 +9,7 @@ import {
   useColorScheme,
   ImageSourcePropType,
 } from "react-native";
-
-interface Level {
-  title: string;
-  image: ImageSourcePropType;
-}
+import { Level } from "./types";
 
 interface Props {
   onPress: (level: Level) => void;

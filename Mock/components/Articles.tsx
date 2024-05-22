@@ -6,12 +6,7 @@ import {
   TouchableOpacity,
   Linking,
 } from "react-native";
-
-interface ArticleMaterial {
-  name: string;
-  type: "journal";
-  link: string;
-}
+import { ArticleMaterial } from "./types";
 
 interface ArticlesProps {
   articleMaterials: ArticleMaterial[];
