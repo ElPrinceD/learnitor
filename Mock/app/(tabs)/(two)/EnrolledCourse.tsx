@@ -69,6 +69,7 @@ const EnrolledCourse: React.FC = () => {
       </View>
     );
   }
+  
 
   if (error) {
     return (

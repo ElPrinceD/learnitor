@@ -28,7 +28,7 @@ const CoursesScreen: React.FC = () => {
           Authorization: `Token ${userToken?.token}`,
         },
       });
-      const categories = await axios.get(`${ApiUrl}:8000/api/category/all`, {
+      const categories = await axios.get(`${ApiUrl}:8000/api/category/all/`, {
         headers: {
           Authorization: `Token ${userToken?.token}`,
         },
@@ -50,7 +50,7 @@ const CoursesScreen: React.FC = () => {
 
   const styles = StyleSheet.create({
     container: {
-      flex: 2,
+      flex: 1,
       // marginTop: -150,
       backgroundColor: "#ffffff",
 
@@ -79,7 +79,13 @@ const CoursesScreen: React.FC = () => {
   return (
     <>
       <Stack.Screen
-        options={{ headerTitle: "What do you want to learn today?" }}
+        options={{
+          headerTitle: "What do you want to learn today?",
+          headerStyle: {
+            backgroundColor: "#fdecd2", // Add this line
+          },
+          headerShadowVisible: false,
+        }}
       />
       {/* <View style={styles.topContainer}>
 

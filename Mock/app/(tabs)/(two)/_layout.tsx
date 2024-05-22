@@ -6,7 +6,7 @@ export default function Tab2Layout() {
   return (
     <SafeAreaProvider>
       <Stack>
-        <Stack.Screen name="two" options={{ headerShown: false }} />
+        <Stack.Screen name="two" options={{ headerShown: true }} />
         <Stack.Screen name="CourseDetails" options={{ headerShown: false }} />
         <Stack.Screen name="EnrolledCourse" options={{ headerShown: false }} />
         <Stack.Screen name="(topic)" options={{ headerShown: false }} />

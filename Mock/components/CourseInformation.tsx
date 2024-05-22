@@ -17,11 +17,17 @@ import { Course, Topic } from "./types";
 interface CourseInformationProps {
   course: Course;
   selectedTopics: Topic[];
+  onContinue: () => void;
+  setShowTopics: (value: boolean) => void;
+  onEnrollmentStatusChange: (status: boolean) => void;
 }
 
 const CourseInformation: React.FC<CourseInformationProps> = ({
   course,
   selectedTopics,
+  onContinue,
+  setShowTopics,
+  onEnrollmentStatusChange,
 }) => {
   if (!course) {
     return (
@@ -32,13 +38,17 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
   }
 
   const colorScheme = useColorScheme();
+  const [showFullDescription, setShowFullDescription] = useState(false);
   const { userToken, userInfo } = useAuth();
   const [enrolled, setEnrolled] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
   const [enrollDisabled, setEnrollDisabled] = useState<boolean>(true);
-  const [enrollmentResponse, setEnrollmentResponse] = useState<any>(null); // State to hold enrollment response
+  const [enrollmentResponse, setEnrollmentResponse] = useState<any>(null);
 
+  const handleShowMore = () => {
+    setShowFullDescription(!showFullDescription);
+  };
   const enrollCourse = async () => {
     setLoading(true);
 
@@ -55,6 +65,8 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
       );
       setEnrolled(true);
       setEnrollDisabled(true);
+      setShowTopics(false);
+      onEnrollmentStatusChange(true);
       setEnrollmentResponse(response.data.enrolled_topics); // Store the response data
     } catch (error) {
       const axiosError = error as AxiosError;
@@ -82,7 +94,9 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
       setEnrolled(false);
       setEnrollDisabled(false);
       setEnrollmentResponse(null);
-      setProgress(0); // Reset progress to 0 on unenroll
+      setProgress(0);
+      setShowTopics(true);
+      onEnrollmentStatusChange(false);
       console.log("Unenrollment response:", response.data);
     } catch (error) {
       console.error("Error unenrolling:", error);
@@ -119,7 +133,8 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
         );
         const userAlreadyEnrolled = response.data.enrolled;
         setEnrolled(userAlreadyEnrolled);
-        setEnrollDisabled(userAlreadyEnrolled || selectedTopics.length === 0); // Disable enroll button if user is already enrolled or no topic is selected
+        setEnrollDisabled(userAlreadyEnrolled || selectedTopics.length === 0);
+        onEnrollmentStatusChange(userAlreadyEnrolled);
 
         if (userAlreadyEnrolled) {
           await fetchProgress();
@@ -153,52 +168,76 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
 
   const styles = StyleSheet.create({
     container: {
+      padding: 0,
+      //flexDirection: "row",
+      backgroundColor: "transparernt",
+      borderTopLeftRadius: 80,
+      borderTopRightRadius: 70,
+    },
+
+    bodyContainer: {
       padding: 20,
-      backgroundColor: colorScheme === "dark" ? "#000" : "#fff",
+      // backgroundColor: "blue",
+      borderTopLeftRadius: 30,
+      borderTopRightRadius: 30,
     },
     title: {
       fontSize: 24,
+      justifyContent: "center",
+      alignItems: "center",
       fontWeight: "bold",
-      marginBottom: 10,
-      color: colorScheme === "dark" ? "#fff" : "#333",
+
+      // borderTopLeftRadius: 30,
+      // borderTopRightRadius: 3
+      backgroundColor: "transparent",
+
+      color: colorScheme === "dark" ? "#565050" : "#5c5a5a",
     },
     description: {
       fontSize: 18,
       marginBottom: 20,
-      color: colorScheme === "dark" ? "#ccc" : "#777",
+
+      color: colorScheme === "dark" ? "#ccc" : "#1d1c1c",
+    },
+    showMore: {
+      fontSize: 16,
+
+      color: "#337ab7",
+      // textDecorationLine: "underline",
     },
     imageContainer: {
-      borderRadius: 10,
-      overflow: "hidden",
-      marginBottom: 10,
+      width: "100%",
+      //margin: 20,
     },
     image: {
-      width: "30%",
-      height: 100,
+      height: 250,
     },
     buttonContainer: {
       flexDirection: "row",
       alignItems: "center",
+      position: "absolute",
+      top: 20,
       marginTop: 20,
     },
     enrollButton: {
-      backgroundColor: enrollDisabled ? "#ccc" : "transparent",
-      paddingVertical: 10,
+      backgroundColor: enrollDisabled ? "#e6ac6a" : "#b5752c",
+      paddingVertical: 15,
+
       paddingHorizontal: 20,
       borderRadius: 20,
-      borderWidth: 2,
+      //borderWidth: 2,
       alignItems: "center",
-      borderColor: colorScheme === "dark" ? "#fff" : "#000",
+      //borderColor: colorScheme === "dark" ? "#fff" : "#000",
       opacity: enrollDisabled ? 0.5 : 1,
     },
     continueButton: {
-      backgroundColor: "transparent",
       paddingVertical: 10,
       paddingHorizontal: 20,
       borderRadius: 20,
-      borderWidth: 2,
-      borderColor: colorScheme === "dark" ? "#fff" : "#000",
-      marginTop: -20,
+      //borderWidth: 2,
+      //borderColor: colorScheme === "dark" ? "#fff" : "#000",
+      backgroundColor: "#b5752c",
+      marginTop: -40,
       flexDirection: "row",
       justifyContent: "center", // Center the text horizontally
       width: "48%",
@@ -214,20 +253,21 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
       color: colorScheme === "dark" ? "#fff" : "#000",
     },
     progressContainer: {
-      marginTop: 20,
+      marginTop: 70,
       flexDirection: "row",
       alignItems: "center",
     },
     progressBar: {
       flex: 1,
       height: 10,
-      backgroundColor: "#ccc",
+      backgroundColor: "#ffffff",
       borderRadius: 5,
       marginRight: 10,
     },
+
     progressFill: {
       height: "100%",
-      backgroundColor: colorScheme === "dark" ? "#fff" : "#000",
+      backgroundColor: colorScheme === "dark" ? "#e6ac6a" : "#e6ac6a",
       borderRadius: 5,
     },
     progressText: {
@@ -248,18 +288,50 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
             onError={(error) => console.log("Image error:", error)}
           />
         </View>
-        <Text style={styles.title}>{course.title}</Text>
-        <Text style={styles.description}>{course.description}</Text>
+        {/* <Text style={styles.title}>{course.title}</Text> */}
+      </View>
+      <View style={styles.bodyContainer}>
+        <Text
+          style={[
+            {
+              fontWeight: "bold",
+              fontSize: 20,
+              color: "#696868",
+              paddingBottom: 8,
+            },
+          ]}
+        >
+          About Course:
+        </Text>
+        <View>
+          <Text style={[styles.description, { flexWrap: "wrap" }]}>
+            {showFullDescription
+              ? course.description
+              : `${course.description.substring(0, 100)}...`}
+            <TouchableOpacity onPress={handleShowMore}>
+              <Text style={styles.showMore}>
+                {showFullDescription ? "Show less" : "Show more"}
+              </Text>
+            </TouchableOpacity>
+          </Text>
+        </View>
 
         {enrolled ? (
           <View>
             <View style={styles.buttonContainer}>
               <TouchableOpacity
-                style={styles.continueButton}
+                style={[
+                  styles.continueButton,
+                  {
+                    backgroundColor: "transparent",
+                    borderWidth: 2,
+                    borderColor: "#e6ac6a",
+                  },
+                ]}
                 activeOpacity={0.3}
                 onPress={unenrollCourse}
               >
-                <Text style={styles.continueText}>Unenroll</Text>
+                <Text style={[styles.continueText]}>Unenroll</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.continueButton}

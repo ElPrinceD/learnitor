@@ -11,6 +11,8 @@ import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import Swiper from 'react-native-deck-swiper';
 import GradientCard from '../../components/InfoCard'; 
+import {router} from "expo-router";
+
 
 const Index = () => {
   const { userToken, userInfo } = useAuth();
@@ -18,10 +20,10 @@ const Index = () => {
   const [enrolledCoursesData, setEnrolledCoursesData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cardIndex, setCardIndex] = useState(0);
-
+  
   const dummyCardData = [
-    { title: "Find all your academic schedules in one place", description: "Timetables, Study timetables, Assignment deadlines", colors: ['#ace2d1', '#54b093'], category: "Timeline" },
-    { title: "Tailor your topics according to your course description", description: "Variety of course topics, topic material & questions", colors: ['#dabda2', '#9b7a5d'], category: "Courses" },
+    { title: "Find all your academic schedules in one place", description: "Timetables, Study timetables, Assignment deadlines", colors: ['#ace2d1', '#54b093'], category: "Timeline" , image: require("../../assets/images/clock1.png")},
+    { title: "Tailor your topics according to your course description", description: "Variety of course topics, topic material & questions", colors: ['#dabda2', '#9b7a5d'], category: "Courses", image: require("../../assets/images/books.png") },
     { title: "Card 3", description: "This is the description for card 3.", colors: ['#b1afe3', '#3d4e9b'], category: "Timeline" },
   ];
 
@@ -79,6 +81,10 @@ const Index = () => {
   const handleSwiped = () => {
     setCardIndex((prevIndex) => (prevIndex + 1) % dummyCardData.length);
   };
+  const handleCardPress = () => {
+    router.navigate({
+    pathname: "three"})
+  }
 
   return (
     <View style={styles.container}>
@@ -111,7 +117,7 @@ const Index = () => {
               cards={dummyCardData}
               renderCard={(card) =>
                 card ? (
-                  <GradientCard card={card} />
+                  <GradientCard card={card} handleCardPress={handleCardPress} />
                 ) : (
                   <View style={styles.cardPlaceholder}>
                     <Text>No more cards</Text>

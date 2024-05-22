@@ -33,15 +33,17 @@ const CoursesList: React.FC<Props> = ({ courses, categories }) => {
       backgroundColor: colorScheme === "dark" ? "#000" : "#fffdfd",
     },
     categoryContainer: {
-      height: 53,
+      height: 40,
+      marginTop: -6,
     },
     categoryList: {
-      marginBottom: "2%",
+      marginBottom: "1%",
     },
     categoryItem: {
       paddingHorizontal: 15,
-      paddingVertical: 10,
+      paddingVertical: 4,
       marginRight: 10,
+      
       borderRadius: 20,
       borderWidth: 1,
       borderColor: colorScheme === "dark" ? "#555" : "#ccc",

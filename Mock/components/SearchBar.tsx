@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     // height: "10.33%", 
   },
   backgroundGradient: {
-    flex: 1,
+    flex: 0.8,
     alignItems: "center",
     width: "100%",
     height: "100%",
