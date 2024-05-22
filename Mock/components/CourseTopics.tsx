@@ -9,6 +9,14 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+interface Course {
+  title: string;
+  description: string;
+  level: string;
+  url: string;
+  category: number[];
+  id: string;
+}
 interface Topic {
   title: string;
   description: string;
@@ -18,13 +26,15 @@ interface Topic {
 interface CourseTopicsProps {
   topics: Topic[];
   onSelectedTopicsChange: (selectedTopics: Topic[]) => void;
-  selectedTopics: Topic[]; // Define selectedTopics prop
+  selectedTopics: Topic[];
+  course: Course; // Define selectedTopics prop
 }
 
 const CourseTopics: React.FC<CourseTopicsProps> = ({
   topics,
   onSelectedTopicsChange,
   selectedTopics,
+  course,
 }) => {
   const colorScheme = useColorScheme();
 
@@ -53,7 +63,7 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
     topicsContainer: {
       paddingVertical: 20,
       borderTopColor: "#757373",
-  
+
       paddingHorizontal: 10,
       //backgroundColor: colorScheme === "dark" ? "#080808" : "#761818",
     },
@@ -73,16 +83,15 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
       elevation: 1,
       position: "relative",
     },
-    icon:{
+    icon: {
       backgroundColor: "#b3834d",
       padding: 5,
       borderRadius: 50,
-      
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.4,
-        shadowRadius: 2,
-      
+
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.4,
+      shadowRadius: 2,
     },
     topicTitle: {
       fontSize: 17,
@@ -94,7 +103,7 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
       fontSize: 16,
       color: colorScheme === "dark" ? "#ccc" : "#666",
       marginTop: -10,
-      marginLeft: 40
+      marginLeft: 40,
     },
     orderNumber: {
       position: "absolute",
@@ -152,30 +161,30 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
 
         return (
           <TouchableOpacity
-  key={index}
-  style={[
-    styles.topicCard,
-    isSelected && {
-      backgroundColor: colorScheme === "dark" ? "#666" : "#ddd",
-    },
-  ]}
-  onPress={() => toggleTopicSelection(topic.id)}
-  activeOpacity={0.7}
->
-  <Text style={styles.orderNumber}>
-    {isSelected ? orderNumber : ""} 
-  </Text>
-  <View style={{ flexDirection: 'row' }}>
-    <Ionicons
-      name="play-circle"
-      size={20}
-      color={"white"}
-      style= {styles.icon}
-    />
-    <Text style={styles.topicTitle}>{topic.title}</Text>
-  </View>
-  <Text style={styles.topicDescription}>{topic.description}</Text>
-</TouchableOpacity>
+            key={index}
+            style={[
+              styles.topicCard,
+              isSelected && {
+                backgroundColor: colorScheme === "dark" ? "#666" : "#ddd",
+              },
+            ]}
+            onPress={() => toggleTopicSelection(topic.id)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.orderNumber}>
+              {isSelected ? orderNumber : ""}
+            </Text>
+            <View style={{ flexDirection: "row" }}>
+              <Ionicons
+                name="play-circle"
+                size={20}
+                color={"white"}
+                style={styles.icon}
+              />
+              <Text style={styles.topicTitle}>{topic.title}</Text>
+            </View>
+            <Text style={styles.topicDescription}>{topic.description}</Text>
+          </TouchableOpacity>
         );
       })}
     </ScrollView>

@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { View, StyleSheet, ScrollView, Text, TouchableOpacity } from "react-native";
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+} from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import axios from "axios";
 import CourseInformation from "../../../components/CourseInformation";
@@ -43,7 +49,7 @@ const CourseDetails: React.FC = () => {
   const fetchData = async () => {
     try {
       const response = await axios.get(
-        `${ApiUrl}:8000/api/course/${parsedCourse.id}/topics`,
+        `${ApiUrl}:8000/api/course/${parsedCourse.id}/topics/`,
         {
           headers: {
             Authorization: `Token ${userToken?.token}`,
@@ -69,9 +75,8 @@ const CourseDetails: React.FC = () => {
     setShowTopics(!status);
   };
 
-
   return (
-    <LinearGradient colors={['#ffffff', '#fdecd2']} style={styles.container}>
+    <LinearGradient colors={["#ffffff", "#fdecd2"]} style={styles.container}>
       <CourseInformation
         course={parsedCourse}
         selectedTopics={selectedTopics}
@@ -80,62 +85,67 @@ const CourseDetails: React.FC = () => {
         onEnrollmentStatusChange={handleEnrollmentStatusChange}
       />
       <View style={styles.miniTitles}>
-  <View style={styles.topicCountContainer}>
-    {showTopics && (
-      <TouchableOpacity onPress={() => handleMiniTitleSelect("Topics")}>
-        <Text
-          style={[
-            styles.miniText,
-            selectedMiniTitle === "Topics" && styles.selectedMiniTitle,
-            { paddingHorizontal: 40 }
-          ]}
-        >
-          Topics {selectedTopicCount > 0 && `(${selectedTopicCount} Selected)`}
-        </Text>
-      </TouchableOpacity>
-    )}
-    {!showTopics && (
-      <>
-        <TouchableOpacity onPress={() => handleMiniTitleSelect("Questions")}>
-          <View style={styles.inline}>
-            <Text
-              style={[
-                styles.miniText,
-                selectedMiniTitle === "Questions" && styles.selectedMiniTitle,
-              ]}
-            >
-              Questions
-            </Text>
-            <Ionicons name="lock-closed" size={15} color="#8e8e8e" />
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => handleMiniTitleSelect("Materials")}>
-          <View style={[styles.inline, selectedMiniTitle === "Materials" && styles.selectedMiniTitle]}>
-            <Text
-              style={[
-                styles.miniText,
-              ]}
-            >
-              Materials
-            </Text>
-            <Ionicons name="lock-closed" size={15} color="#8e8e8e" />
-          </View>
-        </TouchableOpacity>
-      </>
-    )}
-  </View>
-</View>
-<CourseTopics
-  topics={showTopics ? topics : selectedTopics}
-  selectedTopics={selectedTopics}
-  onSelectedTopicsChange={handleSelectedTopicsChange}
-  course={parsedCourse}
-/>
+        <View style={styles.topicCountContainer}>
+          {showTopics && (
+            <TouchableOpacity onPress={() => handleMiniTitleSelect("Topics")}>
+              <Text
+                style={[
+                  styles.miniText,
+                  selectedMiniTitle === "Topics" && styles.selectedMiniTitle,
+                  { paddingHorizontal: 40 },
+                ]}
+              >
+                Topics{" "}
+                {selectedTopicCount > 0 && `(${selectedTopicCount} Selected)`}
+              </Text>
+            </TouchableOpacity>
+          )}
+          {/* {!showTopics && (
+            <>
+              <TouchableOpacity
+                onPress={() => handleMiniTitleSelect("Questions")}
+              >
+                <View style={styles.inline}>
+                  <Text
+                    style={[
+                      styles.miniText,
+                      selectedMiniTitle === "Questions" &&
+                        styles.selectedMiniTitle,
+                    ]}
+                  >
+                    Questions
+                  </Text>
+                  <Ionicons name="lock-closed" size={15} color="#8e8e8e" />
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleMiniTitleSelect("Materials")}
+              >
+                <View
+                  style={[
+                    styles.inline,
+                    selectedMiniTitle === "Materials" &&
+                      styles.selectedMiniTitle,
+                  ]}
+                >
+                  <Text style={[styles.miniText]}>Materials</Text>
+                  <Ionicons name="lock-closed" size={15} color="#8e8e8e" />
+                </View>
+              </TouchableOpacity>
+            </>
+          )} */}
+        </View>
+      </View>
+      <CourseTopics
+        topics={topics}
+        selectedTopics={selectedTopics}
+        onSelectedTopicsChange={handleSelectedTopicsChange}
+        course={parsedCourse}
+      />
       <ScrollView contentContainerStyle={styles.scrollViewContainer}>
         {selectedTopics.map((topic) => (
           <View key={topic.id}></View>
         ))}
-        
       </ScrollView>
     </LinearGradient>
   );
@@ -148,9 +158,9 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
   },
   topicCountContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   countText: {
     paddingHorizontal: 10,
@@ -159,11 +169,11 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     fontSize: 15,
   },
-  miniTitles: {  
+  miniTitles: {
     borderBottomColor: "#bababa",
     marginTop: -20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderTopWidth: 0,
     borderLeftWidth: 0,
     borderRightWidth: 0,
@@ -183,12 +193,12 @@ const styles = StyleSheet.create({
   },
   inline: {
     paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   icon: {
     fontSize: 15,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 15,
   },
   scrollViewContainer: {

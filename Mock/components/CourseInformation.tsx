@@ -13,7 +13,6 @@ import { FontAwesome5 } from "@expo/vector-icons";
 import ApiUrl from "../config";
 import { useAuth } from "./AuthContext";
 
-
 interface Course {
   title: string;
   description: string;
@@ -43,7 +42,6 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
   onContinue,
   setShowTopics,
   onEnrollmentStatusChange,
-  
 }) => {
   if (!course) {
     return (
@@ -60,8 +58,7 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
   const [progress, setProgress] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
   const [enrollDisabled, setEnrollDisabled] = useState<boolean>(true);
-  const [enrollmentResponse, setEnrollmentResponse] = useState<any>(null); 
-
+  const [enrollmentResponse, setEnrollmentResponse] = useState<any>(null);
 
   const handleShowMore = () => {
     setShowFullDescription(!showFullDescription);
@@ -111,7 +108,7 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
       setEnrolled(false);
       setEnrollDisabled(false);
       setEnrollmentResponse(null);
-      setProgress(0); 
+      setProgress(0);
       setShowTopics(true);
       onEnrollmentStatusChange(false);
       console.log("Unenrollment response:", response.data);
@@ -176,7 +173,7 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
   }, [selectedTopics]);
 
   const handleContinue = () => {
-    router.navigate("EnrolledCourses");
+    router.navigate("EnrolledCourse");
     router.setParams({
       enrolledTopics: JSON.stringify(enrollmentResponse),
       course: JSON.stringify(course),
@@ -190,43 +187,39 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
       backgroundColor: "transparernt",
       borderTopLeftRadius: 80,
       borderTopRightRadius: 70,
-      
     },
 
-    bodyContainer :{
+    bodyContainer: {
       padding: 20,
       // backgroundColor: "blue",
       borderTopLeftRadius: 30,
       borderTopRightRadius: 30,
-      
     },
     title: {
       fontSize: 24,
-      justifyContent: 'center',
+      justifyContent: "center",
       alignItems: "center",
       fontWeight: "bold",
-      
+
       // borderTopLeftRadius: 30,
       // borderTopRightRadius: 3
       backgroundColor: "transparent",
-      
+
       color: colorScheme === "dark" ? "#565050" : "#5c5a5a",
     },
     description: {
       fontSize: 18,
       marginBottom: 20,
-      
-      
+
       color: colorScheme === "dark" ? "#ccc" : "#1d1c1c",
     },
     showMore: {
       fontSize: 16,
-      
+
       color: "#337ab7",
       // textDecorationLine: "underline",
     },
     imageContainer: {
-      
       width: "100%",
       //margin: 20,
     },
@@ -241,9 +234,9 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
       marginTop: 20,
     },
     enrollButton: {
-      backgroundColor: enrollDisabled ? '#e6ac6a' : '#b5752c',
+      backgroundColor: enrollDisabled ? "#e6ac6a" : "#b5752c",
       paddingVertical: 15,
-      
+
       paddingHorizontal: 20,
       borderRadius: 20,
       //borderWidth: 2,
@@ -252,7 +245,6 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
       opacity: enrollDisabled ? 0.5 : 1,
     },
     continueButton: {
-      
       paddingVertical: 10,
       paddingHorizontal: 20,
       borderRadius: 20,
@@ -286,7 +278,7 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
       borderRadius: 5,
       marginRight: 10,
     },
-  
+
     progressFill: {
       height: "100%",
       backgroundColor: colorScheme === "dark" ? "#e6ac6a" : "#e6ac6a",
@@ -300,53 +292,65 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
   return (
     <View>
       <View style={styles.container}>
-       
         <View style={styles.imageContainer}>
-       
           <Image
             source={{
               uri: course.url,
             }}
             style={styles.image}
-            
             resizeMode="cover"
             onError={(error) => console.log("Image error:", error)}
           />
-         
-          
-          
         </View>
         {/* <Text style={styles.title}>{course.title}</Text> */}
-
-        </View>
-        <View style={styles.bodyContainer}>
-        
-        <Text style= {[{fontWeight: "bold", fontSize: 20, color: "#696868", paddingBottom: 8 }]}>About Course:</Text>
+      </View>
+      <View style={styles.bodyContainer}>
+        <Text
+          style={[
+            {
+              fontWeight: "bold",
+              fontSize: 20,
+              color: "#696868",
+              paddingBottom: 8,
+            },
+          ]}
+        >
+          About Course:
+        </Text>
         <View>
-  <Text style={[styles.description, { flexWrap: 'wrap' }]}>
-    {showFullDescription ? course.description : `${course.description.substring(0, 100)}...`}
-    <TouchableOpacity onPress={handleShowMore}>
-      <Text style={styles.showMore}>
-        {showFullDescription ? "Show less" : "Show more"}
-      </Text>
-    </TouchableOpacity>
-  </Text>
-</View>
+          <Text style={[styles.description, { flexWrap: "wrap" }]}>
+            {showFullDescription
+              ? course.description
+              : `${course.description.substring(0, 100)}...`}
+            <TouchableOpacity onPress={handleShowMore}>
+              <Text style={styles.showMore}>
+                {showFullDescription ? "Show less" : "Show more"}
+              </Text>
+            </TouchableOpacity>
+          </Text>
+        </View>
 
         {enrolled ? (
           <View>
             <View style={styles.buttonContainer}>
               <TouchableOpacity
-                style={[styles.continueButton,  {backgroundColor: "transparent",borderWidth:2, borderColor: "#e6ac6a"}]}
+                style={[
+                  styles.continueButton,
+                  {
+                    backgroundColor: "transparent",
+                    borderWidth: 2,
+                    borderColor: "#e6ac6a",
+                  },
+                ]}
                 activeOpacity={0.3}
                 onPress={unenrollCourse}
               >
-                <Text style={[styles.continueText,]}>Unenroll</Text>
+                <Text style={[styles.continueText]}>Unenroll</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.continueButton}
                 activeOpacity={0.3}
-                onPress={onContinue}
+                onPress={handleContinue}
               >
                 <Text style={styles.continueText}>
                   Continue{" "}
@@ -372,7 +376,6 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
             </View>
           </View>
         ) : (
-          
           <TouchableOpacity
             style={[styles.enrollButton, { opacity: enrollDisabled ? 0.5 : 1 }]}
             activeOpacity={0.3}
@@ -383,8 +386,7 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
           </TouchableOpacity>
         )}
       </View>
-      </View>
-    
+    </View>
   );
 };
 

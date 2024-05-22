@@ -66,7 +66,7 @@ const CoursesScreen: React.FC = () => {
       flex: 1,
       // marginTop: -150,
       backgroundColor: "#ffffff",
-      
+
       // backgroundColor: colorScheme === "dark" ? "#000" : "#fff",
     },
     headerText: {
@@ -75,7 +75,7 @@ const CoursesScreen: React.FC = () => {
       marginBottom: 10,
       color: colorScheme === "dark" ? "#fff" : "#000",
     },
-    
+
     backgroundGradient: {
       flex: 1,
       width: "100%",
@@ -86,36 +86,29 @@ const CoursesScreen: React.FC = () => {
       backgroundColor: "transparent",
       justifyContent: "center",
       alignItems: "center",
-      height: "10.33%", 
+      height: "10.33%",
     },
-
-   
   });
   return (
     <>
-    
       <Stack.Screen
-
-        options={{ headerTitle: "What do you want to learn today?",  headerStyle: {
-          backgroundColor: '#fdecd2',  // Add this line
-        },
-        headerShadowVisible: false,
-      }}
-        
+        options={{
+          headerTitle: "What do you want to learn today?",
+          headerStyle: {
+            backgroundColor: "#fdecd2", // Add this line
+          },
+          headerShadowVisible: false,
+        }}
       />
       {/* <View style={styles.topContainer}>
 
       </View> */}
       <View style={styles.container}>
-      <SearchBar onSearch={handleSearch} />
+        <SearchBar onSearch={handleSearch} />
         <CoursesList courses={filteredCourses} categories={categoryData} />
       </View>
     </>
-  )
-
-}
-
- 
-  
+  );
+};
 
 export default CoursesScreen;
