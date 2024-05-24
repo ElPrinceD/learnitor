@@ -1,28 +1,16 @@
 import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Linking,
-} from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { ArticleMaterial } from "./types";
 
 interface ArticlesProps {
   articleMaterials: ArticleMaterial[];
+  handleArticlePress: (articleMaterial: ArticleMaterial) => void;
 }
 
-const handleMaterialPress = (articleMaterial: ArticleMaterial) => {
-  if (articleMaterial.link) {
-    Linking.openURL(articleMaterial.link).catch((error) =>
-      console.error("Error opening link:", error)
-    );
-  } else {
-    console.log("No link available for this articleMaterial");
-  }
-};
-
-const Articles: React.FC<ArticlesProps> = ({ articleMaterials }) => {
+const Articles: React.FC<ArticlesProps> = ({
+  articleMaterials,
+  handleArticlePress,
+}) => {
   // Filter materials to only include books
   const books = articleMaterials.filter(
     (articleMaterial) => articleMaterial.type === "journal"
@@ -33,7 +21,7 @@ const Articles: React.FC<ArticlesProps> = ({ articleMaterials }) => {
       {books.map((articleMaterial, index) => (
         <TouchableOpacity
           key={index}
-          onPress={() => handleMaterialPress(articleMaterial)}
+          onPress={() => handleArticlePress(articleMaterial)}
         >
           <View style={styles.articleMaterial}>
             <View style={styles.detailsContainer}>

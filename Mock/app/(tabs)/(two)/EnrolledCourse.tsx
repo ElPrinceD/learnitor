@@ -3,7 +3,7 @@ import { View, StyleSheet, Text, ActivityIndicator } from "react-native";
 import axios from "axios";
 import CourseRoadmap from "../../../components/CourseRoadmap";
 import RoadmapTitle from "../../../components/RoadmapTitle";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, router } from "expo-router";
 import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
 import { Topic, Course } from "../../../components/types";
@@ -62,6 +62,22 @@ const EnrolledCourse: React.FC = () => {
     fetchProgress();
   });
 
+  const handleTopicPress = (topic: Topic) => {
+    router.push({
+      pathname: "VideoMaterials",
+      params: { topic: JSON.stringify(topic) },
+    });
+  };
+  const handleQuestionPress = (topic: Topic) => {
+    router.push({
+      pathname: "Practice",
+      params: {
+        topic: JSON.stringify(topic),
+        course: course,
+      },
+    });
+  };
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -69,7 +85,6 @@ const EnrolledCourse: React.FC = () => {
       </View>
     );
   }
-  
 
   if (error) {
     return (
@@ -83,7 +98,12 @@ const EnrolledCourse: React.FC = () => {
     <View style={styles.container}>
       <RoadmapTitle course={parsedCourse} progress={progress} />
 
-      <CourseRoadmap enrolledTopics={enrolledTopics} course={parsedCourse} />
+      <CourseRoadmap
+        enrolledTopics={enrolledTopics}
+        course={parsedCourse}
+        handleTopicPress={handleTopicPress}
+        handleQuestionPress={handleQuestionPress}
+      />
     </View>
   );
 };

@@ -1,207 +1,166 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker'; // Import datetimepicker
-import { useGlobalSearchParams } from "expo-router";
-import axios from 'axios';
-import { useNavigation } from '@react-navigation/native';
-import {router} from 'expo-router'
-import apiUrl from '../../../config.js';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+} from "react-native";
+import { useLocalSearchParams } from "expo-router";
+import axios from "axios";
+import { router } from "expo-router";
+import apiUrl from "../../../config.js";
 import { useAuth } from "../../../components/AuthContext";
+import DatePicker from "../../../components/DatePicker"; // Adjust the import path as needed
+import TimePicker from "../../../components/TimePicker"; // Adjust the import path as needed
 
-const CreateNewTime = () => {
-    const params = useGlobalSearchParams();
-    const category_name = params.name;
-    const category_id = params.category_id;
-   
+const CreateNewTime: React.FC = () => {
+  const params = useLocalSearchParams();
+  const category_name = Array.isArray(params.name)
+    ? params.name[0]
+    : params.name || "Unknown Category";
+  const category_id = Array.isArray(params.category_id)
+    ? params.category_id[0]
+    : params.category_id || "Unknown ID";
+  const { userToken, userInfo } = useAuth();
 
-      const { userToken, userInfo } = useAuth();
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [date, setDate] = useState(new Date());
+  const [time, setTime] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
-    const navigation = useNavigation();
-    
-   
-    
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
-    const [date, setDate] = useState(new Date()); // Initialize date state with current date
-    const [time, setTime] = useState(new Date()); // Initialize time state with current time
-    const [showDatePicker, setShowDatePicker] = useState(false); // State to control visibility of date picker
-    const [showTimePicker, setShowTimePicker] = useState(false); // State to control visibility of time picker
+  const handleSaveTime = async () => {
+    const data = {
+      title,
+      description,
+      due_date: date.toISOString().split("T")[0],
+      due_time: time.toISOString().split("T")[1].slice(0, 5),
+      category: category_id,
+      learner: userInfo?.user.id,
+    };
 
-    const datetime = new Date(
-      date.getFullYear(),
-      date.getMonth(),
-      date.getDate(),
-      time.getHours(),
-      time.getMinutes(),
-      time.getSeconds()
-    );
+    try {
+      const response = await axios.post(
+        `${apiUrl}:8000/api/learner/task/create/`,
+        data,
+        {
+          headers: {
+            Authorization: `Token ${userToken?.token}`,
+          },
+        }
+      );
+      router.navigate("three");
+      router.setParams({ newPlan: response.data });
+    } catch (error) {
+      console.error("Error adding schedule:", error);
+    }
+  };
 
-    
-  
-    
-    
-    // Function to handle saving the new time
-    const handleSaveTime = async () => {
+  return (
+    <ScrollView style={styles.container}>
+      <Text style={styles.title}>Create New Schedule</Text>
 
-    
-      const data = {
-        title,
-        description,
-        due_date: date.toISOString().split('T')[0],
-        due_time: time.toISOString().split('T')[1].slice(0, 5),
-        category: category_id,
-        learner: userInfo?.user.id
-        
-        };
-        console.log(data)
-      try {
-      
-    
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Title</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Title"
+          value={title}
+          onChangeText={setTitle}
+        />
+      </View>
 
-    const response = await axios.post(`${apiUrl}:8000/api/learner/task/create/`, data, {
-      headers: {
-        Authorization: `Token ${userToken?.token}`,
-      },
-    });
-    router.navigate("three")
-    router.setParams({newPlan: response.data});
-    }  catch (error) {
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Description</Text>
+        <TextInput
+          style={[styles.input, styles.descriptionInput]}
+          placeholder="Description"
+          value={description}
+          onChangeText={setDescription}
+        />
+      </View>
 
-    console.error('Error adding schedule:', error);
-}}  
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Date</Text>
+        <DatePicker
+          date={date}
+          show={showDatePicker}
+          onDateChange={(event, selectedDate) =>
+            selectedDate && setDate(selectedDate)
+          }
+          setShow={setShowDatePicker}
+        />
+      </View>
 
-    return (
-        <ScrollView style={styles.container}>
-            <Text style={styles.title}>Create New Schedule</Text>
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Category</Text>
+        <TextInput
+          style={styles.input}
+          placeholder={category_id}
+          value={category_name}
+          editable={false}
+        />
+      </View>
 
-            {/* Title Input */}
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Title</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Title"
-                    value={title}
-                    onChangeText={setTitle}
-                />
-            </View>
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Time</Text>
+        <TimePicker
+          time={time}
+          show={showTimePicker}
+          onTimeChange={(event, selectedTime) =>
+            selectedTime && setTime(selectedTime)
+          }
+          setShow={setShowTimePicker}
+        />
+      </View>
 
-            {/* Description Input */}
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Description</Text>
-                <TextInput
-                    style={[styles.input, styles.input]}
-                    placeholder="Description"
-                    value={description}
-                    onChangeText={setDescription}
-                />
-            </View>
-
-            {/* Date Input */}
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Date</Text>
-                <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
-                    <Text>{date.toLocaleDateString()}</Text>
-                </TouchableOpacity>
-                {showDatePicker && (
-                    <DateTimePicker
-                        value={date}
-                        mode="date"
-                        display="spinner"
-                        onChange={(event, selectedDate) => {
-                            setShowDatePicker(false);
-                            if (selectedDate) {
-                                setDate(selectedDate);
-                            }
-                        }}
-                    />
-                )}
-            </View>
-
-            {/* Category Input */}
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Category</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder={category_id}
-                    value={category_name} // Display the category name
-                    editable={false} // Make the input non-editable
-                />
-            </View>
-
-            {/* Time Input */}
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Time</Text>
-                <TouchableOpacity style={styles.input} onPress={() => setShowTimePicker(true)}>
-                    <Text>{formatTime(time)}</Text>
-                </TouchableOpacity>
-                {showTimePicker && (
-                    <DateTimePicker
-                        value={time}
-                        mode="time"
-                        display="clock" // Use "clock" instead of "spinner"
-                        onChange={(event, selectedTime) => {
-                            setShowTimePicker(false);
-                            if (selectedTime) {
-                                setTime(selectedTime);
-                            }
-                        }}
-                    />
-                )}
-            </View>
-
-            {/* Save Button */}
-            <TouchableOpacity style={styles.saveButton} onPress={handleSaveTime}>
-                <Text style={styles.saveButtonText}>Add Schedule</Text>
-            </TouchableOpacity>
-        </ScrollView>
-    );
-};
-
-// Function to format time without seconds
-const formatTime = (time) => {
-    const hours = time.getHours().toString().padStart(2, '0');
-    const minutes = time.getMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
+      <TouchableOpacity style={styles.saveButton} onPress={handleSaveTime}>
+        <Text style={styles.saveButtonText}>Add Schedule</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        padding: 20,
-    },
-    title: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        marginBottom: 20,
-    },
-    inputContainer: {
-        marginBottom: 40,
-    },
-    label: {
-        fontSize: 16,
-        marginBottom: 5,
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 10,
-        padding: 20,
-    },
-    descriptionInput: {
-        height: 120, // Increase height for multiline input
-    },
-    saveButton: {
-        backgroundColor: '#007BFF',
-        paddingVertical: 12,
-        borderRadius: 5,
-        alignItems: 'center',
-        marginBottom: 50,
-    },
-    saveButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
+  container: {
+    flex: 1,
+    padding: 20,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 20,
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 16,
+    marginBottom: 5,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 10,
+    padding: 10,
+  },
+  descriptionInput: {
+    height: 120,
+  },
+  saveButton: {
+    backgroundColor: "#007BFF",
+    paddingVertical: 12,
+    borderRadius: 5,
+    alignItems: "center",
+  },
+  saveButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
 });
 
 export default CreateNewTime;

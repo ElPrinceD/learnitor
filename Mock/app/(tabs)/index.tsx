@@ -9,10 +9,9 @@ import ApiUrl from "../../config";
 import { useAuth } from "../../components/AuthContext";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import Swiper from 'react-native-deck-swiper';
-import GradientCard from '../../components/InfoCard'; 
-import {router} from "expo-router";
-
+import Swiper from "react-native-deck-swiper";
+import GradientCard from "../../components/InfoCard";
+import { router } from "expo-router";
 
 const Index = () => {
   const { userToken, userInfo } = useAuth();
@@ -20,11 +19,28 @@ const Index = () => {
   const [enrolledCoursesData, setEnrolledCoursesData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cardIndex, setCardIndex] = useState(0);
-  
+
   const dummyCardData = [
-    { title: "Find all your academic schedules in one place", description: "Timetables, Study timetables, Assignment deadlines", colors: ['#ace2d1', '#54b093'], category: "Timeline" , image: require("../../assets/images/clock1.png")},
-    { title: "Tailor your topics according to your course description", description: "Variety of course topics, topic material & questions", colors: ['#dabda2', '#9b7a5d'], category: "Courses", image: require("../../assets/images/books.png") },
-    { title: "Card 3", description: "This is the description for card 3.", colors: ['#b1afe3', '#3d4e9b'], category: "Timeline" },
+    {
+      title: "Find all your academic schedules in one place",
+      description: "Timetables, Study timetables, Assignment deadlines",
+      colors: ["#ace2d1", "#54b093"],
+      category: "Timeline",
+      image: require("../../assets/images/clock1.png"),
+    },
+    {
+      title: "Tailor your topics according to your course description",
+      description: "Variety of course topics, topic material & questions",
+      colors: ["#dabda2", "#9b7a5d"],
+      category: "Courses",
+      image: require("../../assets/images/books.png"),
+    },
+    {
+      title: "Card 3",
+      description: "This is the description for card 3.",
+      colors: ["#b1afe3", "#3d4e9b"],
+      category: "Timeline",
+    },
   ];
 
   useFocusEffect(
@@ -83,36 +99,21 @@ const Index = () => {
   };
   const handleCardPress = () => {
     router.navigate({
-    pathname: "three"})
-  }
+      pathname: "three",
+    });
+  };
 
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#fdecd2', '#FFFFFF']}
+        colors={["#fdecd2", "#FFFFFF"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={styles.backgroundGradient}
       >
         <View style={styles.topContainer}></View>
         <View style={styles.bottomContainer}>
-        
           <View style={{ flex: 1, marginLeft: -10 }}>
-            {/* <LinearGradient
-              colors={['#d8cdc1', '#8c6130']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.gradientContainer}
-            >
-              <View style={styles.textWithIcon}>
-                <Ionicons name="sparkles" size={30} color="white" />
-                <Text style={styles.gradientText}>Checkout your Schedule for the Day</Text>
-                <Ionicons name="chevron-forward-circle" size={35} color="white" />
-              </View>
-            </LinearGradient> */}
-              {loading ? (
-            <Text>Loading...</Text>
-          ) : (
             <Swiper
               cards={dummyCardData}
               renderCard={(card) =>
@@ -125,21 +126,23 @@ const Index = () => {
                 )
               }
               onSwiped={handleSwiped}
-              verticalSwipe={false}
+              verticalSwipe={true}
               cardIndex={cardIndex}
               stackSize={3}
               stackSeparation={1}
               stackScale={1}
               backgroundColor="transparent"
               infinite={true}
-              
             />
-          )}
           </View>
-          <Text style={[styles.sectionTitle, {marginTop: 120}]}>Enrolled Courses</Text>
+          <Text style={[styles.sectionTitle, { marginTop: 120 }]}>
+            Enrolled Courses
+          </Text>
           <EnrolledCoursesList enrolledCoursesData={enrolledCoursesData} />
           <Text style={[styles.sectionTitle]}>Recommended for you</Text>
-          <RecommendedCoursesList RecommendedCoursesData={recommendedCoursesData} />
+          <RecommendedCoursesList
+            RecommendedCoursesData={recommendedCoursesData}
+          />
         </View>
       </LinearGradient>
     </View>
@@ -197,11 +200,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "normal",
   },
-  separator: {
-    marginVertical: 30,
-    height: 1,
-    width: "80%",
-  },
+
   sectionTitle: {
     fontSize: 25,
     color: "#D96B06",
@@ -210,10 +209,10 @@ const styles = StyleSheet.create({
   },
   cardPlaceholder: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: 40,
-  }
+  },
 });
 
 export default Index;

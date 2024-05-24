@@ -1,13 +1,8 @@
 import React from "react";
 import { View, Text, StyleSheet, useColorScheme } from "react-native";
-import { Course } from "./types";
+import ProgressBar from "./ProgressBar";
 
-interface RoadmapTitleProps {
-  course: Course;
-  progress: number; // Add progress prop to the interface
-}
-
-const RoadmapTitle: React.FC<RoadmapTitleProps> = ({ course, progress }) => {
+const RoadmapTitle = ({ course, progress }) => {
   const colorScheme = useColorScheme();
 
   const styles = StyleSheet.create({
@@ -72,11 +67,10 @@ const RoadmapTitle: React.FC<RoadmapTitleProps> = ({ course, progress }) => {
       </Text>
 
       <View style={styles.progressContainer}>
-        <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${progress}%` }]} />
-        </View>
-
-        <Text style={styles.progressText}>{`${progress.toFixed(2)}% `}</Text>
+        <ProgressBar progress={progress} />
+        <Text style={styles.progressText}>{`${progress.toFixed(
+          2
+        )}% Completed`}</Text>
       </View>
     </View>
   );

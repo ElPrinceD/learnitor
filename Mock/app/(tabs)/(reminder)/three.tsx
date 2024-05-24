@@ -1,39 +1,33 @@
+// Timeline.tsx
 import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-} from "react-native";
+import { View, ScrollView, StyleSheet, Alert } from "react-native";
 import axios from "axios";
 import { Feather } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
-import { RootParamList } from "../../../components/types";
+import { router } from "expo-router";
 import ApiUrl from "../../../config";
-import { useLocalSearchParams } from "expo-router";
 import { useAuth } from "../../../components/AuthContext";
-import { router, useFocusEffect } from 'expo-router';
-import { Swipeable, GestureHandlerRootView } from 'react-native-gesture-handler';
+import PlanItem from "../../../components/PlanItem";
+import DaySelector from "../../../components/DaySelector";
+import Header from "../../../components/TimelineHeader";
 
 interface Plan {
   id: number;
   title: string;
   description: string;
   due_date: string;
-  due_time: string,
+  due_time: string;
   category: number;
 }
 
 const Timeline: React.FC = () => {
-  const navigation = useNavigation<RootParamList>();
-  const days = ['Mon', 'Tue', 'Wed', 'Thur', 'Fri', 'Sat', 'Sun'];
+  const days = ["Mon", "Tue", "Wed", "Thur", "Fri", "Sat", "Sun"];
   const [todayPlans, setTodayPlans] = useState<Plan[]>([]);
-  const [openSwipeable, setOpenSwipeable] = useState(null);
-  const [categoryNames, setCategoryNames] = useState<{ [key: number]: string }>({});
-  const [selectedDay, setSelectedDay] = useState(days[(new Date().getDay() - 1) % 7]);
+  const [categoryNames, setCategoryNames] = useState<{ [key: number]: string }>(
+    {}
+  );
+  const [selectedDay, setSelectedDay] = useState(
+    days[(new Date().getDay() - 1) % 7]
+  );
   const [loading, setLoading] = useState(false);
 
   const { userToken } = useAuth();
@@ -53,21 +47,19 @@ const Timeline: React.FC = () => {
     }
   };
 
-  console.log(selectedDay)
-
-
- const fetchTodayPlans = async (formattedDate: string) => {
+  const fetchTodayPlans = async (formattedDate: string) => {
     setLoading(true);
     try {
       const selectedIndex = days.indexOf(selectedDay);
       const currentDate = new Date();
       currentDate.setDate(currentDate.getDate() + selectedIndex);
-      const formattedDate = currentDate.toISOString().split('T')[0];
-      const response = await axios.get<Plan[]>(`${ApiUrl}:8000/api/learner/tasks/?due_date=${formattedDate}`, {
-        headers: {
-          Authorization: `Token ${userToken?.token}` 
-        },
-      });
+      const formattedDate = currentDate.toISOString().split("T")[0];
+      const response = await axios.get<Plan[]>(
+        `${ApiUrl}:8000/api/learner/tasks/?due_date=${formattedDate}`,
+        {
+          headers: { Authorization: `Token ${userToken?.token}` },
+        }
+      );
       setTodayPlans(response.data);
     } catch (error) {
       console.error("Error fetching today's plans:", error);
@@ -80,18 +72,19 @@ const Timeline: React.FC = () => {
     const selectedIndex = days.indexOf(selectedDay);
     const currentDate = new Date();
     currentDate.setDate(currentDate.getDate() + selectedIndex);
-    const formattedDate = currentDate.toISOString().split('T')[0];
+    const formattedDate = currentDate.toISOString().split("T")[0];
     fetchCategoryNames();
     fetchTodayPlans(formattedDate);
   }, [selectedDay, userToken]);
 
   const fetchCategoryNames = async () => {
     try {
-      const response = await axios.get<{ id: number; name: string }[]>(`${ApiUrl}:8000/api/task/categories/`, {
-        headers: {
-          Authorization: `Token ${userToken?.token}`,
-        },
-      });
+      const response = await axios.get<{ id: number; name: string }[]>(
+        `${ApiUrl}:8000/api/task/categories/`,
+        {
+          headers: { Authorization: `Token ${userToken?.token}` },
+        }
+      );
       const categories = response.data.reduce((acc, category) => {
         acc[category.id] = category.name;
         return acc;
@@ -104,16 +97,13 @@ const Timeline: React.FC = () => {
 
   const handleDeletePlan = async (planId: number) => {
     const selectedIndex = days.indexOf(selectedDay);
-      const currentDate = new Date();
-      currentDate.setDate(currentDate.getDate() + selectedIndex);
-      const formattedDate = currentDate.toISOString().split('T')[0];
+    const currentDate = new Date();
+    currentDate.setDate(currentDate.getDate() + selectedIndex);
+    const formattedDate = currentDate.toISOString().split("T")[0];
     try {
-      const response = await axios.get<Plan[]>(`${ApiUrl}:8000/api/learner/tasks/?due_date=${formattedDate}`, {
-        headers: {
-          Authorization: `Token ${userToken?.token}`,
-        },
+      await axios.delete(`${ApiUrl}:8000/api/learner/tasks/${planId}/`, {
+        headers: { Authorization: `Token ${userToken?.token}` },
       });
-      
       fetchTodayPlans(formattedDate);
     } catch (error) {
       console.error("Error deleting task:", error);
@@ -122,97 +112,38 @@ const Timeline: React.FC = () => {
   };
 
   const handleEditPlan = (plan: Plan) => {
-    router.navigate("EditPlan")
-    console.log(categoryNames)
-    const taskIdString: string = String(plan.id);
-    router.setParams({taskId: taskIdString, title: plan.title,description: plan.description, 
+    router.navigate("EditPlan");
+    const taskIdString = String(plan.id);
+    router.setParams({
+      taskId: taskIdString,
+      title: plan.title,
+      description: plan.description,
       duedate: plan.due_date,
       category_id: String(plan.category),
-      duetime: plan.due_time, category_name: categoryNames[plan.category]})
+      duetime: plan.due_time,
+      category_name: categoryNames[plan.category],
+    });
   };
-
-  
-
-  const renderPlanContent = (plan: Plan, index: number) => {
-   
-    return (
-      <GestureHandlerRootView>
-        <Swipeable    
-          renderRightActions={() => (
-            <>     
-              <TouchableOpacity  
-                style={styles.deleteButton}
-                onPress={() => handleDeletePlan(plan.id)}
-              >
-                <Feather name="trash-2" size={24} color="white" />
-              </TouchableOpacity>
-            </>
-          )}
-
-
-          renderLeftActions={() =>  <TouchableOpacity
-                onPress={() => handleEditPlan(plan)}
-                style={styles.editButton}
-              >
-                <Feather name="edit" size={24} color="white" />
-              </TouchableOpacity>}
-        >
-          <View style={styles.planContainer} key={index}>
-            <View
-              style={[
-                styles.timeMarker,
-                {
-                  backgroundColor: getCategoryColor(categoryNames[plan.category]),
-                },
-              ]}
-            >
-              <Text style={[styles.typeText, { transform: [{ rotate: "180deg" }] }]}>
-                {categoryNames[plan.category] || "Unknown Category"}
-              </Text>
-            </View>
-            
-            <View style={styles.planContent}>
-              <Text style={styles.planTitle}>{plan.title}</Text>
-              <Text style={styles.planTime}>
-              {plan.due_time ? plan.due_time.slice(0, 5) : ""}        
-              </Text>
-            </View>
-          </View>
-        </Swipeable>
-      </GestureHandlerRootView>
-    );
-    
-  };
-
-  
-  
 
   return (
     <View style={styles.container}>
-      <View style={styles.cylinderContainer}>
-        <View style={styles.cylinder}>
-          <View style={styles.cylinderContent}>
-            <Text style={styles.cylinderText}>Easy way to note your task</Text>
-          </View>
-          <Image
-            source={require("../../../assets/images/Notes-amico.png")}
-            style={styles.image}
-          />
-        </View>
-      </View>
-      <View style={styles.touchableContainer}>
-        {days.map((day, index) => (
-          <TouchableOpacity key={index} style={[
-            styles.touchableButton,
-            selectedDay === day && { backgroundColor: 'orange', padding: 10, borderRadius: 17 }
-          ]}
-          onPress={() => setSelectedDay(day)}>
-            <Text style={styles.touchableText}>{day}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <Header />
+      <DaySelector
+        days={days}
+        selectedDay={selectedDay}
+        setSelectedDay={setSelectedDay}
+      />
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        {todayPlans.map((plan, index) => renderPlanContent(plan, index))}
+        {todayPlans.map((plan, index) => (
+          <PlanItem
+            key={index}
+            plan={plan}
+            categoryNames={categoryNames}
+            getCategoryColor={getCategoryColor}
+            handleDeletePlan={handleDeletePlan}
+            handleEditPlan={handleEditPlan}
+          />
+        ))}
       </ScrollView>
     </View>
   );
@@ -224,154 +155,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-  planContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  planContent: {
-    flex: 1,
-    backgroundColor: "#f0f0f0",
-    padding: 10,
-    marginLeft: -18,
-    borderRadius: 8,
-    borderColor: "#e0e0e0",
-    borderWidth: 1,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  planTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 5,
-  },
-  planTime: {
-    fontSize: 14,
-    color: "#777",
-  },
-  timeMarker: {
-    width: 59,
-    height: 30,
-    borderTopLeftRadius: 9,
-    justifyContent: "center",
-    alignItems: "center",
-    transform: [{ rotate: "270deg" }],
-  },
-  typeText: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: "#fff",
-  },
-  actionButton: {
-    justifyContent: "center",
-    alignItems: "center",
-    width: 50,
-    borderRadius: 10,
-    position: "absolute",
-    right: 0,
-    top: 0,
-    bottom: 0,
-  },
-  touchableContainer: {
-    marginTop: -70,
-    flexDirection: 'row',
-    backgroundColor: "#f4f7f3",
-    alignSelf: 'center',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingBottom: 10, 
-    borderRadius: 30,
-    width: '100%',
-    
-  },
-  touchableButton: {
-    borderRadius: 10,
-  },
-  touchableText: {
-    color: '#145714',
-    fontSize: 24,
-    fontWeight: 'bold',
-    padding: 5,
-  },
-
- 
-
-
-  editButton: {
-    backgroundColor: "green",
-    height: "75%",
-    justifyContent: "center",
-    alignItems: "center",
-    width: 50,
-    borderRadius: 10,
-  },
-  deleteButton: {
-    backgroundColor: "red",
-    height: "75%",
-    justifyContent: "center",
-    alignItems: "center",
-    width: 50,
-    borderRadius: 10,
-  },
   scrollViewContent: {
     flexGrow: 1,
-    marginBottom: 200
-  },
-  image: {
-    width: 200,
-    height: 200,
-    resizeMode: "contain",
-    marginBottom: 16,
-  },
-  cylinderContainer: {
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  cylinder: {
-    backgroundColor: "#1f3e4c",
-    width: 380,
-    height: 320,
-    justifyContent: "center",
-    alignItems: "center",
-    borderBottomLeftRadius: 70,
-    borderBottomRightRadius: 90,
-    overflow: "hidden",
-    flexDirection: "row",
-  },
-  cylinderContent: {
-    flex: 1,
-    padding: 20,
-    justifyContent: "center",
-    alignItems: "flex-start",
-  },
-  cylinderText: {
-    color: "#fff",
-    fontSize: 30,
-    fontWeight: "bold",
-  },
-  dateContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginTop: 20,
-  },
-  date: {
-    color: "#7e2626",
-    fontSize: 14,
-    backgroundColor: "#ffff",
-    paddingTop: 20,
-    paddingBottom: 10,
-    margin: 10,
-    fontWeight: "bold",
+    marginBottom: 200,
   },
 });
 

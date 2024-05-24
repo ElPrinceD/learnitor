@@ -7,25 +7,15 @@ import {
   FlatList,
   Image,
   useColorScheme,
-  ImageSourcePropType,
 } from "react-native";
 import { Level } from "./types";
 
 interface Props {
   onPress: (level: Level) => void;
+  levels: Level[]; // Add levels prop
 }
 
-const PracticeLevel: React.FC<Props> = ({ onPress }) => {
-  const levels: Level[] = [
-    { title: "Beginner", image: require("../assets/images/Beginner.jpg") },
-    {
-      title: "Intermediate",
-      image: require("../assets/images/Intermediate.png"),
-    },
-    { title: "Advanced", image: require("../assets/images/Advanced.jpg") },
-    { title: "Master", image: require("../assets/images/Master.jpg") },
-  ];
-
+const PracticeLevel: React.FC<Props> = ({ onPress, levels }) => {
   const colorScheme = useColorScheme();
 
   const styles = StyleSheet.create({

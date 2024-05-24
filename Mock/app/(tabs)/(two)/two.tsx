@@ -8,13 +8,13 @@ import { useAuth } from "../../../components/AuthContext";
 import { Stack } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Course, Category } from "../../../components/types";
+import { router } from "expo-router";
 
 const CoursesScreen: React.FC = () => {
   const [coursesData, setCoursesData] = useState<Course[]>([]);
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
   const [categoryData, setCategoryData] = useState<Category[]>([]);
   const colorScheme = useColorScheme();
-  // const { course } = useLocalSearchParams();
   const { userToken } = useAuth();
 
   useEffect(() => {
@@ -48,13 +48,17 @@ const CoursesScreen: React.FC = () => {
     setFilteredCourses(filtered);
   };
 
+  const handleCoursePress = (course: Course) => {
+    router.navigate("CourseDetails");
+    router.setParams({
+      course: JSON.stringify(course),
+    });
+  };
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      // marginTop: -150,
       backgroundColor: "#ffffff",
-
-      // backgroundColor: colorScheme === "dark" ? "#000" : "#fff",
     },
     headerText: {
       fontSize: 18,
@@ -62,7 +66,6 @@ const CoursesScreen: React.FC = () => {
       marginBottom: 10,
       color: colorScheme === "dark" ? "#fff" : "#000",
     },
-
     backgroundGradient: {
       flex: 1,
       width: "100%",
@@ -76,23 +79,25 @@ const CoursesScreen: React.FC = () => {
       height: "10.33%",
     },
   });
+
   return (
     <>
       <Stack.Screen
         options={{
           headerTitle: "What do you want to learn today?",
           headerStyle: {
-            backgroundColor: "#fdecd2", // Add this line
+            backgroundColor: "#fdecd2",
           },
           headerShadowVisible: false,
         }}
       />
-      {/* <View style={styles.topContainer}>
-
-      </View> */}
       <View style={styles.container}>
         <SearchBar onSearch={handleSearch} />
-        <CoursesList courses={filteredCourses} categories={categoryData} />
+        <CoursesList
+          courses={filteredCourses}
+          categories={categoryData}
+          onCoursePress={handleCoursePress}
+        />
       </View>
     </>
   );

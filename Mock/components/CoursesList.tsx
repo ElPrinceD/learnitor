@@ -8,15 +8,19 @@ import {
   StyleSheet,
   useColorScheme,
 } from "react-native";
-import { router } from "expo-router";
 import { Course, Category } from "./types";
 
 interface Props {
   courses: Course[];
-  categories: Category[];
+  categories?: Category[];
+  onCoursePress: (course: Course) => void;
 }
 
-const CoursesList: React.FC<Props> = ({ courses, categories }) => {
+const CoursesList: React.FC<Props> = ({
+  courses,
+  categories,
+  onCoursePress,
+}) => {
   const colorScheme = useColorScheme();
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
     null
@@ -43,7 +47,7 @@ const CoursesList: React.FC<Props> = ({ courses, categories }) => {
       paddingHorizontal: 15,
       paddingVertical: 4,
       marginRight: 10,
-      
+
       borderRadius: 20,
       borderWidth: 1,
       borderColor: colorScheme === "dark" ? "#555" : "#ccc",
@@ -160,13 +164,7 @@ const CoursesList: React.FC<Props> = ({ courses, categories }) => {
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
           <TouchableOpacity
-            onPress={() => {
-              // Push the CourseDetails route and set parameters
-              router.navigate("CourseDetails");
-              router.setParams({
-                course: JSON.stringify(item),
-              });
-            }}
+            onPress={() => onCoursePress(item)}
             activeOpacity={0.5}
             style={styles.courseItem}
           >

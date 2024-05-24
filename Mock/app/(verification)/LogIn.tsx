@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { Text } from "../../components/Themed";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "expo-linear-gradient";
 import { useThemeColor } from "../../components/Themed";
 import { router, useNavigation } from "expo-router";
 import axios from "axios";
@@ -60,7 +60,7 @@ const LogIn = () => {
         // Handle successful response from backend
         login(response.data, response.data.token); // Logging in user with token
 
-        navigation.replace("(tabs)", {});
+        router.replace("(tabs)");
         console.log(response.data.user);
       })
       .catch((error) => {
@@ -83,8 +83,6 @@ const LogIn = () => {
     router.navigate("ContinueWithEmail");
   };
 
-
-
   const themeColor = useThemeColor(
     {
       dark: "#9a580d",
@@ -93,8 +91,6 @@ const LogIn = () => {
     "background"
   );
 
-
-
   const buttonTextColor = useThemeColor(
     { light: "#b9b9b9", dark: "#fff" },
     "text"
@@ -102,7 +98,6 @@ const LogIn = () => {
   const buttonBackgroundColor = useThemeColor(
     { light: "#fff", dark: "#000" },
     "background"
-    
   );
 
   const dividerTextColor = useThemeColor(
@@ -111,11 +106,8 @@ const LogIn = () => {
   );
 
   return (
-    <LinearGradient
-      colors={['#FFFFFF', '#ffffff']}
-      style={styles.container}
-    >
-       <Text style={[styles.header, {color: buttonTextColor}]}>Sign in</Text>
+    <LinearGradient colors={["#FFFFFF", "#ffffff"]} style={styles.container}>
+      <Text style={[styles.header, { color: buttonTextColor }]}>Sign in</Text>
       <View style={styles.inputContainer}>
         <View style={styles.inputWrapper}>
           <Text style={styles.label}>Email</Text>
@@ -124,8 +116,9 @@ const LogIn = () => {
               styles.input,
               {
                 backgroundColor: buttonBackgroundColor,
-                
-                color: "#4d4c4c",              },
+
+                color: "#4d4c4c",
+              },
             ]}
             placeholder="Myemail@learnitor.com"
             placeholderTextColor={buttonTextColor}
@@ -133,7 +126,7 @@ const LogIn = () => {
             onChangeText={(text) => setEmail(text)}
           />
         </View>
-        
+
         <View style={styles.inputWrapper}>
           <Text style={styles.label}>Password</Text>
           <TextInput
@@ -161,38 +154,31 @@ const LogIn = () => {
             />
           </TouchableOpacity>
         </View>
-        
+
         {error ? <Text style={styles.errorMessage}>{error}</Text> : null}
       </View>
       <View style={styles.forgotPasswordContainer}>
         <TouchableOpacity onPress={handleForgotPassword}>
           <Text
-            style={[
-              styles.forgotPasswordText,
-              {textDecorationLine: "none" },
-            ]}
+            style={[styles.forgotPasswordText, { textDecorationLine: "none" }]}
           >
             Forgot password?
           </Text>
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity
-        
-        onPress={handleLogin}
-        disabled={loading}
-      >
+      <TouchableOpacity onPress={handleLogin} disabled={loading}>
         <LinearGradient
-            colors={['#c17319', '#9a580d']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={[styles.button, styles.loginButton]}
-          >
-        {loading ? (
-          <ActivityIndicator color="white" />
-        ) : (
-          <Text style={[styles.buttonText, { color: "white" }]}>Login</Text>
-        )}
+          colors={["#c17319", "#9a580d"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={[styles.button, styles.loginButton]}
+        >
+          {loading ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={[styles.buttonText, { color: "white" }]}>Login</Text>
+          )}
         </LinearGradient>
       </TouchableOpacity>
 
@@ -211,8 +197,6 @@ const LogIn = () => {
           </Text>
         </TouchableOpacity>
       </View>
-
-      
 
       {/* <View style={styles.dividerRow}>
         <Text style={[styles.dividerText, { color: dividerTextColor }]}>
@@ -260,8 +244,6 @@ const LogIn = () => {
           <Ionicons name="logo-twitter" size={25} color={buttonTextColor} />
         </TouchableOpacity>
       </View> */}
-
-      
     </LinearGradient>
   );
 };
@@ -277,8 +259,8 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "normal",
     position: "absolute",
-    top: 70
-    },
+    top: 70,
+  },
   inputContainer: {
     width: "100%",
     marginBottom: 16,
@@ -291,12 +273,12 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: -8,
     left: 17,
-    backgroundColor: 'white', // Make the label background transparent
+    backgroundColor: "white", // Make the label background transparent
     paddingHorizontal: 8,
     zIndex: 1,
     fontSize: 16,
-    color: '#515050',
-    fontWeight: 'light',
+    color: "#515050",
+    fontWeight: "light",
   },
   input: {
     borderWidth: 1,
@@ -306,12 +288,11 @@ const styles = StyleSheet.create({
     marginBottom: 25,
     color: "#000",
     height: 65,
-    position: 'relative',
+    position: "relative",
     zIndex: 0,
   },
   passwordContainer: {
     position: "relative",
-    
   },
   toggleIcon: {
     position: "absolute",
@@ -336,7 +317,7 @@ const styles = StyleSheet.create({
   },
   button: {
     alignItems: "center",
-    justifyContent : "center",
+    justifyContent: "center",
     padding: 16,
     marginBottom: 16,
     borderRadius: 20,
@@ -372,22 +353,18 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   forgotPasswordContainer: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    width: "100%",
+    flexDirection: "row",
+    justifyContent: "flex-end",
     paddingHorizontal: 16,
     marginTop: -50,
-    
-    paddingBottom:50,
-    
+
+    paddingBottom: 50,
   },
   forgotPasswordText: {
     fontSize: 16,
     color: "#9a580d",
     fontWeight: "bold",
-    
-    
-    
   },
   bottomContainer: {
     marginTop: 30,
@@ -414,4 +391,3 @@ const styles = StyleSheet.create({
 });
 
 export default LogIn;
-

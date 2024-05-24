@@ -5,9 +5,10 @@ import { Pressable, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "../../constants/Colors";
 import { useColorScheme } from "../../components/useColorScheme";
+import { StyleSheet } from "react-native";
 
 import { useClientOnlyValue } from "../../components/useClientOnlyValue";
-import { useThemeColor } from "../../components/Themed";
+import { View, useThemeColor } from "../../components/Themed";
 
 import { useAuth } from "../../components/AuthContext";
 
@@ -63,18 +64,42 @@ export default function TabLayout() {
             tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
             headerShadowVisible: false,
             headerRight: () => (
-              <Link href="/modal" asChild>
-                <Pressable>
-                  {({ pressed }) => (
-                    <Ionicons
-                      name="notifications"
-                      size={25}
-                      color={Colors[colorScheme ?? "light"].text}
-                      style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
-                    />
-                  )}
-                </Pressable>
-              </Link>
+              <View style={styles.container}>
+                <View style={styles.container}>
+                  <Link href="/modal" asChild>
+                    <Pressable>
+                      {({ pressed }) => (
+                        <Ionicons
+                          name="notifications"
+                          size={27}
+                          color={Colors[colorScheme ?? "light"].text}
+                          style={{
+                            marginRight: 15,
+                            opacity: pressed ? 0.5 : 1,
+                          }}
+                        />
+                      )}
+                    </Pressable>
+                  </Link>
+                </View>
+                <View style={styles.container}>
+                  <Link href="/GameIntro" asChild>
+                    <Pressable>
+                      {({ pressed }) => (
+                        <Ionicons
+                          name="game-controller"
+                          size={27}
+                          color={Colors[colorScheme ?? "light"].text}
+                          style={{
+                            marginRight: 15,
+                            opacity: pressed ? 0.5 : 1,
+                          }}
+                        />
+                      )}
+                    </Pressable>
+                  </Link>
+                </View>
+              </View>
             ),
             headerTitle: () => (
               <Text
@@ -82,13 +107,13 @@ export default function TabLayout() {
                   color: themeTextColor,
                   fontSize: 20,
                   fontWeight: "bold",
-                  
                 }}
               >
                 {greeting}, {userInfo?.user.first_name}!
               </Text>
-            ),  headerStyle: {
-              backgroundColor: '#fdecd2', // Add this line
+            ),
+            headerStyle: {
+              backgroundColor: "#fdecd2", // Add this line
             },
           }}
         />
@@ -99,13 +124,11 @@ export default function TabLayout() {
             tabBarIcon: ({ color }) => <TabBarIcon name="book" color={color} />,
             headerShown: false,
             headerTitle: "Details",
-    
+
             // headerTransparent: true,
             headerShadowVisible: false,
             headerStyle: {
-              backgroundColor: '#fdecd2', // Add this line
-              
-              
+              backgroundColor: "#fdecd2", // Add this line
             },
           }}
         />
@@ -119,7 +142,7 @@ export default function TabLayout() {
             ),
             headerShadowVisible: false,
             headerRight: () => (
-              <Link href="../(reminder)/Categories" asChild>
+              <Link href="../(reminder)/TimelineCategory" asChild>
                 <Pressable>
                   {({ pressed }) => (
                     <Ionicons
@@ -148,3 +171,9 @@ export default function TabLayout() {
     </SafeAreaProvider>
   );
 }
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: "row-reverse",
+    backgroundColor: "#fdecd2",
+  },
+});
