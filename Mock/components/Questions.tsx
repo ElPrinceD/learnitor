@@ -25,7 +25,7 @@ const Questions: React.FC<QuestionProps> = ({
 }) => {
   const colorScheme = useColorScheme();
   const { isTimed, duration } = useLocalSearchParams();
-
+  let totalQuestions = practiceQuestions.length;
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<{
     [key: number]: number[];
@@ -107,7 +107,7 @@ const Questions: React.FC<QuestionProps> = ({
   };
 
   const handleSubmit = () => {
-    let totalQuestions = practiceQuestions.length;
+    
     let correctAnswers = 0;
 
     const results = practiceQuestions.map((question) => {
@@ -177,11 +177,28 @@ const Questions: React.FC<QuestionProps> = ({
 
   const styles = StyleSheet.create({
     container: {
-      marginTop: "50%",
-      padding: 20,
+       //marginTop: "-50%",
+      //padding: 20,
+      backgroundColor: 'transparent',
+      padding: 0,
       borderRadius: 10,
       elevation: 1,
-      backgroundColor: colorScheme === "dark" ? "#181818" : "#fff",
+      marginBottom: 20,
+      //backgroundColor: colorScheme === "dark" ? "transparent" : "transparent",
+    },
+    topSection: {
+      flex: 1,
+      backgroundColor: "#fdecd2", // Light blue color for the top section
+      paddingHorizontal: 20,
+      paddingVertical: 40,
+      marginTop: -250,
+    },
+    orange:{
+      color: "#674119",
+      fontSize: 22,
+      
+      marginTop: -10,
+      paddingBottom: 10,
     },
     progressBarContainer: {
       height: 10,
@@ -190,6 +207,7 @@ const Questions: React.FC<QuestionProps> = ({
       borderRadius: 5,
       overflow: "hidden",
       marginBottom: 20,
+      
     },
     progressBar: {
       height: "100%",
@@ -197,27 +215,33 @@ const Questions: React.FC<QuestionProps> = ({
       width: `${progress * 100}%`,
     },
     questionText: {
-      fontSize: 16,
-      marginBottom: 5,
+      fontSize: 35,
+      marginBottom: 15,
+      paddingBottom: 10,
+      flexWrap: 'wrap',
       color: colorScheme === "dark" ? "#fff" : "#555",
     },
     answersContainer: {
       marginTop: 5,
+      
       color: colorScheme === "dark" ? "#fff" : "#181818",
     },
     answerTouchable: {
       flexDirection: "row",
       alignItems: "center",
       marginBottom: 5,
+      
       backgroundColor: colorScheme === "dark" ? "#333" : "#f0f0f0",
-      padding: 10,
+      padding: 20,
+      margin: 20,
       borderRadius: 5,
     },
     selectedAnswer: {
-      backgroundColor: colorScheme === "dark" ? "#555" : "#ccc",
+      backgroundColor: colorScheme === "dark" ? "#F08080" : "#F08080",
+      color: "#fff"
     },
     answerText: {
-      fontSize: 14,
+      fontSize: 20,
       color: colorScheme === "dark" ? "#fff" : "#444",
       marginLeft: 10,
     },
@@ -226,20 +250,23 @@ const Questions: React.FC<QuestionProps> = ({
       height: 20,
       borderWidth: 2,
       borderColor: "#888",
-      borderRadius: 3,
+      borderRadius: 30,
       marginRight: 10,
     },
     checkedBox: {
       backgroundColor: "#888",
     },
     buttonContainer: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      marginTop: 20,
+      flexDirection: 'row',
+      justifyContent: 'center', // Center buttons horizontally
+      alignItems: 'center', // Center buttons vertically
+      backgroundColor: 'red', // Set background color to red
+      paddingVertical: 20, // Add some padding to the container
+      paddingHorizontal: 20, // Add some padding to the container
     },
     buttonText: {
       fontSize: 16,
-      color: colorScheme === "dark" ? "#bbb" : "#337ab7",
+      color: colorScheme === "dark" ? "#7d1c1c" : "#337ab7",
     },
     disabledButtonText: {
       color: "#ccc",
@@ -255,11 +282,11 @@ const Questions: React.FC<QuestionProps> = ({
   });
 
   return (
-    <ScrollView>
-      <View style={styles.container}>
-        <View style={styles.progressBarContainer}>
-          <View style={styles.progressBar} />
-        </View>
+    <View style={styles.container}>
+      <View style={styles.topSection}>
+        <Text style= {styles.orange}>
+          Question {currentQuestion + 1}/{totalQuestions}
+        </Text>
         {timeLeft !== null && (
           <Text
             style={[
@@ -268,95 +295,87 @@ const Questions: React.FC<QuestionProps> = ({
             ]}
           >
             Time Left: {Math.floor(timeLeft / 60)}:
-            {timeLeft % 60 < 10 ? `0${timeLeft % 60}` : timeLeft % 60}
+            {timeLeft % 60 < 10 ? `0${timeLeft % 60}` : timeLeft % 60} minutes
           </Text>
         )}
-        {practiceQuestions.length > 0 && (
-          <View key={currentQuestion}>
-            {practiceQuestions[currentQuestion] &&
-              practiceQuestions[currentQuestion].text && (
-                <Text style={styles.questionText}>
-                  {`${currentQuestion + 1}. ${
-                    practiceQuestions[currentQuestion].text
-                  }`}
-                </Text>
-              )}
-            <View style={styles.answersContainer}>
-              {practiceAnswers
-                .filter(
-                  (answer) =>
-                    answer.question === practiceQuestions[currentQuestion].id
-                )
-                .map((answer, ansIndex) => (
-                  <TouchableOpacity
-                    key={ansIndex}
-                    style={[
-                      styles.answerTouchable,
-                      isAnswerSelected(
-                        practiceQuestions[currentQuestion].id,
-                        answer.id
-                      ) && styles.selectedAnswer,
-                    ]}
-                    onPress={() =>
-                      handleAnswerSelection(
-                        answer.id,
-                        practiceQuestions[currentQuestion].id
-                      )
-                    }
-                  >
-                    {questionsWithMultipleCorrectAnswers.includes(
-                      practiceQuestions[currentQuestion].id
-                    ) && (
-                      <View
-                        style={[
-                          styles.checkBox,
-                          isAnswerSelected(
-                            practiceQuestions[currentQuestion].id,
-                            answer.id
-                          ) && styles.checkedBox,
-                        ]}
-                      />
-                    )}
-                    {answer && answer.text && (
-                      <Text style={styles.answerText}>{answer.text}</Text>
-                    )}
-                  </TouchableOpacity>
-                ))}
-            </View>
-          </View>
-        )}
-        <View style={styles.buttonContainer}>
-          {currentQuestion > 0 && (
-            <TouchableOpacity
-              onPress={handlePreviousQuestion}
-              disabled={currentQuestion === 0}
-            >
-              <Text style={styles.buttonText}>Previous</Text>
-            </TouchableOpacity>
-          )}
-          {currentQuestion < practiceQuestions.length - 1 && (
-            <TouchableOpacity onPress={handleNextQuestion}>
-              <Text style={styles.buttonText}>Next</Text>
-            </TouchableOpacity>
-          )}
-          {currentQuestion === practiceQuestions.length - 1 && (
-            <TouchableOpacity
-              onPress={handleSubmit}
-              disabled={isSubmitDisabled}
-            >
-              <Text
-                style={[
-                  styles.buttonText,
-                  isSubmitDisabled && styles.disabledButtonText,
-                ]}
-              >
-                Submit
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        <Text style={styles.questionText}>
+          {practiceQuestions[currentQuestion]?.text}
+        </Text>
+        {/* <View style={styles.progressBarContainer}>
+          <View style={styles.progressBar} />
+        </View> */}
       </View>
-    </ScrollView>
+
+      <ScrollView>
+        <View style={styles.answersContainer}>
+          {practiceAnswers
+            .filter(
+              (answer) =>
+                answer.question === practiceQuestions[currentQuestion]?.id
+            )
+            .map((answer) => (
+              <TouchableOpacity
+                key={answer.id}
+                style={[
+                  styles.answerTouchable,
+                  isAnswerSelected(practiceQuestions[currentQuestion].id, answer.id) &&
+                    styles.selectedAnswer,
+                ]}
+                onPress={() =>
+                  handleAnswerSelection(
+                    answer.id,
+                    practiceQuestions[currentQuestion].id
+                  )
+                }
+              >
+                <View
+                  style={[
+                    styles.checkBox,
+                    isAnswerSelected(practiceQuestions[currentQuestion].id, answer.id) &&
+                      styles.checkedBox,
+                  ]}
+                />
+                <Text style={styles.answerText}>{answer.text}</Text>
+              </TouchableOpacity>
+            ))}
+        </View>
+      </ScrollView>
+
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          disabled={currentQuestion === 0}
+          onPress={handlePreviousQuestion}
+        >
+          <Text
+            style={[
+              styles.buttonText,
+              currentQuestion === 0 && styles.disabledButtonText,
+            ]}
+          >
+            Previous
+          </Text>
+        </TouchableOpacity>
+        {currentQuestion < totalQuestions - 1 ? (
+          <TouchableOpacity onPress={handleNextQuestion}>
+            <Text style={styles.buttonText}>Next</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            onPress={handleSubmit}
+            disabled={isSubmitDisabled}
+          >
+            <Text
+              style={[
+                styles.buttonText,
+                isSubmitDisabled && styles.disabledButtonText,
+              ]}
+            >
+              Submit
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
   );
 };
 

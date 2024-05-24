@@ -1,26 +1,31 @@
-import React, { useState, useEffect } from "react";
-import { View, StyleSheet, Text, ActivityIndicator } from "react-native";
+import React, { useState, useEffect, useRef } from "react";
+import { View, StyleSheet, ScrollView, Animated } from "react-native";
 import axios from "axios";
 import CourseRoadmap from "../../../components/CourseRoadmap";
 import RoadmapTitle from "../../../components/RoadmapTitle";
-import { useLocalSearchParams } from "expo-router";
+import { Stack, useLocalSearchParams } from "expo-router";
 import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
 import { Topic, Course } from "../../../components/types";
+import { useNavigation } from "@react-navigation/native";
 
 const EnrolledCourse: React.FC = () => {
   const { userToken, userInfo } = useAuth();
   const { course } = useLocalSearchParams();
+  const navigation = useNavigation();
   const [enrolledTopics, setEnrolledTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number>(0);
+
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   const parsedCourse: Course =
     typeof course === "string" ? JSON.parse(course) : course;
 
   useEffect(() => {
     fetchData();
+    fetchProgress();
   }, []);
 
   const fetchData = async () => {
@@ -35,13 +40,13 @@ const EnrolledCourse: React.FC = () => {
       );
 
       setEnrolledTopics(response.data);
-
       setLoading(false);
     } catch (error) {
       setError("Error fetching data");
       setLoading(false);
     }
   };
+
   const fetchProgress = async () => {
     try {
       const response = await axios.get(
@@ -58,39 +63,75 @@ const EnrolledCourse: React.FC = () => {
       console.error("Error fetching progress:", error);
     }
   };
-  useEffect(() => {
-    fetchProgress();
+
+  const titleOpacity = scrollY.interpolate({
+    inputRange: [0, 100],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
   });
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#0000ff" />
-      </View>
-    );
-  }
-  
+  const titleTranslateY = scrollY.interpolate({
+    inputRange: [0, 100],
+    outputRange: [10, 0],
+    extrapolate: 'clamp',
+  });
 
-  if (error) {
-    return (
-      <View style={styles.container}>
-        <Text>{error}</Text>
-      </View>
-    );
-  }
+  useEffect(() => {
+    navigation.setOptions({
+      headerTitle: () => (
+        <Animated.Text
+          style={[
+            styles.headerTitle,
+            { opacity: titleOpacity, transform: [{ translateY: titleTranslateY }] },
+          ]}
+        >
+          {parsedCourse.title}
+        </Animated.Text>
+      ),
+      headerShown: true,
+      headerTitleStyle: {
+        fontWeight: "bold",
+      },
+      headerBackTitle: "",
+      headerBackTitleVisible: false,
+      headerStyle: {
+        backgroundColor: "#fdecd2", // Add this line
+      },
+      headerShadowVisible: false,
+    });
+  }, [navigation, titleOpacity, titleTranslateY]);
 
   return (
-    <View style={styles.container}>
-      <RoadmapTitle course={parsedCourse} progress={progress} />
-
-      <CourseRoadmap enrolledTopics={enrolledTopics} course={parsedCourse} />
-    </View>
+    <>
+      <ScrollView
+        contentContainerStyle={styles.scrollViewContent}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+        scrollEventThrottle={16}
+      >
+        <View style={styles.container}>
+          <RoadmapTitle course={parsedCourse} progress={progress} />
+          <CourseRoadmap enrolledTopics={enrolledTopics} course={parsedCourse} />
+        </View>
+      </ScrollView>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    
+    
+  },
+  scrollViewContent: {
+    flexGrow: 1,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
 

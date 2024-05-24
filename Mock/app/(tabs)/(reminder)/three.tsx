@@ -11,7 +11,6 @@ import {
 import axios from "axios";
 import { Feather } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { RootParamList } from "../../../components/types";
 import ApiUrl from "../../../config";
 import { useLocalSearchParams } from "expo-router";
 import { useAuth } from "../../../components/AuthContext";
@@ -28,7 +27,6 @@ interface Plan {
 }
 
 const Timeline: React.FC = () => {
-  const navigation = useNavigation<RootParamList>();
   const days = ['Mon', 'Tue', 'Wed', 'Thur', 'Fri', 'Sat', 'Sun'];
   const [todayPlans, setTodayPlans] = useState<Plan[]>([]);
   const [openSwipeable, setOpenSwipeable] = useState(null);

@@ -29,12 +29,14 @@ const ThreeDButton = ({ title, onPress }) => {
       inputRange: [0, 1],
       outputRange: [12, 16],
     }),
+    
   };
   const heightStyle = {
     marginTop: animatedValue.interpolate({
       inputRange: [0, 1],
       outputRange: [-15, 0],
     }),
+    
     paddingBottom: animatedValue.interpolate({
       inputRange: [0, 1],
       outputRange: [10, 0],
@@ -74,26 +76,37 @@ const styles = StyleSheet.create({
   button: {
     height: 60,
     width: 70,
+    
+    
   },
   outer: {
     flex: 1,
     padding: 10,
-    borderRadius: 14,
-    backgroundColor: "#5f9ea0",
+    borderRadius: 10,
+    transform: [{ rotate: '45deg' }],
+    backgroundColor: "#b16f24",
+    shadowColor: "#000",
+    shadowOffset: { width: 4, height: 9 },
+    shadowOpacity: 0.6,
+    shadowRadius: 2,
   },
   height: {
-    borderRadius: 16,
-    backgroundColor: "#008b8b",
+    borderRadius: 15, 
+    backgroundColor: "#454141",
+
   },
   inner: {
-    backgroundColor: "#00ffff",
+    backgroundColor: "#9b5b11",
     alignItems: "center",
+    
     justifyContent: "center",
     height: "100%",
+    
   },
   buttonText: {
     color: "#fff",
     fontWeight: "bold",
+    
     fontSize: 20,
   },
 });

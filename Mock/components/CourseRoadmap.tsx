@@ -8,7 +8,7 @@ import {
 } from "react-native";
 
 import { useRouter } from "expo-router";
-import { FontAwesome6 } from "@expo/vector-icons";
+import { FontAwesome6, Ionicons } from "@expo/vector-icons";
 import ThreeDButton from "./ThreeDButton"; // Assuming ThreeDButton is in the same directory
 import { Course, Topic } from "./types";
 
@@ -71,7 +71,7 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
           <ThreeDButton
             title={
               isQuestion ? (
-                <FontAwesome6 name="dumbbell" size={24} color="black" />
+                <Ionicons name="play-circle-outline" size={30} color="black" />
               ) : (
                 ""
               )
@@ -116,6 +116,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     margin: 20,
+    
+    
   },
   timelineItem: {
     flexDirection: "row",
@@ -131,18 +133,21 @@ const styles = StyleSheet.create({
   timelineContentLeft: {
     flex: 1,
     alignItems: "flex-start",
+    marginLeft: 13
   },
   timelineContentCenter: {
     flex: 1,
     alignItems: "center",
+    
   },
   timelineContentRight: {
     flex: 1,
     alignItems: "flex-end",
+    marginRight: 13
   },
   timelineText: {
     fontSize: 14,
-    marginBottom: 5,
+    marginTop: 20,
     textAlign: "center",
     width: 150,
   },

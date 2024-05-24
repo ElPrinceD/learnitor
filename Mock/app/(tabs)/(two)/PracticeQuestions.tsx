@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, Dimensions } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import axios from "axios";
 import Questions from "../../../components/Questions";
@@ -70,12 +70,17 @@ const PracticeQuestions: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      <View style={styles.topSection}></View>
+     
+      <View style={styles.bottomSection}>
       <Questions
-        practiceQuestions={practiceQuestions}
-        practiceAnswers={practiceAnswers}
-        topic={parsedTopic}
-        course={parsedCourse}
-      />
+          practiceQuestions={practiceQuestions}
+          practiceAnswers={practiceAnswers}
+          topic={parsedTopic}
+          course={parsedCourse}
+        />  
+       
+      </View>
     </View>
   );
 };
@@ -83,6 +88,21 @@ const PracticeQuestions: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "transparent",
+     marginTop: -100,
+  },
+  topSection: {
+    flex: 1,   
+    backgroundColor: "#fdecd2", 
+  },
+  bottomSection: {
+    flex: 1,
+    backgroundColor: "#ffffff", 
+    justifyContent: "center",
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+     marginTop: -150,
+    alignItems: "center",
   },
 });
 
