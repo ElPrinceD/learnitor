@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View } from "react-native";
+import { View, Linking } from "react-native";
 import { useGlobalSearchParams } from "expo-router";
 import axios from "axios";
 
@@ -45,11 +45,23 @@ const VideoMaterials: React.FC<VideoMaterialsProps> = () => {
     }
   };
 
+  const handleVideoPress = (material: Material) => {
+    if (material.link) {
+      Linking.openURL(material.link).catch((error) =>
+        console.error("Error opening link:", error)
+      );
+    } else {
+      console.log("No link available for this material");
+    }
+  };
   return (
     <View>
       {/* <TopicInformation topic={parsedTopic} /> */}
 
-      <Videos videoMaterials={selectedTopicMaterials} />
+      <Videos
+        videoMaterials={selectedTopicMaterials}
+        handleVideoPress={handleVideoPress}
+      />
     </View>
   );
 };

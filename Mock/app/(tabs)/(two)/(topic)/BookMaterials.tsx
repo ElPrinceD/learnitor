@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View } from "react-native";
+import { View, Linking } from "react-native";
 import { useGlobalSearchParams } from "expo-router";
 import axios from "axios";
 
@@ -43,10 +43,22 @@ const BookMaterials: React.FC<BookMaterialsProps> = () => {
       console.error("Error fetching data:", error);
     }
   };
+  const handleBookPress = (bookMaterial: BookMaterial) => {
+    if (bookMaterial.link) {
+      Linking.openURL(bookMaterial.link).catch((error) =>
+        console.error("Error opening link:", error)
+      );
+    } else {
+      console.log("No link available for this bookMaterial");
+    }
+  };
 
   return (
     <View>
-      <Books bookMaterials={selectedBookMaterials} />
+      <Books
+        bookMaterials={selectedBookMaterials}
+        handleBookPress={handleBookPress}
+      />
     </View>
   );
 };

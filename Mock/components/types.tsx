@@ -17,8 +17,9 @@ export interface Course {
 export interface Topic {
   title: string;
   description: string;
-  id: string;
+  id: number;
   completed?: boolean;
+  color: string;
 }
 export interface Level {
   title: string;

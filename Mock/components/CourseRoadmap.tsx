@@ -7,7 +7,6 @@ import {
   useColorScheme,
 } from "react-native";
 
-import { useRouter } from "expo-router";
 import { FontAwesome6, Ionicons } from "@expo/vector-icons";
 import ThreeDButton from "./ThreeDButton"; // Assuming ThreeDButton is in the same directory
 import { Course, Topic } from "./types";
@@ -15,31 +14,16 @@ import { Course, Topic } from "./types";
 interface CourseRoadmapProps {
   enrolledTopics: Topic[];
   course: Course;
+  handleTopicPress: (topic: Topic) => void;
+  handleQuestionPress: (topic: Topic) => void;
 }
 
 const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
   enrolledTopics,
-  course,
+  handleTopicPress,
+  handleQuestionPress,
 }) => {
   const colorScheme = useColorScheme();
-  const router = useRouter();
-
-  const handleTopicPress = (topic: Topic) => {
-    router.push({
-      pathname: "VideoMaterials",
-      params: { topic: JSON.stringify(topic) },
-    });
-  };
-
-  const handleQuestionPress = (topic: Topic) => {
-    router.push({
-      pathname: "Practice",
-      params: {
-        topic: JSON.stringify(topic),
-        course: JSON.stringify(course),
-      },
-    });
-  };
 
   const renderTimelineItem = (
     topic: Topic,

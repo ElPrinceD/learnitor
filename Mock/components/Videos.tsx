@@ -1,28 +1,16 @@
 import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Linking,
-} from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Material } from "./types";
 
 interface VideosProps {
   videoMaterials: Material[];
+  handleVideoPress: (material: Material) => void;
 }
 
-const handleMaterialPress = (material: Material) => {
-  if (material.link) {
-    Linking.openURL(material.link).catch((error) =>
-      console.error("Error opening link:", error)
-    );
-  } else {
-    console.log("No link available for this material");
-  }
-};
-
-const Videos: React.FC<VideosProps> = ({ videoMaterials }) => {
+const Videos: React.FC<VideosProps> = ({
+  videoMaterials,
+  handleVideoPress,
+}) => {
   // Filter materials to only include videos
   const videos = videoMaterials.filter((material) => material.type === "video");
 
@@ -31,7 +19,7 @@ const Videos: React.FC<VideosProps> = ({ videoMaterials }) => {
       {videos.map((material, index) => (
         <TouchableOpacity
           key={index}
-          onPress={() => handleMaterialPress(material)}
+          onPress={() => handleVideoPress(material)}
         >
           <View style={styles.material}>
             <View style={styles.detailsContainer}>

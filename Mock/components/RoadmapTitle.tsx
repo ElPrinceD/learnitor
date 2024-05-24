@@ -2,12 +2,9 @@ import React from "react";
 import { View, Text, StyleSheet, useColorScheme, Image } from "react-native";
 import { Course } from "./types";
 
-interface RoadmapTitleProps {
-  course: Course;
-  progress: number; // Add progress prop to the interface
-}
+import ProgressBar from "./ProgressBar";
 
-const RoadmapTitle: React.FC<RoadmapTitleProps> = ({ course, progress }) => {
+const RoadmapTitle = ({ course, progress }) => {
   const colorScheme = useColorScheme();
 
   const styles = StyleSheet.create({
@@ -71,30 +68,27 @@ const RoadmapTitle: React.FC<RoadmapTitleProps> = ({ course, progress }) => {
       ]}
     >
       <View style={styles.textContainer}>
-        <Text
-          style={[
-            styles.title,
-            { color: colorScheme === "dark" ? "#fff" : "#000" },
-          ]}
-        >
-          {course.title}
-        </Text>
+        
+        <Text style={[styles.title, { color: colorScheme === "dark" ? "#fff" : "#000" }]}>
+  {course.title}
+</Text>
 
-        <Text
-          style={[
-            styles.subtext,
-            { color: colorScheme === "dark" ? "#ccc" : "#666" },
-          ]}
-        >
-          {course.description}
-        </Text>
+<Text
+  style={[
+    styles.subtext,
+    { color: colorScheme === "dark" ? "#ccc" : "#666" },
+  ]}
+>
+  {course.description}
+</Text>
         <View style={styles.progressContainer}>
           <View style={styles.progressBar}>
             <View style={[styles.progressFill, { width: `${progress}%` }]} />
           </View>
 
-          <Text style={styles.progressText}>{`${progress.toFixed(2)}% `}</Text>
-        </View>
+      <View style={styles.progressContainer}>
+        <ProgressBar progress={progress} />
+        <Text style={styles.progressText}>{`${progress.toFixed(2)}% Completed`}</Text>
       </View>
       <Image
         source={{
@@ -104,6 +98,8 @@ const RoadmapTitle: React.FC<RoadmapTitleProps> = ({ course, progress }) => {
         resizeMode="cover"
         onError={(error) => console.log("Image error:", error)}
       />
+    </View>
+    </View>
     </View>
   );
 };

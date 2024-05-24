@@ -10,19 +10,10 @@ import { BookMaterial } from "./types";
 
 interface BooksProps {
   bookMaterials: BookMaterial[];
+  handleBookPress: (bookMaterial: BookMaterial) => void;
 }
 
-const handleMaterialPress = (bookMaterial: BookMaterial) => {
-  if (bookMaterial.link) {
-    Linking.openURL(bookMaterial.link).catch((error) =>
-      console.error("Error opening link:", error)
-    );
-  } else {
-    console.log("No link available for this bookMaterial");
-  }
-};
-
-const Books: React.FC<BooksProps> = ({ bookMaterials }) => {
+const Books: React.FC<BooksProps> = ({ bookMaterials, handleBookPress }) => {
   // Filter materials to only include books
   const books = bookMaterials.filter(
     (bookMaterial) => bookMaterial.type === "book"
@@ -33,7 +24,7 @@ const Books: React.FC<BooksProps> = ({ bookMaterials }) => {
       {books.map((bookMaterial, index) => (
         <TouchableOpacity
           key={index}
-          onPress={() => handleMaterialPress(bookMaterial)}
+          onPress={() => handleBookPress(bookMaterial)}
         >
           <View style={styles.bookMaterial}>
             <View style={styles.detailsContainer}>

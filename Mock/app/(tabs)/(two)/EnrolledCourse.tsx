@@ -3,7 +3,7 @@ import { View, StyleSheet, ScrollView, Animated } from "react-native";
 import axios from "axios";
 import CourseRoadmap from "../../../components/CourseRoadmap";
 import RoadmapTitle from "../../../components/RoadmapTitle";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { Stack, useLocalSearchParams, router } from "expo-router";
 import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
 import { Topic, Course } from "../../../components/types";
@@ -75,6 +75,23 @@ const EnrolledCourse: React.FC = () => {
     outputRange: [10, 0],
     extrapolate: 'clamp',
   });
+  const handleTopicPress = (topic: Topic) => {
+    router.push({
+      pathname: "VideoMaterials",
+      params: { topic: JSON.stringify(topic) },
+    });
+  };
+  const handleQuestionPress = (topic: Topic) => {
+    router.push({
+      pathname: "Practice",
+      params: {
+        topic: JSON.stringify(topic),
+        course: course,
+      },
+    });
+  };
+
+
 
   useEffect(() => {
     navigation.setOptions({
@@ -113,8 +130,13 @@ const EnrolledCourse: React.FC = () => {
       >
         <View style={styles.container}>
           <RoadmapTitle course={parsedCourse} progress={progress} />
-          <CourseRoadmap enrolledTopics={enrolledTopics} course={parsedCourse} />
-        </View>
+          <CourseRoadmap
+        enrolledTopics={enrolledTopics}
+        course={parsedCourse}
+        handleTopicPress={handleTopicPress}
+        handleQuestionPress={handleQuestionPress}
+      />       
+       </View>
       </ScrollView>
     </>
   );

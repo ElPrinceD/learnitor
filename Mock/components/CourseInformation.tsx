@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,164 +7,21 @@ import {
   useColorScheme,
   Image,
 } from "react-native";
-import { router } from "expo-router";
-import axios, { AxiosError } from "axios";
 import { FontAwesome5 } from "@expo/vector-icons";
-import ApiUrl from "../config";
-import { useAuth } from "./AuthContext";
-import { Course, Topic } from "./types";
+import ProgressBar from "./ProgressBar";
 
-interface CourseInformationProps {
-  course: Course;
-  selectedTopics: Topic[];
-  onContinue: () => void;
-  setShowTopics: (value: boolean) => void;
-  onEnrollmentStatusChange: (status: boolean) => void;
-}
-
-const CourseInformation: React.FC<CourseInformationProps> = ({
+const CourseInformation = ({
   course,
-  selectedTopics,
-  onContinue,
-  setShowTopics,
-  onEnrollmentStatusChange,
+  enrollCourse,
+  handleContinue,
+  handleShowMore,
+  unenrollCourse,
+  progress,
+  enrolled,
+  enrollDisabled,
+  showFullDescription,
 }) => {
-  if (!course) {
-    return (
-      <View>
-        <Text>No course data available</Text>
-      </View>
-    );
-  }
-
   const colorScheme = useColorScheme();
-  const [showFullDescription, setShowFullDescription] = useState(false);
-  const { userToken, userInfo } = useAuth();
-  const [enrolled, setEnrolled] = useState<boolean>(false);
-  const [progress, setProgress] = useState<number>(0);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [enrollDisabled, setEnrollDisabled] = useState<boolean>(true);
-  const [enrollmentResponse, setEnrollmentResponse] = useState<any>(null);
-
-  const handleShowMore = () => {
-    setShowFullDescription(!showFullDescription);
-  };
-  const enrollCourse = async () => {
-    setLoading(true);
-
-    try {
-      const topicIds = selectedTopics.map((topic) => topic.id); // Extract IDs from selectedTopics
-      const response = await axios.post(
-        `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/course/${course.id}/enroll/`,
-        { selectedTopics: topicIds }, // Pass only the IDs of selected topics
-        {
-          headers: {
-            Authorization: `Token ${userToken?.token}`,
-          },
-        }
-      );
-      setEnrolled(true);
-      setEnrollDisabled(true);
-      setShowTopics(false);
-      onEnrollmentStatusChange(true);
-      setEnrollmentResponse(response.data.enrolled_topics); // Store the response data
-    } catch (error) {
-      const axiosError = error as AxiosError;
-      if (axiosError.response) {
-        console.error("Failed to enroll:", axiosError.response.data);
-      } else {
-        console.error("Error enrolling:", axiosError.message);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const unenrollCourse = async () => {
-    try {
-      const response = await axios.post(
-        `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/course/${course.id}/unenroll/`,
-        {},
-        {
-          headers: {
-            Authorization: `Token ${userToken?.token}`,
-          },
-        }
-      );
-      setEnrolled(false);
-      setEnrollDisabled(false);
-      setEnrollmentResponse(null);
-      setProgress(0);
-      setShowTopics(true);
-      onEnrollmentStatusChange(false);
-      console.log("Unenrollment response:", response.data);
-    } catch (error) {
-      console.error("Error unenrolling:", error);
-    }
-  };
-
-  const fetchProgress = async () => {
-    try {
-      const response = await axios.get(
-        `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/course/${course.id}/progress/`,
-        {
-          headers: {
-            Authorization: `Token ${userToken?.token}`,
-          },
-        }
-      );
-
-      setProgress(response.data.course_progress);
-    } catch (error) {
-      console.error("Error fetching progress:", error);
-    }
-  };
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await axios.get(
-          `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/course/${course.id}/enrollment/`,
-          {
-            headers: {
-              Authorization: `Token ${userToken?.token}`,
-            },
-          }
-        );
-        const userAlreadyEnrolled = response.data.enrolled;
-        setEnrolled(userAlreadyEnrolled);
-        setEnrollDisabled(userAlreadyEnrolled || selectedTopics.length === 0);
-        onEnrollmentStatusChange(userAlreadyEnrolled);
-
-        if (userAlreadyEnrolled) {
-          await fetchProgress();
-        }
-      } catch (error) {
-        console.error("Error fetching enrollment status:", error);
-      }
-    };
-
-    fetchData();
-  }, [userInfo, userToken, course.id, selectedTopics.length]);
-
-  useEffect(() => {
-    if (enrolled) {
-      fetchProgress();
-    }
-  }, [enrolled]);
-
-  useEffect(() => {
-    // Enable enroll button if at least one topic is selected
-    setEnrollDisabled(selectedTopics.length === 0);
-  }, [selectedTopics]);
-
-  const handleContinue = () => {
-    router.navigate("EnrolledCourse");
-    router.setParams({
-      enrolledTopics: JSON.stringify(enrollmentResponse),
-      course: JSON.stringify(course),
-    });
-  };
 
   const styles = StyleSheet.create({
     container: {
@@ -280,26 +137,21 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
       <View style={styles.container}>
         <View style={styles.imageContainer}>
           <Image
-            source={{
-              uri: course.url,
-            }}
+            source={{ uri: course.url }}
             style={styles.image}
             resizeMode="cover"
             onError={(error) => console.log("Image error:", error)}
           />
         </View>
-        {/* <Text style={styles.title}>{course.title}</Text> */}
       </View>
       <View style={styles.bodyContainer}>
         <Text
-          style={[
-            {
-              fontWeight: "bold",
-              fontSize: 20,
-              color: "#696868",
-              paddingBottom: 8,
-            },
-          ]}
+          style={{
+            fontWeight: "bold",
+            fontSize: 20,
+            color: "#696868",
+            paddingBottom: 8,
+          }}
         >
           About Course:
         </Text>
@@ -315,7 +167,6 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
             </TouchableOpacity>
           </Text>
         </View>
-
         {enrolled ? (
           <View>
             <View style={styles.buttonContainer}>
@@ -331,7 +182,7 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
                 activeOpacity={0.3}
                 onPress={unenrollCourse}
               >
-                <Text style={[styles.continueText]}>Unenroll</Text>
+                <Text style={styles.continueText}>Unenroll</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.continueButton}
@@ -350,15 +201,10 @@ const CourseInformation: React.FC<CourseInformationProps> = ({
               </TouchableOpacity>
             </View>
             <View style={styles.progressContainer}>
-              <View style={styles.progressBar}>
-                <View
-                  style={[styles.progressFill, { width: `${progress}%` }]}
-                />
-              </View>
-
-              <Text style={styles.progressText}>
-                {`${progress.toFixed(2)}% Completed`}
-              </Text>
+              <ProgressBar progress={progress} />
+              <Text style={styles.progressText}>{`${progress.toFixed(
+                2
+              )}% Completed`}</Text>
             </View>
           </View>
         ) : (

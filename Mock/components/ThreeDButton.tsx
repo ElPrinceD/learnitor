@@ -87,8 +87,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#b16f24",
     shadowColor: "#000",
     shadowOffset: { width: 4, height: 9 },
-    shadowOpacity: 0.6,
+    shadowOpacity: 1,
     shadowRadius: 2,
+    elevation: 5
   },
   height: {
     borderRadius: 15, 
@@ -98,7 +99,6 @@ const styles = StyleSheet.create({
   inner: {
     backgroundColor: "#9b5b11",
     alignItems: "center",
-    
     justifyContent: "center",
     height: "100%",
     

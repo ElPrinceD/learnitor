@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View } from "react-native";
+import { View, Linking } from "react-native";
 import { useGlobalSearchParams } from "expo-router";
 import axios from "axios";
 
@@ -42,10 +42,22 @@ const ArticleMaterials: React.FC<ArticleMaterialsProps> = () => {
       console.error("Error fetching data:", error);
     }
   };
+  const handleArticlePress = (articleMaterial: ArticleMaterial) => {
+    if (articleMaterial.link) {
+      Linking.openURL(articleMaterial.link).catch((error) =>
+        console.error("Error opening link:", error)
+      );
+    } else {
+      console.log("No link available for this articleMaterial");
+    }
+  };
 
   return (
     <View>
-      <Articles articleMaterials={selectedArticleMaterials} />
+      <Articles
+        articleMaterials={selectedArticleMaterials}
+        handleArticlePress={handleArticlePress}
+      />
     </View>
   );
 };

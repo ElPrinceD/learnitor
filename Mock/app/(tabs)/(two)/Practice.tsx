@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet, ImageSourcePropType } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import PracticeInformation from "../../../components/PracticeInformation";
 import PracticeLevel from "../../../components/PracticeLevel";
@@ -21,10 +21,25 @@ const Practice: React.FC = () => {
     console.log("Level pressed:", level);
   };
 
+  const levels: Level[] = [
+    {
+      title: "Beginner",
+      image: require("../../../assets/images/Beginner.jpg"),
+    },
+    {
+      title: "Intermediate",
+      image: require("../../../assets/images/Intermediate.png"),
+    },
+    {
+      title: "Advanced",
+      image: require("../../../assets/images/Advanced.jpg"),
+    },
+    { title: "Master", image: require("../../../assets/images/Master.jpg") },
+  ];
   return (
     <View style={styles.container}>
       <PracticeInformation topic={parsedTopic} />
-      <PracticeLevel onPress={handleLevelPress} />
+      <PracticeLevel onPress={handleLevelPress} levels={levels} />
     </View>
   );
 };
