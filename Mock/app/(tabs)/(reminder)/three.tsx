@@ -47,19 +47,23 @@ const Timeline: React.FC = () => {
     }
   };
 
-  const fetchTodayPlans = async (formattedDate: string) => {
+  const fetchTodayPlans = async () => {
     setLoading(true);
     try {
       const selectedIndex = days.indexOf(selectedDay);
-      const currentDate = new Date();
-      currentDate.setDate(currentDate.getDate() + selectedIndex);
-      const formattedDate = currentDate.toISOString().split("T")[0];
+      const today = new Date();
+      const currentDay = today.getDay();
+      const diff = selectedIndex + 1 - currentDay;
+      today.setDate(today.getDate() + diff);
+      const currentDate = today.toISOString().split("T")[0];
+
       const response = await axios.get<Plan[]>(
-        `${ApiUrl}:8000/api/learner/tasks/?due_date=${formattedDate}`,
+        `${ApiUrl}:8000/api/learner/tasks/?due_date=${currentDate}`,
         {
           headers: { Authorization: `Token ${userToken?.token}` },
         }
       );
+      console.log(currentDate);
       setTodayPlans(response.data);
     } catch (error) {
       console.error("Error fetching today's plans:", error);
@@ -74,7 +78,7 @@ const Timeline: React.FC = () => {
     currentDate.setDate(currentDate.getDate() + selectedIndex);
     const formattedDate = currentDate.toISOString().split("T")[0];
     fetchCategoryNames();
-    fetchTodayPlans(formattedDate);
+    fetchTodayPlans();
   }, [selectedDay, userToken]);
 
   const fetchCategoryNames = async () => {
@@ -95,16 +99,14 @@ const Timeline: React.FC = () => {
     }
   };
 
-  const handleDeletePlan = async (planId: number) => {
-    const selectedIndex = days.indexOf(selectedDay);
-    const currentDate = new Date();
-    currentDate.setDate(currentDate.getDate() + selectedIndex);
-    const formattedDate = currentDate.toISOString().split("T")[0];
+  const handleDeletePlan = async (planId: number): Promise<void> => {
     try {
-      await axios.delete(`${ApiUrl}:8000/api/learner/tasks/${planId}/`, {
-        headers: { Authorization: `Token ${userToken?.token}` },
+      await axios.delete(`${ApiUrl}:8000/api/tasks/${planId}/`, {
+        headers: {
+          Authorization: `Token ${userToken?.token}`,
+        },
       });
-      fetchTodayPlans(formattedDate);
+      fetchTodayPlans();
     } catch (error) {
       console.error("Error deleting task:", error);
       Alert.alert("Error", "Failed to delete task");
