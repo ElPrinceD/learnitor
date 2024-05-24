@@ -8,11 +8,12 @@ const GameLevel: React.FC = () => {
   const { topic, course } = useLocalSearchParams();
 
   const handleLevelPress = (level: Level) => {
-    router.navigate("PracticeInstructions");
+    router.navigate("GameWaiting");
     router.setParams({
       level: level.title,
       topic: topic?.toString(),
       course: course?.toString(),
+      isCreator: "true", // Convert boolean to string
     });
     console.log("Level pressed:", level);
   };
@@ -34,7 +35,6 @@ const GameLevel: React.FC = () => {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Select a Level</Text>
-
       <PracticeLevel onPress={handleLevelPress} levels={levels} />
     </View>
   );

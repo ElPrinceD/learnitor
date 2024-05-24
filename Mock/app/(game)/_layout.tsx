@@ -9,6 +9,7 @@ export default function GameLayout() {
         <Stack.Screen name="GameIntro" options={{ headerShown: false }} />
         <Stack.Screen name="GameCourses" options={{ headerShown: false }} />
         <Stack.Screen name="GameTopics" options={{ headerShown: false }} />
+        <Stack.Screen name="GameWaiting" options={{ headerShown: false }} />
         <Stack.Screen name="GameLevel" options={{ headerShown: false }} />
         <Stack.Screen name="Results" options={{ headerShown: false }} />
       </Stack>

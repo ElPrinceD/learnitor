@@ -8,7 +8,6 @@ import { Text, View } from "../../components/Themed";
 import ApiUrl from "../../config";
 import { useAuth } from "../../components/AuthContext";
 import { useFocusEffect } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
 import Swiper from "react-native-deck-swiper";
 import GradientCard from "../../components/InfoCard";
 import { router } from "expo-router";

@@ -1,24 +1,47 @@
 import React from "react";
-import { TouchableOpacity, Text, StyleSheet } from "react-native";
+import {
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+  ViewStyle,
+  TextStyle,
+} from "react-native";
 
 type GameButtonProps = {
   onPress: () => void;
   title: string;
   disabled?: boolean; // Make disabled optional
+  style?: ViewStyle | ViewStyle[]; // Add style prop
+  disabledStyle?: ViewStyle;
+  textStyle?: TextStyle | TextStyle[];
 };
 
 const GameButton: React.FC<GameButtonProps> = ({
   onPress,
   title,
   disabled = false,
+  style,
+  textStyle,
+  disabledStyle,
 }) => {
   return (
     <TouchableOpacity
-      style={[styles.button, disabled && styles.buttonDisabled]}
+      style={[
+        styles.button,
+        disabled && [styles.buttonDisabled, disabledStyle],
+        ...(Array.isArray(style) ? style : [style]),
+      ]}
       onPress={onPress}
       disabled={disabled}
     >
-      <Text style={styles.text}>{title}</Text>
+      <Text
+        style={[
+          styles.text,
+          ...(Array.isArray(textStyle) ? textStyle : [textStyle]),
+        ]}
+      >
+        {title}
+      </Text>
     </TouchableOpacity>
   );
 };
@@ -33,7 +56,7 @@ const styles = StyleSheet.create({
     margin: 10,
   },
   buttonDisabled: {
-    backgroundColor: "#A9A9A9",
+    backgroundColor: "red",
   },
   text: {
     color: "#FFFFFF",
