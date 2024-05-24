@@ -17,7 +17,7 @@ export default function Tab2Layout() {
         />
         <Stack.Screen
           name="PracticeQuestions"
-          options={{ headerShown: false, presentation: "modal" }}
+          options={{ headerShown: false, presentation: "fullScreenModal" }}
         />
         <Stack.Screen
           name="ScorePage"

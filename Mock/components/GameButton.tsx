@@ -10,10 +10,9 @@ import {
 type GameButtonProps = {
   onPress: () => void;
   title: string;
-  disabled?: boolean; // Make disabled optional
-  style?: ViewStyle | ViewStyle[]; // Add style prop
-  disabledStyle?: ViewStyle;
-  textStyle?: TextStyle | TextStyle[];
+  disabled?: boolean;
+  style?: ViewStyle | ViewStyle[]; // Updated to accept a list of styles
+  textStyle?: TextStyle | TextStyle[]; // Updated to accept a list of styles
 };
 
 const GameButton: React.FC<GameButtonProps> = ({
@@ -22,13 +21,12 @@ const GameButton: React.FC<GameButtonProps> = ({
   disabled = false,
   style,
   textStyle,
-  disabledStyle,
 }) => {
   return (
     <TouchableOpacity
       style={[
         styles.button,
-        disabled && [styles.buttonDisabled, disabledStyle],
+        disabled && styles.buttonDisabled,
         ...(Array.isArray(style) ? style : [style]),
       ]}
       onPress={onPress}
@@ -48,7 +46,7 @@ const GameButton: React.FC<GameButtonProps> = ({
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: "#007BFF",
+    backgroundColor: "#9a580d",
     padding: 10,
     borderRadius: 5,
     alignItems: "center",

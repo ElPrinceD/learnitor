@@ -4,7 +4,6 @@ import {
   StyleSheet,
   ScrollView,
   Text,
-  TouchableOpacity,
   useColorScheme,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
@@ -13,6 +12,7 @@ import Questions from "../../../components/Questions";
 import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
 import { Topic, Question, Answer } from "../../../components/types";
+import GameButton from "../../../components/GameButton";
 import ProgressBar from "../../../components/ProgressBar";
 
 const PracticeQuestions: React.FC = () => {
@@ -21,20 +21,12 @@ const PracticeQuestions: React.FC = () => {
   const [practiceQuestions, setPracticeQuestions] = useState<Question[]>([]);
   const [practiceAnswers, setPracticeAnswers] = useState<Answer[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<{
-    [key: number]: number[];
-  }>({});
-  const [
-    questionsWithMultipleCorrectAnswers,
-    setQuestionsWithMultipleCorrectAnswers,
-  ] = useState<number[]>([]);
+  const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: number[] }>({});
+  const [questionsWithMultipleCorrectAnswers, setQuestionsWithMultipleCorrectAnswers] = useState<number[]>([]);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   const parsedLevel: string = typeof level === "string" ? level : "";
-  const parsedTopic: Topic =
-    typeof topic === "string" ? JSON.parse(topic) : topic;
-  // const parsedCourse: Course =
-  //   typeof course === "string" ? JSON.parse(course) : course;
+  const parsedTopic: Topic = typeof topic === "string" ? JSON.parse(topic) : topic;
 
   useEffect(() => {
     fetchData();
@@ -221,10 +213,14 @@ const PracticeQuestions: React.FC = () => {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
+      marginTop: 50,
       padding: 20,
-      borderRadius: 10,
       elevation: 1,
-      backgroundColor: colorScheme === "dark" ? "#181818" : "#fff",
+      backgroundColor: "#e0dede",
+    },
+    orange: {
+      color: "#b16f24",
+      fontSize: 15,
     },
     progressBarContainer: {
       height: 10,
@@ -237,31 +233,6 @@ const PracticeQuestions: React.FC = () => {
     progressBar: {
       height: "100%",
       backgroundColor: "#76c7c0",
-    },
-    questionText: {
-      fontSize: 16,
-      marginBottom: 5,
-      color: colorScheme === "dark" ? "#fff" : "#555",
-    },
-    answersContainer: {
-      marginTop: 5,
-      color: colorScheme === "dark" ? "#fff" : "#181818",
-    },
-    answerTouchable: {
-      flexDirection: "row",
-      alignItems: "center",
-      marginBottom: 5,
-      backgroundColor: colorScheme === "dark" ? "#333" : "#f0f0f0",
-      padding: 10,
-      borderRadius: 5,
-    },
-    selectedAnswer: {
-      backgroundColor: colorScheme === "dark" ? "#555" : "#ccc",
-    },
-    answerText: {
-      fontSize: 14,
-      color: colorScheme === "dark" ? "#fff" : "#444",
-      marginLeft: 10,
     },
     checkBox: {
       width: 20,
@@ -277,19 +248,37 @@ const PracticeQuestions: React.FC = () => {
     buttonContainer: {
       flexDirection: "row",
       justifyContent: "space-between",
-      marginTop: 20,
+      paddingTop: 30,
+      backgroundColor:"#e0dede"
+    },
+    button: {
+      backgroundColor: "#e1943b",
+      padding: 15,
+      borderRadius: 5,
+      flex: 1,
+      marginHorizontal: 10,
+      borderTopLeftRadius: 20,
+      borderBottomRightRadius: 20,
     },
     buttonText: {
       fontSize: 16,
-      color: colorScheme === "dark" ? "#bbb" : "#337ab7",
+      color: colorScheme === "dark" ? "#ffffff" : "#ffffff",
+      textAlign: "center",
     },
     disabledButtonText: {
-      color: "#ccc",
+      backgroundColor: "#ccc",
+      padding: 15,
+      borderRadius: 5,
+      flex: 1,
+      marginHorizontal: 10,
+      borderTopLeftRadius: 20,
+      borderBottomRightRadius: 20,
+
     },
     timer: {
       fontSize: 18,
       textAlign: "center",
-      marginVertical: 10,
+      
     },
     timerRed: {
       color: "red",
@@ -297,57 +286,57 @@ const PracticeQuestions: React.FC = () => {
   });
 
   return (
-    <ScrollView>
+    <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between' }}>
       <View style={styles.container}>
-        <ProgressBar progress={progress * 100} />
-      </View>
-      {timeLeft !== null && (
-        <Text
-          style={[
-            styles.timer,
-            timeLeft <= 60 && styles.timerRed, // Apply the red color when time is less than or equal to 60 seconds
-          ]}
-        >
-          Time Left: {Math.floor(timeLeft / 60)}:
-          {timeLeft % 60 < 10 ? `0${timeLeft % 60}` : timeLeft % 60}
+        
+        {timeLeft !== null && (
+          <Text
+            style={[
+              styles.timer,
+              timeLeft <= 60 && styles.timerRed, // Apply the red color when time is less than or equal to 60 seconds
+            ]}
+          >
+            {Math.floor(timeLeft / 60)}:
+            {timeLeft % 60 < 10 ? `0${timeLeft % 60}` : timeLeft % 60}
+          </Text>
+        )}
+        <Text style={styles.orange}>
+          Question {currentQuestion + 1} / {practiceQuestions.length}
         </Text>
-      )}
+      </View>
       <Questions
         practiceQuestions={practiceQuestions}
         practiceAnswers={practiceAnswers}
         currentQuestion={currentQuestion}
         selectedAnswers={selectedAnswers}
-        questionsWithMultipleCorrectAnswers={
-          questionsWithMultipleCorrectAnswers
-        }
+        questionsWithMultipleCorrectAnswers={questionsWithMultipleCorrectAnswers}
         isAnswerSelected={isAnswerSelected}
         handleAnswerSelection={handleAnswerSelection}
       />
       <View style={styles.buttonContainer}>
         {currentQuestion > 0 && (
-          <TouchableOpacity
+          <GameButton
             onPress={handlePreviousQuestion}
             disabled={currentQuestion === 0}
-          >
-            <Text style={styles.buttonText}>Previous</Text>
-          </TouchableOpacity>
+            style={styles.button}
+            title="Previous"
+          />
         )}
         {currentQuestion < practiceQuestions.length - 1 && (
-          <TouchableOpacity onPress={handleNextQuestion}>
-            <Text style={styles.buttonText}>Next</Text>
-          </TouchableOpacity>
+          <GameButton
+            onPress={handleNextQuestion}
+            style={styles.button}
+            title="Next"
+          />
         )}
         {currentQuestion === practiceQuestions.length - 1 && (
-          <TouchableOpacity onPress={handleSubmit} disabled={isSubmitDisabled}>
-            <Text
-              style={[
-                styles.buttonText,
-                isSubmitDisabled && styles.disabledButtonText,
-              ]}
-            >
-              Submit
-            </Text>
-          </TouchableOpacity>
+          <GameButton
+            onPress={handleSubmit}
+            disabled={isSubmitDisabled}
+            style={[ isSubmitDisabled ? styles.disabledButtonText: styles.button ]}
+            textStyle={[styles.buttonText,  ]}
+            title="Submit"
+          />
         )}
       </View>
     </ScrollView>

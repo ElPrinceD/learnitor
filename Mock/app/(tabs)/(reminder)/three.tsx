@@ -1,8 +1,8 @@
 // Timeline.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback  } from "react";
 import { View, ScrollView, StyleSheet, Alert } from "react-native";
 import axios from "axios";
-import { Feather } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
 import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
@@ -46,6 +46,14 @@ const Timeline: React.FC = () => {
         return "#000000";
     }
   };
+  useFocusEffect(
+    useCallback(() => {
+      if (userToken) {
+        fetchTodayPlans();
+      }
+    }, [userToken])
+  );
+
 
   const fetchTodayPlans = async () => {
     setLoading(true);
@@ -71,7 +79,7 @@ const Timeline: React.FC = () => {
       setLoading(false);
     }
   };
-
+console.log(todayPlans)
   useEffect(() => {
     const selectedIndex = days.indexOf(selectedDay);
     const currentDate = new Date();
