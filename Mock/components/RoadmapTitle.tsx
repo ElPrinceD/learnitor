@@ -9,38 +9,39 @@ const RoadmapTitle = ({ course, progress }) => {
 
   const styles = StyleSheet.create({
     container: {
-      flexDirection: "row", // Align items in a row
-      justifyContent: "space-between", // Distribute space between elements
-      alignItems: "center", // Center items vertically
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
       paddingVertical: 20,
-      paddingHorizontal: 10, // Add horizontal padding
+      paddingHorizontal: 10,
     },
     textContainer: {
       flex: 1,
-      alignItems: "flex-start", // Align text items to the start (left)
+      alignItems: "flex-start",
     },
     title: {
       fontSize: 24,
       fontWeight: "bold",
       marginBottom: 10,
-      textAlign: "left", // Align text to the left
+      textAlign: "left",
+      color: colorScheme === "dark" ? "#fff" : "#000",
     },
     subtext: {
       fontSize: 16,
       textAlign: "left",
       width: 300,
+      color: colorScheme === "dark" ? "#ccc" : "#666",
     },
     image: {
       width: 80,
       height: 80,
-      marginLeft: 10, 
-      marginTop: -20,
+      marginLeft: 10,
     },
     progressContainer: {
       marginTop: 20,
       flexDirection: "row",
       alignItems: "center",
-      width: "100%", // Ensure the progress container takes full width
+      width: "100%",
     },
     progressBar: {
       flex: 1,
@@ -68,38 +69,24 @@ const RoadmapTitle = ({ course, progress }) => {
       ]}
     >
       <View style={styles.textContainer}>
-        
-        <Text style={[styles.title, { color: colorScheme === "dark" ? "#fff" : "#000" }]}>
-  {course.title}
-</Text>
-
-<Text
-  style={[
-    styles.subtext,
-    { color: colorScheme === "dark" ? "#ccc" : "#666" },
-  ]}
->
-  {course.description}
-</Text>
+        <Text style={styles.title}>{course.title}</Text>
+        <Text style={styles.subtext}>{course.description}</Text>
         <View style={styles.progressContainer}>
           <View style={styles.progressBar}>
             <View style={[styles.progressFill, { width: `${progress}%` }]} />
           </View>
-
-      <View style={styles.progressContainer}>
-        <ProgressBar progress={progress} />
-        <Text style={styles.progressText}>{`${progress.toFixed(2)}% Completed`}</Text>
+          <View style={styles.progressContainer}>
+            <ProgressBar progress={progress} />
+            <Text style={styles.progressText}>{`${progress.toFixed(2)}% Completed`}</Text>
+          </View>
+        </View>
       </View>
       <Image
-        source={{
-          uri: course.url,
-        }}
+        source={{ uri: course.url }}
         style={styles.image}
         resizeMode="cover"
         onError={(error) => console.log("Image error:", error)}
       />
-    </View>
-    </View>
     </View>
   );
 };

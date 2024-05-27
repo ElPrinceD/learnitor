@@ -102,7 +102,7 @@ const Questions = ({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flex: 10,
   },
   questionContainer: {
     flex: 1,
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   questionText: {
     fontSize: 25,
     color: "#232222",
-    paddingLeft: 30,
+    paddingLeft: 20,
     marginBottom: 5,
     fontWeight: 'bold',
   },

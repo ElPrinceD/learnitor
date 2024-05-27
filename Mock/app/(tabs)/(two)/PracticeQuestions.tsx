@@ -220,7 +220,8 @@ const PracticeQuestions: React.FC = () => {
     },
     orange: {
       color: "#b16f24",
-      fontSize: 15,
+      fontSize: 20,
+      
     },
     progressBarContainer: {
       height: 10,
@@ -228,7 +229,7 @@ const PracticeQuestions: React.FC = () => {
       backgroundColor: "#e0e0e0",
       borderRadius: 5,
       overflow: "hidden",
-      marginBottom: 20,
+      //marginBottom: 20,
     },
     progressBar: {
       height: "100%",

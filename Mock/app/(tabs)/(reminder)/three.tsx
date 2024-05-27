@@ -1,5 +1,4 @@
-// Timeline.tsx
-import React, { useEffect, useState, useCallback  } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { View, ScrollView, StyleSheet, Alert } from "react-native";
 import axios from "axios";
 import { useFocusEffect } from "@react-navigation/native";
@@ -8,7 +7,8 @@ import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
 import PlanItem from "../../../components/PlanItem";
 import DaySelector from "../../../components/DaySelector";
-import Header from "../../../components/TimelineHeader";
+import TimelineHeader from "../../../components/TimelineHeader";
+import { Picker } from "@react-native-picker/picker"; // Import Picker from @react-native-picker/picker
 
 interface Plan {
   id: number;
@@ -20,15 +20,11 @@ interface Plan {
 }
 
 const Timeline: React.FC = () => {
-  const days = ["Mon", "Tue", "Wed", "Thur", "Fri", "Sat", "Sun"];
   const [todayPlans, setTodayPlans] = useState<Plan[]>([]);
-  const [categoryNames, setCategoryNames] = useState<{ [key: number]: string }>(
-    {}
-  );
-  const [selectedDay, setSelectedDay] = useState(
-    days[(new Date().getDay() - 1) % 7]
-  );
+  const [categoryNames, setCategoryNames] = useState<{ [key: number]: string }>({});
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [loading, setLoading] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null); // State for selected category
 
   const { userToken } = useAuth();
 
@@ -46,48 +42,43 @@ const Timeline: React.FC = () => {
         return "#000000";
     }
   };
-  useFocusEffect(
-    useCallback(() => {
-      if (userToken) {
-        fetchTodayPlans();
-      }
-    }, [userToken])
-  );
 
-
-  const fetchTodayPlans = async () => {
+  const fetchTodayPlans = async (date: Date) => {
     setLoading(true);
     try {
-      const selectedIndex = days.indexOf(selectedDay);
-      const today = new Date();
-      const currentDay = today.getDay();
-      const diff = selectedIndex + 1 - currentDay;
-      today.setDate(today.getDate() + diff);
-      const currentDate = today.toISOString().split("T")[0];
-
-      const response = await axios.get<Plan[]>(
-        `${ApiUrl}:8000/api/learner/tasks/?due_date=${currentDate}`,
-        {
-          headers: { Authorization: `Token ${userToken?.token}` },
-        }
-      );
-      console.log(currentDate);
-      setTodayPlans(response.data);
+      const currentDate = date.toISOString().split("T")[0];
+      let apiUrl = `${ApiUrl}:8000/api/learner/tasks/?due_date=${currentDate}`;
+      if (selectedCategory !== null) {
+        apiUrl += `&category=${selectedCategory}`; // Filter by selected category if it's not null
+      }
+      const response = await axios.get<Plan[]>(apiUrl, {
+        headers: { Authorization: `Token ${userToken?.token}` },
+      });
+      const sortedPlans = response.data.sort((a, b) => {
+        const dateA = new Date(a.due_date + "T" + a.due_time);
+        const dateB = new Date(b.due_date + "T" + b.due_time);
+        return dateA.getTime() - dateB.getTime();
+      });
+      setTodayPlans(sortedPlans);
     } catch (error) {
       console.error("Error fetching today's plans:", error);
     } finally {
       setLoading(false);
     }
   };
-console.log(todayPlans)
+
+  useFocusEffect(
+    useCallback(() => {
+      if (userToken) {
+        fetchTodayPlans(selectedDate);
+      }
+    }, [userToken, selectedDate, selectedCategory]) // Include selectedCategory in dependency array
+  );
+
   useEffect(() => {
-    const selectedIndex = days.indexOf(selectedDay);
-    const currentDate = new Date();
-    currentDate.setDate(currentDate.getDate() + selectedIndex);
-    const formattedDate = currentDate.toISOString().split("T")[0];
     fetchCategoryNames();
-    fetchTodayPlans();
-  }, [selectedDay, userToken]);
+    fetchTodayPlans(selectedDate);
+  }, [selectedDate, userToken, selectedCategory]); // Include selectedCategory in dependency array
 
   const fetchCategoryNames = async () => {
     try {
@@ -114,7 +105,7 @@ console.log(todayPlans)
           Authorization: `Token ${userToken?.token}`,
         },
       });
-      fetchTodayPlans();
+      fetchTodayPlans(selectedDate);
     } catch (error) {
       console.error("Error deleting task:", error);
       Alert.alert("Error", "Failed to delete task");
@@ -137,22 +128,30 @@ console.log(todayPlans)
 
   return (
     <View style={styles.container}>
-      <Header />
-      <DaySelector
-        days={days}
-        selectedDay={selectedDay}
-        setSelectedDay={setSelectedDay}
-      />
+      <DaySelector selectedDate={selectedDate} setSelectedDate={setSelectedDate} />
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
+        {/* <View style={styles.categoryPickerContainer}>
+          <Picker
+            selectedValue={selectedCategory}
+            style={styles.picker}
+            onValueChange={(itemValue) => setSelectedCategory(itemValue)}
+          >
+            <Picker.Item label="All Categories" value={null} />
+            {Object.entries(categoryNames).map(([categoryId, categoryName]) => (
+              <Picker.Item key={categoryId} label={categoryName} value={parseInt(categoryId)} />
+            ))}
+          </Picker>
+        </View> */}
         {todayPlans.map((plan, index) => (
-          <PlanItem
-            key={index}
-            plan={plan}
-            categoryNames={categoryNames}
-            getCategoryColor={getCategoryColor}
-            handleDeletePlan={handleDeletePlan}
-            handleEditPlan={handleEditPlan}
-          />
+          <View key={index} style={styles.planItemContainer}>
+            <PlanItem
+              plan={plan}
+              categoryNames={categoryNames}
+              getCategoryColor={getCategoryColor}
+              handleDeletePlan={handleDeletePlan}
+              handleEditPlan={handleEditPlan}
+            />
+          </View>
         ))}
       </ScrollView>
     </View>
@@ -167,7 +166,18 @@ const styles = StyleSheet.create({
   },
   scrollViewContent: {
     flexGrow: 1,
-    marginBottom: 200,
+    paddingBottom: 200,
+  },
+  planItemContainer: {
+    marginVertical: 10,
+  },
+  categoryPickerContainer: {
+    alignSelf: "flex-end",
+    marginRight: 20,
+  },
+  picker: {
+    height: 50,
+    width: 150,
   },
 });
 

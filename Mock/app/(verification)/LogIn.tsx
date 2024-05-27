@@ -49,7 +49,7 @@ const LogIn = () => {
     }
 
     setLoading(true);
-
+    console.log(email)
     axios
       .post(`${ApiUrl}:8000/api/login/`, {
         email: email,
@@ -57,6 +57,7 @@ const LogIn = () => {
       })
       .then((response) => {
         setLoading(false);
+        
         // Handle successful response from backend
         login(response.data, response.data.token); // Logging in user with token
 
