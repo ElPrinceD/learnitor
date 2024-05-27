@@ -12,7 +12,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { AuthProvider, useAuth } from "../components/AuthContext"; // Update the path
 import "react-native-reanimated";
 import { useColorScheme } from "../components/useColorScheme";
-import { View, ActivityIndicator } from "react-native";
+import { RootSiblingParent } from "react-native-root-siblings";
 import "react-native-reanimated";
 export { ErrorBoundary } from "expo-router";
 
@@ -38,7 +38,9 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <RootLayoutNav />
+      <RootSiblingParent>
+        <RootLayoutNav />
+      </RootSiblingParent>
     </AuthProvider>
   );
 }

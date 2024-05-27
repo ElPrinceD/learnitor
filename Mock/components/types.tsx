@@ -19,6 +19,7 @@ export interface Topic {
   description: string;
   id: number;
   completed?: boolean;
+  isChecked?: boolean;
   color: string;
 }
 export interface Level {

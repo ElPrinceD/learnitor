@@ -7,7 +7,7 @@ import {
   useColorScheme,
 } from "react-native";
 
-import { FontAwesome6, Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import ThreeDButton from "./ThreeDButton"; // Assuming ThreeDButton is in the same directory
 import { Course, Topic } from "./types";
 
@@ -100,8 +100,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     margin: 20,
-    
-    
   },
   timelineItem: {
     flexDirection: "row",
@@ -117,17 +115,16 @@ const styles = StyleSheet.create({
   timelineContentLeft: {
     flex: 1,
     alignItems: "flex-start",
-    marginLeft: 13
+    marginLeft: 13,
   },
   timelineContentCenter: {
     flex: 1,
     alignItems: "center",
-    
   },
   timelineContentRight: {
     flex: 1,
     alignItems: "flex-end",
-    marginRight: 13
+    marginRight: 13,
   },
   timelineText: {
     fontSize: 14,
