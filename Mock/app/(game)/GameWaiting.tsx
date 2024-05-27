@@ -8,8 +8,10 @@ import {
   TouchableOpacity,
   Share,
   Dimensions,
+  Platform,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
+import Toast from "react-native-root-toast";
 import { useAuth } from "../../components/AuthContext";
 import { useLocalSearchParams } from "expo-router";
 import GameButton from "../../components/GameButton";
@@ -38,18 +40,21 @@ export default function GameWaitingScreen() {
     const dummyPlayers = [
       {
         id: 1,
-        profilePicture: "https://via.placeholder.com/50",
-        profileName: "Player 1",
+        profilePicture:
+          "https://www.thetimes.co.uk/imageserver/image/%2Fmethode%2Ftimes%2Fprod%2Fweb%2Fbin%2F7bb37908-ad1f-433e-a45f-5fb29f3995fe.jpg?crop=4512%2C2538%2C487%2C225&resize=1200",
+        profileName: "Nkunku",
       },
       {
         id: 2,
-        profilePicture: "https://via.placeholder.com/50",
-        profileName: "Player 2",
+        profilePicture:
+          "https://i2-prod.football.london/incoming/article28357181.ece/ALTERNATES/s1200c/0_conor-gallagher-chelsea.jpg",
+        profileName: "Gallagher",
       },
       {
         id: 3,
-        profilePicture: "https://via.placeholder.com/50",
-        profileName: "Player 3",
+        profilePicture:
+          "https://i2-prod.football.london/incoming/article28069737.ece/ALTERNATES/s615/0_GettyImages-1779855118.jpg",
+        profileName: "T. Silva",
       },
     ];
     setPlayers(dummyPlayers);
@@ -57,7 +62,16 @@ export default function GameWaitingScreen() {
 
   const copyToClipboard = async () => {
     await Clipboard.setStringAsync(gameCode);
-    alert("Game code copied to clipboard!");
+    Toast.show("Game code copied", {
+      duration: Toast.durations.LONG,
+      position: Toast.positions.BOTTOM,
+      shadow: true,
+      animation: true,
+      hideOnPress: true,
+      delay: 0,
+      //   backgroundColor: "#fdecd2",
+      opacity: 0.8,
+    });
   };
 
   const shareGameCode = async () => {
@@ -87,16 +101,25 @@ export default function GameWaitingScreen() {
 
   return (
     <View style={styles.container}>
+      <Text style={styles.topContainerTitle}>
+        {userInfo?.user.first_name}'s Arena
+      </Text>
       <View style={styles.header}>
         <Text style={styles.gameCode}>{gameCode}</Text>
         <TouchableOpacity onPress={copyToClipboard} style={styles.iconButton}>
           <Ionicons name="copy-outline" size={24} color="#000" />
         </TouchableOpacity>
         <TouchableOpacity onPress={shareGameCode} style={styles.iconButton}>
-          <Ionicons name="share-outline" size={24} color="#000" />
+          <Ionicons
+            name={
+              Platform.OS === "ios" ? "share-outline" : "share-social-sharp"
+            }
+            size={24}
+            color="#000"
+          />
         </TouchableOpacity>
       </View>
-      <Text style={styles.waitingText}>Waiting For others</Text>
+      <Text style={styles.waitingText}>Waiting for others...</Text>
       <FlatList
         data={players}
         renderItem={renderPlayer}
@@ -104,8 +127,12 @@ export default function GameWaitingScreen() {
         contentContainerStyle={styles.playersList}
       />
       {isCreator && (
-        <View style={styles.startButtonContainer}>
-          <GameButton title="Start Game" onPress={handleStartGame} />
+        <View>
+          <GameButton
+            title="Start Game"
+            onPress={handleStartGame}
+            style={styles.startButtonContainer}
+          />
         </View>
       )}
     </View>
@@ -119,6 +146,11 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     backgroundColor: "#f5f5f5",
+  },
+  topContainerTitle: {
+    fontSize: 40,
+    fontWeight: "bold",
+    marginTop: 140,
   },
   header: {
     flexDirection: "row",
@@ -135,7 +167,7 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: "transparent",
     borderRadius: 5,
-    marginHorizontal: 5,
+    marginHorizontal: 0,
   },
   iconText: {
     color: "#ffffff",
@@ -154,14 +186,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 10,
-    backgroundColor: "#ffffff",
+    backgroundColor: "transparent",
     borderRadius: 10,
     marginVertical: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
   },
   profileImage: {
     width: 50,
@@ -175,7 +202,13 @@ const styles = StyleSheet.create({
   startButtonContainer: {
     position: "absolute",
     bottom: 20,
-    left: screenWidth / 2 - 75, // Center the button
-    width: 150,
+    width: 250,
+    alignSelf: "center",
+    backgroundColor: "#e1943b",
+    padding: 15,
+    borderRadius: 5,
+    marginHorizontal: 10,
+    borderTopLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
 });

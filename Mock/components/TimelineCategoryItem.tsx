@@ -16,12 +16,14 @@ interface CategoryItemProps {
     icon?: keyof typeof Ionicons.glyphMap;
   };
   onPress: () => void;
+  onLongPress?: () => void; // Add onLongPress prop
   width: number;
 }
 
 const TimelineCategoryItem: React.FC<CategoryItemProps> = ({
   category,
   onPress,
+  onLongPress, // Destructure onLongPress prop
   width,
 }) => {
   return (
@@ -47,6 +49,7 @@ const TimelineCategoryItem: React.FC<CategoryItemProps> = ({
       ]}
       activeOpacity={0.5}
       onPress={onPress}
+      onLongPress={onLongPress} // Pass onLongPress to TouchableOpacity
     >
       <Ionicons name={category.icon} size={40} color="#fff" />
       <Text style={styles.categoryText}>{category.name}</Text>

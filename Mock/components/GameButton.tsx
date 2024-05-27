@@ -31,6 +31,7 @@ const GameButton: React.FC<GameButtonProps> = ({
       ]}
       onPress={onPress}
       disabled={disabled}
+      activeOpacity={0.8}
     >
       <Text
         style={[

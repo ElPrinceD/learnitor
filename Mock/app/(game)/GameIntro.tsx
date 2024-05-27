@@ -165,18 +165,26 @@ const styles = StyleSheet.create({
     color: "#000",
     height: 40,
     flex: 1,
+    borderTopLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
   joinButton: {
     marginTop: 10,
     backgroundColor: "#e1943b",
+    borderTopLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
   joinButtonDisabled: {
     marginTop: 10,
     backgroundColor: "#ccc", // Custom disabled color
+    borderTopLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
   createButton: {
     marginTop: 20,
-    backgroundColor: "#e1943b", // Different color for create button
+    backgroundColor: "#e1943b",
+    borderTopLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
   noCodeContainer: {
     alignItems: "center",

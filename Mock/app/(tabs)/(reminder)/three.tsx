@@ -1,5 +1,4 @@
-// Timeline.tsx
-import React, { useEffect, useState, useCallback  } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { View, ScrollView, StyleSheet, Alert } from "react-native";
 import axios from "axios";
 import { useFocusEffect } from "@react-navigation/native";
@@ -26,7 +25,7 @@ const Timeline: React.FC = () => {
     {}
   );
   const [selectedDay, setSelectedDay] = useState(
-    days[(new Date().getDay() - 1) % 7]
+    days[(new Date().getDay() - 1 + 7) % 7]
   );
   const [loading, setLoading] = useState(false);
 
@@ -46,14 +45,20 @@ const Timeline: React.FC = () => {
         return "#000000";
     }
   };
+
+  useEffect(() => {
+    if (userToken) {
+      fetchCategoryNames();
+    }
+  }, [userToken]);
+
   useFocusEffect(
     useCallback(() => {
-      if (userToken) {
+      if (userToken && selectedDay) {
         fetchTodayPlans();
       }
-    }, [userToken])
+    }, [userToken, selectedDay])
   );
-
 
   const fetchTodayPlans = async () => {
     setLoading(true);
@@ -71,7 +76,6 @@ const Timeline: React.FC = () => {
           headers: { Authorization: `Token ${userToken?.token}` },
         }
       );
-      console.log(currentDate);
       setTodayPlans(response.data);
     } catch (error) {
       console.error("Error fetching today's plans:", error);
@@ -79,15 +83,7 @@ const Timeline: React.FC = () => {
       setLoading(false);
     }
   };
-console.log(todayPlans)
-  useEffect(() => {
-    const selectedIndex = days.indexOf(selectedDay);
-    const currentDate = new Date();
-    currentDate.setDate(currentDate.getDate() + selectedIndex);
-    const formattedDate = currentDate.toISOString().split("T")[0];
-    fetchCategoryNames();
-    fetchTodayPlans();
-  }, [selectedDay, userToken]);
+  console.log(todayPlans);
 
   const fetchCategoryNames = async () => {
     try {

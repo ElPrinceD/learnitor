@@ -5,12 +5,13 @@ import PracticeLevel from "../../components/PracticeLevel";
 import { Level } from "../../components/types";
 
 const GameLevel: React.FC = () => {
-  const { topic, course } = useLocalSearchParams();
+  const { topics, topic, course } = useLocalSearchParams();
 
   const handleLevelPress = (level: Level) => {
     router.navigate("GameWaiting");
     router.setParams({
       level: level.title,
+      topics: topics?.toString(),
       topic: topic?.toString(),
       course: course?.toString(),
       isCreator: "true", // Convert boolean to string
