@@ -40,10 +40,7 @@ export default function Tab2Layout() {
             title: "Course Details",
             headerTransparent: true,
             headerBackTitleVisible: false,
-            
-            headerStyle: {
-              backgroundColor: "transparent",
-            },
+           
             headerTitleStyle: {
               color: themeColors.text,
             },
