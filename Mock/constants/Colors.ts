@@ -1,6 +1,5 @@
-const tintColorLight = '#8c6130';
-const tintColorDark = '#8c6130';
-const gradientButton = 'linear-gradient(to right, #447A7A 0%, #F9E866 100%)';
+const tintColorLight = '#097969';
+const tintColorDark = '#097969';
 
 export default {
   light: {
@@ -9,7 +8,12 @@ export default {
     tint: tintColorLight,
     tabIconDefault: '#ccc',
     tabIconSelected: tintColorLight,
-    buttonBackground: gradientButton,
+    buttonBackground: 'linear-gradient(to right, #447A7A 0%, #F9E866 100%)',
+    placeholder: '#666',
+    border: '#097969',
+    icon: '#097969',
+    selectedItem: "#097969",
+    selectedText:"#097969",
   },
   dark: {
     text: '#fff',
@@ -17,6 +21,11 @@ export default {
     tint: tintColorDark,
     tabIconDefault: '#ccc',
     tabIconSelected: tintColorDark,
-    buttonBackground: gradientButton,
+    buttonBackground: 'linear-gradient(to right, #447A7A 0%, #F9E866 100%)',
+    placeholder: '#aaa',
+    border: '#097969',
+    icon: '#097969',
+    selectedItem: "#097969",
+    selectedText:"#097969",
   },
 };

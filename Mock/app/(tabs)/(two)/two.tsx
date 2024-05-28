@@ -6,9 +6,9 @@ import axios from "axios";
 import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
 import { Stack } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import { Course, Category } from "../../../components/types";
 import { router } from "expo-router";
+import Colors from "../../../constants/Colors"; // Adjust the import path as necessary
 
 const CoursesScreen: React.FC = () => {
   const [coursesData, setCoursesData] = useState<Course[]>([]);
@@ -55,28 +55,12 @@ const CoursesScreen: React.FC = () => {
     });
   };
 
+  const themeColors = Colors[colorScheme ?? "light"];
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: "#ffffff",
-    },
-    headerText: {
-      fontSize: 18,
-      fontWeight: "bold",
-      marginBottom: 10,
-      color: colorScheme === "dark" ? "#fff" : "#000",
-    },
-    backgroundGradient: {
-      flex: 1,
-      width: "100%",
-      height: "100%",
-    },
-    topContainer: {
-      flex: 1,
-      backgroundColor: "transparent",
-      justifyContent: "center",
-      alignItems: "center",
-      height: "10.33%",
+      // backgroundColor: themeColors.background, // Add background color for the container
     },
   });
 
@@ -86,7 +70,10 @@ const CoursesScreen: React.FC = () => {
         options={{
           headerTitle: "What do you want to learn today?",
           headerStyle: {
-            backgroundColor: "#fdecd2",
+            backgroundColor: themeColors.background,
+          },
+          headerTitleStyle: {
+            color: themeColors.text,
           },
           headerShadowVisible: false,
         }}

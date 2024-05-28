@@ -8,6 +8,7 @@ import {
   StyleSheet,
   useColorScheme,
 } from "react-native";
+import Colors from "../constants/Colors"; // Adjust the import path as necessary
 import { Course, Category } from "./types";
 
 interface Props {
@@ -22,23 +23,22 @@ const CoursesList: React.FC<Props> = ({
   onCoursePress,
 }) => {
   const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
     null
   );
 
-  // Determine styles based on color scheme
+  // Define styles using themeColors
   const styles = StyleSheet.create({
     container: {
       flex: 4,
-      marginTop: -20,
       borderTopLeftRadius: 30,
       borderTopRightRadius: 30,
       padding: 10,
-      backgroundColor: colorScheme === "dark" ? "#000" : "#fffdfd",
+      backgroundColor: themeColors.background,
     },
     categoryContainer: {
       height: 40,
-      marginTop: -6,
     },
     categoryList: {
       marginBottom: "1%",
@@ -47,36 +47,37 @@ const CoursesList: React.FC<Props> = ({
       paddingHorizontal: 15,
       paddingVertical: 4,
       marginRight: 10,
-
       borderRadius: 20,
       borderWidth: 1,
-      borderColor: colorScheme === "dark" ? "#555" : "#ccc",
+      borderColor: themeColors.tabIconDefault,
       backgroundColor: "transparent",
     },
     selectedCategoryItem: {
-      borderColor: "#9a580d",
+      borderColor: themeColors.selectedItem,
       borderWidth: 1,
     },
     categoryText: {
       fontSize: 16,
-      color: colorScheme === "dark" ? "#888" : "#666",
+      color: themeColors.text,
     },
     selectedCategoryText: {
-      color: "#9a580d",
+      color: themeColors.selectedText,
       fontWeight: "bold",
     },
     courseList: {
       paddingHorizontal: 10,
       paddingBottom: 20,
     },
+    courseListContainer: {
+      // padding: 10,
+      backgroundColor: themeColors.background,
+    },
     courseItem: {
       flex: 1,
-      flexDirection: "row",
       margin: 10,
       borderRadius: 10,
       overflow: "hidden",
       elevation: 1,
-      backgroundColor: colorScheme === "dark" ? "#181818" : "#fff",
     },
     imageContainer: {
       flex: 1,
@@ -91,12 +92,12 @@ const CoursesList: React.FC<Props> = ({
       position: "absolute",
       top: 10,
       right: 0,
-      backgroundColor: "#c99252",
+      backgroundColor: themeColors.tabIconSelected,
       paddingHorizontal: 5,
       paddingVertical: 2,
     },
     newLabelText: {
-      color: "white",
+      color: themeColors.text,
       fontSize: 12,
       fontWeight: "bold",
     },
@@ -108,11 +109,11 @@ const CoursesList: React.FC<Props> = ({
     name: {
       fontSize: 16,
       fontWeight: "bold",
-      color: colorScheme === "dark" ? "#fff" : "#333",
+      color: themeColors.text,
     },
     details: {
       fontSize: 14,
-      color: colorScheme === "dark" ? "#ccc" : "#777",
+      color: themeColors.tabIconDefault,
     },
   });
 
@@ -168,7 +169,7 @@ const CoursesList: React.FC<Props> = ({
             activeOpacity={0.5}
             style={styles.courseItem}
           >
-            <View style={styles.container}>
+            <View style={styles.courseListContainer}>
               <View style={styles.imageContainer}>
                 <Image source={{ uri: item.url }} style={styles.image} />
                 <View style={styles.newLabelContainer}>
