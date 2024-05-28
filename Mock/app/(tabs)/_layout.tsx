@@ -141,20 +141,8 @@ export default function TabLayout() {
               <TabBarIcon name="history" color={color} />
             ),
             headerShadowVisible: false,
-            headerRight: () => (
-              <Link href="../(reminder)/TimelineCategory" asChild>
-                <Pressable>
-                  {({ pressed }) => (
-                    <Ionicons
-                      name="add"
-                      size={25}
-                      color={Colors[colorScheme ?? "light"].text}
-                      style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
-                    />
-                  )}
-                </Pressable>
-              </Link>
-            ),
+            headerShown: false,
+          
             headerTitle: "",
           }}
         />

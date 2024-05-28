@@ -8,17 +8,41 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 import { router } from "expo-router";
+import axios from "axios";
+import ApiUrl from "../../config";
+import { useAuth } from "../../components/AuthContext";
 import GameButton from "../../components/GameButton";
 
 export default function GameIntro() {
   const [gameCode, setGameCode] = useState("");
+  const { userInfo, userToken } = useAuth();
 
-  const joinGame = () => {
-    router.navigate({
-      pathname: "GameWaiting",
-      params: { gameCode: gameCode },
-    });
+  const joinGame = async () => {
+    try {
+      const response = await axios.post(`${ApiUrl}:8000/games/${gameCode}/join/`,{}, {
+        headers: {
+          Authorization: `Token ${userToken?.token}`,
+        },
+      });
+      // Check if the response is successful
+      if (response.status === 200) {
+        // Redirect the user to the waiting screen
+        router.navigate({
+          pathname: "GameWaiting",
+          params: { gameCode: gameCode },
+        });
+      } else {
+        // Handle unsuccessful response
+        console.error("Failed to join the game:", response.data);
+        // Optionally, display an error message to the user
+      }
+    } catch (error) {
+      // Handle any errors that occur during the API call
+      console.error("Error joining the game:", error);
+      // Optionally, display an error message to the user
+    }
   };
+  
 
   return (
     <View style={styles.container}>

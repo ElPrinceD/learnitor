@@ -16,49 +16,43 @@ import { useAuth } from "../../components/AuthContext";
 import { useLocalSearchParams } from "expo-router";
 import GameButton from "../../components/GameButton";
 import { Ionicons } from "@expo/vector-icons";
+import ApiUrl from "../../config"; // Ensure this points to your API configuration
 
 export default function GameWaitingScreen() {
   const { userInfo } = useAuth(); // Assuming useAuth provides user information
-  const { isCreator } = useLocalSearchParams();
-  const [gameCode, setGameCode] = useState("");
+  const { isCreator, code } = useLocalSearchParams();
+  const [gameCode, setGameCode] = useState(code || "");
   const [players, setPlayers] = useState<
     { id: number; profilePicture: string; profileName: string }[]
   >([]);
 
   useEffect(() => {
-    generateGameCode();
-    fetchDummyPlayers();
-  }, []);
+    // Initialize WebSocket connection
+    const ws = new WebSocket(`${ApiUrl}:8000/ws/game/?game_code=${gameCode}/`);
 
-  const generateGameCode = () => {
-    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-    setGameCode(code);
-  };
+    ws.onopen = () => {
+      console.log("WebSocket connection opened");
+    };
 
-  const fetchDummyPlayers = () => {
-    // Dummy data for players
-    const dummyPlayers = [
-      {
-        id: 1,
-        profilePicture:
-          "https://www.thetimes.co.uk/imageserver/image/%2Fmethode%2Ftimes%2Fprod%2Fweb%2Fbin%2F7bb37908-ad1f-433e-a45f-5fb29f3995fe.jpg?crop=4512%2C2538%2C487%2C225&resize=1200",
-        profileName: "Nkunku",
-      },
-      {
-        id: 2,
-        profilePicture:
-          "https://i2-prod.football.london/incoming/article28357181.ece/ALTERNATES/s1200c/0_conor-gallagher-chelsea.jpg",
-        profileName: "Gallagher",
-      },
-      {
-        id: 3,
-        profilePicture:
-          "https://i2-prod.football.london/incoming/article28069737.ece/ALTERNATES/s615/0_GettyImages-1779855118.jpg",
-        profileName: "T. Silva",
-      },
-    ];
-    setPlayers(dummyPlayers);
-  };
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === "player_joined") {
+        setPlayers((prevPlayers) => [...prevPlayers, data.player]);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+
+    ws.onclose = () => {
+      console.log("WebSocket connection closed");
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, [gameCode]);
 
   const copyToClipboard = async () => {
     await Clipboard.setStringAsync(gameCode);
@@ -69,7 +63,6 @@ export default function GameWaitingScreen() {
       animation: true,
       hideOnPress: true,
       delay: 0,
-      //   backgroundColor: "#fdecd2",
       opacity: 0.8,
     });
   };

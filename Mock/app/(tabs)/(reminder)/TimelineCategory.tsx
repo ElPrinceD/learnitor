@@ -54,13 +54,13 @@ const TimelineCategory: React.FC = () => {
   const getCategoryColor = (type: string) => {
     switch (type) {
       case "Assignments & Projects":
-        return "#FF6347"; // Red
+        return "#0d1116"; // Red
       case "TimeTable":
-        return "#FFA500"; // Orange
+        return "#ed892e"; // Orange
       case "Study TimeTable":
-        return "#00BFFF"; // Blue
+        return "#6c77f4"; // Blue
       case "Exams TimeTable":
-        return "#8A2BE2"; // Purple
+        return "#a96ae3"; // Purple
       default:
         return "#000000"; // Black (default color)
     }

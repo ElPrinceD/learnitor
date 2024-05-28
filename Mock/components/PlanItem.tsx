@@ -1,7 +1,6 @@
-// PlanItem.tsx
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import {
   Swipeable,
   GestureHandlerRootView,
@@ -31,6 +30,23 @@ const PlanItem: React.FC<Props> = ({
   handleDeletePlan,
   handleEditPlan,
 }) => {
+  const categoryColor = getCategoryColor(categoryNames[plan.category]);
+
+  const getCategoryIcon = (type: string): keyof typeof Ionicons.glyphMap => {
+    switch (type) {
+      case "Exams TimeTable":
+        return "flame";
+      case "TimeTable":
+        return "briefcase";
+      case "Assignments & Projects":
+        return "people";
+      case "Study TimeTable":
+        return "book";
+      default:
+        return "help-circle"; // Default icon name
+    }
+  };
+
   return (
     <GestureHandlerRootView>
       <Swipeable
@@ -51,26 +67,19 @@ const PlanItem: React.FC<Props> = ({
           </TouchableOpacity>
         )}
       >
-        <View style={styles.planContainer}>
-          <View
-            style={[
-              styles.timeMarker,
-              {
-                backgroundColor: getCategoryColor(categoryNames[plan.category]),
-              },
-            ]}
-          >
-            <Text
-              style={[styles.typeText, { transform: [{ rotate: "180deg" }] }]}
-            >
-              {categoryNames[plan.category] || "Unknown Category"}
-            </Text>
-          </View>
-          <View style={styles.planContent}>
-            <Text style={styles.planTitle}>{plan.title}</Text>
-            <Text style={styles.planTime}>
-              {plan.due_time ? plan.due_time.slice(0, 5) : ""}
-            </Text>
+        <View style={styles.planItemWrapper}>
+          {/* <Text style={styles.planTime}>{plan.due_time.slice(0, -3)}</Text> */}
+          <Ionicons name={getCategoryIcon(categoryNames[plan.category]  )} size={24} color={categoryColor} style={styles.planIcon} />
+          <View style={[styles.planItemContainer, { backgroundColor: categoryColor }]}>
+            
+            <View style={styles.planContent}>
+            <Text style={[styles.planCategory, { color: "#fff" }]}>
+                {categoryNames[plan.category] || "Unknown Category"}
+              </Text>
+              <Text style={[styles.planTitle, { color: "#fff" }]}>{plan.title}</Text>
+              <Text style={[styles.planDescription, { color: "#fff" }]}>{plan.description}</Text>
+              
+            </View>
           </View>
         </View>
       </Swipeable>
@@ -79,45 +88,55 @@ const PlanItem: React.FC<Props> = ({
 };
 
 const styles = StyleSheet.create({
-  planContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
+  planItemWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  planIcon: {
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderRadius: 30,
+    backgroundColor: "#ffffff"
+    //marginRight: 10, // Add space between the icon and the plan item
+  },
+  planTime: {
+    width: 50,
+    textAlign: 'center',
+    color: "#ffffff",
+  },
+  planItemContainer: {
+    flex: 1,
+    marginLeft: 10,
+    borderRadius: 15,
+    padding: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 3, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  planItemLine: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: '#ccc',
   },
   planContent: {
-    flex: 1,
-    backgroundColor: "#f0f0f0",
-    padding: 10,
-    marginLeft: -18,
-    borderRadius: 8,
-    borderColor: "#e0e0e0",
-    borderWidth: 1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    paddingTop: 10, // Adjust padding to ensure text is not hidden by the line
   },
   planTitle: {
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 5,
   },
-  planTime: {
+  planDescription: {
     fontSize: 14,
-    color: "#777",
   },
-  timeMarker: {
-    width: 59,
-    height: 30,
-    borderTopLeftRadius: 9,
-    justifyContent: "center",
-    alignItems: "center",
-    transform: [{ rotate: "270deg" }],
-  },
-  typeText: {
+  planCategory: {
     fontSize: 12,
-    fontWeight: "bold",
-    color: "#fff",
   },
   deleteButton: {
     backgroundColor: "red",

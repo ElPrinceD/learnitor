@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { View, ScrollView, StyleSheet, Alert } from "react-native";
+import { View, ScrollView, StyleSheet, Alert, Text } from "react-native";
 import axios from "axios";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
@@ -31,15 +31,15 @@ const Timeline: React.FC = () => {
   const getCategoryColor = (type: string) => {
     switch (type) {
       case "Assignments & Projects":
-        return "#FF6347";
+        return "#0d1116"; // Red
       case "TimeTable":
-        return "#FFA500";
+        return "#ed892e"; // Orange
       case "Study TimeTable":
-        return "#00BFFF";
+        return "#6c77f4"; // Blue
       case "Exams TimeTable":
-        return "#8A2BE2";
+        return "#a96ae3"; // Purple
       default:
-        return "#000000";
+        return "#000000"; // Black (default color)
     }
   };
 
@@ -128,22 +128,21 @@ const Timeline: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      {/* <TimelineHeader /> */}
       <DaySelector selectedDate={selectedDate} setSelectedDate={setSelectedDate} />
+      <View style={[styles.bottom]}>
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        {/* <View style={styles.categoryPickerContainer}>
-          <Picker
-            selectedValue={selectedCategory}
-            style={styles.picker}
-            onValueChange={(itemValue) => setSelectedCategory(itemValue)}
-          >
-            <Picker.Item label="All Categories" value={null} />
-            {Object.entries(categoryNames).map(([categoryId, categoryName]) => (
-              <Picker.Item key={categoryId} label={categoryName} value={parseInt(categoryId)} />
-            ))}
-          </Picker>
-        </View> */}
-        {todayPlans.map((plan, index) => (
-          <View key={index} style={styles.planItemContainer}>
+      <View style={styles.plansContainer}>
+  {todayPlans.length === 0 ? (
+    <Text style={styles.noPlansText}>Hey, you have a free day!</Text>
+  ) : (
+    todayPlans.map((plan, index) => {
+      const categoryColor = getCategoryColor(categoryNames[plan.category]);
+      return (
+        <View key={index} style={styles.planItemWrapper}>
+          <Text style={styles.planTime}>{plan.due_time.slice(0, -3)}</Text>
+          <View style={[styles.planItemContainer, { backgroundColor: categoryColor }]}>
+            <View style={styles.planItemLine}/>
             <PlanItem
               plan={plan}
               categoryNames={categoryNames}
@@ -152,8 +151,13 @@ const Timeline: React.FC = () => {
               handleEditPlan={handleEditPlan}
             />
           </View>
-        ))}
+        </View>
+      );
+    })
+  )}
+</View>
       </ScrollView>
+      </View>
     </View>
   );
 };
@@ -161,16 +165,71 @@ const Timeline: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 50,
   },
   scrollViewContent: {
     flexGrow: 1,
-    paddingBottom: 200,
+    paddingBottom: 50,
+    borderTopRightRadius: 50,
+    borderTopLeftRadius: 50,
+    
   },
-  planItemContainer: {
+  bottom:{
+    height: "100%", 
+    marginTop: -55,
+    width: "100%", 
+    borderTopRightRadius: 50,
+    borderTopLeftRadius: 50,
+    backgroundColor: "white"
+  },
+  plansContainer: {
+    // backgroundColor: "#FFFFFF", // White background for the entire plans container
+    borderTopRightRadius: 30,
+    borderTopLeftRadius: 30,
+    
+    padding: 10,
+    
+    marginTop: 20,
+  },
+  planItemWrapper: {
+    flexDirection: 'row', // Align time and plan item side by side
+    alignItems: 'center',
     marginVertical: 10,
   },
+  planTime: {
+    width: 50, // Fixed width for the time
+    textAlign: 'center',
+    color: "#1f1f1f",
+    marginTop: -153
+  },
+  noPlansText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#666',
+    
+    textAlign: 'center',
+    paddingVertical: 20,
+  },
+  planItemContainer: {
+    flex: 1,
+    marginLeft: 10,
+    borderRadius: 20,
+    padding: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  planItemLine: {
+    position: 'absolute',
+    top: -10, // Adjust this value to move the line higher or lower
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: '#ccc',
+  },
+  
   categoryPickerContainer: {
     alignSelf: "flex-end",
     marginRight: 20,
