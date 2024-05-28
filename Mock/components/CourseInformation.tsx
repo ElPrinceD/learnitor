@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -7,65 +7,61 @@ import {
   useColorScheme,
   Image,
 } from "react-native";
-import { FontAwesome5 } from "@expo/vector-icons";
+import { FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
 import ProgressBar from "./ProgressBar";
+import Colors from "../constants/Colors";
+import CourseTopics from "./CourseTopics";
 
 const CourseInformation = ({
   course,
   enrollCourse,
   handleContinue,
-  handleShowMore,
   unenrollCourse,
   progress,
   enrolled,
   enrollDisabled,
-  showFullDescription,
+  topics,
 }) => {
   const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
 
   const styles = StyleSheet.create({
     container: {
       padding: 0,
-      //flexDirection: "row",
-      backgroundColor: "transparernt",
-      borderTopLeftRadius: 80,
-      borderTopRightRadius: 70,
     },
-
     bodyContainer: {
       padding: 20,
-      // backgroundColor: "blue",
-      borderTopLeftRadius: 30,
-      borderTopRightRadius: 30,
+      backgroundColor: themeColors.background,
+      marginTop: -47,
+      borderTopLeftRadius: 50,
+      borderTopRightRadius: 50,
+    },
+    heading: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignContent: "center",
     },
     title: {
       fontSize: 24,
-      justifyContent: "center",
-      alignItems: "center",
       fontWeight: "bold",
-
-      // borderTopLeftRadius: 30,
-      // borderTopRightRadius: 3
-      backgroundColor: "transparent",
-
-      color: colorScheme === "dark" ? "#565050" : "#5c5a5a",
+      color: themeColors.text,
+    },
+    topicsNumber: {
+      fontSize: 18,
+      color: themeColors.icon,
+      textAlign: "center",
+      top: 5,
     },
     description: {
       fontSize: 18,
       marginBottom: 20,
-
-      color: colorScheme === "dark" ? "#ccc" : "#1d1c1c",
+      color: themeColors.textSecondary,
     },
-    showMore: {
-      fontSize: 16,
 
-      color: "#337ab7",
-      // textDecorationLine: "underline",
-    },
     imageContainer: {
       width: "100%",
-      //margin: 20,
     },
+
     image: {
       height: 250,
     },
@@ -77,58 +73,42 @@ const CourseInformation = ({
       marginTop: 20,
     },
     enrollButton: {
-      backgroundColor: enrollDisabled ? "#e6ac6a" : "#b5752c",
+      backgroundColor: enrollDisabled
+        ? themeColors.buttonDisabled
+        : themeColors.buttonBackground,
       paddingVertical: 15,
-
       paddingHorizontal: 20,
       borderRadius: 20,
-      //borderWidth: 2,
       alignItems: "center",
-      //borderColor: colorScheme === "dark" ? "#fff" : "#000",
       opacity: enrollDisabled ? 0.5 : 1,
     },
     continueButton: {
       paddingVertical: 10,
       paddingHorizontal: 20,
       borderRadius: 20,
-      //borderWidth: 2,
-      //borderColor: colorScheme === "dark" ? "#fff" : "#000",
-      backgroundColor: "#b5752c",
+      backgroundColor: themeColors.buttonBackground,
       marginTop: -40,
       flexDirection: "row",
-      justifyContent: "center", // Center the text horizontally
+      justifyContent: "center",
       width: "48%",
       marginRight: 10,
     },
     continueText: {
-      color: colorScheme === "dark" ? "#fff" : "#000",
+      color: themeColors.text,
       fontSize: 16,
       fontWeight: "bold",
     },
     arrowIcon: {
       marginLeft: 5,
-      color: colorScheme === "dark" ? "#fff" : "#000",
+      color: themeColors.text,
     },
     progressContainer: {
       marginTop: 70,
       flexDirection: "row",
       alignItems: "center",
     },
-    progressBar: {
-      flex: 1,
-      height: 10,
-      backgroundColor: "#ffffff",
-      borderRadius: 5,
-      marginRight: 10,
-    },
-
-    progressFill: {
-      height: "100%",
-      backgroundColor: colorScheme === "dark" ? "#e6ac6a" : "#e6ac6a",
-      borderRadius: 5,
-    },
     progressText: {
-      color: colorScheme === "dark" ? "#fff" : "#000",
+      color: themeColors.textSecondary,
     },
   });
 
@@ -145,26 +125,20 @@ const CourseInformation = ({
         </View>
       </View>
       <View style={styles.bodyContainer}>
-        <Text
-          style={{
-            fontWeight: "bold",
-            fontSize: 20,
-            color: "#696868",
-            paddingBottom: 8,
-          }}
-        >
-          About Course:
-        </Text>
         <View>
+          <View style={styles.heading}>
+            <Text style={styles.title}>{course.title}</Text>
+            <Text style={styles.topicsNumber}>
+              <MaterialCommunityIcons
+                name="notebook-multiple"
+                size={20}
+                color={themeColors.icon}
+              />{" "}
+              {topics.length} Topics
+            </Text>
+          </View>
           <Text style={[styles.description, { flexWrap: "wrap" }]}>
-            {showFullDescription
-              ? course.description
-              : `${course.description.substring(0, 100)}...`}
-            <TouchableOpacity onPress={handleShowMore}>
-              <Text style={styles.showMore}>
-                {showFullDescription ? "Show less" : "Show more"}
-              </Text>
-            </TouchableOpacity>
+            {course.description}
           </Text>
         </View>
         {enrolled ? (
@@ -176,7 +150,7 @@ const CourseInformation = ({
                   {
                     backgroundColor: "transparent",
                     borderWidth: 2,
-                    borderColor: "#e6ac6a",
+                    borderColor: themeColors.border,
                   },
                 ]}
                 activeOpacity={0.3}
@@ -201,7 +175,14 @@ const CourseInformation = ({
               </TouchableOpacity>
             </View>
             <View style={styles.progressContainer}>
-              <ProgressBar progress={progress} />
+              <ProgressBar
+                progress={progress}
+                containerStyle={{
+                  backgroundColor: themeColors.text,
+                  height: 10,
+                }}
+                fillStyle={{ backgroundColor: themeColors.icon }}
+              />
               <Text style={styles.progressText}>{`${progress.toFixed(
                 2
               )}% Completed`}</Text>
