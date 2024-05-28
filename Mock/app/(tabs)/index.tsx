@@ -22,7 +22,7 @@ const Index = () => {
     {
       title: "Find all your academic schedules in one place",
       description: "Timetables, Study timetables, Assignment deadlines",
-      colors: ["#ace2d1", "#54b093"],
+      colors: ["#ace2d1", "#54b099"],
       category: "Timeline",
       image: require("../../assets/images/clock1.png"),
     },

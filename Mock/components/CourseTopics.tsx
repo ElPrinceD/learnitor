@@ -9,12 +9,12 @@ import {
 } from "react-native";
 import { Topic } from "./types";
 import { Ionicons } from "@expo/vector-icons";
+import Colors from "../constants/Colors"; // Adjust the import path as necessary
 
 interface CourseTopicsProps {
   topics: Topic[];
   onSelectedTopicsChange: (selectedTopics: Topic[]) => void;
   selectedTopics: Topic[];
-  // Define selectedTopics prop
 }
 
 const CourseTopics: React.FC<CourseTopicsProps> = ({
@@ -23,12 +23,13 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
   selectedTopics,
 }) => {
   const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
 
   useEffect(() => {
     onSelectedTopicsChange(selectedTopics);
   }, [selectedTopics, onSelectedTopicsChange]);
 
-  const toggleTopicSelection = (id: string) => {
+  const toggleTopicSelection = (id: number) => {
     const topic = topics.find((topic) => topic.id === id);
     if (!topic) return;
 
@@ -45,21 +46,20 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
   const clearSelection = () => {
     onSelectedTopicsChange([]);
   };
+
   const styles = StyleSheet.create({
     topicsContainer: {
       paddingVertical: 20,
-      borderTopColor: "#757373",
-
+      borderTopColor: themeColors.border,
       paddingHorizontal: 10,
-      //backgroundColor: colorScheme === "dark" ? "#080808" : "#761818",
     },
     topicCard: {
       marginBottom: 15,
-      backgroundColor: colorScheme === "dark" ? "#181818" : "#f7f2f2",
+      backgroundColor: themeColors.card,
       padding: 10,
       margin: 5,
       borderRadius: 10,
-      shadowColor: colorScheme === "dark" ? "#696969" : "#000",
+      shadowColor: themeColors.shadow,
       shadowOffset: {
         width: 0,
         height: 1,
@@ -70,11 +70,10 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
       position: "relative",
     },
     icon: {
-      backgroundColor: "#b3834d",
+      backgroundColor: themeColors.tint,
       padding: 5,
       borderRadius: 50,
-
-      shadowColor: "#000",
+      shadowColor: themeColors.shadow,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.4,
       shadowRadius: 2,
@@ -83,11 +82,11 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
       fontSize: 17,
       fontWeight: "bold",
       paddingLeft: 10,
-      color: colorScheme === "dark" ? "#fff" : "#5a5858",
+      color: themeColors.text,
     },
     topicDescription: {
       fontSize: 16,
-      color: colorScheme === "dark" ? "#ccc" : "#666",
+      color: themeColors.textSecondary,
       marginTop: -10,
       marginLeft: 40,
     },
@@ -97,29 +96,14 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
       right: 15,
       fontSize: 16,
       fontWeight: "bold",
-      color: colorScheme === "dark" ? "#ccc" : "#666",
+      color: themeColors.textSecondary,
     },
-    // clearButton: {
-    //   position: "absolute",
-    //   top: 45,
-    //   right: 20,
-    //   backgroundColor: showClearButton
-    //     ? colorScheme === "dark"
-    //       ? "#666"
-    //       : "#ddd"
-    //     : "transparent",
-    //   borderRadius: 50,
-    //   padding: 1,
-    // },
-    // clearButtonIcon: {
-    //   color: colorScheme === "dark" ? "#fff" : "#333",
-    // },
     instructionText: {
       fontSize: 18,
       fontWeight: "bold",
       textAlign: "center",
       marginBottom: 10,
-      color: colorScheme === "dark" ? "#fff" : "#333",
+      color: themeColors.text,
     },
   });
 
@@ -128,18 +112,9 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
       contentContainerStyle={styles.topicsContainer}
       showsVerticalScrollIndicator={false}
     >
-      {/* <Text style={styles.instructionText}>
+      <Text style={styles.instructionText}>
         Select your topics in the order in which you want to learn them.
-      </Text> */}
-      {/* {showClearButton && (
-        <TouchableOpacity
-          style={styles.clearButton}
-          onPress={clearSelection}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="close" size={27} style={styles.clearButtonIcon} />
-        </TouchableOpacity>
-      )} */}
+      </Text>
       {topics.map((topic, index) => {
         const isSelected = selectedTopics.some((t) => t.id === topic.id);
         const orderNumber =

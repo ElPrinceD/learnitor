@@ -1,7 +1,7 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, StyleSheet } from "react-native";
 
-const ProgressBar = ({ progress }) => {
+const ProgressBar = ({ progress, containerStyle, fillStyle }) => {
   const styles = StyleSheet.create({
     progressBar: {
       flex: 1,
@@ -15,14 +15,14 @@ const ProgressBar = ({ progress }) => {
       backgroundColor: "#e6ac6a",
       borderRadius: 5,
     },
-    progressText: {
-      color: "#000",
-    },
   });
 
   return (
-    <View style={styles.progressBar}>
-      <View style={[styles.progressFill, { width: `${progress}%` }]} />
+    <View style={[styles.progressBar, containerStyle]}>
+      <View
+        style={[styles.progressFill, { width: `${progress}%` }, fillStyle]}
+      />
+      {/* <Text style={[styles.progressText, textStyle]}>{progress}%</Text> */}
     </View>
   );
 };

@@ -5,10 +5,9 @@ import CoursesList from "../../../components/CoursesList";
 import axios from "axios";
 import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
-import { Stack } from "expo-router";
 import { Course, Category } from "../../../components/types";
 import { router } from "expo-router";
-import Colors from "../../../constants/Colors"; // Adjust the import path as necessary
+import Colors from "../../../constants/Colors";
 
 const CoursesScreen: React.FC = () => {
   const [coursesData, setCoursesData] = useState<Course[]>([]);
@@ -65,28 +64,14 @@ const CoursesScreen: React.FC = () => {
   });
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerTitle: "What do you want to learn today?",
-          headerStyle: {
-            backgroundColor: themeColors.background,
-          },
-          headerTitleStyle: {
-            color: themeColors.text,
-          },
-          headerShadowVisible: false,
-        }}
+    <View style={styles.container}>
+      <SearchBar onSearch={handleSearch} />
+      <CoursesList
+        courses={filteredCourses}
+        categories={categoryData}
+        onCoursePress={handleCoursePress}
       />
-      <View style={styles.container}>
-        <SearchBar onSearch={handleSearch} />
-        <CoursesList
-          courses={filteredCourses}
-          categories={categoryData}
-          onCoursePress={handleCoursePress}
-        />
-      </View>
-    </>
+    </View>
   );
 };
 

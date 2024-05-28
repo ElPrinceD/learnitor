@@ -36,7 +36,7 @@ const SearchBar: React.FC<Props> = ({ onSearch }) => {
       >
         <TextInput
           style={[styles.searchInput, { color: themeColors.text }]}
-          placeholder="Search for courses..."
+          placeholder="What do you want to learn today?"
           placeholderTextColor={themeColors.placeholder}
           onChangeText={handleSearch}
           value={searchQuery}
