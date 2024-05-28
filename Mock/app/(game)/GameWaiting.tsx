@@ -18,17 +18,22 @@ import GameButton from "../../components/GameButton";
 import { Ionicons } from "@expo/vector-icons";
 import ApiUrl from "../../config"; // Ensure this points to your API configuration
 
+// Define the type for a player
+type Player = {
+  id: number;
+  profilePicture: string;
+  profileName: string;
+};
+
 export default function GameWaitingScreen() {
   const { userInfo } = useAuth(); // Assuming useAuth provides user information
   const { isCreator, code } = useLocalSearchParams();
-  const [gameCode, setGameCode] = useState(code || "");
-  const [players, setPlayers] = useState<
-    { id: number; profilePicture: string; profileName: string }[]
-  >([]);
+  const [gameCode, setGameCode] = useState<string>(code || "");
+  const [players, setPlayers] = useState<Player[]>([]);
 
   useEffect(() => {
     // Initialize WebSocket connection
-    const ws = new WebSocket(`${ApiUrl}:8000/ws/game/?game_code=${gameCode}/`);
+    const ws = new WebSocket(`ws://192.168.48.61:8000/ws/game/?game_code=${gameCode}`);
 
     ws.onopen = () => {
       console.log("WebSocket connection opened");
@@ -36,8 +41,11 @@ export default function GameWaitingScreen() {
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      if (data.type === "player_joined") {
-        setPlayers((prevPlayers) => [...prevPlayers, data.player]);
+      console.log("WebSocket message received:", data);
+      if (data.message) {
+        // Assuming data.message contains the new player's details
+        const newPlayer: Player = data.message;
+        setPlayers((prevPlayers) => [...prevPlayers, newPlayer]);
       }
     };
 
@@ -82,7 +90,7 @@ export default function GameWaitingScreen() {
     console.log("Game started");
   };
 
-  const renderPlayer = ({ item }) => (
+  const renderPlayer = ({ item }: { item: Player }) => (
     <View style={styles.playerContainer}>
       <Image
         source={{ uri: item.profilePicture }}

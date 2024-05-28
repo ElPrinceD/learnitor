@@ -1,23 +1,22 @@
 import axios from "axios";
 import React, { useState, useEffect, useCallback } from "react";
-import { StyleSheet } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
+import { StyleSheet, useColorScheme } from "react-native";
 import RecommendedCoursesList from "../../components/Recommended";
 import EnrolledCoursesList from "../../components/EnrolledCoursesList";
-import { LinearGradient } from "expo-linear-gradient";
 import { Text, View } from "../../components/Themed";
 import ApiUrl from "../../config";
 import { useAuth } from "../../components/AuthContext";
-import { useFocusEffect } from "@react-navigation/native";
-import Swiper from "react-native-deck-swiper";
-import GradientCard from "../../components/InfoCard";
 import { router } from "expo-router";
+import Colors from "../../constants/Colors";
+import CardSwiper from "../../components/CardSwiper";
 
 const Index = () => {
   const { userToken, userInfo } = useAuth();
+  const colorScheme = useColorScheme();
   const [recommendedCoursesData, setRecommendedCoursesData] = useState([]);
   const [enrolledCoursesData, setEnrolledCoursesData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [cardIndex, setCardIndex] = useState(0);
 
   const dummyCardData = [
     {
@@ -28,17 +27,18 @@ const Index = () => {
       image: require("../../assets/images/clock1.png"),
     },
     {
-      title: "Tailor your topics according to your course description",
+      title: "Tailor topics according to course",
       description: "Variety of course topics, topic material & questions",
       colors: ["#dabda2", "#9b7a5d"],
       category: "Courses",
       image: require("../../assets/images/books.png"),
     },
     {
-      title: "Card 3",
+      title: "Games",
       description: "This is the description for card 3.",
       colors: ["#b1afe3", "#3d4e9b"],
-      category: "Timeline",
+      category: "Games",
+      image: require("../../assets/images/mystery-box-collage (1).png"),
     },
   ];
 
@@ -93,125 +93,55 @@ const Index = () => {
     fetchData();
   }, []);
 
-  const handleSwiped = () => {
-    setCardIndex((prevIndex) => (prevIndex + 1) % dummyCardData.length);
+  const handleCardPress = (card) => {
+    if (card.category === "Timeline") {
+      router.navigate({ pathname: "three" });
+    } else if (card.category === "Courses") {
+      router.navigate({ pathname: "two" });
+    } else {
+      router.navigate({ pathname: "GameIntro" });
+    }
   };
-  const handleCardPress = () => {
-    router.navigate({
-      pathname: "three",
-    });
-  };
+
+  const themeColors = Colors[colorScheme ?? "light"];
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 15,
+    },
+    cardContainer: {
+      flex: 1,
+      //zIndex: 3,
+    },
+    coursesContainer: {
+      flex: 2.5,
+    },
+    sectionTitle: {
+      fontSize: 25,
+      color: themeColors.selectedText,
+      fontWeight: "bold",
+      marginBottom: 5,
+      marginTop: 15,
+      alignSelf: "flex-start",
+    },
+  });
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={["#fdecd2", "#FFFFFF"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={styles.backgroundGradient}
-      >
-        <View style={styles.topContainer}></View>
-        <View style={styles.bottomContainer}>
-          <View style={{ flex: 1, marginLeft: -10 }}>
-            <Swiper
-              cards={dummyCardData}
-              renderCard={(card) =>
-                card ? (
-                  <GradientCard card={card} handleCardPress={handleCardPress} />
-                ) : (
-                  <View style={styles.cardPlaceholder}>
-                    <Text>No more cards</Text>
-                  </View>
-                )
-              }
-              onSwiped={handleSwiped}
-              verticalSwipe={true}
-              cardIndex={cardIndex}
-              stackSize={3}
-              stackSeparation={1}
-              stackScale={1}
-              backgroundColor="transparent"
-              infinite={true}
-            />
-          </View>
-          <Text style={[styles.sectionTitle, { marginTop: 120 }]}>
-            Enrolled Courses
-          </Text>
-          <EnrolledCoursesList enrolledCoursesData={enrolledCoursesData} />
-          <Text style={[styles.sectionTitle]}>Recommended for you</Text>
-          <RecommendedCoursesList
-            RecommendedCoursesData={recommendedCoursesData}
-          />
-        </View>
-      </LinearGradient>
+      <View style={styles.cardContainer}>
+        <CardSwiper cards={dummyCardData} onCardPress={handleCardPress} />
+      </View>
+      <View style={styles.coursesContainer}>
+        <Text style={styles.sectionTitle}>Enrolled Courses</Text>
+        <EnrolledCoursesList enrolledCoursesData={enrolledCoursesData} />
+        <Text style={styles.sectionTitle}>Recommended for you</Text>
+        <RecommendedCoursesList
+          RecommendedCoursesData={recommendedCoursesData}
+        />
+      </View>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  backgroundGradient: {
-    flex: 1,
-    width: "100%",
-    height: "100%",
-  },
-  topContainer: {
-    flex: 1,
-    backgroundColor: "transparent",
-    justifyContent: "center",
-    alignItems: "center",
-    height: "10.33%",
-  },
-  bottomContainer: {
-    flex: 2,
-    marginTop: -150,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    backgroundColor: "#ffffff",
-    padding: 20,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-  gradientContainer: {
-    flex: 1,
-    width: 390,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    height: 80,
-    paddingHorizontal: 20,
-  },
-  textWithIcon: {
-    flexDirection: "row",
-    backgroundColor: "none",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-  },
-  gradientText: {
-    color: "#fff",
-    fontSize: 20,
-    fontWeight: "normal",
-  },
-
-  sectionTitle: {
-    fontSize: 25,
-    color: "#D96B06",
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-  cardPlaceholder: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 40,
-  },
-});
 
 export default Index;

@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Image,
   StyleSheet,
-  useColorScheme,
 } from "react-native";
 
 import { router } from "expo-router";
@@ -107,6 +106,7 @@ const styles = StyleSheet.create({
     margin: 5,
     alignItems: "flex-start",
     position: "relative",
+    flex: 1,
   },
   touchable: {
     borderRadius: 10,

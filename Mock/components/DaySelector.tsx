@@ -53,7 +53,7 @@ const DaySelector: React.FC<DaySelectorProps> = ({ selectedDate, setSelectedDate
 
   return (
     <View style={styles.container}>
-      {/* <Text style={styles.month}>{month}</Text> */}
+      <Text style={styles.month}>{month}</Text>
       <View style={styles.selectorContainer}>
         <TouchableOpacity onPress={() => handleScroll("prev")}>
           <Text style={styles.arrow}>{"<"}</Text>

@@ -19,7 +19,7 @@ export default function GameIntro() {
 
   const joinGame = async () => {
     try {
-      const response = await axios.post(`${ApiUrl}:8000/games/${gameCode}/join/`,{}, {
+      const response = await axios.post(`${ApiUrl}:8000/games/${gameCode}/join/`,{game_code:gameCode}, {
         headers: {
           Authorization: `Token ${userToken?.token}`,
         },
@@ -29,7 +29,7 @@ export default function GameIntro() {
         // Redirect the user to the waiting screen
         router.navigate({
           pathname: "GameWaiting",
-          params: { gameCode: gameCode },
+          params: { code: gameCode },
         });
       } else {
         // Handle unsuccessful response

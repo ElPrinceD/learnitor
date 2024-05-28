@@ -44,6 +44,7 @@ export default function TabLayout() {
     },
     "text"
   );
+  const themeColors = Colors[colorScheme ?? "light"];
 
   const { userInfo } = useAuth();
 
@@ -70,7 +71,7 @@ export default function TabLayout() {
                     <Pressable>
                       {({ pressed }) => (
                         <Ionicons
-                          name="notifications"
+                          name="notifications-outline"
                           size={27}
                           color={Colors[colorScheme ?? "light"].text}
                           style={{
@@ -87,7 +88,7 @@ export default function TabLayout() {
                     <Pressable>
                       {({ pressed }) => (
                         <Ionicons
-                          name="game-controller"
+                          name="game-controller-outline"
                           size={27}
                           color={Colors[colorScheme ?? "light"].text}
                           style={{
@@ -112,9 +113,6 @@ export default function TabLayout() {
                 {greeting}, {userInfo?.user.first_name}!
               </Text>
             ),
-            headerStyle: {
-              backgroundColor: "#fdecd2", // Add this line
-            },
           }}
         />
         <Tabs.Screen
@@ -127,9 +125,6 @@ export default function TabLayout() {
 
             // headerTransparent: true,
             headerShadowVisible: false,
-            headerStyle: {
-              backgroundColor: "#fdecd2", // Add this line
-            },
           }}
         />
 
@@ -162,6 +157,5 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row-reverse",
-    backgroundColor: "#fdecd2",
   },
 });

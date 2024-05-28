@@ -1,8 +1,7 @@
-import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native';
+import React from "react";
+import { StyleSheet, Text, View, TouchableOpacity, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from 'expo-linear-gradient';
-
+import { LinearGradient } from "expo-linear-gradient";
 
 const GradientCard = ({ card, handleCardPress }) => {
   return (
@@ -18,8 +17,8 @@ const GradientCard = ({ card, handleCardPress }) => {
       </View>
       <Image source={card.image} style={styles.cardImage} />
       <Text style={styles.cardTitle}>{card.title}</Text>
-      <Text style={styles.cardDescription}>{card.description}</Text>
-      
+      {/* <Text style={styles.cardDescription}>{card.description}</Text> */}
+
       <TouchableOpacity onPress={handleCardPress} style={styles.forward}>
         <Ionicons name="arrow-forward-circle" size={30} color="#D96B06" />
       </TouchableOpacity>
@@ -29,18 +28,17 @@ const GradientCard = ({ card, handleCardPress }) => {
 
 const styles = StyleSheet.create({
   card: {
-    width: 370,
-    height: 200,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
+    width: 360,
+    height: 180,
+    borderRadius: 30,
+    justifyContent: "center",
+    // alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
     },
     marginLeft: -10,
-    marginTop: -160,
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
@@ -64,35 +62,39 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 30,
+    fontWeight: "bold",
+    marginTop: 45,
     marginBottom: 10,
+    marginLeft: 10,
+    textAlign: "left",
+    flexWrap: "wrap",
+    maxWidth: "50%",
     zIndex: 2,
   },
   cardDescription: {
     fontSize: 16,
-    color: '#333',
-    textAlign: 'left',
-    marginLeft: -20,
+    color: "#333",
+    textAlign: "left",
+    // marginLeft: -20,
     zIndex: 2,
   },
 
-    cardImage: {
-      width: 180, // Increased width
-      height: 200, // Increased height
-      position: 'absolute',
-      right: 6,
-      bottom: 0,
-      opacity: 0.5, // Optional: adjust opacity to make it blend better with the card background
-      zIndex: 1, // Ensures it stays behind other elements
-    },
-  
+  cardImage: {
+    width: 180,
+    height: 200,
+    position: "absolute",
+    right: 6,
+    bottom: 0,
+    // opacity: 0.5, // Optional: adjust opacity to make it blend better with the card background
+    zIndex: 1,
+  },
+
   forward: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 7,
     right: 15,
     zIndex: 2,
-  }
+  },
 });
 
 export default GradientCard;
