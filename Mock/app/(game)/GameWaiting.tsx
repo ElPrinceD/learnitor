@@ -30,21 +30,25 @@ type Player = {
 
 export default function GameWaitingScreen() {
   const { userInfo, userToken } = useAuth();
-  const { isCreator, code, id } = useLocalSearchParams();
+  const { isCreator, code, id, gameId } = useLocalSearchParams();
+  const [creator, setCreator] = useState()
+  const[ creatorId, setCreatorId] = useState()
   const [gameCode, setGameCode] = useState<string>(code || "");
   const [players, setPlayers] = useState<Player[]>([]);
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
   useEffect(() => {
-    console.log(id)
+    console.log("This is the enter: ",id)
     const fetchGameDetails = async () => {
       try {
-        const response = await axios.get(`${ApiUrl}:8000/games/${id}/`,{
+        const response = await axios.get(`${ApiUrl}:8000/games/${id || gameId}/`,{
           headers: { Authorization: `Token ${userToken?.token}` },
         });
         
         const { data } = response;
+        setCreator(data.creator.first_name)
+        setCreatorId(data.creator.id)
         if (data.players) {
           const newPlayers = data.players.map((player: any) => ({
             id: player.id,
@@ -86,6 +90,11 @@ export default function GameWaitingScreen() {
 
                 setPlayers(newPlayers); // Update player list with both existing and newly joined players
             }
+            if (data.event === "start_game") {
+              console.log("Game is starting!");
+              setGameCode("Started")
+              // Implement logic to start the game for the player
+            }
         } catch (error) {
             console.error("Error parsing JSON data:", error);
         }
@@ -123,14 +132,90 @@ export default function GameWaitingScreen() {
     }
   };
 
-  const handleStartGame = () => {
-    console.log("Game started");
-    // Implement the logic to start the game
+  const handleStartGame = async () => {
+    
+    try {
+      const response = await axios.post(`${ApiUrl}:8000/games/${id || gameId}/start_game/`, {}, {
+        headers: { Authorization: `Token ${userToken?.token}` },
+      });
+      if (response.status === 200) {
+        console.log("Game started");
+      }
+    } catch (error) {
+      console.error("Error starting the game:", error);
+    }
+  
   };
 
-
-  // console.log(players)
-  // console.log(gameCode)
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 16,
+    },
+    topContainerTitle: {
+      color: themeColors.text,
+      fontSize: 40,
+      fontWeight: "bold",
+      marginTop: 140,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      marginVertical: 20,
+    },
+    gameCode: {
+      color: themeColors.text,
+      fontSize: 24,
+      fontWeight: "bold",
+      marginRight: 10,
+    },
+    iconButton: {
+      padding: 5,
+      backgroundColor: "transparent",
+      borderRadius: 5,
+    },
+    waitingText: {
+      color: themeColors.textSecondary,
+      fontSize: 18,
+      fontWeight: "bold",
+      textAlign: "center",
+      marginBottom: 20,
+    },
+    playersList: {
+      paddingBottom: 80, // Add padding to ensure the last player is not obscured by the start button
+    },
+    playerContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 10,
+      backgroundColor: "transparent",
+      borderRadius: 10,
+      marginVertical: 5,
+    },
+    profileImage: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      marginRight: 10,
+    },
+    profileName: {
+      color: themeColors.text,
+      fontSize: 16,
+    },
+    startButtonContainer: {
+      position: "absolute",
+      bottom: 20,
+      width: 250,
+      alignSelf: "center",
+      backgroundColor: themeColors.buttonBackground,
+      padding: 15,
+      borderRadius: 5,
+      marginHorizontal: 10,
+      borderTopLeftRadius: 20,
+      borderBottomRightRadius: 20,
+    },
+  });
 
   const renderPlayer = ({ item }: { item: Player }) => (
     <View style={styles.playerContainer}>
@@ -141,7 +226,9 @@ export default function GameWaitingScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.topContainerTitle}>{userInfo?.user.first_name}'s Arena</Text>
+      <Text style={styles.topContainerTitle}>
+  {isCreator ? userInfo?.user.first_name : creator}'s Arena
+</Text>
       <View style={styles.header}>
         <Text style={styles.gameCode}>{gameCode}</Text>
         <TouchableOpacity onPress={copyToClipboard} style={styles.iconButton}>
@@ -164,15 +251,15 @@ export default function GameWaitingScreen() {
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.playersList}
       />
-      {isCreator && (
-        <View>
-          <GameButton
-            title="Start Game"
-            onPress={handleStartGame}
-            style={styles.startButtonContainer}
-          />
-        </View>
-      )}
+      {(isCreator || creatorId === userInfo?.user.id) && (
+  <View>
+    <GameButton
+      title="Start Game"
+      onPress={handleStartGame}
+      style={styles.startButtonContainer}
+    />
+  </View>
+)}
     </View>
   );
 }
@@ -180,74 +267,3 @@ export default function GameWaitingScreen() {
 
 
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: "#f5f5f5",
-  },
-  topContainerTitle: {
-    fontSize: 40,
-    fontWeight: "bold",
-    marginTop: 140,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginVertical: 20,
-  },
-  gameCode: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginRight: 10,
-  },
-  iconButton: {
-    padding: 10,
-    backgroundColor: "transparent",
-    borderRadius: 5,
-    marginHorizontal: 0,
-  },
-  iconText: {
-    color: "#ffffff",
-    fontSize: 16,
-  },
-  waitingText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  playersList: {
-    paddingBottom: 80, // Add padding to ensure the last player is not obscured by the start button
-  },
-  playerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 10,
-    backgroundColor: "transparent",
-    borderRadius: 10,
-    marginVertical: 5,
-  },
-  profileImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 10,
-  },
-  profileName: {
-    fontSize: 16,
-  },
-  startButtonContainer: {
-    position: "absolute",
-    bottom: 20,
-    width: 250,
-    alignSelf: "center",
-    backgroundColor: "#e1943b",
-    padding: 15,
-    borderRadius: 5,
-    marginHorizontal: 10,
-    borderTopLeftRadius: 20,
-    borderBottomRightRadius: 20,
-  },
-});

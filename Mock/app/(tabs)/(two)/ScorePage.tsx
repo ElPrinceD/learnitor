@@ -223,6 +223,7 @@ const ScorePage: React.FC = () => {
                 textAlign: "center",
                 position: "absolute",
                 top: 15,
+                width: 300
               },
             ]}
           >

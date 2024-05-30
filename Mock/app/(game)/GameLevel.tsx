@@ -43,6 +43,7 @@ const GameLevel: React.FC = () => {
 
       // Extract the game code from the response
       const gameCode = response.data.code;
+      const gameId = response.data.id
 
       // Navigate to the GameWaiting screen with the necessary parameters
       router.navigate({
@@ -53,6 +54,7 @@ const GameLevel: React.FC = () => {
           course: course?.toString(),
           isCreator: "true", // Convert boolean to string
           code: gameCode,
+          gameId: gameId,
         },
       });
 
