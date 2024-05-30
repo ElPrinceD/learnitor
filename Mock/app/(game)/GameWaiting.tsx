@@ -7,7 +7,7 @@ import {
   Image,
   TouchableOpacity,
   Share,
-  Dimensions,
+  useColorScheme,
   Platform,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
@@ -16,6 +16,7 @@ import { useAuth } from "../../components/AuthContext";
 import { useLocalSearchParams } from "expo-router";
 import GameButton from "../../components/GameButton";
 import { Ionicons } from "@expo/vector-icons";
+import Colors from "../../constants/Colors";
 
 export default function GameWaitingScreen() {
   const { userInfo } = useAuth(); // Assuming useAuth provides user information
@@ -24,6 +25,8 @@ export default function GameWaitingScreen() {
   const [players, setPlayers] = useState<
     { id: number; profilePicture: string; profileName: string }[]
   >([]);
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
 
   useEffect(() => {
     generateGameCode();
@@ -89,6 +92,75 @@ export default function GameWaitingScreen() {
     console.log("Game started");
   };
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 16,
+    },
+    topContainerTitle: {
+      color: themeColors.text,
+      fontSize: 40,
+      fontWeight: "bold",
+      marginTop: 140,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      marginVertical: 20,
+    },
+    gameCode: {
+      color: themeColors.text,
+      fontSize: 24,
+      fontWeight: "bold",
+      marginRight: 10,
+    },
+    iconButton: {
+      padding: 5,
+      backgroundColor: "transparent",
+      borderRadius: 5,
+    },
+    waitingText: {
+      color: themeColors.textSecondary,
+      fontSize: 18,
+      fontWeight: "bold",
+      textAlign: "center",
+      marginBottom: 20,
+    },
+    playersList: {
+      paddingBottom: 80, // Add padding to ensure the last player is not obscured by the start button
+    },
+    playerContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 10,
+      backgroundColor: "transparent",
+      borderRadius: 10,
+      marginVertical: 5,
+    },
+    profileImage: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      marginRight: 10,
+    },
+    profileName: {
+      color: themeColors.text,
+      fontSize: 16,
+    },
+    startButtonContainer: {
+      position: "absolute",
+      bottom: 20,
+      width: 250,
+      alignSelf: "center",
+      backgroundColor: themeColors.buttonBackground,
+      padding: 15,
+      borderRadius: 5,
+      marginHorizontal: 10,
+      borderTopLeftRadius: 20,
+      borderBottomRightRadius: 20,
+    },
+  });
   const renderPlayer = ({ item }) => (
     <View style={styles.playerContainer}>
       <Image
@@ -107,15 +179,15 @@ export default function GameWaitingScreen() {
       <View style={styles.header}>
         <Text style={styles.gameCode}>{gameCode}</Text>
         <TouchableOpacity onPress={copyToClipboard} style={styles.iconButton}>
-          <Ionicons name="copy-outline" size={24} color="#000" />
+          <Ionicons name="copy-outline" size={30} color={themeColors.icon} />
         </TouchableOpacity>
         <TouchableOpacity onPress={shareGameCode} style={styles.iconButton}>
           <Ionicons
             name={
               Platform.OS === "ios" ? "share-outline" : "share-social-sharp"
             }
-            size={24}
-            color="#000"
+            size={30}
+            color={themeColors.icon}
           />
         </TouchableOpacity>
       </View>
@@ -138,77 +210,3 @@ export default function GameWaitingScreen() {
     </View>
   );
 }
-
-const screenWidth = Dimensions.get("window").width;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: "#f5f5f5",
-  },
-  topContainerTitle: {
-    fontSize: 40,
-    fontWeight: "bold",
-    marginTop: 140,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginVertical: 20,
-  },
-  gameCode: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginRight: 10,
-  },
-  iconButton: {
-    padding: 10,
-    backgroundColor: "transparent",
-    borderRadius: 5,
-    marginHorizontal: 0,
-  },
-  iconText: {
-    color: "#ffffff",
-    fontSize: 16,
-  },
-  waitingText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  playersList: {
-    paddingBottom: 80, // Add padding to ensure the last player is not obscured by the start button
-  },
-  playerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 10,
-    backgroundColor: "transparent",
-    borderRadius: 10,
-    marginVertical: 5,
-  },
-  profileImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 10,
-  },
-  profileName: {
-    fontSize: 16,
-  },
-  startButtonContainer: {
-    position: "absolute",
-    bottom: 20,
-    width: 250,
-    alignSelf: "center",
-    backgroundColor: "#e1943b",
-    padding: 15,
-    borderRadius: 5,
-    marginHorizontal: 10,
-    borderTopLeftRadius: 20,
-    borderBottomRightRadius: 20,
-  },
-});

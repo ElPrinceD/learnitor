@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { Topic } from "./types";
 import { Ionicons } from "@expo/vector-icons";
-import Colors from "../constants/Colors"; // Adjust the import path as necessary
+import Colors from "../constants/Colors";
 
 interface CourseTopicsProps {
   topics: Topic[];
@@ -46,6 +46,8 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
   const clearSelection = () => {
     onSelectedTopicsChange([]);
   };
+
+  const showClearButton = selectedTopics.length > 0;
 
   const styles = StyleSheet.create({
     topicsContainer: {
@@ -105,6 +107,17 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
       marginBottom: 10,
       color: themeColors.text,
     },
+    clearButton: {
+      alignSelf: "flex-end",
+      backgroundColor: "#fff",
+      borderRadius: 50,
+      padding: 1,
+      marginTop: -10,
+      marginRight: 10,
+    },
+    clearButtonIcon: {
+      color: themeColors.buttonBackground,
+    },
   });
 
   return (
@@ -115,6 +128,15 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
       <Text style={styles.instructionText}>
         Select your topics in the order in which you want to learn them.
       </Text>
+      {showClearButton && (
+        <TouchableOpacity
+          style={styles.clearButton}
+          onPress={clearSelection}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="close" size={27} style={styles.clearButtonIcon} />
+        </TouchableOpacity>
+      )}
       {topics.map((topic, index) => {
         const isSelected = selectedTopics.some((t) => t.id === topic.id);
         const orderNumber =

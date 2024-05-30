@@ -1,3 +1,4 @@
+import React from "react";
 import {
   createMaterialTopTabNavigator,
   MaterialTopTabNavigationOptions,
@@ -25,7 +26,10 @@ const TopicLayout = () => {
           fontWeight: "bold",
           textTransform: "capitalize",
         },
-        tabBarIndicatorStyle: { backgroundColor: "#1C87ED", height: 3 },
+        tabBarIndicatorStyle: {
+          backgroundColor: "#097969",
+          height: 3,
+        },
       }}
     >
       <MaterialTopTabs.Screen

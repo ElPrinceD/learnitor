@@ -38,7 +38,11 @@ const CoursesList: React.FC<Props> = ({
       backgroundColor: themeColors.background,
     },
     categoryContainer: {
-      height: 40,
+      flex: 1,
+      backgroundColor: "transparent",
+    },
+    courseContainer: {
+      flex: 15,
     },
     categoryList: {
       marginBottom: "1%",
@@ -47,7 +51,7 @@ const CoursesList: React.FC<Props> = ({
       paddingHorizontal: 15,
       paddingVertical: 4,
       marginRight: 10,
-      borderRadius: 20,
+      borderRadius: 10,
       borderWidth: 1,
       borderColor: themeColors.tabIconDefault,
       backgroundColor: "transparent",
@@ -70,7 +74,7 @@ const CoursesList: React.FC<Props> = ({
     },
     courseListContainer: {
       // padding: 10,
-      backgroundColor: themeColors.background,
+      backgroundColor: themeColors.card,
     },
     courseItem: {
       flex: 1,
@@ -159,37 +163,39 @@ const CoursesList: React.FC<Props> = ({
       </View>
 
       {/* Course List */}
-      <FlatList
-        data={filteredCourses}
-        numColumns={2}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            onPress={() => onCoursePress(item)}
-            activeOpacity={0.5}
-            style={styles.courseItem}
-          >
-            <View style={styles.courseListContainer}>
-              <View style={styles.imageContainer}>
-                <Image source={{ uri: item.url }} style={styles.image} />
-                <View style={styles.newLabelContainer}>
-                  <Text style={styles.newLabelText}>NEW</Text>
+      <View style={styles.courseContainer}>
+        <FlatList
+          data={filteredCourses}
+          numColumns={2}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              onPress={() => onCoursePress(item)}
+              activeOpacity={0.5}
+              style={styles.courseItem}
+            >
+              <View style={styles.courseListContainer}>
+                <View style={styles.imageContainer}>
+                  <Image source={{ uri: item.url }} style={styles.image} />
+                  <View style={styles.newLabelContainer}>
+                    <Text style={styles.newLabelText}>NEW</Text>
+                  </View>
                 </View>
-              </View>
-              <View style={styles.textContainer}>
-                <Text style={styles.name} numberOfLines={1}>
-                  {item.title}
-                </Text>
-                {/* <Text style={styles.details} numberOfLines={2}>
+                <View style={styles.textContainer}>
+                  <Text style={styles.name} numberOfLines={1}>
+                    {item.title}
+                  </Text>
+                  {/* <Text style={styles.details} numberOfLines={2}>
                   {item.description} · {item.level}
                 </Text> */}
+                </View>
               </View>
-            </View>
-          </TouchableOpacity>
-        )}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.courseList}
-      />
+            </TouchableOpacity>
+          )}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.courseList}
+        />
+      </View>
     </View>
   );
 };

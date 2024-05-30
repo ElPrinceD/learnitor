@@ -42,17 +42,9 @@ const Index = () => {
     },
   ];
 
-  useFocusEffect(
-    useCallback(() => {
-      if (userToken && userInfo) {
-        fetchData();
-      }
-    }, [userToken, userInfo])
-  );
-
-  const fetchData = async () => {
+  // Fetch data function
+  const fetchData = async (token) => {
     try {
-      const token = userToken?.token;
       const coursesUrl = `${ApiUrl}:8000/api/course/all/`;
       const coursesResponse = await axios.get(coursesUrl, {
         headers: {
@@ -89,9 +81,21 @@ const Index = () => {
     }
   };
 
+  // Fetch data on focus if token and user info are available
+  useFocusEffect(
+    useCallback(() => {
+      if (userToken && userInfo) {
+        fetchData(userToken.token);
+      }
+    }, [userToken, userInfo])
+  );
+
+  // Fetch data on initial load if token and user info are available
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (userToken && userInfo) {
+      fetchData(userToken.token);
+    }
+  }, [userToken, userInfo]);
 
   const handleCardPress = (card) => {
     if (card.category === "Timeline") {
@@ -112,7 +116,6 @@ const Index = () => {
     },
     cardContainer: {
       flex: 1,
-      //zIndex: 3,
     },
     coursesContainer: {
       flex: 2.5,

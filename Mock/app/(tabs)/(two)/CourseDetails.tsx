@@ -7,6 +7,7 @@ import CourseTopics from "../../../components/CourseTopics";
 import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
 import { Topic, Course } from "../../../components/types";
+import Toast from "react-native-root-toast";
 
 const CourseDetails: React.FC = () => {
   const { course } = useLocalSearchParams();
@@ -142,6 +143,20 @@ const CourseDetails: React.FC = () => {
     setEnrollDisabled(selectedTopics.length === 0);
   }, [selectedTopics]);
 
+  const handleEnrolledDisabledPress = () => {
+    if (enrollDisabled) {
+      Toast.show("Select at least one topic", {
+        duration: Toast.durations.LONG,
+        position: Toast.positions.BOTTOM,
+        shadow: true,
+        animation: true,
+        hideOnPress: true,
+        delay: 0,
+        opacity: 0.8,
+      });
+    }
+  };
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -168,6 +183,7 @@ const CourseDetails: React.FC = () => {
         progress={progress}
         enrolled={enrolled}
         enrollDisabled={enrollDisabled}
+        onEnrollDisabledPress={handleEnrolledDisabledPress}
         handleContinue={handleContinue}
         topics={topics}
       />

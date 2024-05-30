@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, StyleSheet, ScrollView, Animated } from "react-native";
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  Animated,
+  useColorScheme,
+} from "react-native";
 import axios from "axios";
 import CourseRoadmap from "../../../components/CourseRoadmap";
 import RoadmapTitle from "../../../components/RoadmapTitle";
@@ -8,6 +14,8 @@ import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
 import { Topic, Course } from "../../../components/types";
 import { useNavigation } from "@react-navigation/native";
+import Colors from "../../../constants/Colors";
+import ProgressBar from "../../../components/ProgressBar";
 
 const EnrolledCourse: React.FC = () => {
   const { userToken, userInfo } = useAuth();
@@ -17,6 +25,8 @@ const EnrolledCourse: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number>(0);
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
 
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -67,20 +77,34 @@ const EnrolledCourse: React.FC = () => {
   const titleOpacity = scrollY.interpolate({
     inputRange: [0, 100],
     outputRange: [0, 1],
-    extrapolate: 'clamp',
+    extrapolate: "clamp",
   });
 
   const titleTranslateY = scrollY.interpolate({
     inputRange: [0, 100],
     outputRange: [10, 0],
-    extrapolate: 'clamp',
+    extrapolate: "clamp",
   });
+
+  const progressOpacity = scrollY.interpolate({
+    inputRange: [0, 160],
+    outputRange: [-3, 1],
+    extrapolate: "clamp",
+  });
+
+  const progressTranslateY = scrollY.interpolate({
+    inputRange: [0, 160],
+    outputRange: [10, 0],
+    extrapolate: "clamp",
+  });
+
   const handleTopicPress = (topic: Topic) => {
     router.push({
       pathname: "VideoMaterials",
       params: { topic: JSON.stringify(topic) },
     });
   };
+
   const handleQuestionPress = (topic: Topic) => {
     router.push({
       pathname: "Practice",
@@ -91,32 +115,87 @@ const EnrolledCourse: React.FC = () => {
     });
   };
 
-
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    scrollViewContent: {
+      flexGrow: 1,
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: "bold",
+      color: themeColors.text,
+      alignContent: "center",
+      marginVertical: 10,
+    },
+    progressContainer: {
+      marginTop: 5, // Add some margin to separate the progress bar from the title
+      width: "100%",
+      alignItems: "center", // Center align the progress bar
+      marginVertical: 10,
+    },
+    progressText: {
+      color: themeColors.textSecondary,
+      marginLeft: 10,
+    },
+  });
 
   useEffect(() => {
     navigation.setOptions({
       headerTitle: () => (
-        <Animated.Text
-          style={[
-            styles.headerTitle,
-            { opacity: titleOpacity, transform: [{ translateY: titleTranslateY }] },
-          ]}
-        >
-          {parsedCourse.title}
-        </Animated.Text>
+        <View>
+          <Animated.Text
+            style={[
+              styles.headerTitle,
+              {
+                opacity: titleOpacity,
+                transform: [{ translateY: titleTranslateY }],
+                textAlign: "center",
+              },
+            ]}
+          >
+            {parsedCourse.title}
+          </Animated.Text>
+          <Animated.View
+            style={[
+              styles.progressContainer,
+              {
+                opacity: progressOpacity,
+                transform: [{ translateY: progressTranslateY }],
+              },
+            ]}
+          >
+            <ProgressBar
+              progress={progress}
+              containerStyle={{
+                backgroundColor: themeColors.text,
+                height: 10,
+                width: 250, // Make sure the progress bar takes the full width
+              }}
+              fillStyle={{ backgroundColor: themeColors.icon }}
+            />
+          </Animated.View>
+        </View>
       ),
       headerShown: true,
       headerTitleStyle: {
         fontWeight: "bold",
       },
-      headerBackTitle: "",
       headerBackTitleVisible: false,
       headerStyle: {
-        backgroundColor: "#fdecd2", // Add this line
+        backgroundColor: themeColors.background,
       },
       headerShadowVisible: false,
+      headerTitleAlign: "center",
     });
-  }, [navigation, titleOpacity, titleTranslateY]);
+  }, [
+    navigation,
+    titleOpacity,
+    titleTranslateY,
+    progressOpacity,
+    progressTranslateY,
+  ]);
 
   return (
     <>
@@ -131,30 +210,15 @@ const EnrolledCourse: React.FC = () => {
         <View style={styles.container}>
           <RoadmapTitle course={parsedCourse} progress={progress} />
           <CourseRoadmap
-        enrolledTopics={enrolledTopics}
-        course={parsedCourse}
-        handleTopicPress={handleTopicPress}
-        handleQuestionPress={handleQuestionPress}
-      />       
-       </View>
+            enrolledTopics={enrolledTopics}
+            course={parsedCourse}
+            handleTopicPress={handleTopicPress}
+            handleQuestionPress={handleQuestionPress}
+          />
+        </View>
       </ScrollView>
     </>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    
-    
-  },
-  scrollViewContent: {
-    flexGrow: 1,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-});
 
 export default EnrolledCourse;

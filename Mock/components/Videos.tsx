@@ -35,7 +35,6 @@ const Videos: React.FC<VideosProps> = ({
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    backgroundColor: "#f0f0f0",
     borderRadius: 10,
   },
   title: {

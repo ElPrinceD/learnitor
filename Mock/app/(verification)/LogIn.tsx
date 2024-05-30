@@ -60,7 +60,7 @@ const LogIn = () => {
         // Handle successful response from backend
         login(response.data, response.data.token); // Logging in user with token
 
-        router.replace("(tabs)");
+        router.replace({ pathname: "(tabs)" });
         console.log(response.data.user);
       })
       .catch((error) => {

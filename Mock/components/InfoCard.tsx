@@ -29,7 +29,7 @@ const GradientCard = ({ card, handleCardPress }) => {
 const styles = StyleSheet.create({
   card: {
     width: 360,
-    height: 180,
+    height: 170,
     borderRadius: 30,
     justifyContent: "center",
     // alignItems: "center",

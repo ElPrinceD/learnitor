@@ -1,11 +1,14 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, useColorScheme } from "react-native";
 import React from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import PracticeLevel from "../../components/PracticeLevel";
 import { Level } from "../../components/types";
+import Colors from "../../constants/Colors";
 
 const GameLevel: React.FC = () => {
   const { topics, topic, course } = useLocalSearchParams();
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
 
   const handleLevelPress = (level: Level) => {
     router.navigate("GameWaiting");
@@ -33,6 +36,22 @@ const GameLevel: React.FC = () => {
     },
     { title: "Master", image: require("../../assets/images/Master.jpg") },
   ];
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 10,
+      marginTop: 50,
+    },
+    header: {
+      color: themeColors.text,
+      fontSize: 24,
+      fontWeight: "bold",
+      marginTop: 10,
+      marginBottom: 40,
+      textAlign: "center",
+    },
+  });
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Select a Level</Text>
@@ -40,18 +59,5 @@ const GameLevel: React.FC = () => {
     </View>
   );
 };
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 10,
-    marginTop: 50,
-  },
-  header: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginTop: 50,
-    marginBottom: 10,
-    textAlign: "center",
-  },
-});
+
 export default GameLevel;

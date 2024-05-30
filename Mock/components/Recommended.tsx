@@ -39,7 +39,7 @@ const RecommendedCoursesList: React.FC<Props> = ({
     courseListContainer: {
       // padding: 10,
       flex: 1,
-      backgroundColor: themeColors.background,
+      backgroundColor: themeColors.card,
     },
     imageContainer: {
       flex: 2,
@@ -66,7 +66,7 @@ const RecommendedCoursesList: React.FC<Props> = ({
     },
     details: {
       fontSize: 16,
-      color: themeColors.tabIconDefault,
+      color: themeColors.textSecondary,
       textAlign: "left",
     },
   });
@@ -80,7 +80,7 @@ const RecommendedCoursesList: React.FC<Props> = ({
           <TouchableOpacity
             onPress={() => {
               router.navigate({
-                pathname: "CourseDetails",
+                pathname: "/CourseDetails",
                 params: { course: JSON.stringify(item) },
               });
             }}

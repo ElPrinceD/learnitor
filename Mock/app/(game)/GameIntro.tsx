@@ -1,17 +1,27 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TextInput,
   StyleSheet,
   Image,
-  KeyboardAvoidingView,
+  useColorScheme,
 } from "react-native";
 import { router } from "expo-router";
+import Toast from "react-native-root-toast";
 import GameButton from "../../components/GameButton";
+import Colors from "../../constants/Colors";
 
 export default function GameIntro() {
   const [gameCode, setGameCode] = useState("");
+  const [joinGameDisabled, setJoinGameDisabled] = useState<boolean>(true);
+
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
+
+  const createGame = () => {
+    router.navigate("GameCourses");
+  };
 
   const joinGame = () => {
     router.navigate({
@@ -20,11 +30,144 @@ export default function GameIntro() {
     });
   };
 
+  useEffect(() => {
+    setJoinGameDisabled(gameCode.length !== 6);
+  }, [gameCode]);
+
+  const handleJoinGameDisabledPress = () => {
+    if (joinGameDisabled) {
+      Toast.show("Enter 6-character code", {
+        duration: Toast.durations.LONG,
+        position: Toast.positions.BOTTOM,
+        shadow: true,
+        animation: true,
+        hideOnPress: true,
+        delay: 0,
+        opacity: 0.8,
+      });
+    }
+  };
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+
+    topContainer: {
+      flex: 2,
+      justifyContent: "center",
+      paddingTop: 20,
+      paddingHorizontal: 10,
+    },
+    topRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "flex-start",
+    },
+    topImage: {
+      width: 300,
+      height: 300,
+      resizeMode: "contain", // Maintain aspect ratio
+      marginBottom: 16,
+      marginLeft: -40,
+      marginRight: 80,
+    },
+
+    topContainerTitle: {
+      color: themeColors.text,
+      fontSize: 40,
+      fontWeight: "bold",
+      marginBottom: 0,
+    },
+    topContainerSubtitle: {
+      fontSize: 24,
+      color: themeColors.textSecondary,
+      marginBottom: 90,
+    },
+
+    bottomContainer: {
+      flex: 2,
+      marginTop: -40,
+      borderTopLeftRadius: 30,
+      borderTopRightRadius: 30,
+      backgroundColor: themeColors.background,
+      padding: 20,
+      width: "100%",
+      alignItems: "center",
+    },
+    title: {
+      color: themeColors.text,
+      fontSize: 24,
+      fontWeight: "bold",
+      marginBottom: 20,
+      textAlign: "center",
+    },
+    codeCard: {
+      backgroundColor: themeColors.card,
+      borderRadius: 10,
+      padding: 30,
+      paddingTop: 50,
+      marginTop: -100,
+      marginBottom: 20,
+      shadowColor: themeColors.shadow,
+      shadowOpacity: 0.1,
+      shadowRadius: 10,
+      elevation: 2,
+      width: "100%",
+      height: 240,
+    },
+    cardTitle: {
+      fontSize: 25,
+      fontWeight: "bold",
+      marginBottom: 10,
+      color: themeColors.text,
+    },
+    cardSubtitle: {
+      fontSize: 14,
+      color: themeColors.textSecondary,
+      marginBottom: 20,
+    },
+    inputRow: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    input: {
+      borderWidth: 2,
+      margin: 10,
+      borderColor: themeColors.border,
+      borderRadius: 5,
+      padding: 6,
+      height: 40,
+      flex: 1,
+      borderTopLeftRadius: 20,
+      borderBottomRightRadius: 20,
+      color: themeColors.text,
+    },
+    joinButton: {
+      backgroundColor: joinGameDisabled
+        ? themeColors.buttonDisabled
+        : themeColors.buttonBackground,
+      borderTopLeftRadius: 20,
+      borderBottomRightRadius: 20,
+      opacity: joinGameDisabled ? 0.5 : 1,
+    },
+
+    createButton: {
+      marginTop: 20,
+      backgroundColor: themeColors.buttonBackground,
+      borderTopLeftRadius: 20,
+      borderBottomRightRadius: 20,
+    },
+    noCodeContainer: {
+      alignItems: "center",
+    },
+  });
+
   return (
     <View style={styles.container}>
       <View style={styles.topContainer}>
         <View style={styles.topRow}>
-          <View style={styles.topContainerText}>
+          <View>
             <Text style={styles.topContainerTitle}>Let's Play</Text>
             <Text style={styles.topContainerSubtitle}>and WIN!</Text>
           </View>
@@ -45,25 +188,23 @@ export default function GameIntro() {
               value={gameCode}
               onChangeText={setGameCode}
               placeholder="Eg: Cx893P"
+              placeholderTextColor={themeColors.textSecondary}
             />
             <GameButton
               title="Join Game"
-              onPress={joinGame}
-              disabled={gameCode.length !== 6}
-              style={
-                gameCode.length === 6
-                  ? styles.joinButton
-                  : styles.joinButtonDisabled
+              onPress={
+                joinGameDisabled ? handleJoinGameDisabledPress : joinGame
               }
+              style={styles.joinButton}
             />
           </View>
         </View>
         <View style={styles.noCodeContainer}>
-          <Text>No Code?</Text>
+          {/* <Text>No Code?</Text> */}
           <Text style={styles.title}>Start your own game!</Text>
           <GameButton
             title="Create Game"
-            onPress={() => router.navigate("GameCourses")}
+            onPress={createGame}
             style={styles.createButton}
           />
         </View>
@@ -71,122 +212,3 @@ export default function GameIntro() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
-    textAlign: "center",
-  },
-  topContainer: {
-    flex: 2,
-    backgroundColor: "#fdecd2",
-    justifyContent: "center",
-    paddingTop: 20,
-  },
-  topRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  topImage: {
-    width: 300, // Make the image bigger
-    height: 300,
-    resizeMode: "contain", // Maintain aspect ratio
-    marginBottom: 16, // Bring the image down a little
-    marginLeft: -40,
-    marginRight: 80,
-  },
-  topContainerText: {
-    alignItems: "flex-start",
-    paddingLeft: 100,
-  },
-  topContainerTitle: {
-    fontSize: 40,
-    fontWeight: "bold",
-    marginBottom: 0,
-  },
-  topContainerSubtitle: {
-    fontSize: 24,
-    color: "#777",
-    marginBottom: 90,
-  },
-  keyboardAvoidingContainer: {
-    flex: 1,
-  },
-  bottomContainer: {
-    flex: 2,
-    marginTop: -40,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    backgroundColor: "#ffffff",
-    padding: 20,
-    width: "100%",
-    alignItems: "center",
-  },
-  codeCard: {
-    backgroundColor: "#f9f9f9",
-    borderRadius: 10,
-    padding: 30,
-    paddingTop: 50,
-    marginTop: -100,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    width: "100%",
-    height: 240,
-  },
-  cardTitle: {
-    fontSize: 25,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-  cardSubtitle: {
-    fontSize: 14,
-    color: "#777",
-    marginBottom: 20,
-  },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#bdbbb9",
-    borderRadius: 5,
-    padding: 6,
-    color: "#000",
-    height: 40,
-    flex: 1,
-    borderTopLeftRadius: 20,
-    borderBottomRightRadius: 20,
-  },
-  joinButton: {
-    marginTop: 10,
-    backgroundColor: "#e1943b",
-    borderTopLeftRadius: 20,
-    borderBottomRightRadius: 20,
-  },
-  joinButtonDisabled: {
-    marginTop: 10,
-    backgroundColor: "#ccc", // Custom disabled color
-    borderTopLeftRadius: 20,
-    borderBottomRightRadius: 20,
-  },
-  createButton: {
-    marginTop: 20,
-    backgroundColor: "#e1943b",
-    borderTopLeftRadius: 20,
-    borderBottomRightRadius: 20,
-  },
-  noCodeContainer: {
-    alignItems: "center",
-  },
-});

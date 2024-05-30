@@ -9,6 +9,7 @@ import {
   useColorScheme,
 } from "react-native";
 import { Level } from "./types";
+import Colors from "../constants/Colors";
 
 interface Props {
   onPress: (level: Level) => void;
@@ -17,28 +18,18 @@ interface Props {
 
 const PracticeLevel: React.FC<Props> = ({ onPress, levels }) => {
   const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
 
   const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      marginTop: 50,
-      paddingHorizontal: 10,
-    },
     item: {
-      backgroundColor: colorScheme === "dark" ? "#181818" : "#fff",
+      backgroundColor: themeColors.card,
       borderRadius: 10,
-      alignItems: "center",
-      justifyContent: "center",
       marginVertical: 15,
       flex: 1,
       marginHorizontal: 5,
       height: 200,
-      elevation: 3,
-      shadowColor: colorScheme === "dark" ? "#000" : "#ccc",
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
+      elevation: 2,
+      shadowColor: themeColors.shadow,
       shadowOpacity: 0.25,
       shadowRadius: 3.84,
     },
@@ -65,7 +56,7 @@ const PracticeLevel: React.FC<Props> = ({ onPress, levels }) => {
       fontWeight: "bold",
       marginTop: 10,
       marginBottom: 10,
-      color: colorScheme === "dark" ? "#fff" : "#333",
+      color: themeColors.text,
     },
   });
 
@@ -81,7 +72,7 @@ const PracticeLevel: React.FC<Props> = ({ onPress, levels }) => {
   );
 
   return (
-    <View style={styles.container}>
+    <View>
       <FlatList
         data={levels}
         numColumns={2}

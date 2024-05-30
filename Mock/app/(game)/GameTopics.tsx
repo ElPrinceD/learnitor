@@ -6,6 +6,7 @@ import {
   FlatList,
   Dimensions,
   TouchableOpacity,
+  useColorScheme,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import axios from "axios";
@@ -15,6 +16,7 @@ import { useAuth } from "../../components/AuthContext";
 import ApiUrl from "../../config";
 import TimelineCategoryItem from "../../components/TimelineCategoryItem";
 import GameButton from "../../components/GameButton";
+import Colors from "../../constants/Colors";
 
 const GameTopics: React.FC = () => {
   const { userToken } = useAuth();
@@ -23,6 +25,9 @@ const GameTopics: React.FC = () => {
   const [selectedTopics, setSelectedTopics] = useState<Topic[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
   const screenWidth = Dimensions.get("window").width;
+
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
 
   const parsedCourse: Course =
     typeof course === "string" ? JSON.parse(course) : course;
@@ -114,6 +119,74 @@ const GameTopics: React.FC = () => {
     });
   };
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 10,
+      marginTop: 50,
+    },
+    header: {
+      color: themeColors.text,
+      fontSize: 24,
+      fontWeight: "bold",
+      marginTop: 10,
+      marginBottom: 20,
+      textAlign: "center",
+    },
+    row: {
+      justifyContent: "space-between",
+    },
+    flatListContent: {
+      paddingBottom: 20,
+    },
+    topicContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 10,
+      position: "relative",
+    },
+    checkBoxContainer: {
+      position: "absolute",
+      top: 7,
+      right: -1.5,
+      zIndex: 1,
+    },
+    checkBox: {
+      width: 24,
+      height: 24,
+      justifyContent: "center",
+      alignItems: "center",
+      alignSelf: "flex-end",
+    },
+    selectAllContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      alignSelf: "flex-end",
+    },
+    selectAllText: {
+      color: themeColors.text,
+      fontSize: 16,
+      fontWeight: "bold",
+      marginLeft: 5,
+    },
+    continueButton: {
+      fontSize: 18,
+      fontWeight: "bold",
+      textAlign: "center",
+      marginTop: 20,
+      position: "absolute",
+      bottom: 20,
+      width: 250,
+      alignSelf: "center",
+      backgroundColor: themeColors.buttonBackground,
+      padding: 15,
+      borderRadius: 5,
+      marginHorizontal: 10,
+      borderTopLeftRadius: 20,
+      borderBottomRightRadius: 20,
+    },
+  });
+
   const renderItem = ({ item }: { item: Topic }) => {
     const opacity = item.isChecked ? 0.9 : 1;
     return (
@@ -125,10 +198,10 @@ const GameTopics: React.FC = () => {
                 <Ionicons
                   name="checkmark-circle-sharp"
                   size={24}
-                  color="#CD7F32"
+                  color={themeColors.icon}
                 />
               ) : (
-                <Feather name="circle" size={24} color="black" />
+                <Feather name="circle" size={22} color="black" />
               ))}
           </TouchableOpacity>
         </View>
@@ -158,11 +231,19 @@ const GameTopics: React.FC = () => {
       >
         <View style={styles.checkBox}>
           {selectedTopics.length === topics.length ? (
-            <Ionicons name="checkmark-circle-sharp" size={24} color="#e1943b" />
+            <Ionicons
+              name="checkmark-circle-sharp"
+              size={24}
+              color={themeColors.icon}
+            />
           ) : selectedTopics.length > 0 ? (
-            <Feather name="circle" size={24} color="black" />
+            <Feather name="circle" size={22} color={themeColors.text} />
           ) : (
-            <Ionicons name="checkmark-circle-outline" size={24} color="black" />
+            <Ionicons
+              name="checkmark-circle-outline"
+              size={24}
+              color={themeColors.text}
+            />
           )}
         </View>
         <Text style={styles.selectAllText}>Select All</Text>
@@ -187,73 +268,6 @@ const GameTopics: React.FC = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 10,
-    marginTop: 50,
-  },
-  header: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginTop: 10,
-    marginBottom: 20,
-    textAlign: "center",
-  },
-  row: {
-    justifyContent: "space-between",
-  },
-  flatListContent: {
-    paddingBottom: 20,
-  },
-  topicContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-    position: "relative",
-  },
-  checkBoxContainer: {
-    position: "absolute",
-    top: 7,
-    right: -1.5,
-    zIndex: 1,
-  },
-  checkBox: {
-    width: 24,
-    height: 24,
-    justifyContent: "center",
-    alignItems: "center",
-    alignSelf: "flex-end",
-  },
-  selectAllContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-end",
-  },
-  selectAllText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginLeft: 5,
-  },
-  continueButton: {
-    fontSize: 18,
-    fontWeight: "bold",
-    textAlign: "center",
-    color: "#ffffff",
-    marginTop: 20,
-    position: "absolute",
-    bottom: 20,
-    width: 250,
-    alignSelf: "center",
-    backgroundColor: "#e1943b",
-    padding: 15,
-    borderRadius: 5,
-    marginHorizontal: 10,
-    borderTopLeftRadius: 20,
-    borderBottomRightRadius: 20,
-  },
-});
 
 const darkColors = [
   "#1A1D23",

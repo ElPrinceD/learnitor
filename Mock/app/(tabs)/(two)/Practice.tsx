@@ -1,12 +1,15 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { View, StyleSheet, useColorScheme, Text } from "react-native";
+import { router, useLocalSearchParams, Stack } from "expo-router";
 import PracticeInformation from "../../../components/PracticeInformation";
 import PracticeLevel from "../../../components/PracticeLevel";
 import { Topic, Level } from "../../../components/types";
+import Colors from "../../../constants/Colors";
 
 const Practice: React.FC = () => {
   const { topic, course } = useLocalSearchParams();
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
 
   const parsedTopic: Topic =
     typeof topic === "string" ? JSON.parse(topic) : topic;
@@ -36,18 +39,50 @@ const Practice: React.FC = () => {
     },
     { title: "Master", image: require("../../../assets/images/Master.jpg") },
   ];
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      justifyContent: "center",
+    },
+    headerTitle: {
+      marginVertical: 10,
+    },
+    description: {
+      fontSize: 16,
+      color: themeColors.textSecondary,
+      textAlign: "center",
+    },
+  });
   return (
-    <View style={styles.container}>
-      <PracticeInformation topic={parsedTopic} />
-      <PracticeLevel onPress={handleLevelPress} levels={levels} />
-    </View>
+    <>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerTitle: () => (
+            <View style={styles.headerTitle}>
+              <Text
+                style={{
+                  color: themeColors.text,
+                  fontSize: 20,
+                  fontWeight: "bold",
+                }}
+              >
+                {parsedTopic.title}
+              </Text>
+              <Text style={styles.description}>Practice</Text>
+            </View>
+          ),
+          headerShadowVisible: false,
+          headerTitleAlign: "center",
+        }}
+      />
+      <View style={styles.container}>
+        {/* <PracticeInformation topic={parsedTopic} /> */}
+        <PracticeLevel onPress={handleLevelPress} levels={levels} />
+      </View>
+    </>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
 
 export default Practice;
