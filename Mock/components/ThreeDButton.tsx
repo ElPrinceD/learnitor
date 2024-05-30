@@ -5,10 +5,14 @@ import {
   Text,
   StyleSheet,
   Animated,
+  useColorScheme,
 } from "react-native";
+import Colors from "../constants/Colors";
 
 const ThreeDButton = ({ title, onPress }) => {
   const [animatedValue] = useState(new Animated.Value(0));
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
 
   const onPressIn = () => {
     Animated.spring(animatedValue, {
@@ -42,6 +46,47 @@ const ThreeDButton = ({ title, onPress }) => {
     }),
   };
 
+  const styles = StyleSheet.create({
+    container: {
+      marginTop: 20,
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    button: {
+      height: 60,
+      width: 70,
+    },
+    outer: {
+      flex: 1,
+      padding: 10,
+      borderRadius: 10,
+      transform: [{ rotate: "45deg" }],
+      backgroundColor: "#436A6E",
+      shadowColor: "#000",
+      shadowOffset: { width: 4, height: 9 },
+      shadowOpacity: 1,
+      shadowRadius: 2,
+      elevation: 5,
+    },
+    height: {
+      borderRadius: 15,
+      backgroundColor: "#023020",
+    },
+    inner: {
+      backgroundColor: themeColors.icon,
+      alignItems: "center",
+      justifyContent: "center",
+      height: "100%",
+    },
+    buttonText: {
+      color: "#fff",
+      fontWeight: "bold",
+
+      fontSize: 20,
+    },
+  });
+
   return (
     <View style={styles.container}>
       <TouchableOpacity
@@ -64,46 +109,5 @@ const ThreeDButton = ({ title, onPress }) => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    marginTop: 20,
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  button: {
-    height: 60,
-    width: 70,
-  },
-  outer: {
-    flex: 1,
-    padding: 10,
-    borderRadius: 10,
-    transform: [{ rotate: "45deg" }],
-    backgroundColor: "#b16f24",
-    shadowColor: "#000",
-    shadowOffset: { width: 4, height: 9 },
-    shadowOpacity: 1,
-    shadowRadius: 2,
-    elevation: 5,
-  },
-  height: {
-    borderRadius: 15,
-    backgroundColor: "#454141",
-  },
-  inner: {
-    backgroundColor: "#9b5b11",
-    alignItems: "center",
-    justifyContent: "center",
-    height: "100%",
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
-
-    fontSize: 20,
-  },
-});
 
 export default ThreeDButton;

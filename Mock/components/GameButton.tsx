@@ -9,10 +9,11 @@ import {
 
 type GameButtonProps = {
   onPress: () => void;
-  title: string;
+  title?: string;
   disabled?: boolean;
   style?: ViewStyle | ViewStyle[]; // Updated to accept a list of styles
   textStyle?: TextStyle | TextStyle[]; // Updated to accept a list of styles
+  children?: React.ReactNode; // Added children prop
 };
 
 const GameButton: React.FC<GameButtonProps> = ({
@@ -21,6 +22,7 @@ const GameButton: React.FC<GameButtonProps> = ({
   disabled = false,
   style,
   textStyle,
+  children,
 }) => {
   return (
     <TouchableOpacity
@@ -31,16 +33,20 @@ const GameButton: React.FC<GameButtonProps> = ({
       ]}
       onPress={onPress}
       disabled={disabled}
-      activeOpacity={0.8}
+      activeOpacity={0.6}
     >
-      <Text
-        style={[
-          styles.text,
-          ...(Array.isArray(textStyle) ? textStyle : [textStyle]),
-        ]}
-      >
-        {title}
-      </Text>
+      {children ? (
+        children
+      ) : (
+        <Text
+          style={[
+            styles.text,
+            ...(Array.isArray(textStyle) ? textStyle : [textStyle]),
+          ]}
+        >
+          {title}
+        </Text>
+      )}
     </TouchableOpacity>
   );
 };
@@ -52,7 +58,6 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     alignItems: "center",
     justifyContent: "center",
-    margin: 10,
   },
   buttonDisabled: {
     backgroundColor: "red",
@@ -60,6 +65,7 @@ const styles = StyleSheet.create({
   text: {
     color: "#FFFFFF",
     fontSize: 16,
+    fontWeight: "bold",
   },
 });
 

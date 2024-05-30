@@ -1,16 +1,9 @@
 import React from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  useColorScheme,
-  Image,
-} from "react-native";
+import { View, Text, StyleSheet, useColorScheme, Image } from "react-native";
 import { FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
 import ProgressBar from "./ProgressBar";
 import Colors from "../constants/Colors";
-import CourseTopics from "./CourseTopics";
+import GameButton from "../components/GameButton";
 
 const CourseInformation = ({
   course,
@@ -20,6 +13,7 @@ const CourseInformation = ({
   progress,
   enrolled,
   enrollDisabled,
+  onEnrollDisabledPress,
   topics,
 }) => {
   const colorScheme = useColorScheme();
@@ -51,6 +45,7 @@ const CourseInformation = ({
       color: themeColors.icon,
       textAlign: "center",
       top: 5,
+      fontWeight: "bold",
     },
     description: {
       fontSize: 18,
@@ -76,22 +71,21 @@ const CourseInformation = ({
       backgroundColor: enrollDisabled
         ? themeColors.buttonDisabled
         : themeColors.buttonBackground,
-      paddingVertical: 15,
-      paddingHorizontal: 20,
-      borderRadius: 20,
+      paddingVertical: 10,
+      borderRadius: 10,
       alignItems: "center",
       opacity: enrollDisabled ? 0.5 : 1,
     },
     continueButton: {
       paddingVertical: 10,
       paddingHorizontal: 20,
-      borderRadius: 20,
+      borderRadius: 10,
       backgroundColor: themeColors.buttonBackground,
       marginTop: -40,
+      marginHorizontal: 5,
       flexDirection: "row",
       justifyContent: "center",
       width: "48%",
-      marginRight: 10,
     },
     continueText: {
       color: themeColors.text,
@@ -144,7 +138,9 @@ const CourseInformation = ({
         {enrolled ? (
           <View>
             <View style={styles.buttonContainer}>
-              <TouchableOpacity
+              <GameButton
+                title="Unenroll"
+                onPress={unenrollCourse}
                 style={[
                   styles.continueButton,
                   {
@@ -153,14 +149,11 @@ const CourseInformation = ({
                     borderColor: themeColors.border,
                   },
                 ]}
-                activeOpacity={0.3}
-                onPress={unenrollCourse}
-              >
-                <Text style={styles.continueText}>Unenroll</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+                textStyle={styles.continueText}
+              />
+
+              <GameButton
                 style={styles.continueButton}
-                activeOpacity={0.3}
                 onPress={handleContinue}
               >
                 <Text style={styles.continueText}>
@@ -169,10 +162,9 @@ const CourseInformation = ({
                     style={styles.arrowIcon}
                     name="arrow-alt-circle-right"
                     size={15}
-                    color="black"
                   />
                 </Text>
-              </TouchableOpacity>
+              </GameButton>
             </View>
             <View style={styles.progressContainer}>
               <ProgressBar
@@ -189,14 +181,11 @@ const CourseInformation = ({
             </View>
           </View>
         ) : (
-          <TouchableOpacity
-            style={[styles.enrollButton, { opacity: enrollDisabled ? 0.5 : 1 }]}
-            activeOpacity={0.3}
-            onPress={enrollCourse}
-            disabled={enrollDisabled}
-          >
-            <Text style={styles.continueText}>Enroll</Text>
-          </TouchableOpacity>
+          <GameButton
+            onPress={enrollDisabled ? onEnrollDisabledPress : enrollCourse}
+            style={styles.enrollButton}
+            title="Enroll"
+          />
         )}
       </View>
     </View>

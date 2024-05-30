@@ -7,6 +7,8 @@ import {
   useColorScheme,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
+import Toast from "react-native-root-toast";
+
 import axios from "axios";
 import Questions from "../../../components/Questions";
 import ApiUrl from "../../../config";
@@ -14,6 +16,7 @@ import { useAuth } from "../../../components/AuthContext";
 import { Topic, Question, Answer } from "../../../components/types";
 import GameButton from "../../../components/GameButton";
 import ProgressBar from "../../../components/ProgressBar";
+import Colors from "../../../constants/Colors";
 
 const PracticeQuestions: React.FC = () => {
   const { topic, level, course, isTimed, duration } = useLocalSearchParams();
@@ -21,12 +24,18 @@ const PracticeQuestions: React.FC = () => {
   const [practiceQuestions, setPracticeQuestions] = useState<Question[]>([]);
   const [practiceAnswers, setPracticeAnswers] = useState<Answer[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: number[] }>({});
-  const [questionsWithMultipleCorrectAnswers, setQuestionsWithMultipleCorrectAnswers] = useState<number[]>([]);
+  const [selectedAnswers, setSelectedAnswers] = useState<{
+    [key: number]: number[];
+  }>({});
+  const [
+    questionsWithMultipleCorrectAnswers,
+    setQuestionsWithMultipleCorrectAnswers,
+  ] = useState<number[]>([]);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   const parsedLevel: string = typeof level === "string" ? level : "";
-  const parsedTopic: Topic = typeof topic === "string" ? JSON.parse(topic) : topic;
+  const parsedTopic: Topic =
+    typeof topic === "string" ? JSON.parse(topic) : topic;
 
   useEffect(() => {
     fetchData();
@@ -205,10 +214,25 @@ const PracticeQuestions: React.FC = () => {
 
   const isSubmitDisabled = !allQuestionsAnswered;
 
+  const handleDisabledSubmitPress = () => {
+    if (isSubmitDisabled) {
+      Toast.show("Answer all questions", {
+        duration: Toast.durations.LONG,
+        position: Toast.positions.BOTTOM,
+        shadow: true,
+        animation: true,
+        hideOnPress: true,
+        delay: 0,
+        //   backgroundColor: "#fdecd2",
+        opacity: 0.8,
+      });
+    }
+  };
   // Calculate progress percentage
   const progress = (currentQuestion + 1) / practiceQuestions.length;
 
   const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
 
   const styles = StyleSheet.create({
     container: {
@@ -216,12 +240,11 @@ const PracticeQuestions: React.FC = () => {
       marginTop: 50,
       padding: 20,
       elevation: 1,
-      backgroundColor: "#e0dede",
     },
-    orange: {
-      color: "#b16f24",
-      fontSize: 20,
-      
+    questionNumberText: {
+      color: themeColors.tint,
+      fontSize: 15,
+      fontWeight: "bold",
     },
     progressBarContainer: {
       height: 10,
@@ -235,61 +258,51 @@ const PracticeQuestions: React.FC = () => {
       height: "100%",
       backgroundColor: "#76c7c0",
     },
-    checkBox: {
-      width: 20,
-      height: 20,
-      borderWidth: 2,
-      borderColor: "#888",
-      borderRadius: 3,
-      marginRight: 10,
-    },
-    checkedBox: {
-      backgroundColor: "#888",
-    },
+
     buttonContainer: {
       flexDirection: "row",
       justifyContent: "space-between",
       paddingTop: 30,
-      backgroundColor:"#e0dede"
     },
     button: {
-      backgroundColor: "#e1943b",
+      backgroundColor: themeColors.buttonBackground,
       padding: 15,
       borderRadius: 5,
       flex: 1,
       marginHorizontal: 10,
       borderTopLeftRadius: 20,
       borderBottomRightRadius: 20,
+      margin: 10,
     },
-    buttonText: {
-      fontSize: 16,
-      color: colorScheme === "dark" ? "#ffffff" : "#ffffff",
-      textAlign: "center",
-    },
-    disabledButtonText: {
-      backgroundColor: "#ccc",
-      padding: 15,
-      borderRadius: 5,
-      flex: 1,
-      marginHorizontal: 10,
-      borderTopLeftRadius: 20,
-      borderBottomRightRadius: 20,
 
+    disabledButtonText: {
+      backgroundColor: themeColors.buttonDisabled,
+      padding: 15,
+      borderRadius: 5,
+      flex: 1,
+      marginHorizontal: 10,
+      borderTopLeftRadius: 20,
+      borderBottomRightRadius: 20,
+      opacity: 0.5,
+      margin: 10,
     },
     timer: {
       fontSize: 18,
       textAlign: "center",
-      
+      color: themeColors.text,
+      fontWeight: "bold",
     },
     timerRed: {
       color: "red",
+      fontWeight: "bold",
     },
   });
 
   return (
-    <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between' }}>
+    <ScrollView
+      contentContainerStyle={{ flexGrow: 1, justifyContent: "space-between" }}
+    >
       <View style={styles.container}>
-        
         {timeLeft !== null && (
           <Text
             style={[
@@ -301,7 +314,7 @@ const PracticeQuestions: React.FC = () => {
             {timeLeft % 60 < 10 ? `0${timeLeft % 60}` : timeLeft % 60}
           </Text>
         )}
-        <Text style={styles.orange}>
+        <Text style={styles.questionNumberText}>
           Question {currentQuestion + 1} / {practiceQuestions.length}
         </Text>
       </View>
@@ -309,8 +322,9 @@ const PracticeQuestions: React.FC = () => {
         practiceQuestions={practiceQuestions}
         practiceAnswers={practiceAnswers}
         currentQuestion={currentQuestion}
-        selectedAnswers={selectedAnswers}
-        questionsWithMultipleCorrectAnswers={questionsWithMultipleCorrectAnswers}
+        questionsWithMultipleCorrectAnswers={
+          questionsWithMultipleCorrectAnswers
+        }
         isAnswerSelected={isAnswerSelected}
         handleAnswerSelection={handleAnswerSelection}
       />
@@ -332,10 +346,10 @@ const PracticeQuestions: React.FC = () => {
         )}
         {currentQuestion === practiceQuestions.length - 1 && (
           <GameButton
-            onPress={handleSubmit}
-            disabled={isSubmitDisabled}
-            style={[ isSubmitDisabled ? styles.disabledButtonText: styles.button ]}
-            textStyle={[styles.buttonText,  ]}
+            onPress={
+              isSubmitDisabled ? handleDisabledSubmitPress : handleSubmit
+            }
+            style={isSubmitDisabled ? styles.disabledButtonText : styles.button}
             title="Submit"
           />
         )}

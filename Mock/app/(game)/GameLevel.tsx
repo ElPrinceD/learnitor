@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, useColorScheme } from "react-native";
 import React from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import PracticeLevel from "../../components/PracticeLevel";

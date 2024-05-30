@@ -2,7 +2,7 @@ import { Stack } from "expo-router";
 import React from "react";
 import { useColorScheme, Text } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import Colors from "../../../constants/Colors"; // Adjust the import path as necessary
+import Colors from "../../../constants/Colors";
 
 export default function Tab2Layout() {
   const colorScheme = useColorScheme();
@@ -29,6 +29,7 @@ export default function Tab2Layout() {
             headerStyle: {
               backgroundColor: themeColors.background,
             },
+            headerTitleAlign: "center",
 
             headerShadowVisible: false,
           }}
@@ -39,8 +40,6 @@ export default function Tab2Layout() {
             headerShown: true,
             title: "Course Details",
             headerTransparent: true,
-            headerBackTitleVisible: false,
-           
             headerTitleStyle: {
               color: themeColors.text,
             },
@@ -49,8 +48,19 @@ export default function Tab2Layout() {
           }}
         />
         <Stack.Screen name="EnrolledCourse" options={{ headerShown: false }} />
-        <Stack.Screen name="(topic)" options={{ headerShown: false }} />
-        <Stack.Screen name="Practice" options={{ headerShown: true,  headerTitleAlign: "center", }} />
+        <Stack.Screen
+          name="(topic)"
+          options={{
+            headerShown: true,
+            title: "Materials",
+            headerTitleStyle: {
+              color: themeColors.text,
+            },
+            headerTitleAlign: "center",
+            headerShadowVisible: false,
+          }}
+        />
+        <Stack.Screen name="Practice" options={{ headerShown: true }} />
         <Stack.Screen
           name="PracticeInstructions"
           options={{ headerShown: false, presentation: "modal" }}
@@ -61,7 +71,12 @@ export default function Tab2Layout() {
         />
         <Stack.Screen
           name="ScorePage"
-          options={{ headerShown: true, presentation: "modal" }}
+          options={{
+            headerShown: true,
+            presentation: "modal",
+            headerTitleAlign: "center",
+            headerShadowVisible: false,
+          }}
         />
       </Stack>
     </SafeAreaProvider>

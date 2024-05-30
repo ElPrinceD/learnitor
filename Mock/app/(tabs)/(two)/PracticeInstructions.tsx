@@ -9,9 +9,13 @@ import {
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { router, useLocalSearchParams } from "expo-router";
+import Colors from "../../../constants/Colors";
+import GameButton from "../../../components/GameButton";
 
 const PracticeInstructions = () => {
   const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
+
   const { topic, level, course } = useLocalSearchParams();
 
   const [isTimed, setIsTimed] = useState(false);
@@ -38,7 +42,7 @@ const PracticeInstructions = () => {
       justifyContent: "center",
     },
     card: {
-      backgroundColor: colorScheme === "dark" ? "#181818" : "#fff",
+      backgroundColor: themeColors.card,
       borderRadius: 20,
       padding: 20,
       width: "80%", // Adjust the width as needed
@@ -49,13 +53,13 @@ const PracticeInstructions = () => {
       fontWeight: "bold",
       marginBottom: 20,
       textAlign: "center",
-      color: colorScheme === "dark" ? "#FFF" : "#000",
+      color: themeColors.text,
     },
     instructions: {
       fontSize: 16,
       marginBottom: 20,
       textAlign: "center",
-      color: colorScheme === "dark" ? "#FFF" : "#000",
+      color: themeColors.text,
     },
     instructionContainer: {
       marginBottom: 20,
@@ -63,24 +67,21 @@ const PracticeInstructions = () => {
     instruction: {
       fontSize: 16,
       marginBottom: 10,
-      color: colorScheme === "dark" ? "#FFF" : "#000",
+      color: themeColors.text,
     },
     startButton: {
       backgroundColor: "transparent",
-      borderWidth: 1,
-      borderColor: colorScheme === "dark" ? "#FFF" : "#000",
-      paddingVertical: 15,
-      paddingHorizontal: 30,
-      borderRadius: 40,
+      borderWidth: 2,
+      borderColor: themeColors.border,
+      paddingVertical: 10,
+      borderRadius: 10,
       alignSelf: "center",
-      alignItems: "center",
-      justifyContent: "center",
-      width: 300,
+      width: "90%",
     },
     startButtonText: {
       fontSize: 18,
       fontWeight: "bold",
-      color: colorScheme === "dark" ? "#FFF" : "#000",
+      color: themeColors.text,
     },
     timerContainer: {
       flexDirection: "row",
@@ -90,7 +91,7 @@ const PracticeInstructions = () => {
     },
     timerText: {
       fontSize: 16,
-      color: colorScheme === "dark" ? "#FFF" : "#000",
+      color: themeColors.textSecondary,
       marginRight: 10,
     },
     pickerContainer: {
@@ -100,9 +101,8 @@ const PracticeInstructions = () => {
       justifyContent: "space-between",
     },
     picker: {
-      height: 50,
-      width: 150,
-      color: colorScheme === "dark" ? "#FFF" : "#000",
+      flex: 1,
+      color: themeColors.textSecondary,
     },
   });
 
@@ -136,7 +136,15 @@ const PracticeInstructions = () => {
         </View>
         <View style={styles.timerContainer}>
           <Text style={styles.timerText}>Timed Quiz:</Text>
-          <Switch value={isTimed} onValueChange={setIsTimed} />
+          <Switch
+            value={isTimed}
+            onValueChange={setIsTimed}
+            trackColor={{
+              false: themeColors.text,
+              true: themeColors.buttonBackground,
+            }}
+            thumbColor={themeColors.icon}
+          />
         </View>
         {isTimed && (
           <View style={styles.pickerContainer}>
@@ -153,12 +161,13 @@ const PracticeInstructions = () => {
             </Picker>
           </View>
         )}
-        <TouchableOpacity
+
+        <GameButton
+          title="Start"
+          onPress={handleStartQuiz}
           style={styles.startButton}
-          onPress={handleStartQuiz} // Call handleStartQuiz function onPress
-        >
-          <Text style={styles.startButtonText}>Start</Text>
-        </TouchableOpacity>
+          textStyle={styles.startButtonText}
+        />
       </View>
     </View>
   );

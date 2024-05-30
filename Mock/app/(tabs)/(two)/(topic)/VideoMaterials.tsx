@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from "react";
-import { View, Linking } from "react-native";
+import React, { useState, useEffect, useCallback } from "react";
+import { View, Linking, RefreshControl, ScrollView } from "react-native";
 import { useGlobalSearchParams } from "expo-router";
 import axios from "axios";
 
 import ApiUrl from "../../../../config";
 
 import { useAuth } from "../../../../components/AuthContext";
-import TopicInformation from "@/components/TopicInformation";
-import Videos from "@/components/Videos";
+import TopicInformation from "../../../../components/TopicInformation";
+import Videos from "../../../../components/Videos";
 
 import { Topic, Material } from "../../../../components/types";
 
@@ -22,6 +22,7 @@ const VideoMaterials: React.FC<VideoMaterialsProps> = () => {
   const [selectedTopicMaterials, setSelectedTopicMaterials] = useState<
     Material[]
   >([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   const parsedTopic: Topic =
     typeof topic === "string" ? JSON.parse(topic) : topic;
@@ -54,15 +55,23 @@ const VideoMaterials: React.FC<VideoMaterialsProps> = () => {
       console.log("No link available for this material");
     }
   };
-  return (
-    <View>
-      {/* <TopicInformation topic={parsedTopic} /> */}
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchData().finally(() => setRefreshing(false));
+  }, []);
 
+  return (
+    <ScrollView
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
+      {/* <TopicInformation topic={parsedTopic} /> */}
       <Videos
         videoMaterials={selectedTopicMaterials}
         handleVideoPress={handleVideoPress}
       />
-    </View>
+    </ScrollView>
   );
 };
 

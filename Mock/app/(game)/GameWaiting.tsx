@@ -7,7 +7,7 @@ import {
   Image,
   TouchableOpacity,
   Share,
-  Dimensions,
+  useColorScheme,
   Platform,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
@@ -16,6 +16,7 @@ import { useAuth } from "../../components/AuthContext";
 import { useLocalSearchParams } from "expo-router";
 import GameButton from "../../components/GameButton";
 import { Ionicons } from "@expo/vector-icons";
+import Colors from "../../constants/Colors";
 import axios from 'axios';
 import ApiUrl from "../../config"; // Ensure this points to your API configuration
 import  SSE  from 'react-native-sse'; // Import the SSE library
@@ -32,6 +33,8 @@ export default function GameWaitingScreen() {
   const { isCreator, code, id } = useLocalSearchParams();
   const [gameCode, setGameCode] = useState<string>(code || "");
   const [players, setPlayers] = useState<Player[]>([]);
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
 
   useEffect(() => {
     console.log(id)
@@ -142,13 +145,15 @@ export default function GameWaitingScreen() {
       <View style={styles.header}>
         <Text style={styles.gameCode}>{gameCode}</Text>
         <TouchableOpacity onPress={copyToClipboard} style={styles.iconButton}>
-          <Ionicons name="copy-outline" size={24} color="#000" />
+          <Ionicons name="copy-outline" size={30} color={themeColors.icon} />
         </TouchableOpacity>
         <TouchableOpacity onPress={shareGameCode} style={styles.iconButton}>
           <Ionicons
-            name={Platform.OS === "ios" ? "share-outline" : "share-social-sharp"}
-            size={24}
-            color="#000"
+            name={
+              Platform.OS === "ios" ? "share-outline" : "share-social-sharp"
+            }
+            size={30}
+            color={themeColors.icon}
           />
         </TouchableOpacity>
       </View>
@@ -173,7 +178,7 @@ export default function GameWaitingScreen() {
 }
 
 
-const screenWidth = Dimensions.get("window").width;
+
 
 const styles = StyleSheet.create({
   container: {

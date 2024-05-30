@@ -9,6 +9,7 @@ import {
 
 import { Ionicons } from "@expo/vector-icons";
 import ThreeDButton from "./ThreeDButton"; // Assuming ThreeDButton is in the same directory
+import Colors from "../constants/Colors";
 import { Course, Topic } from "./types";
 
 interface CourseRoadmapProps {
@@ -24,6 +25,45 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
   handleQuestionPress,
 }) => {
   const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      margin: 20,
+    },
+    timelineItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 10,
+    },
+    timelineConnector: {
+      width: 2,
+      height: 100,
+      backgroundColor: "transparent",
+      marginHorizontal: 10,
+    },
+    timelineContentLeft: {
+      flex: 1,
+      alignItems: "flex-start",
+      marginLeft: 13,
+    },
+    timelineContentCenter: {
+      flex: 1,
+      alignItems: "center",
+    },
+    timelineContentRight: {
+      flex: 1,
+      alignItems: "flex-end",
+      marginRight: 13,
+    },
+    timelineText: {
+      fontSize: 14,
+      color: themeColors.text,
+      marginTop: 20,
+      width: 150,
+    },
+  });
 
   const renderTimelineItem = (
     topic: Topic,
@@ -48,9 +88,16 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
       contentStyle = styles.timelineContentRight;
     }
 
+    const textAlign =
+      contentStyle === styles.timelineContentLeft
+        ? "left"
+        : contentStyle === styles.timelineContentCenter
+        ? "center"
+        : "right";
+
     return (
       <View key={index} style={styles.timelineItem}>
-        {cyclePosition % 6 === 3 && <View style={styles.timelineConnector} />}
+        {/* {cyclePosition % 6 === 3 && <View style={styles.timelineConnector} />} */}
         <View style={contentStyle}>
           <ThreeDButton
             title={
@@ -70,14 +117,14 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
             style={[
               styles.timelineText,
               {
-                color: colorScheme === "dark" ? "#fff" : "#000",
+                textAlign,
               },
             ]}
           >
             {isQuestion ? `Practice ${topic.title}` : topic.title}
           </Text>
         </View>
-        {cyclePosition % 6 !== 3 && <View style={styles.timelineConnector} />}
+        {/* {cyclePosition % 6 !== 3 && <View style={styles.timelineConnector} />} */}
       </View>
     );
   };
@@ -95,43 +142,5 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    margin: 20,
-  },
-  timelineItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  timelineConnector: {
-    width: 2,
-    height: 100,
-    backgroundColor: "transparent",
-    marginHorizontal: 10,
-  },
-  timelineContentLeft: {
-    flex: 1,
-    alignItems: "flex-start",
-    marginLeft: 13,
-  },
-  timelineContentCenter: {
-    flex: 1,
-    alignItems: "center",
-  },
-  timelineContentRight: {
-    flex: 1,
-    alignItems: "flex-end",
-    marginRight: 13,
-  },
-  timelineText: {
-    fontSize: 14,
-    marginTop: 20,
-    textAlign: "center",
-    width: 150,
-  },
-});
 
 export default CourseRoadmap;
