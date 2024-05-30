@@ -19,17 +19,17 @@ export default function GameIntro() {
 
   const joinGame = async () => {
     try {
-      const response = await axios.post(`${ApiUrl}:8000/games/${gameCode}/join/`,{game_code:gameCode}, {
+      const response = await axios.post(`${ApiUrl}:8000/games/join/`,{game_code:gameCode}, {
         headers: {
           Authorization: `Token ${userToken?.token}`,
         },
       });
-      // Check if the response is successful
+      
       if (response.status === 200) {
-        // Redirect the user to the waiting screen
+        const id = response.data.id
         router.navigate({
           pathname: "GameWaiting",
-          params: { code: gameCode },
+          params: { code: gameCode, id: id },
         });
       } else {
         // Handle unsuccessful response

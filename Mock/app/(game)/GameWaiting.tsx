@@ -16,7 +16,9 @@ import { useAuth } from "../../components/AuthContext";
 import { useLocalSearchParams } from "expo-router";
 import GameButton from "../../components/GameButton";
 import { Ionicons } from "@expo/vector-icons";
+import axios from 'axios';
 import ApiUrl from "../../config"; // Ensure this points to your API configuration
+import  SSE  from 'react-native-sse'; // Import the SSE library
 
 // Define the type for a player
 type Player = {
@@ -26,41 +28,74 @@ type Player = {
 };
 
 export default function GameWaitingScreen() {
-  const { userInfo } = useAuth(); // Assuming useAuth provides user information
-  const { isCreator, code } = useLocalSearchParams();
+  const { userInfo, userToken } = useAuth();
+  const { isCreator, code, id } = useLocalSearchParams();
   const [gameCode, setGameCode] = useState<string>(code || "");
   const [players, setPlayers] = useState<Player[]>([]);
 
   useEffect(() => {
-    // Initialize WebSocket connection
-    const ws = new WebSocket(`ws://192.168.48.61:8000/ws/game/?game_code=${gameCode}`);
-
-    ws.onopen = () => {
-      console.log("WebSocket connection opened");
-    };
-
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      console.log("WebSocket message received:", data);
-      if (data.message) {
-        // Assuming data.message contains the new player's details
-        const newPlayer: Player = data.message;
-        setPlayers((prevPlayers) => [...prevPlayers, newPlayer]);
+    console.log(id)
+    const fetchGameDetails = async () => {
+      try {
+        const response = await axios.get(`${ApiUrl}:8000/games/${id}/`,{
+          headers: { Authorization: `Token ${userToken?.token}` },
+        });
+        
+        const { data } = response;
+        if (data.players) {
+          const newPlayers = data.players.map((player: any) => ({
+            id: player.id,
+            profileName: `${player.first_name} ${player.last_name}`,
+            profilePicture: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Eden_Hazard_at_Baku_before_2019_UEFA_Europe_League_Final.jpg/330px-Eden_Hazard_at_Baku_before_2019_UEFA_Europe_League_Final.jpg", // Placeholder URL, update as needed
+          }));
+          setPlayers(newPlayers);
+        }
+      } catch (error) {
+        console.error("Error fetching game details:", error);
       }
     };
 
-    ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
-    };
+    // Call the fetch function when gameCode changes
+    if (gameCode) {
+      fetchGameDetails();
+    }
+    const sse = new SSE(`${ApiUrl}:8000/games/${gameCode}/sse/`);
 
-    ws.onclose = () => {
-      console.log("WebSocket connection closed");
-    };
+    sse.addEventListener('open', () => {
+        console.log('SSE connection opened');
+    });
 
+    sse.addEventListener('error', (error) => {
+        console.error('SSE connection error:', error);
+    });
+
+    sse.addEventListener('message', (event) => {
+        
+        try {
+            const data = JSON.parse(event.data);
+            
+            if (data.players) {
+                const newPlayers = data.players.map((player: any) => ({
+                    id: player.id,
+                    profileName: `${player.first_name} ${player.last_name}`,
+                    profilePicture: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Eden_Hazard_at_Baku_before_2019_UEFA_Europe_League_Final.jpg/330px-Eden_Hazard_at_Baku_before_2019_UEFA_Europe_League_Final.jpg", // Placeholder URL, update as needed
+                }));
+
+                setPlayers(newPlayers); // Update player list with both existing and newly joined players
+            }
+        } catch (error) {
+            console.error("Error parsing JSON data:", error);
+        }
+    });
+
+    // Close SSE connection on component unmount
     return () => {
-      ws.close();
+        sse.close();
     };
-  }, [gameCode]);
+
+}, [gameCode]); // Trigger useEffect whenever gameCode changes
+
+
 
   const copyToClipboard = async () => {
     await Clipboard.setStringAsync(gameCode);
@@ -86,25 +121,24 @@ export default function GameWaitingScreen() {
   };
 
   const handleStartGame = () => {
-    // Logic to start the game
     console.log("Game started");
+    // Implement the logic to start the game
   };
+
+
+  // console.log(players)
+  // console.log(gameCode)
 
   const renderPlayer = ({ item }: { item: Player }) => (
     <View style={styles.playerContainer}>
-      <Image
-        source={{ uri: item.profilePicture }}
-        style={styles.profileImage}
-      />
+      <Image source={{ uri: item.profilePicture }} style={styles.profileImage} />
       <Text style={styles.profileName}>{item.profileName}</Text>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      <Text style={styles.topContainerTitle}>
-        {userInfo?.user.first_name}'s Arena
-      </Text>
+      <Text style={styles.topContainerTitle}>{userInfo?.user.first_name}'s Arena</Text>
       <View style={styles.header}>
         <Text style={styles.gameCode}>{gameCode}</Text>
         <TouchableOpacity onPress={copyToClipboard} style={styles.iconButton}>
@@ -112,9 +146,7 @@ export default function GameWaitingScreen() {
         </TouchableOpacity>
         <TouchableOpacity onPress={shareGameCode} style={styles.iconButton}>
           <Ionicons
-            name={
-              Platform.OS === "ios" ? "share-outline" : "share-social-sharp"
-            }
+            name={Platform.OS === "ios" ? "share-outline" : "share-social-sharp"}
             size={24}
             color="#000"
           />
@@ -139,6 +171,7 @@ export default function GameWaitingScreen() {
     </View>
   );
 }
+
 
 const screenWidth = Dimensions.get("window").width;
 
