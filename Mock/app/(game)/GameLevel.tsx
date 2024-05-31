@@ -57,7 +57,7 @@ const GameLevel: React.FC = () => {
           course: course?.toString(),
           isCreator: "true", // Convert boolean to string
           code: gameCode,
-          gameId: gameId?.toString(),
+          gameId: gameId,
         },
       });
 

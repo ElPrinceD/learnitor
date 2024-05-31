@@ -19,7 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Colors from "../../constants/Colors";
 import axios from "axios";
 import ApiUrl from "../../config";
-import SSE from "react-native-sse";
+import RNEventSource from "react-native-event-source";
 import { Question } from "../../components/types";
 
 // Define the type for a player
@@ -55,8 +55,6 @@ export default function GameWaitingScreen() {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
-  console.log("NO:", gameQuestions);
-
   useEffect(() => {
     const fetchGameDetails = async () => {
       try {
@@ -87,22 +85,31 @@ export default function GameWaitingScreen() {
       }
     };
 
-    if (gameCode && userToken) {
+    if (code && gameCode && userToken) {
       fetchGameDetails();
 
-      const sse = new SSE(`${ApiUrl}:8000/games/${gameCode}/sse/`);
+      const eventSource = new RNEventSource(
+        `${ApiUrl}:8000/games/${gameCode}/sse/`,
+        {
+          headers: {
+            Authorization: `Token ${userToken?.token}`,
 
-      sse.addEventListener("open", () => {
+            // Connection: "keep-alive",
+            // "Content-Type": "application/json",
+            // "Cache-Control": "no-cache",
+            // "Access-Control-Allow-Origin": "*",
+          },
+        }
+      );
+
+      eventSource.addEventListener("open", () => {
         console.log("SSE connection opened");
       });
 
-      sse.addEventListener("error", (error) => {
-        console.error("SSE connection error:", error);
-      });
-
-      sse.addEventListener("message", (event) => {
+      eventSource.addEventListener("message", (event) => {
+        console.log("(DATA):", event);
         try {
-          const data = JSON.parse(event.data);
+          const data = event.data;
 
           if (data.players) {
             const newPlayers = data.players.map((player: any) => ({
@@ -116,18 +123,23 @@ export default function GameWaitingScreen() {
           }
           if (data.event === "start_game") {
             goToGame();
+            // Close the SSE connection
           }
         } catch (error) {
           console.error("Error parsing JSON data:", error);
         }
       });
 
+      eventSource.addEventListener("error", (event) => {
+        console.error("SSE connection error:", event);
+      });
+
       // Close SSE connection on component unmount
       return () => {
-        sse.close();
+        eventSource.close();
       };
     }
-  }, [gameCode, userToken, gameId, id]);
+  }, [gameCode || code, userToken]);
 
   const copyToClipboard = async () => {
     await Clipboard.setStringAsync(gameCode);
@@ -155,7 +167,7 @@ export default function GameWaitingScreen() {
   const handleStartGame = async () => {
     try {
       const response = await axios.post(
-        `${ApiUrl}:8000/games/${id || gameId}/start_game/`,
+        `${ApiUrl}:8000/games/${gameId}/start_game/`,
         {},
         {
           headers: { Authorization: `Token ${userToken?.token}` },
@@ -175,10 +187,12 @@ export default function GameWaitingScreen() {
       pathname: "Game",
       params: {
         questions: JSON.stringify(gameQuestions),
+        gameId: gameId || id,
         isCreator: isCreator,
       },
     });
   };
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,

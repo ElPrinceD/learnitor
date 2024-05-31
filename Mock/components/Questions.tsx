@@ -28,7 +28,7 @@ const Questions = ({
       paddingBottom: 20,
     },
     answersContainer: {
-      flex: 1,
+      flex: 2,
       paddingTop: 30,
       paddingBottom: 0,
       marginTop: -27,

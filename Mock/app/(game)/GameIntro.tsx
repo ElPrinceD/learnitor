@@ -29,14 +29,18 @@ export default function GameIntro() {
 
   const joinGame = async () => {
     try {
-      const response = await axios.post(`${ApiUrl}:8000/games/join/`,{game_code:gameCode}, {
-        headers: {
-          Authorization: `Token ${userToken?.token}`,
-        },
-      });
-      
+      const response = await axios.post(
+        `${ApiUrl}:8000/games/join/`,
+        { game_code: gameCode },
+        {
+          headers: {
+            Authorization: `Token ${userToken?.token}`,
+          },
+        }
+      );
+
       if (response.status === 200) {
-        const id = response.data.id
+        const id = response.data.id;
         router.navigate({
           pathname: "GameWaiting",
           params: { code: gameCode, id: id },
@@ -52,7 +56,6 @@ export default function GameIntro() {
       // Optionally, display an error message to the user
     }
   };
-  
 
   useEffect(() => {
     setJoinGameDisabled(gameCode.length !== 6);
