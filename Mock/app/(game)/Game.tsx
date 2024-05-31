@@ -10,7 +10,7 @@ import { Question, Answer } from "../../components/types";
 
 export default function Game() {
   const { userToken } = useAuth();
-  const { questions } = useLocalSearchParams();
+  const { gameId } = useLocalSearchParams();
   const [gameAnswers, setGameAnswers] = useState<Answer[]>([]);
   
   const [selectedAnswers, setSelectedAnswers] = useState<{
@@ -23,45 +23,42 @@ export default function Game() {
   const [gameQuestions, setGameQuestions] = useState<Question[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState<number>(0);
 
-  const initializeQuestions = () => {
-    const quizQuestions: Question[] =
-      typeof questions === "string" ? JSON.parse(questions) : questions;
-    setGameQuestions(quizQuestions);
-  };
-
+  // Fetch game details, including questions, from the server
   useEffect(() => {
-    initializeQuestions();
-  }, []);
-
-  console.log(gameQuestions)
-
-  useEffect(() => {
-    const fetchAnswers = async () => {
+    const fetchGameDetails = async () => {
       try {
-        const answersPromises = gameQuestions.map(
+        const response = await axios.get(`${ApiUrl}:8000/games/${gameId}/`, {
+          headers: { Authorization: `Token ${userToken?.token}` },
+        });
+
+        const gameData = response.data;
+        setGameQuestions(gameData.questions);
+
+        const answersPromises = gameData.questions.map(
           async (gameQuestion: Question) => {
             const answersResponse = await axios.get(
               `${ApiUrl}:8000/api/course/topic/questions/${gameQuestion.id}/answers`,
               {
-                headers: {
-                  Authorization: `Token ${userToken?.token}`,
-                },
+                headers: { Authorization: `Token ${userToken?.token}` },
               }
             );
             return answersResponse.data;
           }
         );
+
         const answers = await Promise.all(answersPromises);
         setGameAnswers(answers.flat());
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching game details:", error);
       }
     };
 
-    fetchAnswers();
-  }, [gameQuestions, userToken]);
+    fetchGameDetails();
+  }, [gameId, userToken]);
 
   useEffect(() => {
+    if (gameQuestions.length === 0 || gameAnswers.length === 0) return;
+
     const questionsWithMultipleCorrect: number[] = [];
     gameQuestions.forEach((question) => {
       const correctAnswersCount = gameAnswers.filter(
@@ -101,6 +98,13 @@ export default function Game() {
 
       return updatedAnswers;
     });
+
+    // Move to the next question if not the last one
+    if (currentQuestion < gameQuestions.length - 1) {
+      setCurrentQuestion((prevQuestion) => prevQuestion + 1);
+    } else {
+      handleSubmit();
+    }
   };
 
   const handleSubmit = () => {
@@ -160,6 +164,10 @@ export default function Game() {
     );
   };
 
+  useEffect(() => {
+    console.log(gameQuestions);
+  }, [gameQuestions]);
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -168,16 +176,18 @@ export default function Game() {
 
   return (
     <View style={styles.container}>
-      <Questions
-        practiceQuestions={gameQuestions}
-        practiceAnswers={gameAnswers}
-        currentQuestion={currentQuestion}
-        questionsWithMultipleCorrectAnswers={
-          questionsWithMultipleCorrectAnswers
-        }
-        isAnswerSelected={isAnswerSelected}
-        handleAnswerSelection={handleAnswerSelection}
-      />
+      {gameQuestions.length > 0 && (
+        <Questions
+          practiceQuestions={gameQuestions}
+          practiceAnswers={gameAnswers}
+          currentQuestion={currentQuestion}
+          questionsWithMultipleCorrectAnswers={
+            questionsWithMultipleCorrectAnswers
+          }
+          isAnswerSelected={isAnswerSelected}
+          handleAnswerSelection={handleAnswerSelection}
+        />
+      )}
     </View>
   );
 }

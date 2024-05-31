@@ -19,13 +19,14 @@
       "supportsTablet": true
     },
     "android": {
+      "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-"usesCleartextTraffic": true,
 
       "softwareKeyboardLayoutMode": "pan"
+
     },
     "web": {
       "bundler": "metro",
