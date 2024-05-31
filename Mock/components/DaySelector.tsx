@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, FlatList, StyleSheet, TouchableOpacity } from "react-native";
 
 interface DaySelectorProps {
   selectedDate: Date;
@@ -58,12 +58,15 @@ const DaySelector: React.FC<DaySelectorProps> = ({ selectedDate, setSelectedDate
         <TouchableOpacity onPress={() => handleScroll("prev")}>
           <Text style={styles.arrow}>{"<"}</Text>
         </TouchableOpacity>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {weekDays.map((date, index) => {
+        <FlatList
+          data={weekDays}
+          horizontal
+          keyExtractor={(item) => item.toISOString()}
+          renderItem={({ item: date }) => {
             const isToday = date.toDateString() === today.toDateString();
             const isSelected = date.toDateString() === selectedDate.toDateString();
             return (
-              <TouchableOpacity key={index} onPress={() => handleDayPress(date)} style={styles.dayContainer}>
+              <TouchableOpacity onPress={() => handleDayPress(date)} style={styles.dayContainer}>
                 <Text style={[styles.date, isSelected && styles.selectedDay, isToday && styles.today]}>
                   {days[date.getDay()]}
                 </Text>
@@ -72,8 +75,9 @@ const DaySelector: React.FC<DaySelectorProps> = ({ selectedDate, setSelectedDate
                 </Text>
               </TouchableOpacity>
             );
-          })}
-        </ScrollView>
+          }}
+          showsHorizontalScrollIndicator={false}
+        />
         <TouchableOpacity onPress={() => handleScroll("next")}>
           <Text style={styles.arrow}>{">"}</Text>
         </TouchableOpacity>
@@ -86,7 +90,7 @@ const styles = StyleSheet.create({
   container: {
     paddingBottom: 100,
     paddingHorizontal: 20,
-    backgroundColor: "#fdecd2"
+    backgroundColor: "#fdecd2",
   },
   month: {
     fontSize: 20,
@@ -97,29 +101,22 @@ const styles = StyleSheet.create({
   selectorContainer: {
     flexDirection: "row",
     alignItems: "center",
-   
-
   },
   arrow: {
     fontSize: 24,
     fontWeight: "bold",
-    paddingHorizontal: 1,
+    paddingHorizontal: 10,
   },
   dayContainer: {
     alignItems: "center",
     marginHorizontal: 10,
   },
-  day: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  selectedDay: {
-    color: "#007BFF",
-     
-  },
   date: {
     fontSize: 16,
     color: "#888",
+  },
+  selectedDay: {
+    color: "#007BFF",
   },
   today: {
     fontWeight: "bold",
