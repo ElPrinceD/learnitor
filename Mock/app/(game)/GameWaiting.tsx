@@ -55,7 +55,7 @@ export default function GameWaitingScreen() {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
-  console.log("NO:", gameQuestions);
+
 
   useEffect(() => {
     const fetchGameDetails = async () => {
@@ -116,18 +116,21 @@ export default function GameWaitingScreen() {
           }
           if (data.event === "start_game") {
             goToGame();
+            sse.close(); // Close the SSE connection
           }
         } catch (error) {
           console.error("Error parsing JSON data:", error);
         }
       });
 
+      
+
       // Close SSE connection on component unmount
       return () => {
         sse.close();
       };
     }
-  }, [gameCode, userToken, gameId, id]);
+  }, []);
 
   const copyToClipboard = async () => {
     await Clipboard.setStringAsync(gameCode);
@@ -179,6 +182,7 @@ export default function GameWaitingScreen() {
       },
     });
   };
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,

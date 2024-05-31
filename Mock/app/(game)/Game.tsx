@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, StyleSheet } from "react-native";
 import axios from "axios";
-import { useLocalSearchParams, router } from "expo-router"; // Check if this is correct
+import { useLocalSearchParams, router } from "expo-router";
 import ApiUrl from "../../config";
 import { useAuth } from "../../components/AuthContext";
 
@@ -12,6 +12,7 @@ export default function Game() {
   const { userToken } = useAuth();
   const { questions } = useLocalSearchParams();
   const [gameAnswers, setGameAnswers] = useState<Answer[]>([]);
+  
   const [selectedAnswers, setSelectedAnswers] = useState<{
     [key: number]: number[];
   }>({});
@@ -22,13 +23,17 @@ export default function Game() {
   const [gameQuestions, setGameQuestions] = useState<Question[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState<number>(0);
 
-  useEffect(() => {
+  const initializeQuestions = () => {
     const quizQuestions: Question[] =
       typeof questions === "string" ? JSON.parse(questions) : questions;
     setGameQuestions(quizQuestions);
-  }, [questions]);
+  };
 
-  console.log("NO:", questions);
+  useEffect(() => {
+    initializeQuestions();
+  }, []);
+
+  console.log(gameQuestions)
 
   useEffect(() => {
     const fetchAnswers = async () => {
@@ -68,6 +73,14 @@ export default function Game() {
     });
     setQuestionsWithMultipleCorrectAnswers(questionsWithMultipleCorrect);
   }, [gameQuestions, gameAnswers]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCurrentQuestion((prevQuestion) => (prevQuestion + 1) % gameQuestions.length);
+    }, 10000);
+
+    return () => clearTimeout(timer);
+  }, [currentQuestion, gameQuestions]);
 
   const handleAnswerSelection = (answerId: number, questionId: number) => {
     setSelectedAnswers((prevSelectedAnswers) => {
