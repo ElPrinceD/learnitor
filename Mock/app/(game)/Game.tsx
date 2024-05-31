@@ -25,6 +25,7 @@ export default function Game() {
 
   // Fetch game details, including questions, from the server
   useEffect(() => {
+    console.log(gameId)
     const fetchGameDetails = async () => {
       try {
         const response = await axios.get(`${ApiUrl}:8000/games/${gameId}/`, {

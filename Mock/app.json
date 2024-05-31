@@ -20,6 +20,7 @@
     },
     "android": {
       "usesCleartextTraffic": true,
+      "permissions": ["INTERNET", "OTHER_PERMISSION_IF_NEEDED"],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
