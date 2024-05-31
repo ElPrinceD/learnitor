@@ -13,13 +13,14 @@ import {
 import * as Clipboard from "expo-clipboard";
 import Toast from "react-native-root-toast";
 import { useAuth } from "../../components/AuthContext";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import GameButton from "../../components/GameButton";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "../../constants/Colors";
-import axios from 'axios';
-import ApiUrl from "../../config"; // Ensure this points to your API configuration
-import  SSE  from 'react-native-sse'; // Import the SSE library
+import axios from "axios";
+import ApiUrl from "../../config";
+import SSE from "react-native-sse";
+import { Question } from "../../components/types";
 
 // Define the type for a player
 type Player = {
@@ -28,32 +29,56 @@ type Player = {
   profileName: string;
 };
 
+// Define the type for the game details response
+type GameDetailsResponse = {
+  creator: { first_name: string; id: number };
+  players: { id: number; first_name: string; last_name: string }[];
+  questions: Question[];
+  code: string;
+};
+
 export default function GameWaitingScreen() {
   const { userInfo, userToken } = useAuth();
-  const { isCreator, code, id, gameId } = useLocalSearchParams();
-  const [creator, setCreator] = useState()
-  const[ creatorId, setCreatorId] = useState()
+  const { isCreator, code, id, gameId } = useLocalSearchParams() as {
+    isCreator?: string;
+    code?: string;
+    id?: string;
+    gameId?: string;
+  };
+
+  const [creator, setCreator] = useState<string | undefined>();
+  const [creatorId, setCreatorId] = useState<number | undefined>();
   const [gameCode, setGameCode] = useState<string>(code || "");
   const [players, setPlayers] = useState<Player[]>([]);
+  const [gameQuestions, setGameQuestions] = useState<Question[]>([]);
+
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
+  console.log("NO:", gameQuestions);
+
   useEffect(() => {
-    console.log("This is the enter: ",id)
     const fetchGameDetails = async () => {
       try {
-        const response = await axios.get(`${ApiUrl}:8000/games/${id || gameId}/`,{
-          headers: { Authorization: `Token ${userToken?.token}` },
-        });
-        
+        const response = await axios.get<GameDetailsResponse>(
+          `${ApiUrl}:8000/games/${id || gameId}/`,
+          {
+            headers: { Authorization: `Token ${userToken?.token}` },
+          }
+        );
+
         const { data } = response;
-        setCreator(data.creator.first_name)
-        setCreatorId(data.creator.id)
+        setGameQuestions(data.questions);
+        setCreator(data.creator.first_name);
+        setCreatorId(data.creator.id);
+        setGameCode(data.code);
+
         if (data.players) {
-          const newPlayers = data.players.map((player: any) => ({
+          const newPlayers = data.players.map((player) => ({
             id: player.id,
             profileName: `${player.first_name} ${player.last_name}`,
-            profilePicture: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Eden_Hazard_at_Baku_before_2019_UEFA_Europe_League_Final.jpg/330px-Eden_Hazard_at_Baku_before_2019_UEFA_Europe_League_Final.jpg", // Placeholder URL, update as needed
+            profilePicture:
+              "https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Eden_Hazard_at_Baku_before_2019_UEFA_Europe_League_Final.jpg/330px-Eden_Hazard_at_Baku_before_2019_UEFA_Europe_League_Final.jpg", // Placeholder URL, update as needed
           }));
           setPlayers(newPlayers);
         }
@@ -62,52 +87,47 @@ export default function GameWaitingScreen() {
       }
     };
 
-    // Call the fetch function when gameCode changes
-    if (gameCode) {
+    if (gameCode && userToken) {
       fetchGameDetails();
-    }
-    const sse = new SSE(`${ApiUrl}:8000/games/${gameCode}/sse/`);
 
-    sse.addEventListener('open', () => {
-        console.log('SSE connection opened');
-    });
+      const sse = new SSE(`${ApiUrl}:8000/games/${gameCode}/sse/`);
 
-    sse.addEventListener('error', (error) => {
-        console.error('SSE connection error:', error);
-    });
+      sse.addEventListener("open", () => {
+        console.log("SSE connection opened");
+      });
 
-    sse.addEventListener('message', (event) => {
-        
+      sse.addEventListener("error", (error) => {
+        console.error("SSE connection error:", error);
+      });
+
+      sse.addEventListener("message", (event) => {
         try {
-            const data = JSON.parse(event.data);
-            
-            if (data.players) {
-                const newPlayers = data.players.map((player: any) => ({
-                    id: player.id,
-                    profileName: `${player.first_name} ${player.last_name}`,
-                    profilePicture: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Eden_Hazard_at_Baku_before_2019_UEFA_Europe_League_Final.jpg/330px-Eden_Hazard_at_Baku_before_2019_UEFA_Europe_League_Final.jpg", // Placeholder URL, update as needed
-                }));
+          const data = JSON.parse(event.data);
 
-                setPlayers(newPlayers); // Update player list with both existing and newly joined players
-            }
-            if (data.event === "start_game") {
-              console.log("Game is starting!");
-              setGameCode("Started")
-              // Implement logic to start the game for the player
-            }
+          if (data.players) {
+            const newPlayers = data.players.map((player: any) => ({
+              id: player.id,
+              profileName: `${player.first_name} ${player.last_name}`,
+              profilePicture:
+                "https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Eden_Hazard_at_Baku_before_2019_UEFA_Europe_League_Final.jpg/330px-Eden_Hazard_at_Baku_before_2019_UEFA_Europe_League_Final.jpg", // Placeholder URL, update as needed
+            }));
+
+            setPlayers(newPlayers); // Update player list with both existing and newly joined players
+          }
+          if (data.event === "start_game") {
+            goToGame();
+          }
         } catch (error) {
-            console.error("Error parsing JSON data:", error);
+          console.error("Error parsing JSON data:", error);
         }
-    });
+      });
 
-    // Close SSE connection on component unmount
-    return () => {
+      // Close SSE connection on component unmount
+      return () => {
         sse.close();
-    };
-
-}, [gameCode]); // Trigger useEffect whenever gameCode changes
-
-
+      };
+    }
+  }, [gameCode, userToken, gameId, id]);
 
   const copyToClipboard = async () => {
     await Clipboard.setStringAsync(gameCode);
@@ -133,20 +153,32 @@ export default function GameWaitingScreen() {
   };
 
   const handleStartGame = async () => {
-    
     try {
-      const response = await axios.post(`${ApiUrl}:8000/games/${id || gameId}/start_game/`, {}, {
-        headers: { Authorization: `Token ${userToken?.token}` },
-      });
+      const response = await axios.post(
+        `${ApiUrl}:8000/games/${id || gameId}/start_game/`,
+        {},
+        {
+          headers: { Authorization: `Token ${userToken?.token}` },
+        }
+      );
       if (response.status === 200) {
         console.log("Game started");
+        goToGame();
       }
     } catch (error) {
       console.error("Error starting the game:", error);
     }
-  
   };
 
+  const goToGame = () => {
+    router.navigate({
+      pathname: "Game",
+      params: {
+        questions: JSON.stringify(gameQuestions),
+        isCreator: isCreator,
+      },
+    });
+  };
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -219,7 +251,10 @@ export default function GameWaitingScreen() {
 
   const renderPlayer = ({ item }: { item: Player }) => (
     <View style={styles.playerContainer}>
-      <Image source={{ uri: item.profilePicture }} style={styles.profileImage} />
+      <Image
+        source={{ uri: item.profilePicture }}
+        style={styles.profileImage}
+      />
       <Text style={styles.profileName}>{item.profileName}</Text>
     </View>
   );
@@ -227,8 +262,8 @@ export default function GameWaitingScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.topContainerTitle}>
-  {isCreator ? userInfo?.user.first_name : creator}'s Arena
-</Text>
+        {isCreator ? userInfo?.user.first_name : creator}'s Arena
+      </Text>
       <View style={styles.header}>
         <Text style={styles.gameCode}>{gameCode}</Text>
         <TouchableOpacity onPress={copyToClipboard} style={styles.iconButton}>
@@ -252,18 +287,14 @@ export default function GameWaitingScreen() {
         contentContainerStyle={styles.playersList}
       />
       {(isCreator || creatorId === userInfo?.user.id) && (
-  <View>
-    <GameButton
-      title="Start Game"
-      onPress={handleStartGame}
-      style={styles.startButtonContainer}
-    />
-  </View>
-)}
+        <View>
+          <GameButton
+            title="Start Game"
+            onPress={handleStartGame}
+            style={styles.startButtonContainer}
+          />
+        </View>
+      )}
     </View>
   );
 }
-
-
-
-

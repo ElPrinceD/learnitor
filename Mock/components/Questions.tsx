@@ -110,88 +110,88 @@ const Questions = ({
   return (
     <View style={styles.container}>
       <View style={styles.questionContainer}>
-        {practiceQuestions.length > 0 && (
+        {practiceQuestions[currentQuestion] && (
           <View key={currentQuestion}>
-            {practiceQuestions[currentQuestion] &&
-              practiceQuestions[currentQuestion].text && (
-                <Text style={styles.questionText}>
-                  {practiceQuestions[currentQuestion].text}
-                </Text>
-              )}
+            {practiceQuestions[currentQuestion].text && (
+              <Text style={styles.questionText}>
+                {practiceQuestions[currentQuestion].text}
+              </Text>
+            )}
           </View>
         )}
       </View>
       <View style={styles.answersContainer}>
-        {practiceAnswers
-          .filter(
-            (answer) =>
-              answer.question === practiceQuestions[currentQuestion].id
-          )
-          .map((answer, ansIndex) => (
-            <TouchableOpacity
-              key={ansIndex}
-              style={[
-                styles.answerTouchable,
-                isAnswerSelected(
-                  practiceQuestions[currentQuestion].id,
-                  answer.id
-                ) && styles.selectedAnswer,
-              ]}
-              onPress={() =>
-                handleAnswerSelection(
-                  answer.id,
+        {practiceQuestions[currentQuestion] &&
+          practiceAnswers
+            .filter(
+              (answer) =>
+                answer.question === practiceQuestions[currentQuestion].id
+            )
+            .map((answer, ansIndex) => (
+              <TouchableOpacity
+                key={ansIndex}
+                style={[
+                  styles.answerTouchable,
+                  isAnswerSelected(
+                    practiceQuestions[currentQuestion].id,
+                    answer.id
+                  ) && styles.selectedAnswer,
+                ]}
+                onPress={() =>
+                  handleAnswerSelection(
+                    answer.id,
+                    practiceQuestions[currentQuestion].id
+                  )
+                }
+              >
+                {!questionsWithMultipleCorrectAnswers.includes(
                   practiceQuestions[currentQuestion].id
-                )
-              }
-            >
-              {!questionsWithMultipleCorrectAnswers.includes(
-                practiceQuestions[currentQuestion].id
-              ) && (
-                <View style={styles.circleContainer}>
+                ) && (
+                  <View style={styles.circleContainer}>
+                    <View
+                      style={[
+                        styles.circle,
+                        isAnswerSelected(
+                          practiceQuestions[currentQuestion].id,
+                          answer.id
+                        ) && styles.selectedCircle,
+                      ]}
+                    >
+                      {isAnswerSelected(
+                        practiceQuestions[currentQuestion].id,
+                        answer.id
+                      ) && <View style={styles.innerCircle} />}
+                    </View>
+                  </View>
+                )}
+                {questionsWithMultipleCorrectAnswers.includes(
+                  practiceQuestions[currentQuestion].id
+                ) && (
                   <View
                     style={[
-                      styles.circle,
+                      styles.checkBox,
                       isAnswerSelected(
                         practiceQuestions[currentQuestion].id,
                         answer.id
-                      ) && styles.selectedCircle,
+                      ) && styles.checkedBox,
+                    ]}
+                  />
+                )}
+                {answer && answer.text && (
+                  <Text
+                    style={[
+                      styles.answerText,
+                      isAnswerSelected(
+                        practiceQuestions[currentQuestion].id,
+                        answer.id
+                      ) && styles.selectedAnswerText,
                     ]}
                   >
-                    {isAnswerSelected(
-                      practiceQuestions[currentQuestion].id,
-                      answer.id
-                    ) && <View style={styles.innerCircle} />}
-                  </View>
-                </View>
-              )}
-              {questionsWithMultipleCorrectAnswers.includes(
-                practiceQuestions[currentQuestion].id
-              ) && (
-                <View
-                  style={[
-                    styles.checkBox,
-                    isAnswerSelected(
-                      practiceQuestions[currentQuestion].id,
-                      answer.id
-                    ) && styles.checkedBox,
-                  ]}
-                />
-              )}
-              {answer && answer.text && (
-                <Text
-                  style={[
-                    styles.answerText,
-                    isAnswerSelected(
-                      practiceQuestions[currentQuestion].id,
-                      answer.id
-                    ) && styles.selectedAnswerText,
-                  ]}
-                >
-                  {answer.text}
-                </Text>
-              )}
-            </TouchableOpacity>
-          ))}
+                    {answer.text}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            ))}
       </View>
     </View>
   );

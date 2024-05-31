@@ -31,19 +31,22 @@ const GameLevel: React.FC = () => {
       }
 
       // Create a new game by making a POST request to the backend
-      const response = await axios.post(`${ApiUrl}:8000/games/`, {
-        level: level.title,
-        topics: parsedTopics,
-        
-      }, {
-        headers: {
-          Authorization: `Token ${userToken?.token}`,
+      const response = await axios.post(
+        `${ApiUrl}:8000/games/`,
+        {
+          level: level.title,
+          topics: parsedTopics,
         },
-      });
+        {
+          headers: {
+            Authorization: `Token ${userToken?.token}`,
+          },
+        }
+      );
 
       // Extract the game code from the response
       const gameCode = response.data.code;
-      const gameId = response.data.id
+      const gameId = response.data.id;
 
       // Navigate to the GameWaiting screen with the necessary parameters
       router.navigate({
@@ -54,7 +57,7 @@ const GameLevel: React.FC = () => {
           course: course?.toString(),
           isCreator: "true", // Convert boolean to string
           code: gameCode,
-          gameId: gameId,
+          gameId: gameId?.toString(),
         },
       });
 
