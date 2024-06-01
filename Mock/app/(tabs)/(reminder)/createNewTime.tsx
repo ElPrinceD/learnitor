@@ -6,6 +6,7 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  Switch,
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import axios from "axios";
@@ -31,6 +32,7 @@ const CreateNewTime: React.FC = () => {
   const [time, setTime] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [isRepetitive, setIsRepetitive] = useState(false);
 
   const handleSaveTime = async () => {
     const data = {
@@ -40,6 +42,7 @@ const CreateNewTime: React.FC = () => {
       due_time: time.toISOString().split("T")[1].slice(0, 5),
       category: category_id,
       learner: userInfo?.user.id,
+      is_repetitive: isRepetitive, // Add this to your backend data structure
     };
 
     try {
@@ -117,6 +120,17 @@ const CreateNewTime: React.FC = () => {
         />
       </View>
 
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Repetitive</Text>
+        <View style={styles.switchContainer}>
+          <Switch
+            value={isRepetitive}
+            onValueChange={setIsRepetitive}
+          />
+          <Text style={styles.switchLabel}>{isRepetitive ? "Yes" : "No"}</Text>
+        </View>
+      </View>
+
       <TouchableOpacity style={styles.saveButton} onPress={handleSaveTime}>
         <Text style={styles.saveButtonText}>Add Schedule</Text>
       </TouchableOpacity>
@@ -149,6 +163,14 @@ const styles = StyleSheet.create({
   },
   descriptionInput: {
     height: 120,
+  },
+  switchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  switchLabel: {
+    marginLeft: 10,
+    fontSize: 16,
   },
   saveButton: {
     backgroundColor: "#007BFF",
