@@ -8,7 +8,7 @@ import {
 } from "react-native";
 
 type GameButtonProps = {
-  onPress: () => void;
+  onPress?: () => void;
   title?: string;
   disabled?: boolean;
   style?: ViewStyle | ViewStyle[]; // Updated to accept a list of styles
@@ -66,6 +66,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "bold",
+    textAlign: "center",
   },
 });
 

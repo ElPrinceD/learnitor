@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
+import { View, StyleSheet, ScrollView, Image } from "react-native";
 import { useLocalSearchParams, router, Stack } from "expo-router";
 import axios from "axios";
 import CourseInformation from "../../../components/CourseInformation";
@@ -171,31 +171,50 @@ const CourseDetails: React.FC = () => {
     },
     scrollViewContainer: {
       flexGrow: 1,
+      zIndex: 2,
+    },
+    imageContainer: {
+      width: "100%",
+      zIndex: 1,
+    },
+
+    image: {
+      height: 250,
     },
   });
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollViewContainer}>
-      <CourseInformation
-        course={parsedCourse}
-        enrollCourse={enrollCourse}
-        unenrollCourse={unenrollCourse}
-        progress={progress}
-        enrolled={enrolled}
-        enrollDisabled={enrollDisabled}
-        onEnrollDisabledPress={handleEnrolledDisabledPress}
-        handleContinue={handleContinue}
-        topics={topics}
-      />
-      <CourseTopics
-        topics={topics}
-        selectedTopics={selectedTopics}
-        onSelectedTopicsChange={handleSelectedTopicsChange}
-      />
-      {selectedTopics.map((topic) => (
-        <View key={topic.id}></View>
-      ))}
-    </ScrollView>
+    <View style={styles.container}>
+      <View style={styles.imageContainer}>
+        <Image
+          source={{ uri: parsedCourse.url }}
+          style={styles.image}
+          resizeMode="cover"
+          onError={(error) => console.log("Image error:", error)}
+        />
+      </View>
+      <ScrollView contentContainerStyle={styles.scrollViewContainer}>
+        <CourseInformation
+          course={parsedCourse}
+          enrollCourse={enrollCourse}
+          unenrollCourse={unenrollCourse}
+          progress={progress}
+          enrolled={enrolled}
+          enrollDisabled={enrollDisabled}
+          onEnrollDisabledPress={handleEnrolledDisabledPress}
+          handleContinue={handleContinue}
+          topics={topics}
+        />
+        <CourseTopics
+          topics={topics}
+          selectedTopics={selectedTopics}
+          onSelectedTopicsChange={handleSelectedTopicsChange}
+        />
+        {selectedTopics.map((topic) => (
+          <View key={topic.id}></View>
+        ))}
+      </ScrollView>
+    </View>
   );
 };
 

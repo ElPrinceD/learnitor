@@ -45,11 +45,10 @@ const CoursesList: React.FC<Props> = ({
       flex: 15,
     },
     categoryList: {
-      marginBottom: "1%",
+      marginBottom: "2%",
     },
     categoryItem: {
       paddingHorizontal: 15,
-      paddingVertical: 4,
       marginRight: 10,
       borderRadius: 10,
       borderWidth: 1,

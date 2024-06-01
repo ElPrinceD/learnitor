@@ -21,21 +21,7 @@ import axios from "axios";
 import ApiUrl from "../../config";
 import SSE from "react-native-sse";
 import { Question } from "../../components/types";
-
-// Define the type for a player
-type Player = {
-  id: number;
-  profilePicture: string;
-  profileName: string;
-};
-
-// Define the type for the game details response
-type GameDetailsResponse = {
-  creator: { first_name: string; id: number };
-  players: { id: number; first_name: string; last_name: string }[];
-  questions: Question[];
-  code: string;
-};
+import { Player, GameDetailsResponse } from "../../components/types";
 
 export default function GameWaitingScreen() {
   const { userInfo, userToken } = useAuth();
@@ -54,8 +40,6 @@ export default function GameWaitingScreen() {
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
-
- 
 
   useEffect(() => {
     const fetchGameDetails = async () => {
@@ -123,8 +107,6 @@ export default function GameWaitingScreen() {
         }
       });
 
-      
-
       // Close SSE connection on component unmount
       return () => {
         sse.close();
@@ -179,7 +161,7 @@ export default function GameWaitingScreen() {
       params: {
         questions: JSON.stringify(gameQuestions),
         isCreator: isCreator,
-        gameId:  gameId || id
+        gameId: gameId || id,
       },
     });
   };

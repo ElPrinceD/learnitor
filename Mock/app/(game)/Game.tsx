@@ -12,7 +12,7 @@ export default function Game() {
   const { userToken } = useAuth();
   const { gameId } = useLocalSearchParams();
   const [gameAnswers, setGameAnswers] = useState<Answer[]>([]);
-  
+
   const [selectedAnswers, setSelectedAnswers] = useState<{
     [key: number]: number[];
   }>({});
@@ -25,7 +25,7 @@ export default function Game() {
 
   // Fetch game details, including questions, from the server
   useEffect(() => {
-    console.log(gameId)
+    console.log(gameId);
     const fetchGameDetails = async () => {
       try {
         const response = await axios.get(`${ApiUrl}:8000/games/${gameId}/`, {
@@ -74,7 +74,9 @@ export default function Game() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setCurrentQuestion((prevQuestion) => (prevQuestion + 1) % gameQuestions.length);
+      setCurrentQuestion(
+        (prevQuestion) => (prevQuestion + 1) % gameQuestions.length
+      );
     }, 10000);
 
     return () => clearTimeout(timer);
@@ -147,9 +149,10 @@ export default function Game() {
     // Defer the navigation call to avoid potential re-renders
     setTimeout(() => {
       router.replace({
-        pathname: "ScorePage",
+        pathname: "Results",
         params: {
           score: scorePercentage.toFixed(2),
+          gameId: gameId,
           results: JSON.stringify(results),
           practiceQuestions: JSON.stringify(gameQuestions), // Corrected parameter name
           practiceAnswers: JSON.stringify(gameAnswers),
