@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -19,7 +19,6 @@ import { Ionicons } from "@expo/vector-icons";
 import Colors from "../../constants/Colors";
 import axios from "axios";
 import ApiUrl from "../../config";
-import SSE from "react-native-sse";
 import { Question } from "../../components/types";
 import { Player, GameDetailsResponse } from "../../components/types";
 
@@ -74,17 +73,17 @@ export default function GameWaitingScreen() {
     if (gameCode && userToken) {
       fetchGameDetails();
 
-      const sse = new SSE(`${ApiUrl}:8000/games/${gameCode}/sse/`);
+      const ws = new WebSocket(`ws://192.168.25.61:8000/games/${gameCode}/ws/`);
 
-      sse.addEventListener("open", () => {
-        console.log("SSE connection opened");
-      });
+      ws.onopen = () => {
+        console.log("WebSocket connection opened");
+      };
 
-      sse.addEventListener("error", (error) => {
-        console.error("SSE connection error:", error);
-      });
+      ws.onerror = (error) => {
+        console.error("WebSocket connection error:", error);
+      };
 
-      sse.addEventListener("message", (event) => {
+      ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
 
@@ -96,20 +95,24 @@ export default function GameWaitingScreen() {
                 "https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Eden_Hazard_at_Baku_before_2019_UEFA_Europe_League_Final.jpg/330px-Eden_Hazard_at_Baku_before_2019_UEFA_Europe_League_Final.jpg", // Placeholder URL, update as needed
             }));
 
-            setPlayers(newPlayers); // Update player list with both existing and newly joined players
+            setPlayers(newPlayers);
           }
-          if (data.event === "start_game") {
+
+          if (data.type === "game.start") {
+            console.log(
+              "User has received start game ",
+              userInfo?.user.first_name
+            );
             goToGame();
-            sse.close(); // Close the SSE connection
           }
         } catch (error) {
           console.error("Error parsing JSON data:", error);
         }
-      });
+      };
 
-      // Close SSE connection on component unmount
+      // Close WebSocket connection on component unmount
       return () => {
-        sse.close();
+        ws.close();
       };
     }
   }, [gameCode, userToken, gameId, id]);
