@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { View, StyleSheet } from "react-native";
 import axios from "axios";
 import { useLocalSearchParams, router } from "expo-router";
@@ -9,8 +9,8 @@ import Questions from "../../components/Questions";
 import { Question, Answer } from "../../components/types";
 
 export default function Game() {
-  const { userToken } = useAuth();
-  const { gameId } = useLocalSearchParams();
+  const { userToken, userInfo } = useAuth();
+  const { gameId, gameCode } = useLocalSearchParams();
   const [gameAnswers, setGameAnswers] = useState<Answer[]>([]);
 
   const [selectedAnswers, setSelectedAnswers] = useState<{
@@ -22,10 +22,69 @@ export default function Game() {
   ] = useState<number[]>([]);
   const [gameQuestions, setGameQuestions] = useState<Question[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState<number>(0);
+  const [questionDuration, setQuestionDuration] = useState<number>(20000); // Default duration set to 20 seconds
+  const webSocket = useRef<WebSocket | null>(null);
+
+  // Function to send WebSocket message when a user attempts a question
+
+  const sendWebSocketMessage = (questionId: number) => {
+    if (webSocket.current && webSocket.current.readyState === WebSocket.OPEN) {
+      console.log("another one", gameId);
+
+      const message = {
+        type: "attempt_question",
+        question_id: questionId,
+
+        game_id: gameId,
+      };
+      webSocket.current.send(JSON.stringify(message));
+      console.log("We have sent a message");
+    }
+  };
+
+  // Establish WebSocket connection
+  useEffect(() => {
+    webSocket.current = new WebSocket(
+      `ws://192.168.48.198:8000/games/${gameCode}/ws/`
+    );
+
+    webSocket.current.onopen = () => {
+      console.log("WebSocket connection opened");
+    };
+
+    webSocket.current.onclose = () => {
+      console.log("WebSocket connection closed");
+    };
+
+    webSocket.current.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+
+    webSocket.current.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      if (
+        message.type === "question.attempted" &&
+        message.question_id === gameQuestions[currentQuestion].id
+      ) {
+        console.log("We have a message");
+        if (currentQuestion < gameQuestions.length - 1) {
+          console.log("We're here");
+          setCurrentQuestion((prevQuestion) => prevQuestion + 1);
+        } else {
+          handleSubmit();
+        }
+      }
+    };
+
+    return () => {
+      if (webSocket.current) {
+        webSocket.current.close();
+      }
+    };
+  }, [gameCode, gameQuestions, currentQuestion, userInfo]);
 
   // Fetch game details, including questions, from the server
   useEffect(() => {
-    console.log(gameId);
     const fetchGameDetails = async () => {
       try {
         const response = await axios.get(`${ApiUrl}:8000/games/${gameId}/`, {
@@ -33,9 +92,13 @@ export default function Game() {
         });
 
         const gameData = response.data;
-        setGameQuestions(gameData.questions);
+        console.log("Game data fetched:", gameData); // Debugging
 
-        const answersPromises = gameData.questions.map(
+        setGameQuestions(gameData.questions || []);
+
+        setQuestionDuration((gameData.duration || 20) * 1000); // Convert duration to milliseconds
+
+        const answersPromises = (gameData.questions || []).map(
           async (gameQuestion: Question) => {
             const answersResponse = await axios.get(
               `${ApiUrl}:8000/api/course/topic/questions/${gameQuestion.id}/answers`,
@@ -73,16 +136,24 @@ export default function Game() {
   }, [gameQuestions, gameAnswers]);
 
   useEffect(() => {
+    if (gameQuestions.length === 0) return;
+
     const timer = setTimeout(() => {
-      setCurrentQuestion(
-        (prevQuestion) => (prevQuestion + 1) % gameQuestions.length
-      );
-    }, 10000);
+      if (questionDuration) {
+        if (currentQuestion < gameQuestions.length - 1) {
+          setCurrentQuestion((prevQuestion) => prevQuestion + 1);
+        } else {
+          handleSubmit();
+        }
+      }
+    }, questionDuration);
 
     return () => clearTimeout(timer);
-  }, [currentQuestion, gameQuestions]);
+  }, [currentQuestion, questionDuration, gameQuestions]);
 
   const handleAnswerSelection = (answerId: number, questionId: number) => {
+    sendWebSocketMessage(questionId); // Send WebSocket message on answer attempt
+
     setSelectedAnswers((prevSelectedAnswers) => {
       const updatedAnswers = { ...prevSelectedAnswers };
 
@@ -103,11 +174,11 @@ export default function Game() {
     });
 
     // Move to the next question if not the last one
-    if (currentQuestion < gameQuestions.length - 1) {
-      setCurrentQuestion((prevQuestion) => prevQuestion + 1);
-    } else {
-      handleSubmit();
-    }
+    // if (currentQuestion < gameQuestions.length - 1) {
+    //   setCurrentQuestion((prevQuestion) => prevQuestion + 1);
+    // } else {
+    //   handleSubmit();
+    // }
   };
 
   const handleSubmit = () => {
@@ -167,10 +238,6 @@ export default function Game() {
       selectedAnswers[questionId].includes(answerId)
     );
   };
-
-  useEffect(() => {
-    console.log(gameQuestions);
-  }, [gameQuestions]);
 
   const styles = StyleSheet.create({
     container: {

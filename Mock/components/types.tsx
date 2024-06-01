@@ -30,6 +30,7 @@ export interface Question {
   text: string;
   id: number;
   level: string;
+  duration: string;
 }
 export interface Answer {
   text: string;

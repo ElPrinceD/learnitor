@@ -73,7 +73,9 @@ export default function GameWaitingScreen() {
     if (gameCode && userToken) {
       fetchGameDetails();
 
-      const ws = new WebSocket(`ws://192.168.25.61:8000/games/${gameCode}/ws/`);
+      const ws = new WebSocket(
+        `ws://192.168.48.198:8000/games/${gameCode}/ws/`
+      );
 
       ws.onopen = () => {
         console.log("WebSocket connection opened");
@@ -165,6 +167,8 @@ export default function GameWaitingScreen() {
         questions: JSON.stringify(gameQuestions),
         isCreator: isCreator,
         gameId: gameId || id,
+        joinerGameId: id || gameId,
+        gameCode: gameCode,
       },
     });
   };
