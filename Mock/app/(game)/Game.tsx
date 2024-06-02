@@ -10,7 +10,7 @@ import { Question, Answer } from "../../components/types";
 
 export default function Game() {
   const { userToken } = useAuth();
-  const { gameId } = useLocalSearchParams();
+  const { gameId, questions } = useLocalSearchParams();
   const [gameAnswers, setGameAnswers] = useState<Answer[]>([]);
   
   const [selectedAnswers, setSelectedAnswers] = useState<{
