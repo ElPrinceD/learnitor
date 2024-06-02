@@ -30,6 +30,7 @@ export interface Question {
   text: string;
   id: number;
   level: string;
+  duration: string;
 }
 export interface Answer {
   text: string;
@@ -62,4 +63,16 @@ export interface Material {
 export interface Streak {
   name: string;
   streak: boolean;
+}
+export interface Player {
+  id: number;
+  profilePicture: string;
+  profileName: string;
+}
+
+export interface GameDetailsResponse {
+  creator: { first_name: string; id: number };
+  players: { id: number; first_name: string; last_name: string }[];
+  questions: Question[];
+  code: string;
 }

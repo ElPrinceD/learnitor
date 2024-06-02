@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, useColorScheme, Image } from "react-native";
+import { View, Text, StyleSheet, useColorScheme } from "react-native";
 import { FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
 import ProgressBar from "./ProgressBar";
 import Colors from "../constants/Colors";
@@ -26,9 +26,6 @@ const CourseInformation = ({
     bodyContainer: {
       padding: 20,
       backgroundColor: themeColors.background,
-      marginTop: -47,
-      borderTopLeftRadius: 50,
-      borderTopRightRadius: 50,
     },
     heading: {
       flexDirection: "row",
@@ -53,13 +50,6 @@ const CourseInformation = ({
       color: themeColors.textSecondary,
     },
 
-    imageContainer: {
-      width: "100%",
-    },
-
-    image: {
-      height: 250,
-    },
     buttonContainer: {
       flexDirection: "row",
       alignItems: "center",
@@ -108,16 +98,7 @@ const CourseInformation = ({
 
   return (
     <View>
-      <View style={styles.container}>
-        <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: course.url }}
-            style={styles.image}
-            resizeMode="cover"
-            onError={(error) => console.log("Image error:", error)}
-          />
-        </View>
-      </View>
+      <View style={styles.container}></View>
       <View style={styles.bodyContainer}>
         <View>
           <View style={styles.heading}>

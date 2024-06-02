@@ -20,21 +20,7 @@ import Colors from "../../constants/Colors";
 import axios from "axios";
 import ApiUrl from "../../config";
 import { Question } from "../../components/types";
-
-// Define the type for a player
-type Player = {
-  id: number;
-  profilePicture: string;
-  profileName: string;
-};
-
-// Define the type for the game details response
-type GameDetailsResponse = {
-  creator: { first_name: string; id: number };
-  players: { id: number; first_name: string; last_name: string }[];
-  questions: Question[];
-  code: string;
-};
+import { Player, GameDetailsResponse } from "../../components/types";
 
 export default function GameWaitingScreen() {
   const { userInfo, userToken } = useAuth();
@@ -87,7 +73,9 @@ export default function GameWaitingScreen() {
     if (gameCode && userToken) {
       fetchGameDetails();
 
-      const ws = new WebSocket(`ws://192.168.25.61:8000/games/${gameCode}/ws/`);
+      const ws = new WebSocket(
+        `ws://192.168.48.198:8000/games/${gameCode}/ws/`
+      );
 
       ws.onopen = () => {
         console.log("WebSocket connection opened");
@@ -98,12 +86,8 @@ export default function GameWaitingScreen() {
       };
 
       ws.onmessage = (event) => {
-        
-        
         try {
           const data = JSON.parse(event.data);
-          
-          
 
           if (data.players) {
             const newPlayers = data.players.map((player: any) => ({
@@ -116,11 +100,12 @@ export default function GameWaitingScreen() {
             setPlayers(newPlayers);
           }
 
-
           if (data.type === "game.start") {
-            console.log("User has received start game ", userInfo?.user.first_name);
+            console.log(
+              "User has received start game ",
+              userInfo?.user.first_name
+            );
             goToGame();
-           
           }
         } catch (error) {
           console.error("Error parsing JSON data:", error);
@@ -182,6 +167,8 @@ export default function GameWaitingScreen() {
         questions: JSON.stringify(gameQuestions),
         isCreator: isCreator,
         gameId: gameId || id,
+        joinerGameId: id || gameId,
+        gameCode: gameCode,
       },
     });
   };
