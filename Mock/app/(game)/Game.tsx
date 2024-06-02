@@ -21,6 +21,7 @@ export default function Game() {
     setQuestionsWithMultipleCorrectAnswers,
   ] = useState<number[]>([]);
   const [gameQuestions, setGameQuestions] = useState<Question[]>([]);
+  const [allScores, setAllScores] = useState({});
   const [currentQuestion, setCurrentQuestion] = useState<number>(0);
   const [questionDuration, setQuestionDuration] = useState<number>(20000); // Default duration set to 20 seconds
   const webSocket = useRef<WebSocket | null>(null);
@@ -29,7 +30,7 @@ export default function Game() {
 
   const sendWebSocketMessage = (questionId: number) => {
     if (webSocket.current && webSocket.current.readyState === WebSocket.OPEN) {
-      console.log("another one", gameId);
+     
 
       const message = {
         type: "attempt_question",
@@ -42,10 +43,22 @@ export default function Game() {
     }
   };
 
+  const sendSubmitScoreMessage = (scorePercentage: number) =>{
+    if (webSocket.current && webSocket.current.readyState === WebSocket.OPEN) {
+      const message = {
+        type: "submit_score",
+        score: scorePercentage,
+        user_id: userInfo?.user.id,
+        game_id: gameId,
+      };
+      webSocket.current.send(JSON.stringify(message));
+    }
+  }
+
   // Establish WebSocket connection
   useEffect(() => {
     webSocket.current = new WebSocket(
-      `ws://192.168.48.198:8000/games/${gameCode}/ws/`
+      `ws://192.168.205.61:8000/games/${gameCode}/ws/`
     );
 
     webSocket.current.onopen = () => {
@@ -74,6 +87,26 @@ export default function Game() {
           handleSubmit();
         }
       }
+      else if( message.type === "all_scores_submitted"){
+        console.log(message.scores)
+        const scoresObject = message.scores.reduce((acc, score) => {
+          acc[score.user_id] = score.score;
+          return acc;
+        }, {});
+        setAllScores(scoresObject); 
+        setTimeout(() => {
+          router.replace({
+            pathname: "Results",
+            params: {
+              scores: JSON.stringify(scoresObject),
+              gameId: gameId,
+             
+              practiceQuestions: JSON.stringify(gameQuestions), // Corrected parameter name
+              practiceAnswers: JSON.stringify(gameAnswers),
+            },
+          });
+        }, 0);
+      }
     };
 
     return () => {
@@ -92,7 +125,7 @@ export default function Game() {
         });
 
         const gameData = response.data;
-        console.log("Game data fetched:", gameData); // Debugging
+       // Debugging
 
         setGameQuestions(gameData.questions || []);
 
@@ -173,12 +206,7 @@ export default function Game() {
       return updatedAnswers;
     });
 
-    // Move to the next question if not the last one
-    // if (currentQuestion < gameQuestions.length - 1) {
-    //   setCurrentQuestion((prevQuestion) => prevQuestion + 1);
-    // } else {
-    //   handleSubmit();
-    // }
+    
   };
 
   const handleSubmit = () => {
@@ -217,19 +245,10 @@ export default function Game() {
 
     let scorePercentage = (correctAnswers / totalQuestions) * 100;
 
+    sendSubmitScoreMessage(scorePercentage)
+
     // Defer the navigation call to avoid potential re-renders
-    setTimeout(() => {
-      router.replace({
-        pathname: "Results",
-        params: {
-          score: scorePercentage.toFixed(2),
-          gameId: gameId,
-          results: JSON.stringify(results),
-          practiceQuestions: JSON.stringify(gameQuestions), // Corrected parameter name
-          practiceAnswers: JSON.stringify(gameAnswers),
-        },
-      });
-    }, 0);
+    
   };
 
   const isAnswerSelected = (questionId: number, answerId: number) => {
