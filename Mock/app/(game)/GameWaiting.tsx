@@ -74,7 +74,7 @@ export default function GameWaitingScreen() {
       fetchGameDetails();
 
       const ws = new WebSocket(
-        `ws://192.168.48.198:8000/games/${gameCode}/ws/`
+        `ws://192.168.205.61:8000/games/${gameCode}/ws/`
       );
 
       ws.onopen = () => {

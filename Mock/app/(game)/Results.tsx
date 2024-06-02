@@ -17,12 +17,17 @@ import GameButton from "../../components/GameButton";
 
 export default function ResultsScreen() {
   const { userInfo, userToken } = useAuth();
-  const { score: scoreParam, gameId } = useLocalSearchParams<{
+  const { score: scoreParam, gameId, scores: scoresParam } = useLocalSearchParams<{
     score: string;
     gameId: string;
+    scores: string;
   }>();
 
   const score = typeof scoreParam === "string" ? scoreParam : "0";
+  const scores = JSON.parse(typeof scoresParam === "string" ? scoresParam : "{}");
+
+  console.log(scores)
+
 
   const [creator, setCreator] = useState<string | undefined>();
   const [creatorId, setCreatorId] = useState<number | undefined>();
@@ -50,6 +55,7 @@ export default function ResultsScreen() {
         if (data.players) {
           const newPlayers = data.players.map((player) => ({
             id: player.id,
+            score: scores[player.id] || "0.0",
             profileName: `${player.first_name} ${player.last_name}`,
             profilePicture:
               "https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Eden_Hazard_at_Baku_before_2019_UEFA_Europe_League_Final.jpg/330px-Eden_Hazard_at_Baku_before_2019_UEFA_Europe_League_Final.jpg", // Placeholder URL, update as needed
@@ -126,16 +132,19 @@ export default function ResultsScreen() {
     },
   });
 
-  const renderPlayer = ({ item }: { item: Player }) => (
-    <View style={styles.playerContainer}>
-      <Image
-        source={{ uri: item.profilePicture }}
-        style={styles.profileImage}
-      />
-      <Text style={styles.profileName}>{item.profileName}: </Text>
-      <Text style={styles.profileName}>{score}</Text>
-    </View>
-  );
+  const renderPlayer = ({ item }: { item: Player }) => {
+    
+    return (
+      <View style={styles.playerContainer}>
+        <Image
+          source={{ uri: item.profilePicture }}
+          style={styles.profileImage}
+        />
+        <Text style={styles.profileName}>{item.profileName}: </Text>
+        <Text style={styles.profileName}>{item.score}</Text>
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>

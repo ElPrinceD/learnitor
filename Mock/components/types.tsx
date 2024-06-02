@@ -68,6 +68,7 @@ export interface Player {
   id: number;
   profilePicture: string;
   profileName: string;
+  score: string
 }
 
 export interface GameDetailsResponse {
