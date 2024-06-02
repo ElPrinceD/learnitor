@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { View, StyleSheet, ScrollView, Image } from "react-native";
+import React, { useState, useEffect, useRef } from "react";
+import { View, StyleSheet, ScrollView, Image, Animated } from "react-native";
+// import Animated from "react-native-reanimated";
+import { Dimensions } from "react-native";
+import Constants from "expo-constants";
 import { useLocalSearchParams, router, Stack } from "expo-router";
 import axios from "axios";
 import CourseInformation from "../../../components/CourseInformation";
@@ -19,6 +22,8 @@ const CourseDetails: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [enrollDisabled, setEnrollDisabled] = useState<boolean>(true);
   const [enrollmentResponse, setEnrollmentResponse] = useState<any>(null);
+
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   const parsedCourse: Course =
     typeof course === "string" ? JSON.parse(course) : course;
@@ -157,6 +162,24 @@ const CourseDetails: React.FC = () => {
     }
   };
 
+  const { height } = Dimensions.get("window");
+  const φ = (1 + Math.sqrt(5)) / 2;
+  const MIN_HEADER_HEIGHT = 64 + Constants.statusBarHeight;
+  const MAX_HEADER_HEIGHT = height * (1 - 1 / φ);
+  const HEADER_DELTA = MAX_HEADER_HEIGHT - MIN_HEADER_HEIGHT;
+
+  const imageOpacity = scrollY.interpolate({
+    inputRange: [-64, 0, HEADER_DELTA],
+    outputRange: [0, 0.2, 1],
+    extrapolate: "clamp",
+  });
+
+  const imageTranslateY = scrollY.interpolate({
+    inputRange: [-MAX_HEADER_HEIGHT, 0],
+    outputRange: [4, 1],
+    extrapolateRight: "clamp",
+  });
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -169,9 +192,8 @@ const CourseDetails: React.FC = () => {
       textAlign: "center",
       lineHeight: 15,
     },
-    scrollViewContainer: {
+    scrollViewContent: {
       flexGrow: 1,
-      zIndex: 2,
     },
     imageContainer: {
       width: "100%",
@@ -184,37 +206,60 @@ const CourseDetails: React.FC = () => {
   });
 
   return (
-    <View style={styles.container}>
-      <View style={styles.imageContainer}>
+    // <View style={styles.container}>
+    <Animated.ScrollView
+      // style={{ transform: [{ translateY: HEADER_DELTA }] }}
+      contentContainerStyle={styles.scrollViewContent}
+      scrollEventThrottle={16}
+      onScroll={Animated.event(
+        [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+        { useNativeDriver: false }
+      )}
+    >
+      <Animated.View
+        style={[
+          styles.imageContainer,
+          {
+            opacity: imageOpacity,
+            transform: [{ translateY: imageTranslateY }],
+          },
+        ]}
+      >
         <Image
           source={{ uri: parsedCourse.url }}
           style={styles.image}
           resizeMode="cover"
           onError={(error) => console.log("Image error:", error)}
         />
-      </View>
-      <ScrollView contentContainerStyle={styles.scrollViewContainer}>
-        <CourseInformation
-          course={parsedCourse}
-          enrollCourse={enrollCourse}
-          unenrollCourse={unenrollCourse}
-          progress={progress}
-          enrolled={enrolled}
-          enrollDisabled={enrollDisabled}
-          onEnrollDisabledPress={handleEnrolledDisabledPress}
-          handleContinue={handleContinue}
-          topics={topics}
+        <Animated.View
+          style={{
+            ...StyleSheet.absoluteFillObject,
+            backgroundColor: "black",
+            opacity: imageOpacity,
+          }}
         />
-        <CourseTopics
-          topics={topics}
-          selectedTopics={selectedTopics}
-          onSelectedTopicsChange={handleSelectedTopicsChange}
-        />
-        {selectedTopics.map((topic) => (
-          <View key={topic.id}></View>
-        ))}
-      </ScrollView>
-    </View>
+      </Animated.View>
+      <CourseInformation
+        course={parsedCourse}
+        enrollCourse={enrollCourse}
+        unenrollCourse={unenrollCourse}
+        progress={progress}
+        enrolled={enrolled}
+        enrollDisabled={enrollDisabled}
+        onEnrollDisabledPress={handleEnrolledDisabledPress}
+        handleContinue={handleContinue}
+        topics={topics}
+      />
+      <CourseTopics
+        topics={topics}
+        selectedTopics={selectedTopics}
+        onSelectedTopicsChange={handleSelectedTopicsChange}
+      />
+      {selectedTopics.map((topic) => (
+        <View key={topic.id}></View>
+      ))}
+    </Animated.ScrollView>
+    // </View>
   );
 };
 
