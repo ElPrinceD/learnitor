@@ -30,8 +30,6 @@ export default function Game() {
 
   const sendWebSocketMessage = (questionId: number) => {
     if (webSocket.current && webSocket.current.readyState === WebSocket.OPEN) {
-     
-
       const message = {
         type: "attempt_question",
         question_id: questionId,
@@ -43,7 +41,7 @@ export default function Game() {
     }
   };
 
-  const sendSubmitScoreMessage = (scorePercentage: number) =>{
+  const sendSubmitScoreMessage = (scorePercentage: number) => {
     if (webSocket.current && webSocket.current.readyState === WebSocket.OPEN) {
       const message = {
         type: "submit_score",
@@ -53,12 +51,12 @@ export default function Game() {
       };
       webSocket.current.send(JSON.stringify(message));
     }
-  }
+  };
 
   // Establish WebSocket connection
   useEffect(() => {
     webSocket.current = new WebSocket(
-      `ws://192.168.205.61:8000/games/${gameCode}/ws/`
+      `ws://192.168.48.198:8000/games/${gameCode}/ws/`
     );
 
     webSocket.current.onopen = () => {
@@ -86,21 +84,20 @@ export default function Game() {
         } else {
           handleSubmit();
         }
-      }
-      else if( message.type === "all_scores_submitted"){
-        console.log(message.scores)
+      } else if (message.type === "all_scores_submitted") {
+        console.log(message.scores);
         const scoresObject = message.scores.reduce((acc, score) => {
           acc[score.user_id] = score.score;
           return acc;
         }, {});
-        setAllScores(scoresObject); 
+        setAllScores(scoresObject);
         setTimeout(() => {
           router.replace({
             pathname: "Results",
             params: {
               scores: JSON.stringify(scoresObject),
               gameId: gameId,
-             
+
               practiceQuestions: JSON.stringify(gameQuestions), // Corrected parameter name
               practiceAnswers: JSON.stringify(gameAnswers),
             },
@@ -125,7 +122,7 @@ export default function Game() {
         });
 
         const gameData = response.data;
-       // Debugging
+        // Debugging
 
         setGameQuestions(gameData.questions || []);
 
@@ -205,8 +202,6 @@ export default function Game() {
 
       return updatedAnswers;
     });
-
-    
   };
 
   const handleSubmit = () => {
@@ -245,10 +240,9 @@ export default function Game() {
 
     let scorePercentage = (correctAnswers / totalQuestions) * 100;
 
-    sendSubmitScoreMessage(scorePercentage)
+    sendSubmitScoreMessage(scorePercentage);
 
     // Defer the navigation call to avoid potential re-renders
-    
   };
 
   const isAnswerSelected = (questionId: number, answerId: number) => {

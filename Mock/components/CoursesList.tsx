@@ -45,7 +45,7 @@ const CoursesList: React.FC<Props> = ({
       flex: 15,
     },
     categoryList: {
-      marginBottom: "2%",
+      // marginBottom: "2%",
     },
     categoryItem: {
       paddingHorizontal: 15,
@@ -54,6 +54,7 @@ const CoursesList: React.FC<Props> = ({
       borderWidth: 1,
       borderColor: themeColors.tabIconDefault,
       backgroundColor: "transparent",
+      justifyContent: "center",
     },
     selectedCategoryItem: {
       borderColor: themeColors.selectedItem,

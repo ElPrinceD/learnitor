@@ -1,8 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, StyleSheet, ScrollView, Image, Animated } from "react-native";
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  Image,
+  Animated,
+  useColorScheme,
+} from "react-native";
 // import Animated from "react-native-reanimated";
 import { Dimensions } from "react-native";
 import Constants from "expo-constants";
+import { LinearGradient } from "expo-linear-gradient";
+
 import { useLocalSearchParams, router, Stack } from "expo-router";
 import axios from "axios";
 import CourseInformation from "../../../components/CourseInformation";
@@ -11,6 +20,8 @@ import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
 import { Topic, Course } from "../../../components/types";
 import Toast from "react-native-root-toast";
+import Colors from "../../../constants/Colors";
+import { useNavigation } from "@react-navigation/native";
 
 const CourseDetails: React.FC = () => {
   const { course } = useLocalSearchParams();
@@ -22,6 +33,10 @@ const CourseDetails: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [enrollDisabled, setEnrollDisabled] = useState<boolean>(true);
   const [enrollmentResponse, setEnrollmentResponse] = useState<any>(null);
+  const navigation = useNavigation();
+
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
 
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -167,10 +182,23 @@ const CourseDetails: React.FC = () => {
   const MIN_HEADER_HEIGHT = 64 + Constants.statusBarHeight;
   const MAX_HEADER_HEIGHT = height * (1 - 1 / φ);
   const HEADER_DELTA = MAX_HEADER_HEIGHT - MIN_HEADER_HEIGHT;
+  const HEADER_BETA = MAX_HEADER_HEIGHT - HEADER_DELTA;
+
+  const headerTitleOpacity = scrollY.interpolate({
+    inputRange: [HEADER_DELTA - 8, HEADER_DELTA - 4],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
+
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [HEADER_DELTA - 16, HEADER_DELTA],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
 
   const imageOpacity = scrollY.interpolate({
-    inputRange: [-64, 0, HEADER_DELTA],
-    outputRange: [0, 0.2, 1],
+    inputRange: [0, HEADER_BETA, HEADER_DELTA],
+    outputRange: [0, 0.8, 1],
     extrapolate: "clamp",
   });
 
@@ -179,14 +207,30 @@ const CourseDetails: React.FC = () => {
     outputRange: [4, 1],
     extrapolateRight: "clamp",
   });
+  const courseTitleOpacity = scrollY.interpolate({
+    inputRange: [-MAX_HEADER_HEIGHT / 2, 0, MAX_HEADER_HEIGHT / 2],
+    outputRange: [0, 1, 0],
+    extrapolate: "clamp",
+  });
+
+  const courseTitleHeight = scrollY.interpolate({
+    inputRange: [-MAX_HEADER_HEIGHT, -48 / 2],
+    outputRange: [0, MAX_HEADER_HEIGHT + 48],
+    extrapolate: "clamp",
+  });
 
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      borderTopEndRadius: 20,
-      borderTopLeftRadius: 20,
+      ...StyleSheet.absoluteFillObject,
     },
-
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: "bold",
+      color: themeColors.text,
+      alignContent: "center",
+      marginVertical: 10,
+    },
     icon: {
       fontSize: 15,
       textAlign: "center",
@@ -196,31 +240,81 @@ const CourseDetails: React.FC = () => {
       flexGrow: 1,
     },
     imageContainer: {
-      width: "100%",
-      zIndex: 1,
+      ...StyleSheet.absoluteFillObject,
+      height: MAX_HEADER_HEIGHT,
     },
 
     image: {
-      height: 250,
+      ...StyleSheet.absoluteFillObject,
+    },
+    gradient: {
+      position: "absolute",
+      left: 0,
+      bottom: 0,
+      right: 0,
+      alignItems: "center",
+    },
+    cover: {
+      height: MAX_HEADER_HEIGHT,
+    },
+    courseTitleContainer: {
+      ...StyleSheet.absoluteFillObject,
+      justifyContent: "flex-end",
+      alignItems: "flex-start",
+    },
+    courseTitle: {
+      textAlign: "left",
+      marginLeft: 17,
+      color: "#fff",
+      fontSize: 48,
+      fontWeight: "bold",
     },
   });
+  useEffect(() => {
+    navigation.setOptions({
+      headerTitle: () => (
+        <View>
+          <Animated.Text
+            style={[
+              styles.headerTitle,
+              {
+                opacity: headerTitleOpacity,
+                // transform: [{ translateY: titleTranslateY }],
+                textAlign: "center",
+              },
+            ]}
+          >
+            {parsedCourse.title}
+          </Animated.Text>
+        </View>
+      ),
+      headerShown: true,
+      headerTitleStyle: {
+        fontWeight: "bold",
+      },
+      headerBackTitleVisible: false,
+
+      headerShadowVisible: false,
+      headerTitleAlign: "center",
+      headerBackground: () => (
+        <Animated.View
+          style={{
+            ...StyleSheet.absoluteFillObject,
+            backgroundColor: themeColors.background,
+            opacity: headerOpacity,
+          }}
+        />
+      ),
+    });
+  }, [navigation, headerTitleOpacity, headerOpacity]);
 
   return (
-    // <View style={styles.container}>
-    <Animated.ScrollView
-      // style={{ transform: [{ translateY: HEADER_DELTA }] }}
-      contentContainerStyle={styles.scrollViewContent}
-      scrollEventThrottle={16}
-      onScroll={Animated.event(
-        [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-        { useNativeDriver: false }
-      )}
-    >
+    <View style={styles.container}>
       <Animated.View
         style={[
           styles.imageContainer,
           {
-            opacity: imageOpacity,
+            // opacity: imageOpacity,
             transform: [{ translateY: imageTranslateY }],
           },
         ]}
@@ -234,32 +328,60 @@ const CourseDetails: React.FC = () => {
         <Animated.View
           style={{
             ...StyleSheet.absoluteFillObject,
-            backgroundColor: "black",
+            backgroundColor: themeColors.gradientBackground,
             opacity: imageOpacity,
           }}
         />
       </Animated.View>
-      <CourseInformation
-        course={parsedCourse}
-        enrollCourse={enrollCourse}
-        unenrollCourse={unenrollCourse}
-        progress={progress}
-        enrolled={enrolled}
-        enrollDisabled={enrollDisabled}
-        onEnrollDisabledPress={handleEnrolledDisabledPress}
-        handleContinue={handleContinue}
-        topics={topics}
-      />
-      <CourseTopics
-        topics={topics}
-        selectedTopics={selectedTopics}
-        onSelectedTopicsChange={handleSelectedTopicsChange}
-      />
-      {selectedTopics.map((topic) => (
-        <View key={topic.id}></View>
-      ))}
-    </Animated.ScrollView>
-    // </View>
+      <Animated.ScrollView
+        // style={{ transform: [{ translateY: HEADER_DELTA }] }}
+        contentContainerStyle={styles.scrollViewContent}
+        scrollEventThrottle={1}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+      >
+        <View style={styles.cover}>
+          <Animated.View
+            style={[styles.gradient, { height: courseTitleHeight }]}
+          >
+            <LinearGradient
+              style={StyleSheet.absoluteFill}
+              start={[0, 0.4]}
+              end={[0, 1.15]}
+              colors={["transparent", "rgba(0, 0, 0, 0.2)", "#000"]}
+            />
+          </Animated.View>
+          <View style={styles.courseTitleContainer}>
+            <Animated.Text
+              style={[styles.courseTitle, { opacity: courseTitleOpacity }]}
+            >
+              {parsedCourse.title}
+            </Animated.Text>
+          </View>
+        </View>
+        <CourseInformation
+          course={parsedCourse}
+          enrollCourse={enrollCourse}
+          unenrollCourse={unenrollCourse}
+          progress={progress}
+          enrolled={enrolled}
+          enrollDisabled={enrollDisabled}
+          onEnrollDisabledPress={handleEnrolledDisabledPress}
+          handleContinue={handleContinue}
+          topics={topics}
+        />
+        <CourseTopics
+          topics={topics}
+          selectedTopics={selectedTopics}
+          onSelectedTopicsChange={handleSelectedTopicsChange}
+        />
+        {selectedTopics.map((topic) => (
+          <View key={topic.id}></View>
+        ))}
+      </Animated.ScrollView>
+    </View>
   );
 };
 

@@ -10,6 +10,7 @@ const lightShadowColor = '#000';
 const lightTabIconDefaultColor = '#ccc';
 const lightButtonDisabledColor = '#ccffe5';
 const lightPlaceholderColor = '#666';
+const lightGradientBackgroundColor = '#f2f2f2'
 const darkTextColor = '#fff';
 const darkTextSecondaryColor = '#ccc';
 const darkBackgroundColor = '#000';
@@ -18,6 +19,8 @@ const darkShadowColor = '#696969';
 const darkTabIconDefaultColor = '#ccc';
 const darkButtonDisabledColor = '#ccffe5';
 const darkPlaceholderColor = '#aaa';
+const darkGradientBackgroundColor = '#000'
+
 
 // Export themes
 export default {
@@ -37,6 +40,7 @@ export default {
     icon: tintColor,
     selectedItem: tintColor,
     selectedText: tintColor,
+    gradientBackground: lightGradientBackgroundColor
   },
   dark: {
     text: darkTextColor,
@@ -54,5 +58,6 @@ export default {
     icon: tintColor,
     selectedItem: tintColor,
     selectedText: tintColor,
+    gradientBackground:darkGradientBackgroundColor
   },
 };

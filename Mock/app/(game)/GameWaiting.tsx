@@ -59,6 +59,7 @@ export default function GameWaitingScreen() {
         if (data.players) {
           const newPlayers = data.players.map((player) => ({
             id: player.id,
+            score: "0.00",
             profileName: `${player.first_name} ${player.last_name}`,
             profilePicture:
               "https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Eden_Hazard_at_Baku_before_2019_UEFA_Europe_League_Final.jpg/330px-Eden_Hazard_at_Baku_before_2019_UEFA_Europe_League_Final.jpg", // Placeholder URL, update as needed
@@ -74,7 +75,7 @@ export default function GameWaitingScreen() {
       fetchGameDetails();
 
       const ws = new WebSocket(
-        `ws://192.168.205.61:8000/games/${gameCode}/ws/`
+        `ws://192.168.48.198:8000/games/${gameCode}/ws/`
       );
 
       ws.onopen = () => {

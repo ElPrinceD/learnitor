@@ -30,7 +30,7 @@ const CourseInformation = ({
     heading: {
       flexDirection: "row",
       justifyContent: "space-between",
-      alignContent: "center",
+      alignItems: "flex-end",
     },
     title: {
       fontSize: 24,
@@ -40,9 +40,11 @@ const CourseInformation = ({
     topicsNumber: {
       fontSize: 18,
       color: themeColors.icon,
-      textAlign: "center",
-      top: 5,
+      textAlign: "left",
+      marginTop: -10,
+      marginBottom: 5,
       fontWeight: "bold",
+      alignSelf: "flex-end",
     },
     description: {
       fontSize: 18,
@@ -101,8 +103,10 @@ const CourseInformation = ({
       <View style={styles.container}></View>
       <View style={styles.bodyContainer}>
         <View>
+          <Text style={[styles.description, { flexWrap: "wrap" }]}>
+            {course.description}
+          </Text>
           <View style={styles.heading}>
-            <Text style={styles.title}>{course.title}</Text>
             <Text style={styles.topicsNumber}>
               <MaterialCommunityIcons
                 name="notebook-multiple"
@@ -112,9 +116,6 @@ const CourseInformation = ({
               {topics.length} Topics
             </Text>
           </View>
-          <Text style={[styles.description, { flexWrap: "wrap" }]}>
-            {course.description}
-          </Text>
         </View>
         {enrolled ? (
           <View>
