@@ -19,11 +19,11 @@ const AccountSettings = () => {
   const id = userInfo?.user.id
   const defaultemail = userInfo?.user.email;
   const defaultdob = userInfo?.user.dob;
-  const defaultStreet1 = userInfo?.user.address.street_1;
-  const defaultStreet2 = userInfo?.user.address.street_2;
-  const defaultRegion = userInfo?.user.address.region
-  const defaultCity = userInfo?.user.address.city;
-  const defaultCountry = userInfo?.user.address.country;
+  const defaultStreet1 = userInfo?.user?.address?.street_1;
+  const defaultStreet2 = userInfo?.user?.address?.street_2;
+  const defaultRegion = userInfo?.user?.address?.region
+  const defaultCity = userInfo?.user?.address?.city;
+  const defaultCountry = userInfo?.user?.address?.country;
   const [firstName, setFirstName] = useState(defaultFirstName);
   const [lastName, setLastName] = useState(defaultLastName);
   const [dob, setDOB] = useState(defaultdob);
