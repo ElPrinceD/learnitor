@@ -33,8 +33,12 @@ const CreateNewTime: React.FC = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [isRepetitive, setIsRepetitive] = useState(false);
+  const [recurrenceInterval, setRecurrenceInterval] = useState("daily"); // New state for recurrence interval
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState(new Date()); // New state for recurrence end date
+  const [showRecurrenceEndDatePicker, setShowRecurrenceEndDatePicker] = useState(false);
 
   const handleSaveTime = async () => {
+    console.log(category_id)
     const data = {
       title,
       description,
@@ -42,7 +46,9 @@ const CreateNewTime: React.FC = () => {
       due_time: time.toISOString().split("T")[1].slice(0, 5),
       category: category_id,
       learner: userInfo?.user.id,
-      is_repetitive: isRepetitive, // Add this to your backend data structure
+      is_recurring: isRepetitive, // Change this field to match backend naming
+      recurrence_interval: isRepetitive ? recurrenceInterval : null, // Only include if repetitive
+      recurrence_end_date: isRepetitive ? recurrenceEndDate.toISOString().split("T")[0] : null, // Only include if repetitive
     };
 
     try {
@@ -131,6 +137,60 @@ const CreateNewTime: React.FC = () => {
         </View>
       </View>
 
+      {isRepetitive && (
+        <>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Recurrence Interval</Text>
+            <View style={styles.recurrenceContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.recurrenceButton,
+                  recurrenceInterval === "daily" && styles.selectedRecurrenceButton,
+                ]}
+                onPress={() => setRecurrenceInterval("daily")}
+              >
+                <Text
+                  style={[
+                    styles.recurrenceButtonText,
+                    recurrenceInterval === "daily" && styles.selectedRecurrenceButtonText,
+                  ]}
+                >
+                  Daily
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.recurrenceButton,
+                  recurrenceInterval === "weekly" && styles.selectedRecurrenceButton,
+                ]}
+                onPress={() => setRecurrenceInterval("weekly")}
+              >
+                <Text
+                  style={[
+                    styles.recurrenceButtonText,
+                    recurrenceInterval === "weekly" && styles.selectedRecurrenceButtonText,
+                  ]}
+                >
+                  Weekly
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Recurrence End Date</Text>
+            <DatePicker
+              date={recurrenceEndDate}
+              show={showRecurrenceEndDatePicker}
+              onDateChange={(event, selectedDate) =>
+                selectedDate && setRecurrenceEndDate(selectedDate)
+              }
+              setShow={setShowRecurrenceEndDatePicker}
+            />
+          </View>
+        </>
+      )}
+
       <TouchableOpacity style={styles.saveButton} onPress={handleSaveTime}>
         <Text style={styles.saveButtonText}>Add Schedule</Text>
       </TouchableOpacity>
@@ -171,6 +231,27 @@ const styles = StyleSheet.create({
   switchLabel: {
     marginLeft: 10,
     fontSize: 16,
+  },
+  recurrenceContainer: {
+    flexDirection: "row",
+  },
+  recurrenceButton: {
+    flex: 1,
+    alignItems: "center",
+    padding: 10,
+    marginHorizontal: 5,
+    borderWidth: 1,
+    borderRadius: 5,
+    borderColor: "#ccc",
+  },
+  selectedRecurrenceButton: {
+    backgroundColor: "#007BFF",
+  },
+  recurrenceButtonText: {
+    color: "#000",
+  },
+  selectedRecurrenceButtonText: {
+    color: "#fff",
   },
   saveButton: {
     backgroundColor: "#007BFF",

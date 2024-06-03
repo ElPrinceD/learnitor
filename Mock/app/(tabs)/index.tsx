@@ -52,6 +52,7 @@ const Index = () => {
         },
       });
       setRecommendedCoursesData(coursesResponse.data);
+      
 
       const enrolledCoursesUrl = `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/courses`;
       const enrolledResponse = await axios.get(enrolledCoursesUrl, {
