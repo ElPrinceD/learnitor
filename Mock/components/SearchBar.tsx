@@ -54,23 +54,23 @@ const SearchBar: React.FC<Props> = ({ onSearch }) => {
 
 const styles = StyleSheet.create({
   searchBarContainer: {
+    flex: 1,
     flexDirection: "row",
-    alignItems: "center",
     borderWidth: 1,
-    borderRadius: 15,
+    borderRadius: 10,
     paddingHorizontal: 15,
     width: "85%",
-    paddingVertical: 10,
     marginTop: 15,
     justifyContent: "center",
   },
   container: {
-    flex: 0.8,
+    flex: 1,
     alignItems: "center",
   },
   searchIcon: {
     marginLeft: 10,
     height: "100%",
+    justifyContent: "center",
   },
   searchInput: {
     flex: 1,

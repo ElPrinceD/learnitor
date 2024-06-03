@@ -206,6 +206,7 @@ const EnrolledCourse: React.FC = () => {
           { useNativeDriver: false }
         )}
         scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
       >
         <View style={styles.container}>
           <RoadmapTitle course={parsedCourse} progress={progress} />

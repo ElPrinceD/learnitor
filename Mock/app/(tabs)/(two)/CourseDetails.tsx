@@ -197,8 +197,8 @@ const CourseDetails: React.FC = () => {
   });
 
   const imageOpacity = scrollY.interpolate({
-    inputRange: [0, HEADER_BETA, HEADER_DELTA],
-    outputRange: [0, 0.8, 1],
+    inputRange: [-64, 0, HEADER_DELTA],
+    outputRange: [0, 0.2, 1],
     extrapolate: "clamp",
   });
 
@@ -349,8 +349,8 @@ const CourseDetails: React.FC = () => {
           >
             <LinearGradient
               style={StyleSheet.absoluteFill}
-              start={[0, 0.4]}
-              end={[0, 1.15]}
+              start={[0, 0.3]}
+              end={[0, 1]}
               colors={["transparent", "rgba(0, 0, 0, 0.2)", "#000"]}
             />
           </Animated.View>

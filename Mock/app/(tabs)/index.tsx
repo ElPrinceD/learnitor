@@ -90,6 +90,7 @@ const Index = () => {
       }
     }, [userToken, userInfo])
   );
+  console.log("no", recommendedCoursesData);
 
   // Fetch data on initial load if token and user info are available
   useEffect(() => {
