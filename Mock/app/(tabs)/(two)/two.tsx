@@ -1,19 +1,23 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { View, StyleSheet, useColorScheme } from "react-native";
 import SearchBar from "../../../components/SearchBar";
 import CoursesList from "../../../components/CoursesList";
+import CoursesCategories from "../../../components/CoursesCategories";
 import axios from "axios";
 import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
 import { Course, Category } from "../../../components/types";
 import { router } from "expo-router";
-import Colors from "../../../constants/Colors";
+import { sortBy } from "lodash";
 
 const CoursesScreen: React.FC = () => {
   const [coursesData, setCoursesData] = useState<Course[]>([]);
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
   const [categoryData, setCategoryData] = useState<Category[]>([]);
-  const colorScheme = useColorScheme();
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
+    null
+  );
+  const [searchQuery, setSearchQuery] = useState("");
   const { userToken } = useAuth();
 
   useEffect(() => {
@@ -47,28 +51,47 @@ const CoursesScreen: React.FC = () => {
     setFilteredCourses(filtered);
   };
 
-  const handleCoursePress = (course: Course) => {
-    router.navigate("CourseDetails");
-    router.setParams({
-      course: JSON.stringify(course),
-    });
+  const handleCategoryPress = (categoryId: number | null) => {
+    // Toggle the selected category
+    const newCategoryId = selectedCategoryId === categoryId ? null : categoryId;
+    setSelectedCategoryId(newCategoryId);
+
+    // Filter courses based on the new selected category ID
+    const filtered =
+      newCategoryId !== null
+        ? coursesData.filter((course) =>
+            course.category.includes(newCategoryId)
+          )
+        : coursesData;
+    setFilteredCourses(filtered);
   };
 
-  const themeColors = Colors[colorScheme ?? "light"];
+  const handleCoursePress = React.useCallback(
+    (course: Course) => {
+      router.navigate("CourseDetails");
+      router.setParams({
+        course: JSON.stringify(course),
+      });
+    },
+    [router] // Include router in the dependencies array
+  );
 
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      // backgroundColor: themeColors.background, // Add background color for the container
     },
   });
 
   return (
     <View style={styles.container}>
       <SearchBar onSearch={handleSearch} />
+      <CoursesCategories
+        categories={categoryData}
+        onPressCategory={handleCategoryPress}
+        selectedCategoryId={selectedCategoryId}
+      />
       <CoursesList
         courses={filteredCourses}
-        categories={categoryData}
         onCoursePress={handleCoursePress}
       />
     </View>
