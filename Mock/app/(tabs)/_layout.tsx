@@ -18,6 +18,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>["name"];
   color: string;
+  
 }) {
   return <FontAwesome size={28} style={{ marginBottom: -3 }} {...props} />;
 }
@@ -52,6 +53,7 @@ export default function TabLayout() {
     <SafeAreaProvider>
       <Tabs
         screenOptions={{
+        
           tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
           // Disable the static render of the header on web
           // to prevent a hydration error in React Navigation v6.
@@ -62,7 +64,7 @@ export default function TabLayout() {
           name="index"
           options={{
             title: "Home",
-            tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
+            tabBarIcon: ({ color }) => <TabBarIcon name="home"  color={color} />,
             headerShadowVisible: false,
             headerRight: () => (
               <View style={styles.container}>
@@ -157,5 +159,6 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row-reverse",
+    
   },
 });

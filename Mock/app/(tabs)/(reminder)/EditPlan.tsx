@@ -6,6 +6,7 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  Switch,
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import axios from "axios";
@@ -38,10 +39,15 @@ const EditPlan: React.FC<EditPlanProps> = ({ category_name }) => {
   const [time, setTime] = useState(parseTimeString(oldTime));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [updateAll, setUpdateAll] = useState(false);  // New state for the switch
 
   function parseTimeString(timeString: string) {
-    const [hours, minutes, seconds] = timeString.split(":").map(Number);
-    return new Date(0, 0, 0, hours, minutes, seconds);
+    const [hours, minutes] = timeString.split(":").map(Number);
+    const now = new Date();
+    now.setHours(hours);
+    now.setMinutes(minutes);
+    now.setSeconds(0);
+    return now;
   }
 
   const formatTime = (time: Date) => {
@@ -60,6 +66,7 @@ const EditPlan: React.FC<EditPlanProps> = ({ category_name }) => {
       due_time: formattedDueTime,
       category: category_id,
       learner: userInfo?.user.id,
+      update_all: updateAll,  // Include this in the payload
     };
     try {
       const response = await axios.put(
@@ -138,6 +145,14 @@ const EditPlan: React.FC<EditPlanProps> = ({ category_name }) => {
             }
           }}
           setShow={setShowTimePicker}
+        />
+      </View>
+
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Update All Recurring Tasks</Text>
+        <Switch
+          value={updateAll}
+          onValueChange={setUpdateAll}
         />
       </View>
 

@@ -221,13 +221,13 @@ const CourseDetails: React.FC = () => {
 
   const styles = StyleSheet.create({
     container: {
-      flex: 1,
+      flex: 1,  
       ...StyleSheet.absoluteFillObject,
     },
     headerTitle: {
       fontSize: 18,
       fontWeight: "bold",
-      color: themeColors.text,
+      color: themeColors.icon,
       alignContent: "center",
       marginVertical: 10,
     },
@@ -260,6 +260,7 @@ const CourseDetails: React.FC = () => {
     courseTitleContainer: {
       ...StyleSheet.absoluteFillObject,
       justifyContent: "flex-end",
+      
       alignItems: "flex-start",
     },
     courseTitle: {
@@ -355,7 +356,7 @@ const CourseDetails: React.FC = () => {
           </Animated.View>
           <View style={styles.courseTitleContainer}>
             <Animated.Text
-              style={[styles.courseTitle, { opacity: courseTitleOpacity }]}
+              style={[styles.courseTitle, { opacity: courseTitleOpacity  }]}
             >
               {parsedCourse.title}
             </Animated.Text>
