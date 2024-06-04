@@ -37,6 +37,10 @@ export default function ResultsScreen() {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
+  if (!userInfo) {
+    return null;
+  }
+
   useEffect(() => {
     const fetchGameDetails = async () => {
       try {
@@ -58,8 +62,8 @@ export default function ResultsScreen() {
             id: player.id,
             score: scores[player.id] || "0.0",
             profileName: `${player.first_name} ${player.last_name}`,
-            profilePicture:
-            `${ApiUrl}:8000${player.profile_picture}`, 
+            profile_picture:
+            player.profile_picture
           }));
           setPlayers(newPlayers);
         }
@@ -140,6 +144,7 @@ export default function ResultsScreen() {
         <Image
           source={{ uri: item.profile_picture }}
           style={styles.profileImage}
+          onError={() =>console.log(item.profile_picture,"Error loading picture")}
         />
         <Text style={styles.profileName}>{item.profileName}: </Text>
         <Text style={styles.profileName}>{item.score}</Text>
