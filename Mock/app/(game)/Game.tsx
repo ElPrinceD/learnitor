@@ -56,7 +56,7 @@ export default function Game() {
   // Establish WebSocket connection
   useEffect(() => {
     webSocket.current = new WebSocket(
-      `ws://192.168.48.61:8000/games/${gameCode}/ws/`
+      `ws://192.168.48.198:8000/games/${gameCode}/ws/`
     );
 
     webSocket.current.onopen = () => {
@@ -184,7 +184,7 @@ export default function Game() {
   const handleAnswerSelection = (answerId: number, questionId: number) => {
     setSelectedAnswers((prevSelectedAnswers) => {
       const updatedAnswers = { ...prevSelectedAnswers };
-  
+
       if (questionsWithMultipleCorrectAnswers.includes(questionId)) {
         const selected = updatedAnswers[questionId] || [];
         const index = selected.indexOf(answerId);
@@ -196,24 +196,28 @@ export default function Game() {
           selected.push(answerId);
         }
         updatedAnswers[questionId] = selected;
-  
+
         // Check if the correct number of answers has been selected
-        if (selected.length === gameAnswers.filter(answer => answer.question === questionId && answer.isRight).length) {
+        if (
+          selected.length ===
+          gameAnswers.filter(
+            (answer) => answer.question === questionId && answer.isRight
+          ).length
+        ) {
           // If the correct number of answers is selected, send WebSocket message
           sendWebSocketMessage(questionId);
         }
       } else {
         // For questions with single correct answers, replace the selected answer with the new one
         updatedAnswers[questionId] = [answerId];
-        
+
         // Send WebSocket message immediately for questions with single correct answers
         sendWebSocketMessage(questionId);
       }
-  
+
       return updatedAnswers;
     });
   };
-  
 
   const handleSubmit = () => {
     let totalQuestions = gameQuestions.length;

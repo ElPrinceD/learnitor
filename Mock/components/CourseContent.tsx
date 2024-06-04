@@ -3,6 +3,7 @@ import { View, StyleSheet } from "react-native";
 import CourseInformation from "./CourseInformation";
 import CourseTopics from "./CourseTopics";
 import { Course, Topic } from "./types";
+import { Album, MAX_HEADER_HEIGHT, MIN_HEADER_HEIGHT } from "./Model";
 
 interface CourseContentProps {
   course: Course;

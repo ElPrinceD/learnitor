@@ -1,7 +1,7 @@
 import React from "react";
 import { StyleSheet, View, Text, Image, TouchableOpacity } from "react-native";
 import { router } from "expo-router";
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "expo-linear-gradient";
 import { useThemeColor } from "../../components/Themed";
 
 // Define the type for the navigation prop
@@ -9,7 +9,7 @@ import { useThemeColor } from "../../components/Themed";
 
 const Intro = () => {
   // Get theme colors for text and background
-  const textColor = useThemeColor({light: "black", dark: "white"}, "text");
+  const textColor = useThemeColor({ light: "black", dark: "white" }, "text");
   const backgroundColor = useThemeColor({}, "background");
 
   // Navigate to the sign up page
@@ -24,7 +24,7 @@ const Intro = () => {
 
   return (
     <LinearGradient
-      colors={['#ffffff', '#fdecd2']}
+      colors={["#ffffff", "#fdecd2"]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.container}
@@ -52,14 +52,12 @@ const Intro = () => {
         {/* Sign Up Button */}
         <TouchableOpacity onPress={handleSignUp}>
           <LinearGradient
-            colors={['#cd7e24', '#b16f24']}
+            colors={["blue", "#b16f24"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.button}
           >
-            <Text style={[styles.buttonText, { color: "white" }]}>
-              Sign Up
-            </Text>
+            <Text style={[styles.buttonText, { color: "white" }]}>Sign Up</Text>
           </LinearGradient>
         </TouchableOpacity>
 
