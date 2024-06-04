@@ -23,6 +23,7 @@ interface UserInfo {
     address: Address;
     email: string;
     dob: string;
+    profile_picture: string ;
     
    
   };
@@ -33,8 +34,10 @@ interface AuthContextType {
   userInfo: UserInfo | null;
   login: (user: UserInfo, token: string) => Promise<void>;
   logout: () => Promise<void>;
+  setUserInfo: (userInfo: UserInfo) => void;
   isLoading: boolean;
 }
+
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -112,7 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   return (
     <AuthContext.Provider
-      value={{ userInfo, userToken, login, logout, isLoading }}
+      value={{ userInfo, userToken, login, logout,setUserInfo, isLoading }}
     >
       {children}
     </AuthContext.Provider>

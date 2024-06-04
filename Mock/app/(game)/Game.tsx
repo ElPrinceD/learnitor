@@ -185,33 +185,37 @@ export default function Game() {
     setSelectedAnswers((prevSelectedAnswers) => {
       const updatedAnswers = { ...prevSelectedAnswers };
 
+      const correctAnswersCount = gameAnswers.filter(
+        (answer) => answer.question === questionId && answer.isRight
+      ).length;
+
+      console.log(
+        "Correct answers count for question",
+        questionId,
+        ":",
+        correctAnswersCount
+      );
+
+      // If question allows multiple correct answers
       if (questionsWithMultipleCorrectAnswers.includes(questionId)) {
         const selected = updatedAnswers[questionId] || [];
-        const index = selected.indexOf(answerId);
-        if (index !== -1) {
-          // If the answer is already selected, deselect it
-          selected.splice(index, 1);
-        } else {
-          // If the answer is not selected, select it
-          selected.push(answerId);
-        }
-        updatedAnswers[questionId] = selected;
 
-        // Check if the correct number of answers has been selected
         if (
-          selected.length ===
-          gameAnswers.filter(
-            (answer) => answer.question === questionId && answer.isRight
-          ).length
+          !selected.includes(answerId) &&
+          selected.length < correctAnswersCount
         ) {
-          // If the correct number of answers is selected, send WebSocket message
-          sendWebSocketMessage(questionId);
+          selected.push(answerId);
+          updatedAnswers[questionId] = selected;
+          console.log("selected", selected.length);
+
+          // Send WebSocket message if the correct number of answers is selected
+          if (selected.length === correctAnswersCount) {
+            sendWebSocketMessage(questionId);
+          }
         }
       } else {
-        // For questions with single correct answers, replace the selected answer with the new one
+        // For single correct answer questions
         updatedAnswers[questionId] = [answerId];
-
-        // Send WebSocket message immediately for questions with single correct answers
         sendWebSocketMessage(questionId);
       }
 

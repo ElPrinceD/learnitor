@@ -141,7 +141,7 @@ const Timeline: React.FC = () => {
       return (
         <View key={index} style={styles.planItemWrapper}>
           <Text style={styles.planTime}>{plan.due_time.slice(0, -3)}</Text>
-          <View style={[styles.planItemContainer, { backgroundColor: categoryColor }]}>
+          {/* <View style={[styles.planItemContainer, { backgroundColor: categoryColor }]}> */}
             <View style={styles.planItemLine}/>
             <PlanItem
               plan={plan}
@@ -151,7 +151,7 @@ const Timeline: React.FC = () => {
               handleEditPlan={handleEditPlan}
             />
           </View>
-        </View>
+        // </View>
       );
     })
   )}

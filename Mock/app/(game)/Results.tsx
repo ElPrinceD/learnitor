@@ -37,6 +37,10 @@ export default function ResultsScreen() {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
+  if (!userInfo) {
+    return null;
+  }
+
   useEffect(() => {
     const fetchGameDetails = async () => {
       try {
@@ -52,13 +56,14 @@ export default function ResultsScreen() {
         setCreatorId(data.creator.id);
         setGameCode(data.code);
 
+        console.log(data.players)
         if (data.players) {
           const newPlayers = data.players.map((player) => ({
             id: player.id,
             score: scores[player.id] || "0.0",
             profileName: `${player.first_name} ${player.last_name}`,
-            profilePicture:
-              "https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Eden_Hazard_at_Baku_before_2019_UEFA_Europe_League_Final.jpg/330px-Eden_Hazard_at_Baku_before_2019_UEFA_Europe_League_Final.jpg", // Placeholder URL, update as needed
+            profile_picture:
+            player.profile_picture
           }));
           setPlayers(newPlayers);
         }
@@ -137,8 +142,9 @@ export default function ResultsScreen() {
     return (
       <View style={styles.playerContainer}>
         <Image
-          source={{ uri: item.profilePicture }}
+          source={{ uri: item.profile_picture }}
           style={styles.profileImage}
+          onError={() =>console.log(item.profile_picture,"Error loading picture")}
         />
         <Text style={styles.profileName}>{item.profileName}: </Text>
         <Text style={styles.profileName}>{item.score}</Text>

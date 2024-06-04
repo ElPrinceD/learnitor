@@ -6,16 +6,17 @@ import {
   StyleSheet,
   Image,
   Share,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import axios from "axios";
 import { useAuth } from "../../../components/AuthContext"; // Adjust the path
-
+import * as ImagePicker from 'expo-image-picker';
 import ApiUrl from "../../../config.js";
 
 const Profile = () => {
-  const { logout, userToken, userInfo } = useAuth(); // Accessing login function from AuthProvider
+  const { logout, userToken, userInfo, setUserInfo } = useAuth(); // Accessing setUserInfo from AuthProvider
 
   const handleAccountSettings = () => {
     router.navigate("AccountSettings");
@@ -23,7 +24,6 @@ const Profile = () => {
 
   const handleLogout = async () => {
     try {
-      // Make a POST request to your logout endpoint
       await axios.post(
         `${ApiUrl}:8000/api/logout/`,
         {},
@@ -37,7 +37,6 @@ const Profile = () => {
       router.replace("Intro");
     } catch (error) {
       console.error("Error logging out:", error);
-      // Handle error scenarios, such as displaying an error message to the user
     }
   };
 
@@ -48,6 +47,7 @@ const Profile = () => {
   const handlePrivacy = () => {
     // Handle navigation to Privacy screen
   };
+
   const handleTellAFriend = async () => {
     try {
       const shareOptions = {
@@ -63,7 +63,6 @@ const Profile = () => {
       }
     } catch (error) {
       console.error("Error sharing:", error);
-      // Handle error scenarios, such as displaying an error message to the user
     }
   };
 
@@ -75,14 +74,71 @@ const Profile = () => {
     // Handle navigation to Help Center screen
   };
 
+  const handleProfilePictureUpdate = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission to access media library is required!');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+      });
+
+      if (!result.canceled) {
+        const uri = result.assets[0].uri;
+        const formData = new FormData();
+        
+        const fileName = uri.split('/').pop();
+        const fileType = uri.split('.').pop();
+
+        formData.append('profile_picture', {
+          uri,
+          name: fileName,
+          type: `image/${fileType}`,
+        });
+
+        const config = {
+          headers: {
+            Authorization: `Token ${userToken?.token}`,
+            'Content-Type': 'multipart/form-data',
+          },
+        };
+
+        const response = await axios.patch(
+          `${ApiUrl}:8000/api/update/user/${userInfo?.user.id}/`,
+          formData,
+          config
+        );
+
+        setUserInfo({ ...userInfo, user: { ...userInfo?.user, profile_picture: response.data.profile_picture } });
+      }
+    } catch (error) {
+      console.error("Error updating profile picture:", error);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.profileContainer}>
         {/* Profile Image */}
-        <Image
-          source={require("../../../assets/images/profile.png")}
-          style={styles.profileImage}
-        />
+        <TouchableOpacity onPress={handleProfilePictureUpdate}>
+          <Image
+            source={{ uri: userInfo?.user.profile_picture }}
+            style={styles.profileImage}
+            onError={() => console.log("Error loading image")}
+          />
+          <Ionicons
+            name="camera-outline"
+            size={24}
+            color="#000000"
+            style={styles.cameraIcon}
+          />
+        </TouchableOpacity>
 
         {/* Full Name */}
         <Text style={styles.fullName}>
@@ -173,6 +229,7 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     marginBottom: 10,
+    backgroundColor: "#ccc", // Add a background color for better visibility
   },
   fullName: {
     fontSize: 24,
@@ -215,6 +272,14 @@ const styles = StyleSheet.create({
   },
   icon: {
     marginRight: 10,
+  },
+  cameraIcon: {
+    position: "absolute",
+    bottom: 5,
+    right: 5,
+    backgroundColor: "#ffffff",
+    borderRadius: 30,
+    padding: 4,
   },
 });
 

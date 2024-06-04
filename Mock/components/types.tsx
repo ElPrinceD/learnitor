@@ -66,14 +66,14 @@ export interface Streak {
 }
 export interface Player {
   id: number;
-  profilePicture: string;
+  profile_picture: string;
   profileName: string;
   score: string
 }
 
 export interface GameDetailsResponse {
   creator: { first_name: string; id: number };
-  players: { id: number; first_name: string; last_name: string }[];
+  players: { id: number; first_name: string; last_name: string; profile_picture: string }[];
   questions: Question[];
   code: string;
 }

@@ -31,6 +31,9 @@ export default function GameWaitingScreen() {
     gameId?: string;
   };
 
+  if (!userInfo) {
+    return null;
+  }
   const [creator, setCreator] = useState<string | undefined>();
   const [creatorId, setCreatorId] = useState<number | undefined>();
   const [gameCode, setGameCode] = useState<string>(code || "");
@@ -55,16 +58,19 @@ export default function GameWaitingScreen() {
         setCreator(data.creator.first_name);
         setCreatorId(data.creator.id);
         setGameCode(data.code);
-
+        console.log("Players", data.players);
         if (data.players) {
           const newPlayers = data.players.map((player) => ({
             id: player.id,
-            score: "0.00",
+            score: "0",
             profileName: `${player.first_name} ${player.last_name}`,
-            profilePicture:
-              "https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Eden_Hazard_at_Baku_before_2019_UEFA_Europe_League_Final.jpg/330px-Eden_Hazard_at_Baku_before_2019_UEFA_Europe_League_Final.jpg", // Placeholder URL, update as needed
+            profile_picture:
+              player.id === userInfo?.user.id
+                ? userInfo.user.profile_picture
+                : `${ApiUrl}:8000${player.profile_picture}`,
           }));
           setPlayers(newPlayers);
+          console.log("Hey", players);
         }
       } catch (error) {
         console.error("Error fetching game details:", error);
@@ -94,8 +100,10 @@ export default function GameWaitingScreen() {
             const newPlayers = data.players.map((player: any) => ({
               id: player.id,
               profileName: `${player.first_name} ${player.last_name}`,
-              profilePicture:
-                "https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Eden_Hazard_at_Baku_before_2019_UEFA_Europe_League_Final.jpg/330px-Eden_Hazard_at_Baku_before_2019_UEFA_Europe_League_Final.jpg", // Placeholder URL, update as needed
+              profile_picture:
+                player.id === userInfo?.user.id
+                  ? userInfo.user.profile_picture
+                  : `${ApiUrl}:8000${player.profile_picture}`, // Placeholder URL, update as needed
             }));
 
             setPlayers(newPlayers);
@@ -247,7 +255,7 @@ export default function GameWaitingScreen() {
   const renderPlayer = ({ item }: { item: Player }) => (
     <View style={styles.playerContainer}>
       <Image
-        source={{ uri: item.profilePicture }}
+        source={{ uri: item.profile_picture }}
         style={styles.profileImage}
       />
       <Text style={styles.profileName}>{item.profileName}</Text>
