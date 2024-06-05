@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useFonts } from "expo-font";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import {FontAwesome} from "@expo/vector-icons";
 import {
   ThemeProvider,
   DarkTheme,

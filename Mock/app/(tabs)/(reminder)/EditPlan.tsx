@@ -7,10 +7,10 @@ import {
   TouchableOpacity,
   ScrollView,
   Switch,
+  Alert, // Import Alert from react-native
 } from "react-native";
-import { useLocalSearchParams } from "expo-router";
 import axios from "axios";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import apiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
 import DatePicker from "../../../components/DatePicker";
@@ -18,13 +18,14 @@ import TimePicker from "../../../components/TimePicker";
 
 interface EditPlanProps {
   category_name: string;
+  taskId: string; // Add taskId prop
 }
 
-const EditPlan: React.FC<EditPlanProps> = ({ category_name }) => {
+const EditPlan: React.FC<EditPlanProps> = ({ category_name, taskId }) => { // Pass taskId prop
   const [categoryName, setCategoryName] = useState(category_name || "");
   const params = useLocalSearchParams();
+  const id = params.taskId
   const category = params.category_name as string;
-  const taskId = params.taskId as string;
   const oldDescription = params.description as string;
   const oldTitle = params.title as string;
   const oldDate = params.duedate as string;
@@ -39,7 +40,7 @@ const EditPlan: React.FC<EditPlanProps> = ({ category_name }) => {
   const [time, setTime] = useState(parseTimeString(oldTime));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [updateAll, setUpdateAll] = useState(false);  // New state for the switch
+  const [updateAll, setUpdateAll] = useState(false); 
 
   function parseTimeString(timeString: string) {
     const [hours, minutes] = timeString.split(":").map(Number);
@@ -66,11 +67,11 @@ const EditPlan: React.FC<EditPlanProps> = ({ category_name }) => {
       due_time: formattedDueTime,
       category: category_id,
       learner: userInfo?.user.id,
-      update_all: updateAll,  // Include this in the payload
+      update_all: updateAll,
     };
     try {
       const response = await axios.put(
-        `${apiUrl}:8000/api/learner/tasks/update/${taskId}/`,
+        `${apiUrl}:8000/api/learner/tasks/update/${id}/`,
         data,
         {
           headers: {
@@ -82,6 +83,21 @@ const EditPlan: React.FC<EditPlanProps> = ({ category_name }) => {
       console.log("Schedule updated:", response.data);
     } catch (error) {
       console.error("Error updating schedule:", error);
+    }
+  };
+
+  const handleDeletePlan = async () => {
+    console.log(id)
+    try {
+      await axios.delete(`${apiUrl}:8000/api/tasks/${id}/`, {
+        headers: {
+          Authorization: `Token ${userToken?.token}`,
+        },
+      });
+      router.navigate("three");
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      Alert.alert("Error", "Failed to delete task");
     }
   };
 
@@ -159,6 +175,10 @@ const EditPlan: React.FC<EditPlanProps> = ({ category_name }) => {
       <TouchableOpacity style={styles.saveButton} onPress={handleSaveTime}>
         <Text style={styles.saveButtonText}>Save Schedule</Text>
       </TouchableOpacity>
+
+      <TouchableOpacity style={styles.deleteButton} onPress={handleDeletePlan}>
+        <Text style={styles.deleteButtonText}>Delete Task</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 };
@@ -189,8 +209,19 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 5,
     alignItems: "center",
+    marginBottom: 10,
+  },
+  deleteButton: {
+    backgroundColor: "red",
+    paddingVertical: 12,
+    borderRadius: 5,
+    alignItems: "center",
   },
   saveButtonText: {
+    color: "#fff",
+    fontSize: 16,
+  },
+  deleteButtonText: {
     color: "#fff",
     fontSize: 16,
   },

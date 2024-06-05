@@ -6,6 +6,7 @@ import { router } from "expo-router";
 import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
 import PlanItem from "../../../components/PlanItem";
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import DaySelector from "../../../components/DaySelector";
 import TimelineHeader from "../../../components/TimelineHeader";
 import { Picker } from "@react-native-picker/picker"; // Import Picker from @react-native-picker/picker
@@ -115,7 +116,9 @@ const Timeline: React.FC = () => {
   const handleEditPlan = (plan: Plan) => {
     router.navigate("EditPlan");
     const taskIdString = String(plan.id);
+    console.log(taskIdString)
     router.setParams({
+      
       taskId: taskIdString,
       title: plan.title,
       description: plan.description,
@@ -127,6 +130,7 @@ const Timeline: React.FC = () => {
   };
 
   return (
+    
     <View style={styles.container}>
       {/* <TimelineHeader /> */}
       <DaySelector selectedDate={selectedDate} setSelectedDate={setSelectedDate} />
@@ -200,7 +204,7 @@ const styles = StyleSheet.create({
     width: 50, // Fixed width for the time
     textAlign: 'center',
     color: "#1f1f1f",
-    marginTop: -153
+    marginTop: -100
   },
   noPlansText: {
     fontSize: 18,
@@ -223,6 +227,7 @@ const styles = StyleSheet.create({
   },
   planItemLine: {
     position: 'absolute',
+    
     top: -10, // Adjust this value to move the line higher or lower
     left: 0,
     right: 0,

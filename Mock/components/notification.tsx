@@ -17,28 +17,26 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    marginBottom: 16,
+    padding: 1,
+    marginBottom: 1,
     alignSelf: 'flex-start', // Aligns the container to the left
   },
   notificationContainer: {
     backgroundColor: '#fff',
-    paddingLeft: "-70%",
+    
     width: "100%",
-    borderRadius: 10,
-    borderColor: '#ccc', // Border color
-    borderWidth: 1, // Border width
+    
   },
   image: {
-    width: 50,
-    height: 50,
+    width: 100,
+    height: 100,
     borderRadius: 20,
     marginRight: 1,
   },
   content: {
     
     flexDirection: 'row',
-    alignItems: 'flex-start',
+   
   },
   message: {
     fontSize: 16,

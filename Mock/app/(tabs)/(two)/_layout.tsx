@@ -19,6 +19,7 @@ export default function Tab2Layout() {
               <Text
                 style={{
                   color: themeColors.text,
+                  
                   fontSize: 20,
                   fontWeight: "bold",
                 }}
@@ -60,14 +61,14 @@ export default function Tab2Layout() {
             headerShadowVisible: false,
           }}
         />
-        <Stack.Screen name="Practice" options={{ headerShown: true }} />
+        <Stack.Screen name="Practice" options={{ headerShown: true,  headerBackVisible: false,}} />
         <Stack.Screen
           name="PracticeInstructions"
           options={{ headerShown: false, presentation: "modal" }}
         />
         <Stack.Screen
           name="PracticeQuestions"
-          options={{ headerShown: false, presentation: "fullScreenModal" }}
+          options={{ headerShown: false,presentation: "fullScreenModal" }}
         />
         <Stack.Screen
           name="ScorePage"

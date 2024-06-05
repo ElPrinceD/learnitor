@@ -150,6 +150,7 @@ const EnrolledCourse: React.FC = () => {
               styles.headerTitle,
               {
                 opacity: titleOpacity,
+                color: themeColors.tint,
                 transform: [{ translateY: titleTranslateY }],
                 textAlign: "center",
               },
