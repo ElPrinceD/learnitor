@@ -151,10 +151,12 @@ const styles = StyleSheet.create({
   editButton: {
     backgroundColor: "green",
     marginTop: 10,
-    height: "80%",
+    height: "82%",
     justifyContent: "center",
     alignItems: "center",
     width: 100,
+    // borderTopRightRadius: 15,
+    // borderBottomRightRadius: 15,
   },
 });
 

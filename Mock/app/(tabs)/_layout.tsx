@@ -52,7 +52,7 @@ export default function TabLayout() {
       <Tabs
         screenOptions={{
           tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
-          tabBarInactiveTintColor: Colors[colorScheme ?? "light"].textSecondary,
+          
           tabBarLabelStyle: { fontSize: 13, fontWeight: "bold" },
           tabBarStyle: {
             shadowColor: "#000",
@@ -165,7 +165,9 @@ export default function TabLayout() {
             
             headerShadowVisible: false,
           }}
+          
         />
+        
       </Tabs>
     </SafeAreaProvider>
   );
