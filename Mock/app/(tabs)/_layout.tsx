@@ -53,7 +53,7 @@ export default function TabLayout() {
         screenOptions={{
           tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
           
-          tabBarLabelStyle: { fontSize: 13, fontWeight: "bold" },
+          tabBarLabelStyle: { fontSize: 13 },
           tabBarStyle: {
             shadowColor: "#000",
             shadowOffset: {
