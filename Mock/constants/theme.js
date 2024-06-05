@@ -1,3 +1,10 @@
+import {
+  useResponsiveHeight,
+  useResponsiveWidth, useResponsiveFontSize
+} from "react-native-responsive-dimensions";
+import { rMS } from "./responsive";
+
+
 const COLORS = {
   primary: "#312651",
   secondary: "#444262",
@@ -17,12 +24,12 @@ const FONT = {
 };
 
 const SIZES = {
-  xSmall: 10,
-  small: 12,
-  medium: 16,
-  large: 20,
-  xLarge: 24,
-  xxLarge: 32,
+  xSmall: rMS(5),
+  small: rMS(10),
+  medium: rMS(15),
+  large: rMS(20),
+  xLarge:rMS(25),
+  xxLarge: rMS(30),
 };
 
 const SHADOWS = {
