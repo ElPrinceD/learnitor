@@ -42,7 +42,6 @@ const Index = () => {
     },
   ];
 
-  // Fetch data function
   const fetchData = async (token) => {
     try {
       const coursesUrl = `${ApiUrl}:8000/api/course/all/`;
@@ -81,7 +80,7 @@ const Index = () => {
     }
   };
 
-  // Fetch data on focus if token and user info are available
+  
   useFocusEffect(
     useCallback(() => {
       if (userToken && userInfo) {

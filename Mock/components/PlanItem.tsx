@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import {
@@ -29,7 +29,9 @@ const PlanItem: React.FC<Props> = ({
   getCategoryColor,
   handleDeletePlan,
   handleEditPlan,
+  
 }) => {
+  const [isSwipeableOpen, setIsSwipeableOpen] = useState(false);
   const categoryColor = getCategoryColor(categoryNames[plan.category]);
 
   const getCategoryIcon = (type: string): keyof typeof Ionicons.glyphMap => {
@@ -47,68 +49,83 @@ const PlanItem: React.FC<Props> = ({
     }
   };
 
+  const closeSwipeable = () => {
+    setIsSwipeableOpen(false);
+  };
+
   return (
     <GestureHandlerRootView>
-      <Swipeable
-        renderRightActions={() => (
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={() => handleDeletePlan(plan.id)}
-          >
-            <Feather name="trash-2" size={24} color="white" />
-          </TouchableOpacity>
-        )}
-        renderLeftActions={() => (
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={() => handleEditPlan(plan)}
-          >
-            <Feather name="edit" size={24} color="white" />
-          </TouchableOpacity>
-        )}
+      <TouchableOpacity
+        onPress={() => {
+          // Handle tap to close Swipeable
+          // You might need to implement a function to close the Swipeable component here
+        }}
+        activeOpacity={1} // Prevent visual feedback on tap
+        style={styles.wrapper} // Ensure the wrapper covers the entire screen
       >
-        <View style={styles.planItemWrapper}>
-          {/* <Text style={styles.planTime}>{plan.due_time.slice(0, -3)}</Text> */}
-          <Ionicons name={getCategoryIcon(categoryNames[plan.category]  )} size={24} color={categoryColor} style={styles.planIcon} />
-          <View style={[styles.planItemContainer, { backgroundColor: categoryColor }]}>
-            
-            <View style={styles.planContent}>
-            <Text style={[styles.planCategory, { color: "#fff" }]}>
-                {categoryNames[plan.category] || "Unknown Category"}
-              </Text>
-              <Text style={[styles.planTitle, { color: "#fff" }]}>{plan.title}</Text>
-              <Text style={[styles.planDescription, { color: "#fff" }]}>{plan.description}</Text>
+        <Swipeable
+          renderRightActions={() => (
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => handleEditPlan(plan)}
               
+            >
+              <Feather name="edit" size={24} color="white" />
+            </TouchableOpacity>
+          )}
+        >
+          <View style={styles.planItemWrapper}>
+            <Ionicons
+              name={getCategoryIcon(categoryNames[plan.category])}
+              size={24}
+              color={categoryColor}
+              style={styles.planIcon}
+            />
+            <View
+              style={[
+                styles.planItemContainer,
+                { backgroundColor: categoryColor },
+              ]}
+            >
+              <View style={styles.planContent}>
+                <Text style={[styles.planCategory, { color: "#fff" }]}>
+                  {categoryNames[plan.category] || "Unknown Category"}
+                </Text>
+                <Text style={[styles.planTitle, { color: "#fff" }]}>
+                  {plan.title}
+                </Text>
+                <Text style={[styles.planDescription, { color: "#fff" }]}>
+                  {plan.description}
+                </Text>
+              </View>
             </View>
           </View>
-        </View>
-      </Swipeable>
+        </Swipeable>
+      </TouchableOpacity>
     </GestureHandlerRootView>
   );
 };
 
 const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+  },
   planItemWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginVertical: 10,
   },
   planIcon: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 1,
     paddingVertical: 10,
     borderRadius: 30,
-    backgroundColor: "#ffffff"
-    //marginRight: 10, // Add space between the icon and the plan item
-  },
-  planTime: {
-    width: 50,
-    textAlign: 'center',
-    color: "#ffffff",
+    backgroundColor: "#ffffff",
   },
   planItemContainer: {
     flex: 1,
     marginLeft: 10,
-    borderRadius: 15,
+    borderTopLeftRadius: 15,
+    borderBottomLeftRadius: 15,
     padding: 10,
     shadowColor: "#000",
     shadowOffset: { width: 3, height: 2 },
@@ -116,16 +133,8 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 3,
   },
-  planItemLine: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 2,
-    backgroundColor: '#ccc',
-  },
   planContent: {
-    paddingTop: 10, // Adjust padding to ensure text is not hidden by the line
+    paddingTop: 10,
   },
   planTitle: {
     fontSize: 18,
@@ -137,22 +146,17 @@ const styles = StyleSheet.create({
   },
   planCategory: {
     fontSize: 12,
-  },
-  deleteButton: {
-    backgroundColor: "red",
-    height: "75%",
-    justifyContent: "center",
-    alignItems: "center",
-    width: 50,
-    borderRadius: 10,
+    paddingBottom: 10
   },
   editButton: {
     backgroundColor: "green",
-    height: "75%",
+    marginTop: 10,
+    height: "82%",
     justifyContent: "center",
     alignItems: "center",
-    width: 50,
-    borderRadius: 10,
+    width: 100,
+    // borderTopRightRadius: 15,
+    // borderBottomRightRadius: 15,
   },
 });
 
