@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useFonts } from "expo-font";
-import {FontAwesome} from "@expo/vector-icons";
+import { FontAwesome } from "@expo/vector-icons";
 import {
   ThemeProvider,
   DarkTheme,
@@ -10,10 +10,10 @@ import {
 import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { AuthProvider, useAuth } from "../components/AuthContext"; // Update the path
-import "react-native-reanimated";
+// import "react-native-reanimated";
 import { useColorScheme } from "../components/useColorScheme";
 import { RootSiblingParent } from "react-native-root-siblings";
-import "react-native-reanimated";
+// import "react-native-reanimated";
 export { ErrorBoundary } from "expo-router";
 
 export const unstable_settings = {

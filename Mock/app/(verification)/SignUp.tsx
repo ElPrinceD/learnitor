@@ -9,9 +9,13 @@ import {
 import { Ionicons, FontAwesome6 } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Colors from "../../constants/Colors";
-
-import { SIZES, rMS, rS, rV } from "../../constants";
+import { SIZES, rMS, rS } from "../../constants";
 import VerificationButton from "../../components/VerificationButton";
+import Animated, {
+  ReduceMotion,
+  StretchInY,
+  StretchOutY,
+} from "react-native-reanimated";
 
 const SignUp = () => {
   const handleSignUpWithApple = () => {
@@ -101,63 +105,75 @@ const SignUp = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>
-        Create a free account to discover your personalized learning path
-      </Text>
-      <View style={styles.buttonRow}>
-        {/* Apple Sign Up */}
-        <VerificationButton
-          style={styles.threeButtons}
-          onPress={handleSignUpWithApple}
-        >
-          <Text>
-            <Ionicons
-              name="logo-apple"
-              size={SIZES.xLarge}
-              color={themeColors.text}
-            />
-          </Text>
-        </VerificationButton>
-
-        {/* Google Sign Up */}
-
-        <VerificationButton
-          style={styles.threeButtons}
-          onPress={handleSignUpWithGoogle}
-        >
-          <Text>
-            <Ionicons
-              name="logo-google"
-              size={SIZES.xLarge}
-              color={themeColors.text}
-            />
-          </Text>
-        </VerificationButton>
-
-        {/* Twitter Sign Up */}
-
-        <VerificationButton
-          style={styles.threeButtons}
-          onPress={handleSignUpWithTwitter}
-        >
-          <Text>
-            <FontAwesome6
-              name="x-twitter"
-              size={SIZES.xLarge}
-              color={themeColors.text}
-            />
-          </Text>
-        </VerificationButton>
-      </View>
-      <View style={styles.dividerRow}>
-        <Text style={styles.dividerText}>
-          ---------------- or ----------------
+      <Animated.View
+        entering={StretchInY.delay(300)
+          .randomDelay()
+          .reduceMotion(ReduceMotion.Never)
+          .withInitialValues({ transform: [{ scaleY: 0.5 }] })}
+        exiting={StretchOutY.delay(300)
+          .randomDelay()
+          .reduceMotion(ReduceMotion.Never)
+          .withInitialValues({ transform: [{ scaleY: 0.5 }] })}
+        style={styles.container}
+      >
+        <Text style={styles.title}>
+          Create a free account to discover your personalized learning path
         </Text>
-      </View>
-      <VerificationButton
-        onPress={handleSignUpWithEmail}
-        title="Continue with email"
-      ></VerificationButton>
+        <View style={styles.buttonRow}>
+          {/* Apple Sign Up */}
+          <VerificationButton
+            style={styles.threeButtons}
+            onPress={handleSignUpWithApple}
+          >
+            <Text>
+              <Ionicons
+                name="logo-apple"
+                size={SIZES.xLarge}
+                color={themeColors.text}
+              />
+            </Text>
+          </VerificationButton>
+
+          {/* Google Sign Up */}
+
+          <VerificationButton
+            style={styles.threeButtons}
+            onPress={handleSignUpWithGoogle}
+          >
+            <Text>
+              <Ionicons
+                name="logo-google"
+                size={SIZES.xLarge}
+                color={themeColors.text}
+              />
+            </Text>
+          </VerificationButton>
+
+          {/* Twitter Sign Up */}
+
+          <VerificationButton
+            style={styles.threeButtons}
+            onPress={handleSignUpWithTwitter}
+          >
+            <Text>
+              <FontAwesome6
+                name="x-twitter"
+                size={SIZES.xLarge}
+                color={themeColors.text}
+              />
+            </Text>
+          </VerificationButton>
+        </View>
+        <View style={styles.dividerRow}>
+          <Text style={styles.dividerText}>
+            ---------------- or ----------------
+          </Text>
+        </View>
+        <VerificationButton
+          onPress={handleSignUpWithEmail}
+          title="Continue with email"
+        ></VerificationButton>
+      </Animated.View>
       <View style={styles.bottomContainer}>
         <Text style={styles.existingText}>Existing User?</Text>
         <TouchableOpacity

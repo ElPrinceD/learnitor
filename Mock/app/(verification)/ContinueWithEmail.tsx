@@ -17,6 +17,11 @@ import { SIZES, rMS, rS } from "../../constants";
 import Colors from "../../constants/Colors";
 import VerificationButton from "../../components/VerificationButton";
 import AnimatedTextInput from "../../components/AnimatedTextInput";
+import Animated, {
+  ReduceMotion,
+  StretchInY,
+  StretchOutY,
+} from "react-native-reanimated";
 
 const ContinueWithEmail = () => {
   const [firstName, setFirstName] = useState("");
@@ -179,85 +184,97 @@ const ContinueWithEmail = () => {
   return (
     <TouchableWithoutFeedback onPress={handleKeyboardDismiss}>
       <View style={styles.container}>
-        <AnimatedTextInput
-          label="First Name"
-          value={firstName}
-          onChangeText={setFirstName}
-          placeholderTextColor={themeColors.textSecondary}
-        />
-        <AnimatedTextInput
-          label="Last Name"
-          value={surname}
-          onChangeText={setSurname}
-          placeholderTextColor={themeColors.textSecondary}
-        />
-        <AnimatedTextInput
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          placeholderTextColor={themeColors.textSecondary}
-        />
-        <AnimatedTextInput
-          label="Password"
-          value={password}
-          onChangeText={setPassword}
-          placeholderTextColor={themeColors.textSecondary}
-          secureTextEntry={!showPassword}
-          showToggleIcon={true}
-        />
-        {emailError && <Text style={styles.errorMessage}>{emailError}</Text>}
-        {passwordError && (
-          <Text style={styles.errorMessage}>{passwordError}</Text>
-        )}
-        {show && (
-          <DateTimePicker
-            testID="dateTimePicker"
-            value={dateOfBirth}
-            mode="date"
-            is24Hour={true}
-            onChange={onChange}
-            textColor={themeColors.icon}
-            accentColor={themeColors.icon}
+        <Animated.View
+          entering={StretchInY.delay(300)
+            .randomDelay()
+            .reduceMotion(ReduceMotion.Never)
+            .withInitialValues({ transform: [{ scaleY: 0.5 }] })}
+          exiting={StretchOutY.delay(300)
+            .randomDelay()
+            .reduceMotion(ReduceMotion.Never)
+            .withInitialValues({ transform: [{ scaleY: 0.5 }] })}
+          style={styles.container}
+        >
+          <AnimatedTextInput
+            label="First Name"
+            value={firstName}
+            onChangeText={setFirstName}
+            placeholderTextColor={themeColors.textSecondary}
           />
-        )}
-        <View style={styles.inputWrapper}>
-          {/* <Text style={styles.label}>Date Of Birth</Text> */}
-          <TouchableOpacity onPress={showDatePicker}>
-            <TextInput
-              style={styles.input}
-              value={dateOfBirth ? dateOfBirth.toDateString() : ""}
-              placeholderTextColor={themeColors.textSecondary}
-              editable={false}
+          <AnimatedTextInput
+            label="Last Name"
+            value={surname}
+            onChangeText={setSurname}
+            placeholderTextColor={themeColors.textSecondary}
+          />
+          <AnimatedTextInput
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            placeholderTextColor={themeColors.textSecondary}
+          />
+          <AnimatedTextInput
+            label="Password"
+            value={password}
+            onChangeText={setPassword}
+            placeholderTextColor={themeColors.textSecondary}
+            secureTextEntry={!showPassword}
+            showToggleIcon={true}
+          />
+          {emailError && <Text style={styles.errorMessage}>{emailError}</Text>}
+          {passwordError && (
+            <Text style={styles.errorMessage}>{passwordError}</Text>
+          )}
+          {show && (
+            <DateTimePicker
+              testID="dateTimePicker"
+              value={dateOfBirth}
+              mode="date"
+              is24Hour={true}
+              onChange={onChange}
+              textColor={themeColors.icon}
+              accentColor={themeColors.icon}
             />
-          </TouchableOpacity>
-        </View>
-        {allFieldsError && (
-          <Text style={styles.centeredErrorMessage}>{allFieldsError}</Text>
-        )}
-        <VerificationButton onPress={handleSignUp} title="Register" />
-        <Text style={styles.agreementText}>
-          By tapping Register, I agree to Learnitor's{" "}
-          <Text
-            style={styles.link}
-            onPress={() => console.log("Terms pressed")}
-          >
-            Terms
-          </Text>{" "}
-          and{" "}
-          <Text
-            style={styles.link}
-            onPress={() => console.log("Privacy Policy pressed")}
-          >
-            Privacy Policy
+          )}
+          <View style={styles.inputWrapper}>
+            {/* <Text style={styles.label}>Date Of Birth</Text> */}
+            <TouchableOpacity onPress={showDatePicker}>
+              <TextInput
+                style={styles.input}
+                value={dateOfBirth ? dateOfBirth.toDateString() : ""}
+                placeholderTextColor={themeColors.textSecondary}
+                editable={false}
+              />
+            </TouchableOpacity>
+          </View>
+          {allFieldsError && (
+            <Text style={styles.centeredErrorMessage}>{allFieldsError}</Text>
+          )}
+          <VerificationButton onPress={handleSignUp} title="Register" />
+          <Text style={styles.agreementText}>
+            By tapping Register, I agree to Learnitor's{" "}
+            <Text
+              style={styles.link}
+              onPress={() => console.log("Terms pressed")}
+            >
+              Terms
+            </Text>{" "}
+            and{" "}
+            <Text
+              style={styles.link}
+              onPress={() => console.log("Privacy Policy pressed")}
+            >
+              Privacy Policy
+            </Text>
+            .
           </Text>
-          .
-        </Text>
-        <View style={styles.bottomContainer}>
-          <Text style={styles.existingText}>Existing user?</Text>
-          <TouchableOpacity style={styles.signupButton} onPress={handleLogin}>
-            <Text style={styles.loginText}>Login</Text>
-          </TouchableOpacity>
-        </View>
+          <View style={styles.bottomContainer}>
+            <Text style={styles.existingText}>Existing user?</Text>
+            <TouchableOpacity style={styles.signupButton} onPress={handleLogin}>
+              <Text style={styles.loginText}>Login</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
       </View>
     </TouchableWithoutFeedback>
   );

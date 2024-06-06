@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   useColorScheme,
   Linking,
+  Easing,
 } from "react-native";
 import { router } from "expo-router";
 import axios from "axios";
@@ -15,6 +16,11 @@ import apiUrl from "../../config";
 import Colors from "../../constants/Colors";
 import { SIZES, rMS, rS } from "../../constants";
 import VerificationButton from "../../components/VerificationButton";
+import Animated, {
+  ReduceMotion,
+  StretchInY,
+  StretchOutY,
+} from "react-native-reanimated";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -158,77 +164,89 @@ const ForgotPassword = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.title, { marginBottom: -rMS(12) }]}>
-        Forgot your password?
-      </Text>
-      <Text style={[styles.title, { fontSize: 20, marginTop: rMS(10) }]}>
-        Don't Worry!
-      </Text>
-      <Text style={styles.description}>
-        Enter your email and we'll send you a code to reset your password.
-      </Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={(text) => setEmail(text)}
-        placeholderTextColor={themeColors.textSecondary}
-      />
-      {error ? <Text style={styles.errorMessage}>{error}</Text> : null}
-      {sent ? (
-        <Text style={styles.sentMessage}>
-          Check your email for a password reset code
+      <Animated.View
+        entering={StretchInY.delay(300)
+          .randomDelay()
+          .reduceMotion(ReduceMotion.Never)
+          .withInitialValues({ transform: [{ scaleY: 0.5 }] })}
+        exiting={StretchOutY.delay(300)
+          .randomDelay()
+          .reduceMotion(ReduceMotion.Never)
+          .withInitialValues({ transform: [{ scaleY: 0.5 }] })}
+        style={styles.container}
+      >
+        <Text style={[styles.title, { marginBottom: -rMS(12) }]}>
+          Forgot your password?
         </Text>
-      ) : (
-        <VerificationButton
-          onPress={handleSendCode}
-          title={loading ? <ActivityIndicator color="white" /> : "Send code"}
-          disabled={loading}
-        />
-      )}
-      {sent ? (
+        <Text style={[styles.title, { fontSize: 20, marginTop: rMS(10) }]}>
+          Don't Worry!
+        </Text>
+        <Text style={styles.description}>
+          Enter your email and we'll send you a code to reset your password.
+        </Text>
         <TextInput
           style={styles.input}
-          placeholder="Reset code"
-          value={resetCode}
-          onChangeText={(text) => setResetCode(text)}
+          placeholder="Email"
+          value={email}
+          onChangeText={(text) => setEmail(text)}
           placeholderTextColor={themeColors.textSecondary}
         />
-      ) : null}
-      {resetCodeError ? (
-        <Text style={styles.errorMessage}>{resetCodeError}</Text>
-      ) : null}
-      {sent ? (
-        <VerificationButton
-          onPress={CheckVerificationCode}
-          title={
-            loading ? <ActivityIndicator color="white" /> : "Reset Password"
-          }
-          disabled={loading}
-        />
-      ) : null}
-      {resettingPassword ? (
-        <Text style={styles.sentMessage}>Enter new password</Text>
-      ) : null}
-      {resettingPassword && sent ? (
-        <TextInput
-          style={styles.input}
-          placeholder="New password"
-          value={newPassword}
-          onChangeText={(text) => setNewPassword(text)}
-          secureTextEntry
-          placeholderTextColor={themeColors.textSecondary}
-        />
-      ) : null}
-      {resettingPassword ? (
-        <VerificationButton
-          onPress={ConfirmNewPassword}
-          title={
-            loading ? <ActivityIndicator color="white" /> : "Set New Password"
-          }
-          disabled={loading}
-        />
-      ) : null}
+        {error ? <Text style={styles.errorMessage}>{error}</Text> : null}
+        {sent ? (
+          <Animated.Text style={styles.sentMessage}>
+            Check your email for a password reset code
+          </Animated.Text>
+        ) : (
+          <VerificationButton
+            onPress={handleSendCode}
+            title={loading ? <ActivityIndicator color="white" /> : "Send code"}
+            disabled={loading}
+          />
+        )}
+        {sent ? (
+          <TextInput
+            style={styles.input}
+            placeholder="Reset code"
+            value={resetCode}
+            onChangeText={(text) => setResetCode(text)}
+            placeholderTextColor={themeColors.textSecondary}
+          />
+        ) : null}
+        {resetCodeError ? (
+          <Text style={styles.errorMessage}>{resetCodeError}</Text>
+        ) : null}
+        {sent ? (
+          <VerificationButton
+            onPress={CheckVerificationCode}
+            title={
+              loading ? <ActivityIndicator color="white" /> : "Reset Password"
+            }
+            disabled={loading}
+          />
+        ) : null}
+        {resettingPassword ? (
+          <Text style={styles.sentMessage}>Enter new password</Text>
+        ) : null}
+        {resettingPassword && sent ? (
+          <TextInput
+            style={styles.input}
+            placeholder="New password"
+            value={newPassword}
+            onChangeText={(text) => setNewPassword(text)}
+            secureTextEntry
+            placeholderTextColor={themeColors.textSecondary}
+          />
+        ) : null}
+        {resettingPassword ? (
+          <VerificationButton
+            onPress={ConfirmNewPassword}
+            title={
+              loading ? <ActivityIndicator color="white" /> : "Set New Password"
+            }
+            disabled={loading}
+          />
+        ) : null}
+      </Animated.View>
       <Text style={styles.support}>
         If you have trouble resetting your password, contact us at{" "}
         <Text

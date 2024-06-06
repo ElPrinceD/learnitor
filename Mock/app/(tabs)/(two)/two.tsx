@@ -8,7 +8,6 @@ import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
 import { Course, Category } from "../../../components/types";
 import { router } from "expo-router";
-import { sortBy } from "lodash";
 
 const CoursesScreen: React.FC = () => {
   const [coursesData, setCoursesData] = useState<Course[]>([]);
@@ -17,7 +16,6 @@ const CoursesScreen: React.FC = () => {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
     null
   );
-  const [searchQuery, setSearchQuery] = useState("");
   const { userToken } = useAuth();
 
   useEffect(() => {

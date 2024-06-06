@@ -10,10 +10,9 @@ import {
   Keyboard,
 } from "react-native";
 import { Text } from "../../components/Themed";
-import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import { useThemeColor } from "../../components/Themed";
-import { router, useNavigation } from "expo-router";
+import { FontAwesome6, Ionicons } from "@expo/vector-icons";
+
+import { router } from "expo-router";
 import axios from "axios";
 import ApiUrl from "../../config";
 import { useGlobalSearchParams } from "expo-router";
@@ -22,6 +21,11 @@ import Colors from "../../constants/Colors";
 import { SIZES, rMS, rS } from "../../constants";
 import VerificationButton from "../../components/VerificationButton";
 import AnimatedTextInput from "../../components/AnimatedTextInput";
+import Animated, {
+  ReduceMotion,
+  StretchInY,
+  StretchOutY,
+} from "react-native-reanimated";
 
 const LogIn = () => {
   const { login } = useAuth(); // Accessing login function from AuthProvider
@@ -34,6 +38,18 @@ const LogIn = () => {
   const colorScheme = useColorScheme();
   const [showPassword, setShowPassword] = useState(false);
   const themeColors = Colors[colorScheme ?? "light"];
+
+  const handleLogInWithApple = () => {
+    // Handle sign up with Apple ID
+  };
+
+  const handleLogInWithGoogle = () => {
+    // Handle sign up with Google Account
+  };
+
+  const handleLogInWithTwitter = () => {
+    // Handle sign up with Twitter
+  };
 
   const handleLogin = () => {
     if (!email || !password) {
@@ -58,16 +74,12 @@ const LogIn = () => {
       });
   };
 
-  const toggleShowPassword = () => {
-    setShowPassword(!showPassword);
-  };
-
   const handleForgotPassword = () => {
     router.navigate("ForgotPassword");
   };
 
   const handleSignUp = () => {
-    router.navigate("ContinueWithEmail");
+    router.navigate("SignUp");
   };
   const handleKeyboardDismiss = () => {
     Keyboard.dismiss();
@@ -80,6 +92,31 @@ const LogIn = () => {
       justifyContent: "center",
       padding: rMS(16),
       backgroundColor: themeColors.background,
+    },
+
+    buttonRow: {
+      flexDirection: "row",
+      marginBottom: rMS(5),
+      gap: rMS(5),
+    },
+    threeButtons: {
+      backgroundColor: "transparent",
+      borderColor: themeColors.text,
+      padding: rMS(16),
+      borderRadius: 10,
+      borderWidth: 1,
+      width: rS(100),
+    },
+    dividerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: rMS(5),
+    },
+    dividerText: {
+      color: themeColors.textSecondary,
+      fontSize: SIZES.medium,
+      fontWeight: "bold",
+      opacity: 0.6,
     },
 
     inputContainer: {
@@ -107,11 +144,7 @@ const LogIn = () => {
       marginBottom: rMS(16),
       color: themeColors.text,
     },
-    toggleIcon: {
-      position: "absolute",
-      right: rMS(10),
-      top: rMS(17),
-    },
+
     forgotPasswordContainer: {
       alignSelf: "flex-end",
       flexDirection: "row",
@@ -144,6 +177,7 @@ const LogIn = () => {
       color: themeColors.buttonBackground,
     },
     errorMessage: {
+      alignSelf: "flex-start",
       fontSize: SIZES.medium,
       color: "#D22B2B",
     },
@@ -152,34 +186,97 @@ const LogIn = () => {
   return (
     <TouchableWithoutFeedback onPress={handleKeyboardDismiss}>
       <View style={styles.container}>
-        <AnimatedTextInput
-          label="Email"
-          value={email}
-          onChangeText={(text) => setEmail(text)}
-          placeholderTextColor={themeColors.textSecondary}
-        />
+        <Animated.View
+          entering={StretchInY.delay(500)
+            .randomDelay()
+            .reduceMotion(ReduceMotion.Never)
+            .withInitialValues({ transform: [{ scaleY: 0.1 }] })}
+          exiting={StretchOutY.delay(500)
+            .randomDelay()
+            .reduceMotion(ReduceMotion.Never)
+            .withInitialValues({ transform: [{ scaleY: 0.1 }] })}
+          style={styles.container}
+        >
+          <View style={styles.buttonRow}>
+            {/* Apple Sign Up */}
+            <VerificationButton
+              style={styles.threeButtons}
+              onPress={handleLogInWithApple}
+            >
+              <Text>
+                <Ionicons
+                  name="logo-apple"
+                  size={SIZES.xLarge}
+                  color={themeColors.text}
+                />
+              </Text>
+            </VerificationButton>
 
-        <AnimatedTextInput
-          label="Password"
-          value={password}
-          onChangeText={setPassword}
-          placeholderTextColor={themeColors.textSecondary}
-          secureTextEntry={!showPassword}
-          showToggleIcon={true}
-        />
+            {/* Google Sign Up */}
 
-        {error ? <Text style={styles.errorMessage}>{error}</Text> : null}
-        <View style={styles.forgotPasswordContainer}>
-          <TouchableOpacity onPress={handleForgotPassword}>
-            <Text style={styles.forgotPasswordText}>Forgot password?</Text>
-          </TouchableOpacity>
-        </View>
+            <VerificationButton
+              style={styles.threeButtons}
+              onPress={handleLogInWithGoogle}
+            >
+              <Text>
+                <Ionicons
+                  name="logo-google"
+                  size={SIZES.xLarge}
+                  color={themeColors.text}
+                />
+              </Text>
+            </VerificationButton>
 
-        <VerificationButton
-          onPress={handleLogin}
-          title={loading ? <ActivityIndicator color="white" /> : "Login"}
-          disabled={loading}
-        />
+            {/* Twitter Sign Up */}
+
+            <VerificationButton
+              style={styles.threeButtons}
+              onPress={handleLogInWithTwitter}
+            >
+              <Text>
+                <FontAwesome6
+                  name="x-twitter"
+                  size={SIZES.xLarge}
+                  color={themeColors.text}
+                />
+              </Text>
+            </VerificationButton>
+          </View>
+          <View style={styles.dividerRow}>
+            <Text style={styles.dividerText}>
+              ---------------- or ----------------
+            </Text>
+          </View>
+
+          <AnimatedTextInput
+            label="Email"
+            value={email}
+            onChangeText={(text) => setEmail(text)}
+            placeholderTextColor={themeColors.textSecondary}
+          />
+
+          <AnimatedTextInput
+            label="Password"
+            value={password}
+            onChangeText={setPassword}
+            placeholderTextColor={themeColors.textSecondary}
+            secureTextEntry={!showPassword}
+            showToggleIcon={true}
+          />
+
+          {error ? <Text style={styles.errorMessage}>{error}</Text> : null}
+          <View style={styles.forgotPasswordContainer}>
+            <TouchableOpacity onPress={handleForgotPassword}>
+              <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+            </TouchableOpacity>
+          </View>
+
+          <VerificationButton
+            onPress={handleLogin}
+            title={loading ? <ActivityIndicator color="white" /> : "Login"}
+            disabled={loading}
+          />
+        </Animated.View>
 
         <View style={styles.bottomContainer}>
           <Text style={styles.existingText}>Don't have an account?</Text>

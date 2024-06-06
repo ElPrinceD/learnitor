@@ -4,14 +4,13 @@ import {
   StyleSheet,
   ScrollView,
   Image,
-  Animated,
+  Animated as RNAnimated, // Alias for react-native's Animated
   useColorScheme,
+  Dimensions,
 } from "react-native";
-// import Animated from "react-native-reanimated";
-import { Dimensions } from "react-native";
 import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
-
+import Animated, { FadeInDown } from "react-native-reanimated"; // Import react-native-reanimated
 import { useLocalSearchParams, router, Stack } from "expo-router";
 import axios from "axios";
 import CourseInformation from "../../../components/CourseInformation";
@@ -38,7 +37,7 @@ const CourseDetails: React.FC = () => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
-  const scrollY = useRef(new Animated.Value(0)).current;
+  const scrollY = useRef(new RNAnimated.Value(0)).current;
 
   const parsedCourse: Course =
     typeof course === "string" ? JSON.parse(course) : course;
@@ -207,6 +206,7 @@ const CourseDetails: React.FC = () => {
     outputRange: [4, 1],
     extrapolateRight: "clamp",
   });
+
   const courseTitleOpacity = scrollY.interpolate({
     inputRange: [-MAX_HEADER_HEIGHT / 2, 0, MAX_HEADER_HEIGHT / 2],
     outputRange: [0, 1, 0],
@@ -221,7 +221,7 @@ const CourseDetails: React.FC = () => {
 
   const styles = StyleSheet.create({
     container: {
-      flex: 1,  
+      flex: 1,
       ...StyleSheet.absoluteFillObject,
     },
     headerTitle: {
@@ -236,9 +236,9 @@ const CourseDetails: React.FC = () => {
       textAlign: "center",
       lineHeight: 15,
     },
-    scrollViewContent: {
-      flexGrow: 1,
-    },
+    // scrollViewContent: {
+    //   flexGrow: 1,
+    // },
     imageContainer: {
       ...StyleSheet.absoluteFillObject,
       height: MAX_HEADER_HEIGHT,
@@ -260,7 +260,6 @@ const CourseDetails: React.FC = () => {
     courseTitleContainer: {
       ...StyleSheet.absoluteFillObject,
       justifyContent: "flex-end",
-      
       alignItems: "flex-start",
     },
     courseTitle: {
@@ -271,22 +270,22 @@ const CourseDetails: React.FC = () => {
       fontWeight: "bold",
     },
   });
+
   useEffect(() => {
     navigation.setOptions({
       headerTitle: () => (
         <View>
-          <Animated.Text
+          <RNAnimated.Text
             style={[
               styles.headerTitle,
               {
                 opacity: headerTitleOpacity,
-                // transform: [{ translateY: titleTranslateY }],
                 textAlign: "center",
               },
             ]}
           >
             {parsedCourse.title}
-          </Animated.Text>
+          </RNAnimated.Text>
         </View>
       ),
       headerShown: true,
@@ -294,11 +293,10 @@ const CourseDetails: React.FC = () => {
         fontWeight: "bold",
       },
       headerBackTitleVisible: false,
-
       headerShadowVisible: false,
       headerTitleAlign: "center",
       headerBackground: () => (
-        <Animated.View
+        <RNAnimated.View
           style={{
             ...StyleSheet.absoluteFillObject,
             backgroundColor: themeColors.background,
@@ -311,40 +309,38 @@ const CourseDetails: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <Animated.View
+      <RNAnimated.View
         style={[
           styles.imageContainer,
           {
-            // opacity: imageOpacity,
             transform: [{ translateY: imageTranslateY }],
           },
         ]}
       >
-        <Image
+        <Animated.Image
           source={{ uri: parsedCourse.url }}
           style={styles.image}
           resizeMode="cover"
           onError={(error) => console.log("Image error:", error)}
         />
-        <Animated.View
+        <RNAnimated.View
           style={{
             ...StyleSheet.absoluteFillObject,
             backgroundColor: themeColors.gradientBackground,
             opacity: imageOpacity,
           }}
         />
-      </Animated.View>
-      <Animated.ScrollView
-        // style={{ transform: [{ translateY: HEADER_DELTA }] }}
-        contentContainerStyle={styles.scrollViewContent}
+      </RNAnimated.View>
+      <RNAnimated.ScrollView
+        // contentContainerStyle={styles.scrollViewContent}
         scrollEventThrottle={1}
-        onScroll={Animated.event(
+        onScroll={RNAnimated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: false }
         )}
       >
         <View style={styles.cover}>
-          <Animated.View
+          <RNAnimated.View
             style={[styles.gradient, { height: courseTitleHeight }]}
           >
             <LinearGradient
@@ -353,35 +349,37 @@ const CourseDetails: React.FC = () => {
               end={[0, 1]}
               colors={["transparent", "rgba(0, 0, 0, 0.2)", "#000"]}
             />
-          </Animated.View>
+          </RNAnimated.View>
           <View style={styles.courseTitleContainer}>
-            <Animated.Text
-              style={[styles.courseTitle, { opacity: courseTitleOpacity  }]}
+            <RNAnimated.Text
+              style={[styles.courseTitle, { opacity: courseTitleOpacity }]}
             >
               {parsedCourse.title}
-            </Animated.Text>
+            </RNAnimated.Text>
           </View>
         </View>
-        <CourseInformation
-          course={parsedCourse}
-          enrollCourse={enrollCourse}
-          unenrollCourse={unenrollCourse}
-          progress={progress}
-          enrolled={enrolled}
-          enrollDisabled={enrollDisabled}
-          onEnrollDisabledPress={handleEnrolledDisabledPress}
-          handleContinue={handleContinue}
-          topics={topics}
-        />
-        <CourseTopics
-          topics={topics}
-          selectedTopics={selectedTopics}
-          onSelectedTopicsChange={handleSelectedTopicsChange}
-        />
+        <Animated.View entering={FadeInDown.duration(300).delay(400)}>
+          <CourseInformation
+            course={parsedCourse}
+            enrollCourse={enrollCourse}
+            unenrollCourse={unenrollCourse}
+            progress={progress}
+            enrolled={enrolled}
+            enrollDisabled={enrollDisabled}
+            onEnrollDisabledPress={handleEnrolledDisabledPress}
+            handleContinue={handleContinue}
+            topics={topics}
+          />
+          <CourseTopics
+            topics={topics}
+            selectedTopics={selectedTopics}
+            onSelectedTopicsChange={handleSelectedTopicsChange}
+          />
+        </Animated.View>
         {selectedTopics.map((topic) => (
           <View key={topic.id}></View>
         ))}
-      </Animated.ScrollView>
+      </RNAnimated.ScrollView>
     </View>
   );
 };

@@ -18,6 +18,7 @@ type AnimatedTextInputProps = {
   label?: string;
   value?: string;
   onChangeText?: (text: string) => void;
+  onFocusChange?: (isFocused: boolean) => void;
   placeholder?: string;
   placeholderTextColor?: string;
   secureTextEntry?: boolean;
@@ -30,6 +31,7 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
   label,
   value,
   onChangeText,
+  onFocusChange,
   placeholder,
   placeholderTextColor,
   secureTextEntry,
@@ -45,6 +47,7 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
   const handleFocus = () => {
     animateTransform(-30);
     animateBorderWidth(2);
+    onFocusChange?.(true);
   };
 
   const handleBlur = () => {
@@ -52,6 +55,7 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
 
     animateTransform(0);
     animateBorderWidth(1);
+    onFocusChange?.(false);
   };
 
   const animateTransform = (toValue: number) => {
@@ -71,6 +75,12 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
       easing: Easing.ease,
     }).start();
   };
+
+  useEffect(() => {
+    if (value) {
+      handleFocus();
+    }
+  }, [value]);
 
   const transX = transY.current.interpolate({
     inputRange: [-30, 0],
@@ -175,7 +185,6 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
         </View>
       ) : (
         <TextInput
-          // style={[styles.input]}
           onFocus={handleFocus}
           onBlur={handleBlur}
           placeholder={placeholder}
