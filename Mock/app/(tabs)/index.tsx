@@ -51,7 +51,6 @@ const Index = () => {
         },
       });
       setRecommendedCoursesData(coursesResponse.data);
-      
 
       const enrolledCoursesUrl = `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/courses`;
       const enrolledResponse = await axios.get(enrolledCoursesUrl, {
@@ -89,7 +88,6 @@ const Index = () => {
       }
     }, [userToken, userInfo])
   );
- 
 
   // Fetch data on initial load if token and user info are available
   useEffect(() => {

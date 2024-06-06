@@ -56,7 +56,7 @@ export default function Game() {
   // Establish WebSocket connection
   useEffect(() => {
     webSocket.current = new WebSocket(
-      `ws://192.168.164.61:8000/games/${gameCode}/ws/`
+      `ws://192.168.48.198:8000/games/${gameCode}/ws/`
     );
 
     webSocket.current.onopen = () => {
@@ -184,22 +184,30 @@ export default function Game() {
   const handleAnswerSelection = (answerId: number, questionId: number) => {
     setSelectedAnswers((prevSelectedAnswers) => {
       const updatedAnswers = { ...prevSelectedAnswers };
-  
+
       const correctAnswersCount = gameAnswers.filter(
         (answer) => answer.question === questionId && answer.isRight
       ).length;
-  
-      console.log("Correct answers count for question", questionId, ":", correctAnswersCount);
-  
+
+      console.log(
+        "Correct answers count for question",
+        questionId,
+        ":",
+        correctAnswersCount
+      );
+
       // If question allows multiple correct answers
       if (questionsWithMultipleCorrectAnswers.includes(questionId)) {
         const selected = updatedAnswers[questionId] || [];
-  
-        if (!selected.includes(answerId) && selected.length < correctAnswersCount) {
+
+        if (
+          !selected.includes(answerId) &&
+          selected.length < correctAnswersCount
+        ) {
           selected.push(answerId);
           updatedAnswers[questionId] = selected;
           console.log("selected", selected.length);
-  
+
           // Send WebSocket message if the correct number of answers is selected
           if (selected.length === correctAnswersCount) {
             sendWebSocketMessage(questionId);
@@ -210,13 +218,10 @@ export default function Game() {
         updatedAnswers[questionId] = [answerId];
         sendWebSocketMessage(questionId);
       }
-  
+
       return updatedAnswers;
     });
   };
-  
-  
-  
 
   const handleSubmit = () => {
     let totalQuestions = gameQuestions.length;
@@ -265,7 +270,6 @@ export default function Game() {
       selectedAnswers[questionId].includes(answerId)
     );
   };
-  
 
   const styles = StyleSheet.create({
     container: {

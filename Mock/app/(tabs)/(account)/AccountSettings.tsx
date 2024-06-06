@@ -16,12 +16,12 @@ const AccountSettings = () => {
   const { userInfo, userToken } = useAuth();
   const defaultFirstName = userInfo?.user.first_name;
   const defaultLastName = userInfo?.user.last_name;
-  const id = userInfo?.user.id
+  const id = userInfo?.user.id;
   const defaultemail = userInfo?.user.email;
   const defaultdob = userInfo?.user.dob;
   const defaultStreet1 = userInfo?.user?.address?.street_1;
   const defaultStreet2 = userInfo?.user?.address?.street_2;
-  const defaultRegion = userInfo?.user?.address?.region
+  const defaultRegion = userInfo?.user?.address?.region;
   const defaultCity = userInfo?.user?.address?.city;
   const defaultCountry = userInfo?.user?.address?.country;
   const [firstName, setFirstName] = useState(defaultFirstName);
@@ -36,29 +36,36 @@ const AccountSettings = () => {
   const [instituteName, setInstituteName] = useState("");
 
   const handleUpdateInfo = async () => {
-    
     const config = {
       headers: {
         Authorization: `Token ${userToken?.token}`,
       },
-    };  
+    };
     try {
       // Send update request to the user update endpoint
-      await axios.put(`${ApiUrl}:8000/api/update/user/${userInfo?.user.id}/`, {
-        first_name: firstName,
-        last_name: lastName,
-        email: email,
-        dob: dob,
-      }, config);
+      await axios.put(
+        `${ApiUrl}:8000/api/update/user/${userInfo?.user.id}/`,
+        {
+          first_name: firstName,
+          last_name: lastName,
+          email: email,
+          dob: dob,
+        },
+        config
+      );
 
       // Send update request to the address update endpoint
-      await axios.put(`${ApiUrl}:8000/api/update/user/address/`, {
-        street_1: street1,
-        street_2: street2,
-        city: city,
-        region: region,
-        country: country,
-      }, config);
+      await axios.put(
+        `${ApiUrl}:8000/api/update/user/address/`,
+        {
+          street_1: street1,
+          street_2: street2,
+          city: city,
+          region: region,
+          country: country,
+        },
+        config
+      );
 
       // Handle success scenario
       console.log("Update successful");

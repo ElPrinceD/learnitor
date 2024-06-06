@@ -1,12 +1,23 @@
 import React from "react";
-import { StyleSheet, TouchableOpacity, View, Image } from "react-native";
-import { Text } from "@/components/Themed";
-import { Ionicons } from "@expo/vector-icons";
-import { useThemeColor } from "@/components/Themed";
+import {
+  StyleSheet,
+  Text,
+  View,
+  useColorScheme,
+  TouchableOpacity,
+} from "react-native";
+import { Ionicons, FontAwesome6 } from "@expo/vector-icons";
 import { router } from "expo-router";
+import Colors from "../../constants/Colors";
+import { SIZES, rMS, rS } from "../../constants";
+import VerificationButton from "../../components/VerificationButton";
+import Animated, {
+  ReduceMotion,
+  StretchInY,
+  StretchOutY,
+} from "react-native-reanimated";
 
 const SignUp = () => {
-  // Define navigation
   const handleSignUpWithApple = () => {
     // Handle sign up with Apple ID
   };
@@ -23,212 +34,157 @@ const SignUp = () => {
     router.navigate("ContinueWithEmail");
   };
 
-  // Fetch theme colors
-  const buttonTextColor = useThemeColor(
-    { light: "#000", dark: "#fff" },
-    "text"
-  );
-  const buttonBackgroundColor = useThemeColor(
-    { light: "#fff", dark: "#000" },
-    "background"
-  );
-  const buttonBorderColor = useThemeColor(
-    { light: "#000", dark: "#fff" },
-    "tint"
-  );
-  const dividerTextColor = useThemeColor(
-    { light: "#000", dark: "#fff" },
-    "text"
-  );
-
-  const themeColor = useThemeColor(
-    {
-      dark: "#0063cd", light: "#0063cd"
-    }, "background"
-  )
-
-  // Function to navigate to the login page
   const handleNavigateToLogin = () => {
-    router.navigate("LogIn"); // Navigate to the Login screen
+    router.navigate("LogIn");
   };
 
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: rMS(1),
+      backgroundColor: themeColors.background,
+    },
+
+    title: {
+      fontSize: SIZES.xLarge,
+      color: themeColors.text,
+      fontWeight: "bold",
+      marginBottom: rMS(5),
+    },
+    buttonRow: {
+      flexDirection: "row",
+      marginBottom: rMS(5),
+      gap: rMS(5),
+    },
+    threeButtons: {
+      backgroundColor: "transparent",
+      borderColor: themeColors.text,
+      padding: rMS(16),
+      borderRadius: 10,
+      borderWidth: 1,
+      width: rS(100),
+    },
+    dividerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: rMS(5),
+    },
+    dividerText: {
+      color: themeColors.textSecondary,
+      fontSize: SIZES.medium,
+      fontWeight: "bold",
+      opacity: 0.6,
+    },
+
+    bottomContainer: {
+      position: "absolute",
+      bottom: rMS(5),
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    existingText: {
+      color: themeColors.text,
+      fontSize: SIZES.medium,
+      fontWeight: "bold",
+    },
+    loginButton: {
+      marginLeft: rMS(8),
+    },
+    loginText: {
+      fontSize: SIZES.medium,
+      fontWeight: "bold",
+      textDecorationLine: "underline",
+      color: themeColors.buttonBackground,
+    },
+  });
+
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: useThemeColor({}, "background") },
-      ]}
-    >
-       <Image
-        source={require("../../assets/images/account.jpg")} 
-        style={styles.image}
-      />
-      <Text style={[styles.title, { color: useThemeColor({}, "text") }]}>
-        Create a free account to discover your personalized learning path
-      </Text>
-      <View style={styles.buttonRow}>
-        {/* Apple Sign Up */}
-        <TouchableOpacity
-          style={[
-            styles.button,
-            styles.appleButton,
-            {
-              backgroundColor: buttonBackgroundColor,
-              borderColor: buttonBorderColor,
-            },
-          ]}
-          onPress={handleSignUpWithApple}
-        >
-          <Ionicons name="logo-apple" size={25} color={buttonTextColor} />
-        </TouchableOpacity>
-
-        {/* Google Sign Up */}
-        <TouchableOpacity
-          style={[
-            styles.button,
-            styles.googleButton,
-            { borderColor: buttonBorderColor },
-          ]}
-          onPress={handleSignUpWithGoogle}
-        >
-          <Ionicons name="logo-google" size={25} color={buttonTextColor} />
-        </TouchableOpacity>
-
-        {/* Twitter Sign Up */}
-        <TouchableOpacity
-          style={[
-            styles.button,
-            styles.twitterButton,
-            { borderColor: buttonBorderColor },
-          ]}
-          onPress={handleSignUpWithTwitter}
-        >
-          <Ionicons name="logo-twitter" size={25} color={buttonTextColor} />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.dividerRow}>
-        <Text style={[styles.dividerText, { color: dividerTextColor }]}>
-          ---------------- or ----------------
-        </Text>
-      </View>
-
-      {/* Email Sign Up */}
-      <TouchableOpacity
-        style={[
-          styles.button,
-          styles.emailButton,
-          {
-            backgroundColor: themeColor,  
-          },
-        ]}
-        onPress={handleSignUpWithEmail}
+    <View style={styles.container}>
+      <Animated.View
+        entering={StretchInY.delay(300)
+          .randomDelay()
+          .reduceMotion(ReduceMotion.Never)
+          .withInitialValues({ transform: [{ scaleY: 0.5 }] })}
+        exiting={StretchOutY.delay(300)
+          .randomDelay()
+          .reduceMotion(ReduceMotion.Never)
+          .withInitialValues({ transform: [{ scaleY: 0.5 }] })}
+        style={styles.container}
       >
-        <Text style={[styles.buttonText, { color: "white" }]}>
-          Continue with email
+        <Text style={styles.title}>
+          Create a free account to discover your personalized learning path
         </Text>
-      </TouchableOpacity>
+        <View style={styles.buttonRow}>
+          {/* Apple Sign Up */}
+          <VerificationButton
+            style={styles.threeButtons}
+            onPress={handleSignUpWithApple}
+          >
+            <Text>
+              <Ionicons
+                name="logo-apple"
+                size={SIZES.xLarge}
+                color={themeColors.text}
+              />
+            </Text>
+          </VerificationButton>
 
-      {/* Existing User? and Log in */}
+          {/* Google Sign Up */}
+
+          <VerificationButton
+            style={styles.threeButtons}
+            onPress={handleSignUpWithGoogle}
+          >
+            <Text>
+              <Ionicons
+                name="logo-google"
+                size={SIZES.xLarge}
+                color={themeColors.text}
+              />
+            </Text>
+          </VerificationButton>
+
+          {/* Twitter Sign Up */}
+
+          <VerificationButton
+            style={styles.threeButtons}
+            onPress={handleSignUpWithTwitter}
+          >
+            <Text>
+              <FontAwesome6
+                name="x-twitter"
+                size={SIZES.xLarge}
+                color={themeColors.text}
+              />
+            </Text>
+          </VerificationButton>
+        </View>
+        <View style={styles.dividerRow}>
+          <Text style={styles.dividerText}>
+            ---------------- or ----------------
+          </Text>
+        </View>
+        <VerificationButton
+          onPress={handleSignUpWithEmail}
+          title="Continue with email"
+        ></VerificationButton>
+      </Animated.View>
       <View style={styles.bottomContainer}>
-        <Text
-          style={[styles.existingText, { color: useThemeColor({}, "text") }]}
-        >
-          Existing User?
-        </Text>
+        <Text style={styles.existingText}>Existing User?</Text>
         <TouchableOpacity
-          style={[styles.loginButton, ] }
+          style={styles.loginButton}
           onPress={handleNavigateToLogin}
         >
-          <Text
-            style={[styles.loginText, { color: themeColor }]}
-          >
-            Log in
-          </Text>
+          <Text style={styles.loginText}>Login</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 24,
-  },
-  buttonRow: {
-    flexDirection: "row",
-    marginBottom: 16,
-  },
-  dividerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  button: {
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
-    marginRight: 8,
-    borderRadius: 20,
-  },
-  appleButton: {
-    borderWidth: 1,
-    width: 120,
-  },
-  googleButton: {
-    borderWidth: 1,
-    width: 120,
-  },
-  twitterButton: {
-    borderWidth: 1,
-    width: 120,
-  },
-  emailButton: {
-    borderWidth: 2,
-    width: 350,
-  },
-  dividerText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    opacity: 0.4,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  bottomContainer: {
-    position: "absolute",
-    bottom: 16,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  existingText: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  loginButton: {
-    marginLeft: 8,
-  },
-  loginText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    textDecorationLine: "none",
-   
-  },
-  image: {
-    width: 400, // Make the image bigger
-    height: 350,
-    resizeMode: "contain", // Maintain aspect ratio
-    marginBottom: 16, // Bring the image down a little
-  },
-});
-
-export default SignUp; // Export the component
+export default SignUp;

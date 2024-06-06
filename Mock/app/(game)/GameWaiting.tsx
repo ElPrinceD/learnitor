@@ -58,18 +58,19 @@ export default function GameWaitingScreen() {
         setCreator(data.creator.first_name);
         setCreatorId(data.creator.id);
         setGameCode(data.code);
-        console.log("Players",data.players)
+        console.log("Players", data.players);
         if (data.players) {
           const newPlayers = data.players.map((player) => ({
             id: player.id,
             score: "0",
             profileName: `${player.first_name} ${player.last_name}`,
             profile_picture:
-            player.id === userInfo?.user.id
-            ? userInfo.user.profile_picture
-            : `${ApiUrl}:8000${player.profile_picture}`          }));
+              player.id === userInfo?.user.id
+                ? userInfo.user.profile_picture
+                : `${ApiUrl}:8000${player.profile_picture}`,
+          }));
           setPlayers(newPlayers);
-          console.log("Hey",players)
+          console.log("Hey", players);
         }
       } catch (error) {
         console.error("Error fetching game details:", error);
@@ -80,7 +81,7 @@ export default function GameWaitingScreen() {
       fetchGameDetails();
 
       const ws = new WebSocket(
-        `ws://192.168.164.61:8000/games/${gameCode}/ws/`
+        `ws://192.168.48.198:8000/games/${gameCode}/ws/`
       );
 
       ws.onopen = () => {
@@ -95,21 +96,17 @@ export default function GameWaitingScreen() {
         try {
           const data = JSON.parse(event.data);
 
-         
           if (data.players) {
-            
             const newPlayers = data.players.map((player: any) => ({
-             
               id: player.id,
               profileName: `${player.first_name} ${player.last_name}`,
               profile_picture:
-              player.id === userInfo?.user.id
-              ? userInfo.user.profile_picture
-              : `${ApiUrl}:8000${player.profile_picture}`, // Placeholder URL, update as needed
+                player.id === userInfo?.user.id
+                  ? userInfo.user.profile_picture
+                  : `${ApiUrl}:8000${player.profile_picture}`, // Placeholder URL, update as needed
             }));
 
             setPlayers(newPlayers);
-            
           }
 
           if (data.type === "game.start") {
@@ -254,7 +251,6 @@ export default function GameWaitingScreen() {
       borderBottomRightRadius: 20,
     },
   });
-
 
   const renderPlayer = ({ item }: { item: Player }) => (
     <View style={styles.playerContainer}>
