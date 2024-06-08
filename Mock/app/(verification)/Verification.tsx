@@ -8,8 +8,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-
 import { useLocalSearchParams } from "expo-router";
+import { SIZES, rMS, rV } from "../../constants";
 
 const Verification = () => {
   const params = useLocalSearchParams();
@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: 16,
+    padding: rMS(16),
   },
   centered: {
     alignItems: "center",
@@ -89,33 +89,33 @@ const styles = StyleSheet.create({
   },
   title: {
     fontWeight: "bold",
-    marginBottom: 16,
+    marginBottom: rV(14),
   },
   emailText: {
-    fontSize: 16,
+    fontSize: SIZES.medium,
   },
   email: {
     fontWeight: "bold",
-    fontSize: 22,
+    fontSize: SIZES.large,
     color: "#007aff",
-    marginBottom: 24,
+    marginBottom: rV(22),
   },
   boldText: {
-    fontSize: 16,
-    marginBottom: 16,
+    fontSize: SIZES.medium,
+    marginBottom: rV(14),
   },
   bold: {
     fontWeight: "bold",
   },
   text: {
-    fontSize: 16,
-    marginBottom: 16,
+    fontSize: SIZES.medium,
+    marginBottom: rV(14),
   },
   resendButton: {
     width: "80%",
   },
   resendText: {
-    fontSize: 16,
+    fontSize: SIZES.medium,
     color: "#fff",
     fontWeight: "bold",
   },

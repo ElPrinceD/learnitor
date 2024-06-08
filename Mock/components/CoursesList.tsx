@@ -9,6 +9,7 @@ import {
   useColorScheme,
 } from "react-native";
 import Colors from "../constants/Colors"; // Adjust the import path as necessary
+import { SIZES, rMS, rS, rV } from "../constants";
 import { Course, Category } from "./types";
 
 interface Props {
@@ -21,65 +22,62 @@ const CoursesList: React.FC<Props> = ({ courses, onCoursePress }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
-  // Define styles using themeColors
   const styles = StyleSheet.create({
     container: {
       flex: 9,
-      borderTopLeftRadius: 30,
-      borderTopRightRadius: 30,
-      padding: 10,
+      borderTopLeftRadius: rMS(30),
+      borderTopRightRadius: rMS(30),
+      padding: rMS(10),
       backgroundColor: themeColors.background,
     },
-
     courseList: {
-      paddingHorizontal: 10,
-      paddingBottom: 20,
+      paddingHorizontal: rMS(10),
+      paddingBottom: rMS(20),
     },
     courseListContainer: {
-      // padding: 10,
       backgroundColor: themeColors.card,
     },
     courseItem: {
       flex: 1,
-      margin: 10,
-      borderRadius: 10,
+      margin: rMS(10),
+      borderRadius: rMS(10),
       overflow: "hidden",
       elevation: 1,
     },
     imageContainer: {
       flex: 1,
-      borderRadius: 10,
+      borderRadius: rMS(10),
       overflow: "hidden",
     },
     image: {
       width: "100%",
-      height: 150,
+      height: rV(120),
     },
     newLabelContainer: {
       position: "absolute",
-      top: 10,
+      top: rS(10),
       right: 0,
       backgroundColor: themeColors.tabIconSelected,
-      paddingHorizontal: 5,
-      paddingVertical: 2,
+      paddingHorizontal: rMS(5),
+      paddingVertical: rMS(2),
     },
     newLabelText: {
       color: themeColors.text,
-      fontSize: 12,
+      fontSize: SIZES.small,
       fontWeight: "bold",
     },
     textContainer: {
       flex: 1,
-      padding: 10,
+      padding: rMS(10),
       backgroundColor: "transparent",
     },
     name: {
-      fontSize: 16,
+      fontSize: SIZES.medium,
       fontWeight: "bold",
       color: themeColors.text,
     },
     details: {
-      fontSize: 14,
+      fontSize: SIZES.small,
       color: themeColors.tabIconDefault,
     },
   });

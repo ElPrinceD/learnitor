@@ -5,7 +5,9 @@ import {
   StyleSheet,
   ViewStyle,
   TextStyle,
+  useColorScheme,
 } from "react-native";
+import Colors from "../constants/Colors";
 
 type GameButtonProps = {
   onPress?: () => void;
@@ -24,6 +26,27 @@ const GameButton: React.FC<GameButtonProps> = ({
   textStyle,
   children,
 }) => {
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
+
+  const styles = StyleSheet.create({
+    button: {
+      backgroundColor: themeColors.buttonBackground,
+      padding: 10,
+      borderRadius: 10,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    buttonDisabled: {
+      backgroundColor: "red",
+    },
+    text: {
+      color: themeColors.text,
+      fontSize: 16,
+      fontWeight: "bold",
+      textAlign: "center",
+    },
+  });
   return (
     <TouchableOpacity
       style={[
@@ -50,24 +73,5 @@ const GameButton: React.FC<GameButtonProps> = ({
     </TouchableOpacity>
   );
 };
-
-const styles = StyleSheet.create({
-  button: {
-    backgroundColor: "#9a580d",
-    padding: 10,
-    borderRadius: 5,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  buttonDisabled: {
-    backgroundColor: "red",
-  },
-  text: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "bold",
-    textAlign: "center",
-  },
-});
 
 export default GameButton;

@@ -7,6 +7,7 @@ import {
   useColorScheme,
 } from "react-native";
 import Colors from "../constants/Colors";
+import { SIZES, rMS, rS, rV, useShadows } from "../constants";
 
 const Questions = ({
   practiceQuestions,
@@ -18,51 +19,44 @@ const Questions = ({
 }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+  const shadow = useShadows();
   const styles = StyleSheet.create({
     container: {
       flex: 1,
+      padding: rMS(20),
     },
     questionContainer: {
       flex: 1,
       justifyContent: "center",
-      paddingBottom: 20,
+      paddingBottom: rV(18),
     },
     answersContainer: {
       flex: 2,
-      paddingTop: 30,
-      paddingBottom: 0,
-      marginTop: -27,
       alignItems: "center",
     },
     questionText: {
-      fontSize: 25,
+      fontSize: SIZES.xLarge,
       color: themeColors.text,
-      paddingLeft: 30,
-      marginBottom: 5,
       fontWeight: "bold",
     },
     answerTouchable: {
       flexDirection: "row",
       alignItems: "center",
-      marginBottom: 25,
+      marginBottom: rV(22),
       width: "85%",
-      padding: 30,
+      padding: rMS(27),
       borderRadius: 5,
       backgroundColor: themeColors.card,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.5,
-      shadowRadius: 4,
-      elevation: 5,
-      paddingLeft: 40,
+      ...shadow.small,
     },
     circleContainer: {
       justifyContent: "center",
       alignItems: "center",
-      marginRight: 10,
+      marginRight: rS(8),
     },
     circle: {
-      width: 20,
-      height: 20,
+      width: rS(18),
+      height: rV(17),
       borderRadius: 10,
       borderWidth: 2,
       borderColor: "#4b4a4a",
@@ -73,8 +67,8 @@ const Questions = ({
       backgroundColor: "#ffffff",
     },
     innerCircle: {
-      width: 10,
-      height: 10,
+      width: rS(8),
+      height: rV(8),
       borderRadius: 5,
       backgroundColor: "#4b4a4a",
     },
@@ -82,24 +76,24 @@ const Questions = ({
       backgroundColor: themeColors.selectedItem,
     },
     answerText: {
-      fontSize: 14,
-      marginLeft: 10,
+      fontSize: SIZES.medium,
+      marginLeft: rS(8),
       color: themeColors.text,
       flexWrap: "wrap",
       maxWidth: "85%",
     },
     selectedAnswerText: {
-      fontSize: 14,
-      marginLeft: 10,
+      fontSize: SIZES.medium,
+      marginLeft: rS(8),
       color: "#ccc",
     },
     checkBox: {
-      width: 20,
-      height: 20,
+      width: rS(18),
+      height: rV(17),
       borderWidth: 2,
       borderColor: "#888",
       borderRadius: 3,
-      marginRight: 10,
+      marginRight: rS(8),
     },
     checkedBox: {
       backgroundColor: "#000",

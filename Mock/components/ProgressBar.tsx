@@ -1,11 +1,12 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
+import { rV } from "../constants";
 
 const ProgressBar = ({ progress, containerStyle, fillStyle }) => {
   const styles = StyleSheet.create({
     progressBar: {
       flex: 1,
-      height: 10,
+      // height: rV(2),
       backgroundColor: "#ffffff",
       borderRadius: 5,
       marginRight: 10,

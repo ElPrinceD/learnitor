@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, useColorScheme, Image } from "react-native";
-import { Course } from "./types";
 import Colors from "../constants/Colors";
+import { SIZES, rMS, rS, rV } from "../constants";
 
 import ProgressBar from "./ProgressBar";
 
@@ -13,8 +13,8 @@ const RoadmapTitle = ({ course, progress }) => {
     container: {
       justifyContent: "space-between",
       alignItems: "center",
-      paddingVertical: 20,
-      paddingHorizontal: 10,
+      paddingVertical: rV(18),
+      paddingHorizontal: rS(10),
       backgroundColor: themeColors.background,
     },
     courseInfo: {
@@ -25,26 +25,24 @@ const RoadmapTitle = ({ course, progress }) => {
       alignItems: "flex-start",
     },
     title: {
-      fontSize: 24,
+      fontSize: SIZES.xLarge,
       fontWeight: "bold",
-      marginBottom: 10,
+      marginBottom: rV(10),
       textAlign: "left",
       color: themeColors.text,
     },
     subtext: {
-      fontSize: 16,
+      fontSize: SIZES.medium,
       textAlign: "left",
-      width: 300,
+      width: rS(270),
       color: themeColors.textSecondary,
     },
     image: {
-      width: 80,
-      height: 80,
-      // marginLeft: 10,
-      // marginTop: -20,
+      width: rV(70),
+      height: rS(70),
     },
     progressContainer: {
-      marginTop: 20,
+      marginTop: rV(18),
       flexDirection: "row",
       alignItems: "center",
       width: "100%",

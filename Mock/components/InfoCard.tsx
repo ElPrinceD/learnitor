@@ -2,6 +2,7 @@ import React from "react";
 import { StyleSheet, Text, View, TouchableOpacity, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { SIZES, rMS, rS, rV } from "../constants";
 
 const GradientCard = ({ card, handleCardPress }) => {
   return (
@@ -12,15 +13,16 @@ const GradientCard = ({ card, handleCardPress }) => {
       style={styles.card}
     >
       <View style={styles.cardCategory}>
-        <Ionicons name="sparkles" size={15} color="#D96B06" />
+        <Ionicons name="sparkles" size={rMS(15)} color="#D96B06" />
         <Text style={styles.categoryText}>{card.category}</Text>
       </View>
+
       <Image source={card.image} style={styles.cardImage} />
       <Text style={styles.cardTitle}>{card.title}</Text>
       {/* <Text style={styles.cardDescription}>{card.description}</Text> */}
 
       <TouchableOpacity onPress={handleCardPress} style={styles.forward}>
-        <Ionicons name="arrow-forward-circle" size={30} color="#D96B06" />
+        <Ionicons name="arrow-forward-circle" size={rMS(30)} color="#D96B06" />
       </TouchableOpacity>
     </LinearGradient>
   );
@@ -28,17 +30,12 @@ const GradientCard = ({ card, handleCardPress }) => {
 
 const styles = StyleSheet.create({
   card: {
-    width: 360,
-    height: 170,
-    borderRadius: 30,
+    width: rS(310),
+    height: rV(140),
+    borderRadius: 20,
     justifyContent: "center",
     // alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    marginLeft: -10,
+    marginLeft: rMS(-10),
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
@@ -48,52 +45,43 @@ const styles = StyleSheet.create({
     opacity: 0.8,
     flexDirection: "row",
     alignItems: "center",
-    padding: 6,
+    padding: rMS(6),
     borderRadius: 20,
     position: "absolute",
-    top: 20,
+    top: rMS(8),
     color: "#313030",
-    left: 15,
+    left: rMS(13),
   },
   categoryText: {
-    fontSize: 18,
+    fontSize: SIZES.medium,
     fontWeight: "normal",
-    paddingHorizontal: 6,
+    paddingHorizontal: rMS(6),
   },
   cardTitle: {
-    fontSize: 24,
+    fontSize: SIZES.large,
     fontWeight: "bold",
-    marginTop: 45,
-    marginBottom: 10,
-    marginLeft: 10,
+    marginTop: rMS(25),
+    alignSelf: "flex-start",
+    marginLeft: rMS(8),
     textAlign: "left",
     flexWrap: "wrap",
-    maxWidth: "50%",
-    zIndex: 2,
-  },
-  cardDescription: {
-    fontSize: 16,
-    color: "#333",
-    textAlign: "left",
-    // marginLeft: -20,
+    maxWidth: rMS(160),
     zIndex: 2,
   },
 
   cardImage: {
-    width: 180,
-    height: 200,
+    width: rS(160),
+    height: rV(180),
     position: "absolute",
-    right: 6,
-    bottom: 0,
-    // opacity: 0.5, // Optional: adjust opacity to make it blend better with the card background
+    alignSelf: "flex-end",
     zIndex: 1,
   },
 
   forward: {
     position: "absolute",
-    bottom: 7,
-    right: 15,
-    zIndex: 2,
+    bottom: rMS(7),
+    right: rMS(15),
+    zIndex: rMS(2),
   },
 });
 

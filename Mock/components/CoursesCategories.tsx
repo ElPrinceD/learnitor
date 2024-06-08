@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import Colors from "../constants/Colors";
 import { Category } from "./types";
+import { SIZES, rMS, rS, rV } from "../constants";
 
 interface Props {
   categories?: Category[];
@@ -30,8 +31,8 @@ const CoursesCategories: React.FC<Props> = ({
     },
 
     categoryItem: {
-      padding: 10,
-      marginRight: 10,
+      padding: rMS(8),
+      marginHorizontal: rS(5),
       borderRadius: 10,
       borderWidth: 1,
       borderColor: themeColors.tabIconDefault,
@@ -41,10 +42,10 @@ const CoursesCategories: React.FC<Props> = ({
     },
     selectedCategoryItem: {
       borderColor: themeColors.selectedItem,
-      borderWidth: 1,
+      borderWidth: 2,
     },
     categoryText: {
-      fontSize: 16,
+      fontSize: SIZES.medium,
       color: themeColors.text,
     },
     selectedCategoryText: {

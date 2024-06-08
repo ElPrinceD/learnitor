@@ -11,6 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import ThreeDButton from "./ThreeDButton"; // Assuming ThreeDButton is in the same directory
 import Colors from "../constants/Colors";
 import { Course, Topic } from "./types";
+import { SIZES, rMS, rS, rV } from "../constants";
 
 interface CourseRoadmapProps {
   enrolledTopics: Topic[];
@@ -30,23 +31,17 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      margin: 20,
+      margin: rMS(18),
     },
     timelineItem: {
       flexDirection: "row",
       alignItems: "center",
-      marginBottom: 10,
-    },
-    timelineConnector: {
-      width: 2,
-      height: 100,
-      backgroundColor: "transparent",
-      marginHorizontal: 10,
+      marginBottom: rV(8),
     },
     timelineContentLeft: {
       flex: 1,
       alignItems: "flex-start",
-      marginLeft: 13,
+      marginLeft: rS(11),
     },
     timelineContentCenter: {
       flex: 1,
@@ -55,13 +50,13 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
     timelineContentRight: {
       flex: 1,
       alignItems: "flex-end",
-      marginRight: 13,
+      marginRight: rS(13),
     },
     timelineText: {
-      fontSize: 14,
+      fontSize: rMS(12),
       color: themeColors.text,
-      marginTop: 20,
-      width: 150,
+      marginTop: rV(18),
+      width: rS(120),
     },
   });
 
@@ -102,7 +97,11 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
           <ThreeDButton
             title={
               isQuestion ? (
-                <Ionicons name="play-circle-outline" size={30} color="black" />
+                <Ionicons
+                  name="play-circle-outline"
+                  size={SIZES.xxLarge}
+                  color="black"
+                />
               ) : (
                 ""
               )

@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Level } from "./types";
 import Colors from "../constants/Colors";
+import { SIZES, rMS, rS, rV, useShadows } from "../constants";
 
 interface Props {
   onPress: (level: Level) => void;
@@ -19,19 +20,17 @@ interface Props {
 const PracticeLevel: React.FC<Props> = ({ onPress, levels }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+  const shadows = useShadows();
 
   const styles = StyleSheet.create({
     item: {
       backgroundColor: themeColors.card,
       borderRadius: 10,
-      marginVertical: 15,
+      marginVertical: rV(13),
       flex: 1,
       marginHorizontal: 5,
-      height: 200,
-      elevation: 2,
-      shadowColor: themeColors.shadow,
-      shadowOpacity: 0.25,
-      shadowRadius: 3.84,
+      height: rV(180),
+      ...shadows.small,
     },
     imageContainer: {
       flex: 4,
@@ -52,10 +51,10 @@ const PracticeLevel: React.FC<Props> = ({ onPress, levels }) => {
       justifyContent: "center",
     },
     title: {
-      fontSize: 16,
+      fontSize: SIZES.large,
       fontWeight: "bold",
       marginTop: 10,
-      marginBottom: 10,
+      marginBottom: rV(8),
       color: themeColors.text,
     },
   });

@@ -7,6 +7,7 @@ import {
   Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { SIZES, rMS, rV, useShadows } from "../constants";
 
 interface CategoryItemProps {
   category: {
@@ -26,6 +27,30 @@ const TimelineCategoryItem: React.FC<CategoryItemProps> = ({
   onLongPress, // Destructure onLongPress prop
   width,
 }) => {
+  const shadow = useShadows();
+
+  const styles = StyleSheet.create({
+    categoryBox: {
+      height: rV(140),
+      marginVertical: rV(10),
+      borderRadius: 10,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: rMS(10),
+      ...Platform.select({
+        ios: {
+          backgroundColor: "#fff",
+        },
+      }),
+    },
+    categoryText: {
+      fontSize: SIZES.medium,
+      fontWeight: "bold",
+      color: "#fff",
+      marginTop: rV(10),
+    },
+  });
+
   return (
     <TouchableOpacity
       key={category.id}
@@ -34,49 +59,17 @@ const TimelineCategoryItem: React.FC<CategoryItemProps> = ({
         {
           backgroundColor: category.color,
           width: (width - 40) / 2,
-          ...Platform.select({
-            ios: {
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.25,
-              shadowRadius: 3.84,
-            },
-            android: {
-              elevation: 5,
-            },
-          }),
+          ...shadow.medium,
         },
       ]}
       activeOpacity={0.5}
       onPress={onPress}
       onLongPress={onLongPress} // Pass onLongPress to TouchableOpacity
     >
-      <Ionicons name={category.icon} size={40} color="#fff" />
+      <Ionicons name={category.icon} size={SIZES.xxxLarge} color="#fff" />
       <Text style={styles.categoryText}>{category.name}</Text>
     </TouchableOpacity>
   );
 };
-
-const styles = StyleSheet.create({
-  categoryBox: {
-    height: 160,
-    marginVertical: 10,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 10,
-    ...Platform.select({
-      ios: {
-        backgroundColor: "#fff",
-      },
-    }),
-  },
-  categoryText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#fff",
-    marginTop: 10,
-  },
-});
 
 export default TimelineCategoryItem;

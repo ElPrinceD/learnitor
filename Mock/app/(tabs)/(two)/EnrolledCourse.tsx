@@ -16,6 +16,7 @@ import { Topic, Course } from "../../../components/types";
 import { useNavigation } from "@react-navigation/native";
 import Colors from "../../../constants/Colors";
 import ProgressBar from "../../../components/ProgressBar";
+import { SIZES, rS, rV } from "../../../constants";
 
 const EnrolledCourse: React.FC = () => {
   const { userToken, userInfo } = useAuth();
@@ -123,21 +124,21 @@ const EnrolledCourse: React.FC = () => {
       flexGrow: 1,
     },
     headerTitle: {
-      fontSize: 18,
+      fontSize: SIZES.large,
       fontWeight: "bold",
       color: themeColors.text,
       alignContent: "center",
-      marginVertical: 10,
+      marginVertical: rV(5),
     },
     progressContainer: {
-      marginTop: 5, // Add some margin to separate the progress bar from the title
       width: "100%",
       alignItems: "center", // Center align the progress bar
-      marginVertical: 10,
+      alignSelf: "center",
+      marginBottom: rV(10),
     },
     progressText: {
       color: themeColors.textSecondary,
-      marginLeft: 10,
+      marginLeft: rS(10),
     },
   });
 
@@ -171,8 +172,8 @@ const EnrolledCourse: React.FC = () => {
               progress={progress}
               containerStyle={{
                 backgroundColor: themeColors.text,
-                height: 10,
-                width: 250, // Make sure the progress bar takes the full width
+                height: rV(5),
+                width: rS(220), // Make sure the progress bar takes the full width
               }}
               fillStyle={{ backgroundColor: themeColors.icon }}
             />

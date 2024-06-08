@@ -56,7 +56,7 @@ export default function Game() {
   // Establish WebSocket connection
   useEffect(() => {
     webSocket.current = new WebSocket(
-      `ws://192.168.48.198:8000/games/${gameCode}/ws/`
+      `ws://192.168.87.61:8000/games/${gameCode}/ws/`
     );
 
     webSocket.current.onopen = () => {

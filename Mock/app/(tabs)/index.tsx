@@ -10,6 +10,7 @@ import { useAuth } from "../../components/AuthContext";
 import { router } from "expo-router";
 import Colors from "../../constants/Colors";
 import CardSwiper from "../../components/CardSwiper";
+import { SIZES, rMS, rS } from "../../constants";
 
 const Index = () => {
   const { userToken, userInfo } = useAuth();
@@ -80,7 +81,6 @@ const Index = () => {
     }
   };
 
-  
   useFocusEffect(
     useCallback(() => {
       if (userToken && userInfo) {
@@ -111,7 +111,7 @@ const Index = () => {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      padding: 15,
+      padding: rMS(12),
     },
     cardContainer: {
       flex: 1,
@@ -120,11 +120,11 @@ const Index = () => {
       flex: 2.5,
     },
     sectionTitle: {
-      fontSize: 25,
+      fontSize: SIZES.xLarge,
       color: themeColors.selectedText,
       fontWeight: "bold",
-      marginBottom: 5,
-      marginTop: 15,
+      marginBottom: rMS(5),
+      marginTop: rMS(15),
       alignSelf: "flex-start",
     },
   });

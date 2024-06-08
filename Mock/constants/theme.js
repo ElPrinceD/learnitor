@@ -3,6 +3,8 @@ import {
   useResponsiveWidth, useResponsiveFontSize
 } from "react-native-responsive-dimensions";
 import { rMS } from "./responsive";
+import { useColorScheme } from "react-native";
+import Colors from "./Colors";
 
 
 const COLORS = {
@@ -27,32 +29,38 @@ const SIZES = {
   xSmall: rMS(5),
   small: rMS(10),
   medium: rMS(15),
-  large: rMS(20),
-  xLarge:rMS(25),
+  large: rMS(17),
+  xLarge: rMS(25),
   xxLarge: rMS(30),
+  xxxLarge: rMS(45)
 };
 
-const SHADOWS = {
-  small: {
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
+const useShadows = () => {
+const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
+  
+  return {
+    small: {
+      shadowColor: themeColors.shadow,
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 2,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 2,
-  },
-  medium: {
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
+    medium: {
+      shadowColor: themeColors.shadow,
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.25,
+      shadowRadius: 5.84,
+      elevation: 5,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 5.84,
-    elevation: 5,
-  },
+  };
 };
 
-export { COLORS, FONT, SIZES, SHADOWS };
+export { COLORS, FONT, SIZES, useShadows };

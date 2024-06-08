@@ -9,13 +9,14 @@ import {
 import { Ionicons, FontAwesome6 } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Colors from "../../constants/Colors";
-import { SIZES, rMS, rS } from "../../constants";
+import { SIZES, rMS, rS, rV } from "../../constants";
 import VerificationButton from "../../components/VerificationButton";
 import Animated, {
   ReduceMotion,
   StretchInY,
   StretchOutY,
 } from "react-native-reanimated";
+import { StatusBar } from "expo-status-bar";
 
 const SignUp = () => {
   const handleSignUpWithApple = () => {
@@ -47,6 +48,7 @@ const SignUp = () => {
       alignItems: "center",
       justifyContent: "center",
       padding: rMS(1),
+      paddingVertical: rV(3),
       backgroundColor: themeColors.background,
     },
 
@@ -82,8 +84,8 @@ const SignUp = () => {
     },
 
     bottomContainer: {
-      position: "absolute",
-      bottom: rMS(5),
+      bottom: rV(10),
+      justifyContent: "flex-end",
       flexDirection: "row",
       alignItems: "center",
     },
@@ -105,6 +107,8 @@ const SignUp = () => {
 
   return (
     <View style={styles.container}>
+      <StatusBar hidden={true} />
+
       <Animated.View
         entering={StretchInY.delay(300)
           .randomDelay()

@@ -22,6 +22,7 @@ import Animated, {
   StretchInY,
   StretchOutY,
 } from "react-native-reanimated";
+import { StatusBar } from "expo-status-bar";
 
 const ContinueWithEmail = () => {
   const [firstName, setFirstName] = useState("");
@@ -101,7 +102,6 @@ const ContinueWithEmail = () => {
   const handleKeyboardDismiss = () => {
     Keyboard.dismiss();
   };
-
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -184,6 +184,7 @@ const ContinueWithEmail = () => {
   return (
     <TouchableWithoutFeedback onPress={handleKeyboardDismiss}>
       <View style={styles.container}>
+        <StatusBar hidden={true} />
         <Animated.View
           entering={StretchInY.delay(300)
             .randomDelay()
@@ -207,12 +208,14 @@ const ContinueWithEmail = () => {
             onChangeText={setSurname}
             placeholderTextColor={themeColors.textSecondary}
           />
+
           <AnimatedTextInput
             label="Email"
             value={email}
             onChangeText={setEmail}
             placeholderTextColor={themeColors.textSecondary}
           />
+
           <AnimatedTextInput
             label="Password"
             value={password}
@@ -221,6 +224,7 @@ const ContinueWithEmail = () => {
             secureTextEntry={!showPassword}
             showToggleIcon={true}
           />
+
           {emailError && <Text style={styles.errorMessage}>{emailError}</Text>}
           {passwordError && (
             <Text style={styles.errorMessage}>{passwordError}</Text>

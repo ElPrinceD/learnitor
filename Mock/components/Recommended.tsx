@@ -11,6 +11,7 @@ import {
 import { router } from "expo-router";
 import { Course } from "./types";
 import Colors from "../constants/Colors";
+import { SIZES, rMS, rS, rV } from "../constants";
 
 interface Props {
   RecommendedCoursesData: Course[];
@@ -30,14 +31,13 @@ const RecommendedCoursesList: React.FC<Props> = ({
     },
     touchable: {
       flex: 1,
-      marginRight: 20,
-      marginBottom: 2,
+      marginRight: rS(18),
+      marginBottom: rV(2),
       borderRadius: 10,
       overflow: "hidden",
       elevation: 1,
     },
     courseListContainer: {
-      // padding: 10,
       flex: 1,
       backgroundColor: themeColors.card,
     },
@@ -47,25 +47,25 @@ const RecommendedCoursesList: React.FC<Props> = ({
       overflow: "hidden",
     },
     image: {
-      width: 250,
-      height: 200,
+      width: rS(210),
+      height: rV(130),
     },
 
     textContainer: {
       flex: 1,
-      padding: 10,
+      padding: rMS(8),
       borderRadius: 10,
       backgroundColor: "transparent",
     },
     name: {
-      fontSize: 16,
+      fontSize: SIZES.medium,
       fontWeight: "bold",
       flexWrap: "wrap",
-      maxWidth: "70%",
+      maxWidth: rMS(150),
       color: themeColors.text,
     },
     details: {
-      fontSize: 16,
+      fontSize: SIZES.small,
       color: themeColors.textSecondary,
       textAlign: "left",
     },
