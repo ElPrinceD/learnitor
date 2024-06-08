@@ -8,6 +8,7 @@ import {
   useColorScheme,
 } from "react-native";
 import Colors from "../constants/Colors";
+import { rMS, rS, rV } from "../constants";
 
 const ThreeDButton = ({ title, onPress }) => {
   const [animatedValue] = useState(new Animated.Value(0));
@@ -48,18 +49,18 @@ const ThreeDButton = ({ title, onPress }) => {
 
   const styles = StyleSheet.create({
     container: {
-      marginTop: 20,
       flex: 1,
+      marginTop: rV(18),
       alignItems: "center",
       justifyContent: "center",
     },
     button: {
-      height: 60,
-      width: 70,
+      height: rV(50),
+      width: rS(60),
     },
     outer: {
       flex: 1,
-      padding: 10,
+      padding: rMS(8),
       borderRadius: 10,
       transform: [{ rotate: "45deg" }],
       backgroundColor: "#436A6E",
@@ -82,8 +83,6 @@ const ThreeDButton = ({ title, onPress }) => {
     buttonText: {
       color: "#fff",
       fontWeight: "bold",
-
-      fontSize: 20,
     },
   });
 

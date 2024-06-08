@@ -36,7 +36,6 @@ const CardSwiper: React.FC<CardSwiperProps> = ({ cards, onCardPress }) => {
         stackSeparation={1}
         stackScale={4}
         containerStyle={{
-          flex: 1,
           justifyContent: "center",
           alignItems: "center",
         }}

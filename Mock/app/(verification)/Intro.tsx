@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import { SIZES, rMS, rS, rV } from "../../constants";
 import Colors from "../../constants/Colors";
 import VerificationButton from "../../components/VerificationButton";
+import { StatusBar } from "expo-status-bar";
 
 const Intro = () => {
   const colorScheme = useColorScheme();
@@ -67,6 +68,8 @@ const Intro = () => {
 
   return (
     <View style={styles.container}>
+      <StatusBar hidden={true} />
+
       <Image
         source={require("../../assets/images/Learning-cuate.png")}
         style={styles.image}

@@ -1,15 +1,21 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { View, ScrollView, StyleSheet, Alert, Text } from "react-native";
+import {
+  View,
+  ScrollView,
+  StyleSheet,
+  Alert,
+  Text,
+  useColorScheme,
+} from "react-native";
 import axios from "axios";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
 import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
 import PlanItem from "../../../components/PlanItem";
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import DaySelector from "../../../components/DaySelector";
-import TimelineHeader from "../../../components/TimelineHeader";
-import { Picker } from "@react-native-picker/picker"; // Import Picker from @react-native-picker/picker
+import Colors from "../../../constants/Colors";
+import { SIZES, rS, rV } from "../../../constants";
 
 interface Plan {
   id: number;
@@ -22,25 +28,30 @@ interface Plan {
 
 const Timeline: React.FC = () => {
   const [todayPlans, setTodayPlans] = useState<Plan[]>([]);
-  const [categoryNames, setCategoryNames] = useState<{ [key: number]: string }>({});
+  const [categoryNames, setCategoryNames] = useState<{ [key: number]: string }>(
+    {}
+  );
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null); // State for selected category
 
   const { userToken } = useAuth();
 
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
+
   const getCategoryColor = (type: string) => {
     switch (type) {
       case "Assignments & Projects":
-        return "#0d1116"; // Red
+        return themeColors.text;
       case "TimeTable":
-        return "#ed892e"; // Orange
+        return "#ed892e";
       case "Study TimeTable":
-        return "#6c77f4"; // Blue
+        return "#6c77f4";
       case "Exams TimeTable":
-        return "#a96ae3"; // Purple
+        return "#a96ae3";
       default:
-        return "#000000"; // Black (default color)
+        return "#000";
     }
   };
 
@@ -116,9 +127,8 @@ const Timeline: React.FC = () => {
   const handleEditPlan = (plan: Plan) => {
     router.navigate("EditPlan");
     const taskIdString = String(plan.id);
-    console.log(taskIdString)
+    console.log(taskIdString);
     router.setParams({
-      
       taskId: taskIdString,
       title: plan.title,
       description: plan.description,
@@ -129,120 +139,90 @@ const Timeline: React.FC = () => {
     });
   };
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    scrollViewContent: {
+      flexGrow: 1,
+    },
+    bottom: {
+      backgroundColor: themeColors.background,
+      flex: 5.5,
+    },
+    plansContainer: {
+      // padding: 10,
+      marginTop: rV(18),
+    },
+    planItemWrapper: {
+      flexDirection: "row", // Align time and plan item side by side
+      alignItems: "center",
+      marginVertical: rV(8),
+    },
+    planTime: {
+      marginHorizontal: rS(10),
+      textAlign: "left",
+      color: themeColors.textSecondary,
+      alignSelf: "flex-start",
+    },
+    noPlansText: {
+      fontSize: SIZES.large,
+      fontWeight: "bold",
+      color: themeColors.textSecondary,
+      textAlign: "center",
+      paddingVertical: rV(20),
+    },
+
+    planItemLine: {
+      position: "absolute",
+      top: rV(-10),
+      left: 0,
+      right: 0,
+      height: 0.8,
+      backgroundColor: themeColors.border,
+    },
+  });
+
   return (
-    
     <View style={styles.container}>
-      {/* <TimelineHeader /> */}
-      <DaySelector selectedDate={selectedDate} setSelectedDate={setSelectedDate} />
+      <DaySelector
+        selectedDate={selectedDate}
+        setSelectedDate={setSelectedDate}
+      />
       <View style={[styles.bottom]}>
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
-      <View style={styles.plansContainer}>
-  {todayPlans.length === 0 ? (
-    <Text style={styles.noPlansText}>Hey, you have a free day!</Text>
-  ) : (
-    todayPlans.map((plan, index) => {
-      const categoryColor = getCategoryColor(categoryNames[plan.category]);
-      return (
-        <View key={index} style={styles.planItemWrapper}>
-          <Text style={styles.planTime}>{plan.due_time.slice(0, -3)}</Text>
-          {/* <View style={[styles.planItemContainer, { backgroundColor: categoryColor }]}> */}
-            <View style={styles.planItemLine}/>
-            <PlanItem
-              plan={plan}
-              categoryNames={categoryNames}
-              getCategoryColor={getCategoryColor}
-              handleDeletePlan={handleDeletePlan}
-              handleEditPlan={handleEditPlan}
-            />
+        <ScrollView contentContainerStyle={styles.scrollViewContent}>
+          <View style={styles.plansContainer}>
+            {todayPlans.length === 0 ? (
+              <Text style={styles.noPlansText}>Hey, you have a free day!</Text>
+            ) : (
+              todayPlans.map((plan, index) => {
+                const categoryColor = getCategoryColor(
+                  categoryNames[plan.category]
+                );
+                return (
+                  <View key={index} style={styles.planItemWrapper}>
+                    <Text style={styles.planTime}>
+                      {plan.due_time.slice(0, -3)}
+                    </Text>
+                    {/* <View style={[styles.planItemContainer, { backgroundColor: categoryColor }]}> */}
+                    <View style={styles.planItemLine} />
+                    <PlanItem
+                      plan={plan}
+                      categoryNames={categoryNames}
+                      getCategoryColor={getCategoryColor}
+                      handleDeletePlan={handleDeletePlan}
+                      handleEditPlan={handleEditPlan}
+                    />
+                  </View>
+                  // </View>
+                );
+              })
+            )}
           </View>
-        // </View>
-      );
-    })
-  )}
-</View>
-      </ScrollView>
+        </ScrollView>
       </View>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingBottom: 50,
-  },
-  scrollViewContent: {
-    flexGrow: 1,
-    paddingBottom: 50,
-    borderTopRightRadius: 50,
-    borderTopLeftRadius: 50,
-    
-  },
-  bottom:{
-    height: "100%", 
-    marginTop: -55,
-    width: "100%", 
-    borderTopRightRadius: 50,
-    borderTopLeftRadius: 50,
-    backgroundColor: "white"
-  },
-  plansContainer: {
-    // backgroundColor: "#FFFFFF", // White background for the entire plans container
-    borderTopRightRadius: 30,
-    borderTopLeftRadius: 30,
-    
-    padding: 10,
-    
-    marginTop: 20,
-  },
-  planItemWrapper: {
-    flexDirection: 'row', // Align time and plan item side by side
-    alignItems: 'center',
-    marginVertical: 10,
-  },
-  planTime: {
-    width: 50, // Fixed width for the time
-    textAlign: 'center',
-    color: "#1f1f1f",
-    marginTop: -100
-  },
-  noPlansText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#666',
-    
-    textAlign: 'center',
-    paddingVertical: 20,
-  },
-  planItemContainer: {
-    flex: 1,
-    marginLeft: 10,
-    borderRadius: 20,
-    padding: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  planItemLine: {
-    position: 'absolute',
-    
-    top: -10, // Adjust this value to move the line higher or lower
-    left: 0,
-    right: 0,
-    height: 2,
-    backgroundColor: '#ccc',
-  },
-  
-  categoryPickerContainer: {
-    alignSelf: "flex-end",
-    marginRight: 20,
-  },
-  picker: {
-    height: 50,
-    width: 150,
-  },
-});
 
 export default Timeline;

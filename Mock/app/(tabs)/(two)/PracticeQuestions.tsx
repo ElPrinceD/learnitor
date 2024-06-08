@@ -8,15 +8,14 @@ import {
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import Toast from "react-native-root-toast";
-
 import axios from "axios";
 import Questions from "../../../components/Questions";
 import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
 import { Topic, Question, Answer } from "../../../components/types";
 import GameButton from "../../../components/GameButton";
-import ProgressBar from "../../../components/ProgressBar";
 import Colors from "../../../constants/Colors";
+import { SIZES, rMS, rS, rV } from "../../../constants";
 
 const PracticeQuestions: React.FC = () => {
   const { topic, level, course, isTimed, duration } = useLocalSearchParams();
@@ -223,7 +222,6 @@ const PracticeQuestions: React.FC = () => {
         animation: true,
         hideOnPress: true,
         delay: 0,
-        //   backgroundColor: "#fdecd2",
         opacity: 0.8,
       });
     }
@@ -237,63 +235,48 @@ const PracticeQuestions: React.FC = () => {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      marginTop: 50,
-      padding: 20,
+      marginTop: rV(30),
+      padding: rMS(20),
       elevation: 1,
     },
     questionNumberText: {
       color: themeColors.tint,
-      fontSize: 15,
+      fontSize: SIZES.medium,
       fontWeight: "bold",
     },
-    progressBarContainer: {
-      height: 10,
-      width: "100%",
-      backgroundColor: "#e0e0e0",
-      borderRadius: 5,
-      overflow: "hidden",
-      //marginBottom: 20,
-    },
-    progressBar: {
-      height: "100%",
-      backgroundColor: "#76c7c0",
-    },
-
     buttonContainer: {
       flexDirection: "row",
       justifyContent: "space-between",
-      paddingTop: 30,
+      paddingTop: rV(30),
     },
     button: {
       backgroundColor: themeColors.buttonBackground,
-      padding: 15,
-      borderRadius: 5,
+      padding: rMS(15),
       flex: 1,
-      marginHorizontal: 10,
+      marginHorizontal: rS(10),
       borderTopLeftRadius: 20,
       borderBottomRightRadius: 20,
-      margin: 10,
+      margin: rMS(10),
     },
 
     disabledButtonText: {
       backgroundColor: themeColors.buttonDisabled,
-      padding: 15,
-      borderRadius: 5,
+      padding: rMS(15),
       flex: 1,
-      marginHorizontal: 10,
+      marginHorizontal: rS(10),
       borderTopLeftRadius: 20,
       borderBottomRightRadius: 20,
       opacity: 0.5,
-      margin: 10,
+      margin: rMS(10),
     },
     timer: {
-      fontSize: 18,
+      fontSize: SIZES.medium,
       textAlign: "center",
       color: themeColors.text,
       fontWeight: "bold",
     },
     timerRed: {
-      color: "red",
+      color: "#D22B2B",
       fontWeight: "bold",
     },
   });

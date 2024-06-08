@@ -10,6 +10,7 @@ import {
 import { Topic } from "./types";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "../constants/Colors";
+import { SIZES, rMS, rS, rV, useShadows } from "../constants";
 
 interface CourseTopicsProps {
   topics: Topic[];
@@ -24,6 +25,7 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
 }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+  const shadows = useShadows();
 
   useEffect(() => {
     onSelectedTopicsChange(selectedTopics);
@@ -51,69 +53,60 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
 
   const styles = StyleSheet.create({
     topicsContainer: {
-      paddingVertical: 20,
-      borderTopColor: themeColors.border,
-      paddingHorizontal: 10,
+      backgroundColor: themeColors.background,
+      paddingVertical: rV(20),
+      paddingHorizontal: rS(10),
     },
     topicCard: {
-      marginBottom: 15,
+      marginBottom: rV(15),
       backgroundColor: themeColors.card,
-      padding: 10,
-      margin: 5,
+      padding: rMS(10),
+      margin: rMS(5),
       borderRadius: 10,
-      shadowColor: themeColors.shadow,
-      shadowOffset: {
-        width: 0,
-        height: 1,
-      },
-      shadowOpacity: 0.4,
-      shadowRadius: 9.84,
-      elevation: 1,
+      ...shadows.small,
       position: "relative",
     },
     icon: {
       backgroundColor: themeColors.tint,
-      padding: 5,
+      padding: rMS(5),
       borderRadius: 50,
-      shadowColor: themeColors.shadow,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.4,
-      shadowRadius: 2,
+      ...shadows.small,
     },
     topicTitle: {
-      fontSize: 17,
+      fontSize: SIZES.large,
       fontWeight: "bold",
-      paddingLeft: 10,
+      paddingLeft: rS(8),
+      flexWrap: "wrap",
+      maxWidth: rMS(250),
       color: themeColors.text,
     },
     topicDescription: {
-      fontSize: 16,
+      fontSize: SIZES.medium,
       color: themeColors.textSecondary,
-      marginTop: -10,
-      marginLeft: 40,
+      marginLeft: rS(36),
     },
     orderNumber: {
       position: "absolute",
-      top: 15,
-      right: 15,
-      fontSize: 16,
+      top: rV(15),
+      right: rS(15),
+      fontSize: SIZES.small,
       fontWeight: "bold",
       color: themeColors.textSecondary,
     },
     instructionText: {
-      fontSize: 18,
+      fontSize: SIZES.large,
       fontWeight: "bold",
       textAlign: "center",
-      marginBottom: 10,
+      marginBottom: rV(8),
       color: themeColors.text,
     },
     clearButton: {
       alignSelf: "flex-end",
       backgroundColor: "#fff",
       borderRadius: 50,
-      padding: 1,
-      marginTop: -10,
-      marginRight: 10,
+      padding: rMS(1),
+      marginTop: -rV(10),
+      marginRight: rS(10),
     },
     clearButtonIcon: {
       color: themeColors.buttonBackground,
@@ -134,7 +127,11 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
           onPress={clearSelection}
           activeOpacity={0.7}
         >
-          <Ionicons name="close" size={27} style={styles.clearButtonIcon} />
+          <Ionicons
+            name="close"
+            size={SIZES.xLarge}
+            style={styles.clearButtonIcon}
+          />
         </TouchableOpacity>
       )}
       {topics.map((topic, index) => {
@@ -158,12 +155,14 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
               {isSelected ? orderNumber : ""}
             </Text>
             <View style={{ flexDirection: "row" }}>
-              <Ionicons
-                name="play-circle"
-                size={20}
-                color={"white"}
-                style={styles.icon}
-              />
+              <View>
+                <Ionicons
+                  name="play-circle"
+                  size={SIZES.large}
+                  color={"white"}
+                  style={styles.icon}
+                />
+              </View>
               <Text style={styles.topicTitle}>{topic.title}</Text>
             </View>
             <Text style={styles.topicDescription}>{topic.description}</Text>

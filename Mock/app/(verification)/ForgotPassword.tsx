@@ -9,6 +9,7 @@ import {
   useColorScheme,
   Linking,
   Easing,
+  ScrollView,
 } from "react-native";
 import { router } from "expo-router";
 import axios from "axios";
@@ -18,9 +19,13 @@ import { SIZES, rMS, rS } from "../../constants";
 import VerificationButton from "../../components/VerificationButton";
 import Animated, {
   ReduceMotion,
+  SlideInDown,
+  SlideInUp,
+  SlideOutUp,
   StretchInY,
   StretchOutY,
 } from "react-native-reanimated";
+import { StatusBar } from "expo-status-bar";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -108,8 +113,8 @@ const ForgotPassword = () => {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
+      marginTop: rMS(20),
       alignItems: "center",
-      justifyContent: "center",
       padding: rMS(16),
       backgroundColor: themeColors.background,
     },
@@ -145,13 +150,15 @@ const ForgotPassword = () => {
     },
     sentMessage: {
       fontSize: SIZES.medium,
+      fontWeight: "bold",
       marginBottom: rMS(16),
+      marginTop: rMS(16),
       color: themeColors.text,
     },
     support: {
       fontSize: SIZES.medium,
       position: "absolute",
-      bottom: rMS(5),
+      bottom: rMS(10),
       textAlign: "center",
       color: themeColors.text,
     },
@@ -163,13 +170,15 @@ const ForgotPassword = () => {
   });
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
+      <StatusBar hidden={true} />
+
       <Animated.View
-        entering={StretchInY.delay(300)
+        entering={SlideInUp.delay(300)
           .randomDelay()
           .reduceMotion(ReduceMotion.Never)
           .withInitialValues({ transform: [{ scaleY: 0.5 }] })}
-        exiting={StretchOutY.delay(300)
+        exiting={SlideOutUp.delay(300)
           .randomDelay()
           .reduceMotion(ReduceMotion.Never)
           .withInitialValues({ transform: [{ scaleY: 0.5 }] })}
@@ -256,7 +265,7 @@ const ForgotPassword = () => {
           support@learnitor.org
         </Text>
       </Text>
-    </View>
+    </ScrollView>
   );
 };
 

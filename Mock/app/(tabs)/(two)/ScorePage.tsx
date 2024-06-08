@@ -16,6 +16,7 @@ import { Course, Topic, Result } from "../../../components/types";
 import Colors from "../../../constants/Colors";
 import GameButton from "../../../components/GameButton";
 import { useNavigation } from "@react-navigation/native";
+import { SIZES, rMS, rS, rV, useShadows } from "../../../constants";
 
 const AnimatedText = Animated.createAnimatedComponent(Text);
 
@@ -30,6 +31,7 @@ const ScorePage: React.FC = () => {
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+  const shadow = useShadows();
   const navigation = useNavigation();
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -37,77 +39,78 @@ const ScorePage: React.FC = () => {
 
   const styles = StyleSheet.create({
     container: {
-      // flex: 1,
       justifyContent: "center",
       alignItems: "center",
-      padding: 20,
+      padding: rMS(18),
     },
     topContainer: {
       flex: 1,
-      padding: 50,
-      marginTop: -50,
+      padding: rMS(48),
+      marginTop: -rMS(48),
       justifyContent: "center",
       alignItems: "center",
       backgroundColor: themeColors.background,
     },
     title: {
-      fontSize: 24,
+      fontSize: SIZES.xLarge,
       fontWeight: "bold",
-      marginBottom: 20,
+      marginBottom: rV(18),
       color: themeColors.text,
     },
+    scoreHeader: {
+      fontSize: SIZES.xLarge,
+      fontWeight: "bold",
+      color: themeColors.selectedText,
+    },
     score: {
-      fontSize: 40,
+      fontSize: SIZES.xxxLarge,
       fontWeight: "bold",
       color: themeColors.selectedText,
     },
     buttonContainer: {
       flexDirection: "row",
-      marginTop: 20,
+      marginTop: rV(18),
     },
     button: {
       backgroundColor: "transparent",
       borderWidth: 2,
       borderColor: themeColors.border,
-      paddingVertical: 15,
-      paddingHorizontal: 30,
+      paddingVertical: rV(13),
+      paddingHorizontal: rS(27),
       borderRadius: 10,
-      marginHorizontal: 10,
+      marginHorizontal: rS(10),
       alignItems: "center",
       justifyContent: "center",
     },
     buttonText: {
-      fontSize: 18,
+      fontSize: SIZES.large,
       fontWeight: "bold",
       color: themeColors.text,
     },
     answersContainer: {
       flex: 1,
-      marginTop: 20,
+      marginTop: rV(20),
       width: "100%",
     },
     card: {
-      marginBottom: 20,
-      padding: 15,
+      marginBottom: rV(18),
+      padding: rMS(13),
       backgroundColor: themeColors.card,
       borderRadius: 10,
-      shadowColor: themeColors.shadow,
-      shadowOpacity: 0.1,
-      shadowRadius: 10,
-      elevation: 5,
+      ...shadow.medium,
     },
     questionText: {
-      fontSize: 18,
+      fontSize: SIZES.large,
       fontWeight: "bold",
-      marginBottom: 10,
+      marginBottom: rV(8),
       color: themeColors.text,
     },
     answersList: {
-      marginLeft: 20,
+      marginLeft: rS(18),
     },
     answerText: {
-      fontSize: 16,
-      marginBottom: 5,
+      fontSize: SIZES.medium,
+      marginBottom: rV(3),
       color: themeColors.text,
     },
     correctAnswer: {
@@ -117,25 +120,25 @@ const ScorePage: React.FC = () => {
       fontWeight: "bold",
     },
     bullet: {
-      marginRight: 13,
-      marginLeft: -20,
+      marginRight: rS(11),
+      marginLeft: rS(-18),
       color: themeColors.text,
-      fontSize: 20,
+      fontSize: SIZES.large,
       fontWeight: "bold",
     },
     resultText: {
-      fontSize: 16,
+      fontSize: SIZES.medium,
       fontWeight: "bold",
-      marginTop: 10,
+      marginTop: rV(10),
     },
     correct: {
       color: "#097969",
     },
     incorrect: {
-      color: "red",
+      color: "#D22B2B",
     },
     headerTitle: {
-      fontSize: 18,
+      fontSize: SIZES.large,
       fontWeight: "bold",
       color: themeColors.text,
     },
@@ -222,8 +225,8 @@ const ScorePage: React.FC = () => {
                 transform: [{ translateY: originalTitleTranslateY }],
                 textAlign: "center",
                 position: "absolute",
-                top: 15,
-                width: 300
+                top: rV(15),
+                width: rS(300),
               },
             ]}
           >
@@ -252,7 +255,7 @@ const ScorePage: React.FC = () => {
               },
             ]}
           >
-            <AnimatedText style={styles.score}>{score}%</AnimatedText>
+            <AnimatedText style={styles.scoreHeader}>{score}%</AnimatedText>
           </Animated.View>
         </View>
       ),

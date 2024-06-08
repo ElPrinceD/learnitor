@@ -25,6 +25,7 @@ type AnimatedTextInputProps = {
   style?: ViewStyle | ViewStyle[];
   labelStyle?: TextStyle | TextStyle[];
   showToggleIcon?: boolean;
+  editable?: boolean; // Add the editable prop
 };
 
 const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
@@ -36,6 +37,8 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
   placeholderTextColor,
   secureTextEntry,
   showToggleIcon,
+  style,
+  editable = true, // Default to true if not provided
 }) => {
   const [showPassword, setShowPassword] = useState(false);
   const colorScheme = useColorScheme();
@@ -83,25 +86,25 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
   }, [value]);
 
   const transX = transY.current.interpolate({
-    inputRange: [-30, 0],
-    outputRange: [-15, 0],
+    inputRange: [rMS(-30), rMS(0)],
+    outputRange: [rMS(-15), rMS(0)],
     extrapolate: "clamp",
   });
 
   const borderColor = borderWidth.current.interpolate({
-    inputRange: [0, 2],
+    inputRange: [rMS(0), rMS(2)],
     outputRange: [themeColors.text, themeColors.border],
     extrapolate: "clamp",
   });
 
   const labelColorAnimation = borderWidth.current.interpolate({
-    inputRange: [0, 2],
+    inputRange: [rMS(0), rMS(2)],
     outputRange: [themeColors.textSecondary, themeColors.selectedText],
     extrapolate: "clamp",
   });
 
   const fontSize = borderWidth.current.interpolate({
-    inputRange: [0, 2],
+    inputRange: [rMS(0), rMS(2)],
     outputRange: [SIZES.medium, SIZES.small],
     extrapolate: "clamp",
   });
@@ -109,7 +112,7 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
   const styles = StyleSheet.create({
     inputWrapper: {
       marginBottom: rMS(16),
-      width: rS(320),
+      width: "100%",
       borderWidth: 1,
       borderColor: themeColors.border,
       borderRadius: 10,
@@ -118,7 +121,7 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
     },
     labelContainer: {
       position: "absolute",
-      padding: rMS(18),
+      padding: rMS(20),
     },
     label: {
       borderRadius: 70,
@@ -126,11 +129,6 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
       zIndex: 1,
     },
     input: {
-      borderWidth: 1,
-      borderColor: themeColors.border,
-      borderRadius: 10,
-      padding: rMS(16),
-      marginBottom: rMS(16),
       color: themeColors.text,
     },
     toggleIcon: {
@@ -165,12 +163,14 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
         <View>
           <TextInput
             onFocus={handleFocus}
+            style={[styles.input, ...(Array.isArray(style) ? style : [style])]}
             onBlur={handleBlur}
             placeholder={placeholder}
             placeholderTextColor={placeholderTextColor}
             value={value}
             onChangeText={onChangeText}
             secureTextEntry={!showPassword}
+            editable={editable}
           />
           <TouchableOpacity
             onPress={() => setShowPassword(!showPassword)}
@@ -186,12 +186,15 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
       ) : (
         <TextInput
           onFocus={handleFocus}
+          style={[styles.input, ...(Array.isArray(style) ? style : [style])]}
           onBlur={handleBlur}
           placeholder={placeholder}
           placeholderTextColor={placeholderTextColor}
           value={value}
           onChangeText={onChangeText}
           secureTextEntry={secureTextEntry}
+          editable={editable}
+          multiline
         />
       )}
     </Animated.View>

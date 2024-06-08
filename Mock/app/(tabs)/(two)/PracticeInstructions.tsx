@@ -1,16 +1,11 @@
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  useColorScheme,
-  Switch,
-} from "react-native";
+import { View, Text, StyleSheet, useColorScheme, Switch } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { router, useLocalSearchParams } from "expo-router";
 import Colors from "../../../constants/Colors";
 import GameButton from "../../../components/GameButton";
+import { SIZES, rMS, rS, rV } from "../../../constants";
+import Animated, { FadeInLeft, ReduceMotion } from "react-native-reanimated";
 
 const PracticeInstructions = () => {
   const colorScheme = useColorScheme();
@@ -43,62 +38,59 @@ const PracticeInstructions = () => {
     },
     card: {
       backgroundColor: themeColors.card,
-      borderRadius: 20,
-      padding: 20,
+      borderRadius: 10,
+      padding: rMS(18),
       width: "80%", // Adjust the width as needed
-      elevation: 1,
     },
     title: {
-      fontSize: 24,
+      fontSize: SIZES.xLarge,
       fontWeight: "bold",
-      marginBottom: 20,
+      marginBottom: rV(18),
       textAlign: "center",
       color: themeColors.text,
     },
     instructions: {
-      fontSize: 16,
-      marginBottom: 20,
+      fontSize: SIZES.large,
+      marginBottom: rV(18),
       textAlign: "center",
       color: themeColors.text,
     },
     instructionContainer: {
-      marginBottom: 20,
+      marginBottom: rV(18),
     },
     instruction: {
-      fontSize: 16,
-      marginBottom: 10,
+      fontSize: SIZES.medium,
+      marginBottom: rV(8),
       color: themeColors.text,
     },
     startButton: {
       backgroundColor: "transparent",
-      borderWidth: 2,
+      borderWidth: 1,
       borderColor: themeColors.border,
-      paddingVertical: 10,
+      paddingVertical: rV(8),
       borderRadius: 10,
       alignSelf: "center",
       width: "90%",
+      marginTop: rV(15),
     },
     startButtonText: {
-      fontSize: 18,
+      fontSize: SIZES.medium,
       fontWeight: "bold",
       color: themeColors.text,
     },
     timerContainer: {
       flexDirection: "row",
       alignItems: "center",
-      marginVertical: 10,
       justifyContent: "space-between",
     },
     timerText: {
-      fontSize: 16,
+      fontSize: SIZES.medium,
       color: themeColors.textSecondary,
-      marginRight: 10,
+      marginRight: rS(8),
     },
     pickerContainer: {
       flexDirection: "row",
       alignItems: "center",
-      marginVertical: 10,
-      justifyContent: "space-between",
     },
     picker: {
       flex: 1,
@@ -147,7 +139,12 @@ const PracticeInstructions = () => {
           />
         </View>
         {isTimed && (
-          <View style={styles.pickerContainer}>
+          <Animated.View
+            entering={FadeInLeft.delay(200)
+              .randomDelay()
+              .reduceMotion(ReduceMotion.Never)}
+            style={{ flexDirection: "row", alignItems: "center" }}
+          >
             <Text style={styles.timerText}>Select Duration:</Text>
             <Picker
               selectedValue={duration}
@@ -159,7 +156,7 @@ const PracticeInstructions = () => {
               <Picker.Item label="30 minutes" value={30} />
               <Picker.Item label="45 minutes" value={45} />
             </Picker>
-          </View>
+          </Animated.View>
         )}
 
         <GameButton

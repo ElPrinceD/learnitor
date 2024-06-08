@@ -7,6 +7,8 @@ import Colors from "../../../constants/Colors";
 
 export default function Tab3Layout() {
   const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
+
   return (
     <SafeAreaProvider>
       <Stack>
@@ -16,10 +18,13 @@ export default function Tab3Layout() {
             headerShown: true,
             headerShadowVisible: false,
             headerStyle: {
-              backgroundColor: "#fdecd2", // Add this line
+              backgroundColor: themeColors.background,
             },
             headerTitle: "Schedule",
             headerTitleAlign: "center",
+            headerTitleStyle: {
+              fontWeight: "bold",
+            },
             headerRight: () => (
               <Link href="../(reminder)/TimelineCategory" asChild>
                 <Pressable>
@@ -42,7 +47,15 @@ export default function Tab3Layout() {
             headerShown: true,
             presentation: "modal",
             animation: "slide_from_right",
+            headerStyle: {
+              backgroundColor: themeColors.background,
+            },
             headerTitle: "Edit Task",
+            headerTitleAlign: "center",
+            headerTitleStyle: {
+              fontWeight: "bold",
+            },
+            headerShadowVisible: false,
           }}
         />
         <Stack.Screen
@@ -50,8 +63,16 @@ export default function Tab3Layout() {
           options={{
             headerShown: true,
             presentation: "modal",
+            headerStyle: {
+              backgroundColor: themeColors.background,
+            },
             animation: "slide_from_bottom",
-            headerTitle: "Categories",
+            headerTitle: "Select Category",
+            headerTitleAlign: "center",
+            headerShadowVisible: false,
+            headerTitleStyle: {
+              fontWeight: "bold",
+            },
           }}
         />
         <Stack.Screen
@@ -60,7 +81,15 @@ export default function Tab3Layout() {
             headerShown: true,
             presentation: "modal",
             animation: "slide_from_bottom",
+            headerStyle: {
+              backgroundColor: themeColors.background,
+            },
             headerTitle: "Create New Schedule",
+            headerTitleAlign: "center",
+            headerTitleStyle: {
+              fontWeight: "bold",
+            },
+            headerShadowVisible: false,
           }}
         />
       </Stack>

@@ -1,19 +1,19 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  useColorScheme,
+} from "react-native";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import {
   Swipeable,
   GestureHandlerRootView,
 } from "react-native-gesture-handler";
-
-interface Plan {
-  id: number;
-  title: string;
-  description: string;
-  due_date: string;
-  due_time: string;
-  category: number;
-}
+import { Plan } from "./types";
+import { SIZES, rMS, rS, rV, useShadows } from "../constants";
+import Colors from "../constants/Colors";
 
 interface Props {
   plan: Plan;
@@ -27,12 +27,13 @@ const PlanItem: React.FC<Props> = ({
   plan,
   categoryNames,
   getCategoryColor,
-  handleDeletePlan,
   handleEditPlan,
-  
 }) => {
   const [isSwipeableOpen, setIsSwipeableOpen] = useState(false);
   const categoryColor = getCategoryColor(categoryNames[plan.category]);
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
+  const shadow = useShadows();
 
   const getCategoryIcon = (type: string): keyof typeof Ionicons.glyphMap => {
     switch (type) {
@@ -53,6 +54,48 @@ const PlanItem: React.FC<Props> = ({
     setIsSwipeableOpen(false);
   };
 
+  const styles = StyleSheet.create({
+    wrapper: {
+      flex: 1,
+    },
+    planItemWrapper: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginVertical: rV(10),
+    },
+    planItemContainer: {
+      flex: 1,
+      marginLeft: rS(10),
+      borderTopLeftRadius: rMS(15),
+      borderBottomLeftRadius: rMS(15),
+      padding: rS(10),
+      ...shadow.medium,
+    },
+    planContent: {
+      paddingTop: rV(8),
+    },
+    planTitle: {
+      fontSize: SIZES.large,
+      fontWeight: "bold",
+      marginBottom: rS(5),
+    },
+    planDescription: {
+      fontSize: SIZES.medium,
+    },
+    planCategory: {
+      fontSize: SIZES.small,
+      paddingBottom: rV(8),
+    },
+    editButton: {
+      backgroundColor: "green",
+      alignSelf: "center",
+      height: "80%",
+      justifyContent: "center",
+      alignItems: "center",
+      width: rS(100),
+    },
+  });
+
   return (
     <GestureHandlerRootView>
       <TouchableOpacity
@@ -68,18 +111,16 @@ const PlanItem: React.FC<Props> = ({
             <TouchableOpacity
               style={styles.editButton}
               onPress={() => handleEditPlan(plan)}
-              
             >
-              <Feather name="edit" size={24} color="white" />
+              <Feather name="edit" size={rMS(24)} color="white" />
             </TouchableOpacity>
           )}
         >
           <View style={styles.planItemWrapper}>
             <Ionicons
               name={getCategoryIcon(categoryNames[plan.category])}
-              size={24}
+              size={rMS(24)}
               color={categoryColor}
-              style={styles.planIcon}
             />
             <View
               style={[
@@ -88,13 +129,52 @@ const PlanItem: React.FC<Props> = ({
               ]}
             >
               <View style={styles.planContent}>
-                <Text style={[styles.planCategory, { color: "#fff" }]}>
+                <Text
+                  style={[
+                    styles.planCategory,
+                    {
+                      color:
+                        categoryNames[plan.category] ===
+                        "Assignments & Projects"
+                          ? colorScheme === "dark"
+                            ? "#000"
+                            : "#fff"
+                          : "#fff",
+                    },
+                  ]}
+                >
                   {categoryNames[plan.category] || "Unknown Category"}
                 </Text>
-                <Text style={[styles.planTitle, { color: "#fff" }]}>
+                <Text
+                  style={[
+                    styles.planTitle,
+                    {
+                      color:
+                        categoryNames[plan.category] ===
+                        "Assignments & Projects"
+                          ? colorScheme === "dark"
+                            ? "#000"
+                            : "#fff"
+                          : "#fff",
+                    },
+                  ]}
+                >
                   {plan.title}
                 </Text>
-                <Text style={[styles.planDescription, { color: "#fff" }]}>
+                <Text
+                  style={[
+                    styles.planDescription,
+                    {
+                      color:
+                        categoryNames[plan.category] ===
+                        "Assignments & Projects"
+                          ? colorScheme === "dark"
+                            ? "#000"
+                            : "#fff"
+                          : "#fff",
+                    },
+                  ]}
+                >
                   {plan.description}
                 </Text>
               </View>
@@ -105,59 +185,5 @@ const PlanItem: React.FC<Props> = ({
     </GestureHandlerRootView>
   );
 };
-
-const styles = StyleSheet.create({
-  wrapper: {
-    flex: 1,
-  },
-  planItemWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 10,
-  },
-  planIcon: {
-    paddingHorizontal: 1,
-    paddingVertical: 10,
-    borderRadius: 30,
-    backgroundColor: "#ffffff",
-  },
-  planItemContainer: {
-    flex: 1,
-    marginLeft: 10,
-    borderTopLeftRadius: 15,
-    borderBottomLeftRadius: 15,
-    padding: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 3, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 3,
-  },
-  planContent: {
-    paddingTop: 10,
-  },
-  planTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 5,
-  },
-  planDescription: {
-    fontSize: 14,
-  },
-  planCategory: {
-    fontSize: 12,
-    paddingBottom: 10
-  },
-  editButton: {
-    backgroundColor: "green",
-    marginTop: 10,
-    height: "82%",
-    justifyContent: "center",
-    alignItems: "center",
-    width: 100,
-    // borderTopRightRadius: 15,
-    // borderBottomRightRadius: 15,
-  },
-});
 
 export default PlanItem;

@@ -2,15 +2,13 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   StyleSheet,
-  ScrollView,
-  Image,
   Animated as RNAnimated, // Alias for react-native's Animated
   useColorScheme,
   Dimensions,
 } from "react-native";
 import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, { FadeInDown } from "react-native-reanimated"; // Import react-native-reanimated
+import Animated, { FadeInDown, ReduceMotion } from "react-native-reanimated"; // Import react-native-reanimated
 import { useLocalSearchParams, router, Stack } from "expo-router";
 import axios from "axios";
 import CourseInformation from "../../../components/CourseInformation";
@@ -20,6 +18,7 @@ import { useAuth } from "../../../components/AuthContext";
 import { Topic, Course } from "../../../components/types";
 import Toast from "react-native-root-toast";
 import Colors from "../../../constants/Colors";
+import { SIZES, rS, rV } from "../../../constants";
 import { useNavigation } from "@react-navigation/native";
 
 const CourseDetails: React.FC = () => {
@@ -197,7 +196,7 @@ const CourseDetails: React.FC = () => {
 
   const imageOpacity = scrollY.interpolate({
     inputRange: [-64, 0, HEADER_DELTA],
-    outputRange: [0, 0.2, 1],
+    outputRange: [0, 0.1, 1],
     extrapolate: "clamp",
   });
 
@@ -225,17 +224,13 @@ const CourseDetails: React.FC = () => {
       ...StyleSheet.absoluteFillObject,
     },
     headerTitle: {
-      fontSize: 18,
+      fontSize: SIZES.large,
       fontWeight: "bold",
       color: themeColors.icon,
       alignContent: "center",
-      marginVertical: 10,
+      marginVertical: rV(10),
     },
-    icon: {
-      fontSize: 15,
-      textAlign: "center",
-      lineHeight: 15,
-    },
+
     // scrollViewContent: {
     //   flexGrow: 1,
     // },
@@ -250,7 +245,7 @@ const CourseDetails: React.FC = () => {
     gradient: {
       position: "absolute",
       left: 0,
-      bottom: 0,
+      bottom: rV(-5),
       right: 0,
       alignItems: "center",
     },
@@ -264,9 +259,9 @@ const CourseDetails: React.FC = () => {
     },
     courseTitle: {
       textAlign: "left",
-      marginLeft: 17,
+      marginLeft: rS(17),
       color: "#fff",
-      fontSize: 48,
+      fontSize: SIZES.xxxLarge,
       fontWeight: "bold",
     },
   });
@@ -346,7 +341,7 @@ const CourseDetails: React.FC = () => {
             <LinearGradient
               style={StyleSheet.absoluteFill}
               start={[0, 0.3]}
-              end={[0, 1]}
+              end={[0, 1.1]}
               colors={["transparent", "rgba(0, 0, 0, 0.2)", "#000"]}
             />
           </RNAnimated.View>
@@ -358,7 +353,11 @@ const CourseDetails: React.FC = () => {
             </RNAnimated.Text>
           </View>
         </View>
-        <Animated.View entering={FadeInDown.duration(300).delay(400)}>
+        <Animated.View
+          entering={FadeInDown.delay(400)
+            .randomDelay()
+            .reduceMotion(ReduceMotion.Never)}
+        >
           <CourseInformation
             course={parsedCourse}
             enrollCourse={enrollCourse}

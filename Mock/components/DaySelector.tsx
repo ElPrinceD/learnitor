@@ -1,28 +1,53 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  TouchableOpacity,
+  useColorScheme,
+} from "react-native";
+import { SIZES, rMS, rS, rV } from "../constants";
+import Colors from "../constants/Colors";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 interface DaySelectorProps {
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
 }
 
-const DaySelector: React.FC<DaySelectorProps> = ({ selectedDate, setSelectedDate }) => {
+const DaySelector: React.FC<DaySelectorProps> = ({
+  selectedDate,
+  setSelectedDate,
+}) => {
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const [month, setMonth] = useState<string>("");
   const today = new Date();
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
 
-  const getMonthName = (date: Date) => {
+  const getMonthName = (date: Date): string => {
     const monthNames = [
-      "January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December"
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
     ];
     return monthNames[date.getMonth()];
   };
 
-  const getWeekDays = (date: Date) => {
+  const getWeekDays = (date: Date): Date[] => {
     const startOfWeek = new Date(date);
     startOfWeek.setDate(date.getDate() - date.getDay());
-    const weekDays = [];
+    const weekDays: Date[] = [];
     for (let i = 0; i < 7; i++) {
       const day = new Date(startOfWeek);
       day.setDate(startOfWeek.getDate() + i);
@@ -51,12 +76,50 @@ const DaySelector: React.FC<DaySelectorProps> = ({ selectedDate, setSelectedDate
     setMonth(getMonthName(selectedDate));
   }, [selectedDate]);
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      paddingHorizontal: rS(18),
+      backgroundColor: themeColors.tabIconSelected,
+    },
+    month: {
+      fontSize: rMS(23),
+      fontWeight: "bold",
+      textAlign: "center",
+    },
+    selectorContainer: {
+      marginTop: rV(5),
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    dayContainer: {
+      alignItems: "center",
+      marginHorizontal: rS(8),
+    },
+    date: {
+      fontSize: SIZES.medium,
+      color: themeColors.text,
+    },
+    selectedDay: {
+      color: "#1434A4",
+      fontWeight: "bold",
+    },
+    today: {
+      fontWeight: "bold",
+      color: "#FF6347",
+    },
+  });
+
   return (
     <View style={styles.container}>
       <Text style={styles.month}>{month}</Text>
       <View style={styles.selectorContainer}>
         <TouchableOpacity onPress={() => handleScroll("prev")}>
-          <Text style={styles.arrow}>{"<"}</Text>
+          <MaterialCommunityIcons
+            name="code-less-than"
+            size={SIZES.xLarge}
+            color={themeColors.text}
+          />
         </TouchableOpacity>
         <FlatList
           data={weekDays}
@@ -64,13 +127,29 @@ const DaySelector: React.FC<DaySelectorProps> = ({ selectedDate, setSelectedDate
           keyExtractor={(item) => item.toISOString()}
           renderItem={({ item: date }) => {
             const isToday = date.toDateString() === today.toDateString();
-            const isSelected = date.toDateString() === selectedDate.toDateString();
+            const isSelected =
+              date.toDateString() === selectedDate.toDateString();
             return (
-              <TouchableOpacity onPress={() => handleDayPress(date)} style={styles.dayContainer}>
-                <Text style={[styles.date, isSelected && styles.selectedDay, isToday && styles.today]}>
+              <TouchableOpacity
+                onPress={() => handleDayPress(date)}
+                style={styles.dayContainer}
+              >
+                <Text
+                  style={[
+                    styles.date,
+                    isSelected && styles.selectedDay,
+                    isToday && styles.today,
+                  ]}
+                >
                   {days[date.getDay()]}
                 </Text>
-                <Text style={[styles.date, isSelected && styles.selectedDay, isToday && styles.today]}>
+                <Text
+                  style={[
+                    styles.date,
+                    isSelected && styles.selectedDay,
+                    isToday && styles.today,
+                  ]}
+                >
                   {date.getDate()}
                 </Text>
               </TouchableOpacity>
@@ -79,49 +158,15 @@ const DaySelector: React.FC<DaySelectorProps> = ({ selectedDate, setSelectedDate
           showsHorizontalScrollIndicator={false}
         />
         <TouchableOpacity onPress={() => handleScroll("next")}>
-          <Text style={styles.arrow}>{">"}</Text>
+          <MaterialCommunityIcons
+            name="code-greater-than"
+            size={SIZES.xLarge}
+            color={themeColors.text}
+          />
         </TouchableOpacity>
       </View>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    paddingBottom: 100,
-    paddingHorizontal: 20,
-    backgroundColor: "#fdecd2",
-  },
-  month: {
-    fontSize: 20,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginVertical: 3,
-  },
-  selectorContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  arrow: {
-    fontSize: 24,
-    fontWeight: "bold",
-    paddingHorizontal: 10,
-  },
-  dayContainer: {
-    alignItems: "center",
-    marginHorizontal: 10,
-  },
-  date: {
-    fontSize: 16,
-    color: "#888",
-  },
-  selectedDay: {
-    color: "#007BFF",
-  },
-  today: {
-    fontWeight: "bold",
-    color: "#FF6347",
-  },
-});
 
 export default DaySelector;

@@ -5,6 +5,7 @@ import PracticeInformation from "../../../components/PracticeInformation";
 import PracticeLevel from "../../../components/PracticeLevel";
 import { Topic, Level } from "../../../components/types";
 import Colors from "../../../constants/Colors";
+import { SIZES, rV } from "../../../constants";
 
 const Practice: React.FC = () => {
   const { topic, course } = useLocalSearchParams();
@@ -46,10 +47,10 @@ const Practice: React.FC = () => {
       justifyContent: "center",
     },
     headerTitle: {
-      marginVertical: 10,
+      marginVertical: rV(8),
     },
     description: {
-      fontSize: 16,
+      fontSize: SIZES.medium,
       color: themeColors.textSecondary,
       textAlign: "center",
     },
@@ -64,7 +65,7 @@ const Practice: React.FC = () => {
               <Text
                 style={{
                   color: themeColors.text,
-                  fontSize: 20,
+                  fontSize: SIZES.large,
                   fontWeight: "bold",
                 }}
               >

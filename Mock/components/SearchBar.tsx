@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "../constants/Colors"; // Adjust the import path as necessary
+import { SIZES, rS, rV } from "../constants";
 
 interface Props {
   onSearch: (query: string) => void;
@@ -58,9 +59,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderWidth: 1,
     borderRadius: 10,
-    paddingHorizontal: 15,
+    paddingHorizontal: rS(12),
     width: "85%",
-    marginTop: 15,
+    marginTop: rV(12),
     justifyContent: "center",
   },
   container: {
@@ -68,13 +69,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   searchIcon: {
-    marginLeft: 10,
+    marginLeft: rS(8),
     height: "100%",
     justifyContent: "center",
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: SIZES.medium,
   },
 });
 

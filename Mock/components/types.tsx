@@ -68,12 +68,25 @@ export interface Player {
   id: number;
   profile_picture: string;
   profileName: string;
-  score: string
+  score: string;
 }
 
 export interface GameDetailsResponse {
   creator: { first_name: string; id: number };
-  players: { id: number; first_name: string; last_name: string; profile_picture: string }[];
+  players: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    profile_picture: string;
+  }[];
   questions: Question[];
   code: string;
+}
+export interface Plan {
+  id: number;
+  title: string;
+  description: string;
+  due_date: string;
+  due_time: string;
+  category: number;
 }

@@ -17,6 +17,7 @@ import ApiUrl from "../config";
 import { useAuth } from "./AuthContext";
 import ProgressBar from "./ProgressBar";
 import Colors from "../constants/Colors";
+import { SIZES, rMS, rS, rV } from "../constants";
 
 interface Props {
   enrolledCoursesData: Course[];
@@ -67,10 +68,10 @@ const EnrolledCoursesList: React.FC<Props> = ({ enrolledCoursesData }) => {
 
   const styles = StyleSheet.create({
     container: {
-      margin: 5,
+      flex: 1,
+      margin: rMS(5),
       alignItems: "flex-start",
       position: "relative",
-      flex: 1,
     },
     touchable: {
       borderRadius: 10,
@@ -81,28 +82,26 @@ const EnrolledCoursesList: React.FC<Props> = ({ enrolledCoursesData }) => {
       overflow: "hidden",
     },
     image: {
-      width: 150,
-      height: 150,
+      width: rS(120),
+      height: rV(105),
     },
 
     textContainer: {
       position: "absolute",
-      bottom: 10,
-      left: 10,
-      right: 10,
-      padding: 10,
+      bottom: rV(8),
+      left: rS(8),
+      right: rS(8),
+      padding: rMS(8),
       borderRadius: 10,
       backgroundColor: "transparent",
     },
     name: {
-      fontSize: 18,
+      fontSize: SIZES.medium,
       fontWeight: "bold",
       color: themeColors.text,
       textAlign: "left",
-      marginBottom: 5,
+      marginBottom: rMS(5),
       textShadowColor: themeColors.shadow,
-      textShadowOffset: { width: 1, height: 1 },
-      textShadowRadius: 2,
     },
   });
 

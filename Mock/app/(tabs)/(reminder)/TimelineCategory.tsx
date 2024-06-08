@@ -1,25 +1,27 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Dimensions } from "react-native";
+import { View, StyleSheet, Dimensions, useColorScheme } from "react-native";
 import axios from "axios";
 import { useAuth } from "../../../components/AuthContext";
 import apiUrl from "../../../config";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import TimelineCategoryItem from ".,/../../components/TimelineCategoryItem"; // Adjust the import path as needed
+import { rMS } from "../../../constants";
+import Colors from "../../../constants/Colors";
 
-// Define the TimelineCategory interface
 interface TimelineCategory {
   id: string;
   name: string;
   color?: string;
-  icon?: keyof typeof Ionicons.glyphMap; // Ensure icon is a valid Ionicon name
+  icon?: keyof typeof Ionicons.glyphMap;
 }
 
 const TimelineCategory: React.FC = () => {
   const { width } = Dimensions.get("window");
   const [categories, setCategories] = useState<TimelineCategory[]>([]);
   const { userToken } = useAuth();
-
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
   // Fetch categories from the API endpoint
   const fetchCategories = async () => {
     try {
@@ -54,15 +56,15 @@ const TimelineCategory: React.FC = () => {
   const getCategoryColor = (type: string) => {
     switch (type) {
       case "Assignments & Projects":
-        return "#0d1116"; // Red
+        return "#0d1116";
       case "TimeTable":
-        return "#ed892e"; // Orange
+        return "#ed892e";
       case "Study TimeTable":
-        return "#6c77f4"; // Blue
+        return "#6c77f4";
       case "Exams TimeTable":
-        return "#a96ae3"; // Purple
+        return "#a96ae3";
       default:
-        return "#000000"; // Black (default color)
+        return "#000000";
     }
   };
 
@@ -86,9 +88,22 @@ const TimelineCategory: React.FC = () => {
     fetchCategories();
   }, []); // Fetch categories only once when the component mounts
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      justifyContent: "flex-start",
+      padding: rMS(10),
+      backgroundColor: themeColors.background,
+    },
+
+    categoriesContainer: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "space-between",
+    },
+  });
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Select category to remind</Text>
       <View style={styles.categoriesContainer}>
         {categories.map((category) => (
           <TimelineCategoryItem
@@ -102,23 +117,5 @@ const TimelineCategory: React.FC = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "flex-start",
-    padding: 10,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-  categoriesContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-});
 
 export default TimelineCategory;

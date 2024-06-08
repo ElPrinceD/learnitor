@@ -3,7 +3,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   View,
-  TextInput,
   ActivityIndicator,
   useColorScheme,
   TouchableWithoutFeedback,
@@ -11,14 +10,13 @@ import {
 } from "react-native";
 import { Text } from "../../components/Themed";
 import { FontAwesome6, Ionicons } from "@expo/vector-icons";
-
 import { router } from "expo-router";
 import axios from "axios";
 import ApiUrl from "../../config";
 import { useGlobalSearchParams } from "expo-router";
 import { useAuth } from "../../components/AuthContext"; // Adjust the path
 import Colors from "../../constants/Colors";
-import { SIZES, rMS, rS } from "../../constants";
+import { SIZES, rMS, rS, rV } from "../../constants";
 import VerificationButton from "../../components/VerificationButton";
 import AnimatedTextInput from "../../components/AnimatedTextInput";
 import Animated, {
@@ -26,6 +24,7 @@ import Animated, {
   StretchInY,
   StretchOutY,
 } from "react-native-reanimated";
+import { StatusBar } from "expo-status-bar";
 
 const LogIn = () => {
   const { login } = useAuth(); // Accessing login function from AuthProvider
@@ -90,7 +89,6 @@ const LogIn = () => {
       flex: 1,
       alignItems: "center",
       justifyContent: "center",
-      padding: rMS(16),
       backgroundColor: themeColors.background,
     },
 
@@ -156,8 +154,7 @@ const LogIn = () => {
       fontWeight: "bold",
     },
     bottomContainer: {
-      position: "absolute",
-      bottom: rMS(5),
+      bottom: rV(10),
       justifyContent: "flex-end",
       flexDirection: "row",
       alignItems: "center",
@@ -186,12 +183,14 @@ const LogIn = () => {
   return (
     <TouchableWithoutFeedback onPress={handleKeyboardDismiss}>
       <View style={styles.container}>
+        <StatusBar hidden={true} />
+
         <Animated.View
-          entering={StretchInY.delay(500)
+          entering={StretchInY.delay(200)
             .randomDelay()
             .reduceMotion(ReduceMotion.Never)
-            .withInitialValues({ transform: [{ scaleY: 0.1 }] })}
-          exiting={StretchOutY.delay(500)
+            .withInitialValues({ transform: [{ scaleY: 0.5 }] })}
+          exiting={StretchOutY.delay(200)
             .randomDelay()
             .reduceMotion(ReduceMotion.Never)
             .withInitialValues({ transform: [{ scaleY: 0.1 }] })}
