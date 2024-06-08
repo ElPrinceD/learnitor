@@ -5,14 +5,12 @@ import {
   StyleSheet,
   ScrollView,
   useColorScheme,
-  ImageBackground,
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
 import ThreeDButton from "./ThreeDButton"; // Assuming ThreeDButton is in the same directory
 import Colors from "../constants/Colors";
 import { Course, Topic } from "./types";
-import BackgroundSVG from "../assets/images/MySVG.svg"
 
 interface CourseRoadmapProps {
   enrolledTopics: Topic[];
@@ -65,13 +63,6 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
       marginTop: 20,
       width: 150,
     },
-    backgroundImage: {
-      flex: 1,
-      resizeMode: "cover", // or "stretch" or "contain"
-      position: "absolute",
-      width: "100%",
-      height: "100%",
-    },
   });
 
   const renderTimelineItem = (
@@ -97,11 +88,6 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
       contentStyle = styles.timelineContentRight;
     }
 
-     const renderBackground = () => (
-    <ImageBackground source={BackgroundSVG} style={styles.backgroundImage}>
-      {/* Your content goes here */}
-    </ImageBackground>
-  );
     const textAlign =
       contentStyle === styles.timelineContentLeft
         ? "left"
