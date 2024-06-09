@@ -1,5 +1,5 @@
-// import profile from "../assets/images/kemal.jpg";
+import BackgroundSVG from '../assets/images/roadmap.svg';
 
-// export default {
-//   profile,
-// };
+export default {
+  BackgroundSVG
+};

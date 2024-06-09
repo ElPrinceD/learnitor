@@ -18,7 +18,7 @@ export default function Tab3Layout() {
             headerShown: true,
             headerShadowVisible: false,
             headerStyle: {
-              backgroundColor: themeColors.background,
+              backgroundColor: themeColors.tint,
             },
             headerTitle: "Schedule",
             headerTitleAlign: "center",

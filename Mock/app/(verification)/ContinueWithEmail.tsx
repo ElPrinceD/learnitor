@@ -125,6 +125,9 @@ const ContinueWithEmail = () => {
       color: "#515050",
       fontWeight: "light",
     },
+    inputContainer: {
+      width: rS(300),
+    },
     input: {
       borderWidth: 1,
       borderColor: themeColors.border,
@@ -201,12 +204,14 @@ const ContinueWithEmail = () => {
             value={firstName}
             onChangeText={setFirstName}
             placeholderTextColor={themeColors.textSecondary}
+            style={styles.inputContainer}
           />
           <AnimatedTextInput
             label="Last Name"
             value={surname}
             onChangeText={setSurname}
             placeholderTextColor={themeColors.textSecondary}
+            style={styles.inputContainer}
           />
 
           <AnimatedTextInput
@@ -214,6 +219,7 @@ const ContinueWithEmail = () => {
             value={email}
             onChangeText={setEmail}
             placeholderTextColor={themeColors.textSecondary}
+            style={styles.inputContainer}
           />
 
           <AnimatedTextInput
@@ -223,6 +229,7 @@ const ContinueWithEmail = () => {
             placeholderTextColor={themeColors.textSecondary}
             secureTextEntry={!showPassword}
             showToggleIcon={true}
+            style={styles.inputContainer}
           />
 
           {emailError && <Text style={styles.errorMessage}>{emailError}</Text>}
@@ -285,3 +292,4 @@ const ContinueWithEmail = () => {
 };
 
 export default ContinueWithEmail;
+
