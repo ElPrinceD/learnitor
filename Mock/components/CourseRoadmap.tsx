@@ -1,3 +1,4 @@
+// CourseRoadmap.js
 import React from "react";
 import {
   View,
@@ -7,11 +8,12 @@ import {
   Image,
   useColorScheme,
 } from "react-native";
-
 import { Ionicons } from "@expo/vector-icons";
 import ThreeDButton from "./ThreeDButton"; // Assuming ThreeDButton is in the same directory
 import Colors from "../constants/Colors";
 import { Course, Topic } from "./types";
+import SvgComponent from "./SvgComponent"; // Importing the SvgComponent
+
 import { SIZES, rMS, rS, rV, images } from "../constants";
 
 interface CourseRoadmapProps {
@@ -59,6 +61,23 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
       marginTop: rV(18),
       width: rS(120),
     },
+    backgroundContainer: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: -1, // Ensure the background is behind other elements
+    },
+    backgroundSVG: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: -1,
+      elevation: 0,
+    },
   });
 
   const renderTimelineItem = (
@@ -93,12 +112,7 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
 
     return (
       <View key={index} style={styles.timelineItem}>
-        {/* {cyclePosition % 6 === 3 && <View style={styles.timelineConnector} />} */}
         <View style={contentStyle}>
-          <Image
-            source={images.profile}
-            // style={styles.topImage}
-          />
           <ThreeDButton
             title={
               isQuestion ? (
@@ -128,7 +142,6 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
             {isQuestion ? `Practice ${topic.title}` : topic.title}
           </Text>
         </View>
-        {/* {cyclePosition % 6 !== 3 && <View style={styles.timelineConnector} />} */}
       </View>
     );
   };
@@ -139,6 +152,23 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
         {enrolledTopics.map((topic, index) => (
           <View key={index}>
             {renderTimelineItem(topic, index * 2, false)}
+            <View style={[styles.backgroundContainer]}>
+              <SvgComponent
+                paths={[
+                  "M128.743 42.3268C150 50 200 120 250 150",
+                  "M250 150C300 200 350 150 400 200",
+                  "M400 200C450 250 500 200 550 250",
+
+                  "M550 250C600 300 650 250 700 300",
+
+                  "M10.3635 198.539C150 50 200 50 50 10",
+                  "M10.3635 198.539C150 50 200 400 250 150",
+                  ...(index === enrolledTopics.length - 1
+                    ? []
+                    : ["M10.3635 198.539L143.35 322.052"]),
+                ]}
+              />
+            </View>
             {renderTimelineItem(topic, index * 2 + 1, true)}
           </View>
         ))}

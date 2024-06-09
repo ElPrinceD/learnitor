@@ -100,7 +100,7 @@ const DaySelector: React.FC<DaySelectorProps> = ({
       fontSize: SIZES.medium,
       color: themeColors.text,
     },
-    selectedDay: {
+    selectedDay: {  
       color: "#1434A4",
       fontWeight: "bold",
     },

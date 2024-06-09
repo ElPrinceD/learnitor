@@ -142,6 +142,7 @@ const Timeline: React.FC = () => {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
+      borderBottomLeftRadius: 30
     },
     scrollViewContent: {
       flexGrow: 1,

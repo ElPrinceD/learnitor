@@ -136,6 +136,7 @@ export default function ResultsScreen() {
       borderBottomRightRadius: 20,
     },
   });
+  
 
   const renderPlayer = ({ item }: { item: Player }) => {
     
@@ -165,7 +166,7 @@ export default function ResultsScreen() {
       <View style={styles.buttonContainer}>
         <GameButton
           title="Replay"
-          // onPress={handleStartGame}
+           //onPress={handleReplayGame}
           style={styles.button}
         />
         <GameButton

@@ -14,7 +14,9 @@
     },
     "assetBundlePatterns": [
       "**/*"
+      
     ],
+    "sourceExts":["js,json,ts,tsx,jsx,svg"],
     "ios": {
       "supportsTablet": true
     },

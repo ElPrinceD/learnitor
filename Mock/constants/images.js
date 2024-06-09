@@ -1,5 +1,5 @@
-// import profile from "../assets/images/game1.png";
+import BackgroundSVG from '../assets/images/roadmap.svg';
 
-// export default {
-//   profile,
-// };
+export default {
+  BackgroundSVG
+};
