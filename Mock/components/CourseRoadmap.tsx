@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  Image,
   useColorScheme,
 } from "react-native";
 
@@ -11,7 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import ThreeDButton from "./ThreeDButton"; // Assuming ThreeDButton is in the same directory
 import Colors from "../constants/Colors";
 import { Course, Topic } from "./types";
-import { SIZES, rMS, rS, rV } from "../constants";
+import { SIZES, rMS, rS, rV, images } from "../constants";
 
 interface CourseRoadmapProps {
   enrolledTopics: Topic[];
@@ -94,6 +95,10 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
       <View key={index} style={styles.timelineItem}>
         {/* {cyclePosition % 6 === 3 && <View style={styles.timelineConnector} />} */}
         <View style={contentStyle}>
+          <Image
+            source={images.profile}
+            // style={styles.topImage}
+          />
           <ThreeDButton
             title={
               isQuestion ? (

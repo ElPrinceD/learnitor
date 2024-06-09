@@ -265,7 +265,7 @@ export default function GameWaitingScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.topContainerTitle}>
-        {isCreator ? userInfo?.user.first_name : creator}'s Arena
+        {isCreator ? userInfo?.user.first_name : creator}'s Crib
       </Text>
       <View style={styles.header}>
         <Text style={styles.gameCode}>{gameCode}</Text>

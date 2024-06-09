@@ -1,11 +1,12 @@
 // Define color constants
-const tintColor = '#097969';
+const tintColor = '#844539';
+// const tintColor = '#097969';
 const gradientButton = 'linear-gradient(to right, #447A7A 0%, #F9E866 100%)';
 const lightTextColor = '#000';
 const lightTextSecondaryColor = '#666';
 const lightBackgroundColor = '#fff';
 const lightCardColor = '#f7f2f2';
-const lightBorderColor = '#097969';
+const lightBorderColor = '#844539';
 const lightShadowColor = '#000';
 const lightTabIconDefaultColor = '#ccc';
 const lightButtonDisabledColor = '#ccffe5';

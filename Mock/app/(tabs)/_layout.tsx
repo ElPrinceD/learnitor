@@ -52,7 +52,7 @@ export default function TabLayout() {
       <Tabs
         screenOptions={{
           tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
-          
+
           tabBarLabelStyle: { fontSize: 13 },
           tabBarStyle: {
             shadowColor: "#000",
@@ -147,7 +147,11 @@ export default function TabLayout() {
           options={{
             title: "Timeline",
             tabBarIcon: ({ color, focused }) => (
-              <TabBarIcon name="calendar-clock" color={color} focused={focused} />
+              <TabBarIcon
+                name="calendar-clock"
+                color={color}
+                focused={focused}
+              />
             ),
             headerShadowVisible: false,
             headerShown: false,
@@ -162,12 +166,10 @@ export default function TabLayout() {
               <TabBarIcon name="cog" color={color} focused={focused} />
             ),
             headerTitle: "Settings",
-            
+            headerShown: false,
             headerShadowVisible: false,
           }}
-          
         />
-        
       </Tabs>
     </SafeAreaProvider>
   );

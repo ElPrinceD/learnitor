@@ -121,7 +121,7 @@ const Index = () => {
     },
     sectionTitle: {
       fontSize: SIZES.xLarge,
-      color: themeColors.selectedText,
+      color: themeColors.text,
       fontWeight: "bold",
       marginBottom: rMS(5),
       marginTop: rMS(15),

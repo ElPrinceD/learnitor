@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -7,16 +7,21 @@ import {
   Image,
   Share,
   Alert,
+  useColorScheme,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import axios from "axios";
-import { useAuth } from "../../../components/AuthContext"; // Adjust the path
-import * as ImagePicker from 'expo-image-picker';
-import ApiUrl from "../../../config.js";
+import { useAuth } from "../../../components/AuthContext";
+import * as ImagePicker from "expo-image-picker";
+import ApiUrl from "../../../config";
+import Colors from "../../../constants/Colors";
+import { SIZES, rMS, rS, rV } from "../../../constants";
 
 const Profile = () => {
-  const { logout, userToken, userInfo, setUserInfo } = useAuth(); // Accessing setUserInfo from AuthProvider
+  const { logout, userToken, userInfo, setUserInfo } = useAuth();
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
 
   const handleAccountSettings = () => {
     router.navigate("AccountSettings");
@@ -76,9 +81,10 @@ const Profile = () => {
 
   const handleProfilePictureUpdate = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission to access media library is required!');
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission to access media library is required!");
         return;
       }
 
@@ -92,11 +98,11 @@ const Profile = () => {
       if (!result.canceled) {
         const uri = result.assets[0].uri;
         const formData = new FormData();
-        
-        const fileName = uri.split('/').pop();
-        const fileType = uri.split('.').pop();
 
-        formData.append('profile_picture', {
+        const fileName = uri.split("/").pop();
+        const fileType = uri.split(".").pop();
+
+        formData.append("profile_picture", {
           uri,
           name: fileName,
           type: `image/${fileType}`,
@@ -105,7 +111,7 @@ const Profile = () => {
         const config = {
           headers: {
             Authorization: `Token ${userToken?.token}`,
-            'Content-Type': 'multipart/form-data',
+            "Content-Type": "multipart/form-data",
           },
         };
 
@@ -114,19 +120,122 @@ const Profile = () => {
           formData,
           config
         );
-
-        setUserInfo({ ...userInfo, user: { ...userInfo?.user, profile_picture: response.data.profile_picture } });
+        if (userInfo) {
+          setUserInfo({
+            ...userInfo,
+            user: {
+              ...userInfo?.user,
+              profile_picture: response.data.profile_picture,
+            },
+          });
+        }
       }
     } catch (error) {
       console.error("Error updating profile picture:", error);
     }
   };
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      paddingTop: rV(18),
+      backgroundColor: themeColors.background,
+    },
+    profileContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: rS(25),
+      paddingBottom: rV(25),
+    },
+    profileImageContainer: {
+      position: "relative",
+    },
+    profileImage: {
+      width: rS(95),
+      height: rV(95),
+      borderRadius: rMS(50),
+      backgroundColor: "#ccc",
+    },
+    cameraIcon: {
+      position: "absolute",
+      bottom: 0,
+      right: 0,
+      backgroundColor: themeColors.background,
+      borderRadius: 15,
+      padding: 6,
+    },
+    title: {
+      marginLeft: rS(20),
+      flex: 1,
+    },
+    fullName: {
+      color: themeColors.text,
+      fontSize: SIZES.xLarge,
+      fontWeight: "bold",
+    },
+    email: {
+      fontSize: SIZES.medium,
+      color: themeColors.textSecondary,
+    },
+    editProfileButton: {
+      marginTop: rV(10),
+      borderWidth: 1,
+      borderColor: themeColors.border,
+      borderRadius: 5,
+      paddingVertical: rV(5),
+      paddingHorizontal: rS(20),
+      backgroundColor: "transparent",
+      alignItems: "center",
+    },
+    editProfileButtonText: {
+      color: themeColors.text,
+
+      fontSize: SIZES.medium,
+      fontWeight: "bold",
+    },
+    bottomContainer: {
+      flex: 1,
+      backgroundColor: themeColors.background,
+      paddingHorizontal: rS(25),
+      paddingTop: rV(10),
+    },
+    sectionTitle: {
+      fontSize: SIZES.large,
+      fontWeight: "bold",
+      color: themeColors.text,
+      marginBottom: rV(10),
+    },
+    option: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: rV(15),
+      paddingHorizontal: rS(10),
+      backgroundColor: themeColors.card,
+      borderRadius: 10,
+      marginBottom: rV(10),
+    },
+    optionText: {
+      fontSize: SIZES.medium,
+      color: themeColors.text,
+      marginLeft: rS(10),
+    },
+    icon: {
+      marginRight: rS(10),
+    },
+    logoutContainer: {
+      marginTop: "auto", // Pushes the logout button to the bottom
+      paddingHorizontal: rS(25),
+      paddingBottom: rV(25),
+    },
+  });
+
   return (
     <View style={styles.container}>
       <View style={styles.profileContainer}>
-        {/* Profile Image */}
-        <TouchableOpacity onPress={handleProfilePictureUpdate}>
+        <TouchableOpacity
+          onPress={handleProfilePictureUpdate}
+          style={styles.profileImageContainer}
+        >
           <Image
             source={{ uri: userInfo?.user.profile_picture }}
             style={styles.profileImage}
@@ -134,153 +243,85 @@ const Profile = () => {
           />
           <Ionicons
             name="camera-outline"
-            size={24}
-            color="#000000"
+            size={SIZES.large}
+            color={themeColors.icon}
             style={styles.cameraIcon}
           />
         </TouchableOpacity>
-
-        {/* Full Name */}
-        <Text style={styles.fullName}>
-          {userInfo?.user.first_name} {userInfo?.user.last_name}
-        </Text>
+        <View style={styles.title}>
+          <Text style={styles.fullName}>
+            {userInfo?.user.first_name} {userInfo?.user.last_name}
+          </Text>
+          <Text style={styles.email}>{userInfo?.user.email}</Text>
+          <TouchableOpacity
+            style={styles.editProfileButton}
+            onPress={handleAccountSettings}
+          >
+            <Text style={styles.editProfileButtonText}>
+              <MaterialCommunityIcons
+                name="account-cog-outline"
+                size={SIZES.medium}
+                color={themeColors.text}
+              />{" "}
+              Edit Profile
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
-
-      <TouchableOpacity style={styles.option} onPress={handleAccountSettings}>
-        <Ionicons
-          name="settings-outline"
-          size={24}
-          color="#767575"
-          style={styles.icon}
-        />
-        <Text style={[styles.optionText, styles.textColor, styles.slenderText]}>
-          Account Settings
-        </Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.option} onPress={handleReportProblem}>
-        <Ionicons
-          name="alert-circle-outline"
-          size={24}
-          color="#767575"
-          style={styles.icon}
-        />
-        <Text style={[styles.optionText, styles.textColor, styles.slenderText]}>
-          Report a Problem
-        </Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.option} onPress={handleTellAFriend}>
-        <Ionicons
-          name="share-social-outline"
-          size={24}
-          color="#767575"
-          style={styles.icon}
-        />
-        <Text style={[styles.optionText, styles.textColor, styles.slenderText]}>
-          Tell a Friend
-        </Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.option} onPress={handleLogout}>
-        <Ionicons
-          name="log-out-outline"
-          size={24}
-          color="#767575"
-          style={styles.icon}
-        />
-        <Text style={[styles.optionText, styles.textColor, styles.slenderText]}>
-          Log Out
-        </Text>
-      </TouchableOpacity>
-
-      <View style={styles.bottomOptions}>
-        <TouchableOpacity style={styles.bottomOption} onPress={handleTerms}>
-          <Text style={[styles.bottomOptionText, styles.textColor]}>Terms</Text>
+      <View style={styles.bottomContainer}>
+        <Text style={styles.sectionTitle}>Support</Text>
+        <TouchableOpacity style={styles.option} onPress={handleReportProblem}>
+          <Ionicons
+            name="alert-circle-outline"
+            size={24}
+            color={themeColors.icon}
+            style={styles.icon}
+          />
+          <Text style={styles.optionText}>Report a Problem</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.bottomOption} onPress={handlePrivacy}>
-          <Text style={[styles.bottomOptionText, styles.textColor]}>
-            Privacy
-          </Text>
+        <TouchableOpacity style={styles.option} onPress={handleHelpCenter}>
+          <Ionicons
+            name="help-circle-outline"
+            size={24}
+            color={themeColors.icon}
+            style={styles.icon}
+          />
+          <Text style={styles.optionText}>Help Center</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.bottomOption}
-          onPress={handleHelpCenter}
-        >
-          <Text style={[styles.bottomOptionText, styles.textColor]}>
-            Help Center
-          </Text>
+
+        <Text style={styles.sectionTitle}>Terms</Text>
+        <TouchableOpacity style={styles.option} onPress={handleTerms}>
+          <Ionicons
+            name="document-text-outline"
+            size={24}
+            color={themeColors.icon}
+            style={styles.icon}
+          />
+          <Text style={styles.optionText}>Terms of Use</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.option} onPress={handlePrivacy}>
+          <Ionicons
+            name="shield-checkmark-outline"
+            size={24}
+            color={themeColors.icon}
+            style={styles.icon}
+          />
+          <Text style={styles.optionText}>Privacy</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.logoutContainer}>
+        <TouchableOpacity style={styles.option} onPress={handleLogout}>
+          <Ionicons
+            name="log-out-outline"
+            size={24}
+            color={themeColors.icon}
+            style={styles.icon}
+          />
+          <Text style={styles.optionText}>Log Out</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    paddingTop: 20,
-    paddingHorizontal: 20,
-  },
-  profileContainer: {
-    alignItems: "center",
-    marginBottom: 50,
-  },
-  profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginBottom: 10,
-    backgroundColor: "#ccc", // Add a background color for better visibility
-  },
-  fullName: {
-    fontSize: 24,
-    fontWeight: "bold",
-  },
-  option: {
-    flexDirection: "row",
-    alignItems: "center",
-    width: "100%",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    marginBottom: 16,
-    borderRadius: 8,
-  },
-  optionText: {
-    fontSize: 18,
-    marginLeft: 10,
-  },
-  bottomOptions: {
-    flexDirection: "row",
-    justifyContent: "center",
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingVertical: 16,
-  },
-  bottomOption: {
-    marginHorizontal: 8,
-  },
-  bottomOptionText: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  textColor: {
-    color: "#767575",
-  },
-  slenderText: {
-    fontWeight: "300",
-  },
-  icon: {
-    marginRight: 10,
-  },
-  cameraIcon: {
-    position: "absolute",
-    bottom: 5,
-    right: 5,
-    backgroundColor: "#ffffff",
-    borderRadius: 30,
-    padding: 4,
-  },
-});
 
 export default Profile;

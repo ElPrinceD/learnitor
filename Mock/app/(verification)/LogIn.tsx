@@ -118,8 +118,7 @@ const LogIn = () => {
     },
 
     inputContainer: {
-      width: rS(320),
-      marginBottom: rMS(16),
+      width: rS(300),
     },
     inputWrapper: {
       marginBottom: rMS(16),
@@ -252,6 +251,7 @@ const LogIn = () => {
             value={email}
             onChangeText={(text) => setEmail(text)}
             placeholderTextColor={themeColors.textSecondary}
+            style={styles.inputContainer}
           />
 
           <AnimatedTextInput
@@ -261,6 +261,7 @@ const LogIn = () => {
             placeholderTextColor={themeColors.textSecondary}
             secureTextEntry={!showPassword}
             showToggleIcon={true}
+            style={styles.inputContainer}
           />
 
           {error ? <Text style={styles.errorMessage}>{error}</Text> : null}

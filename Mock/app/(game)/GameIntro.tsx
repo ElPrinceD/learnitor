@@ -17,7 +17,7 @@ import Colors from "../../constants/Colors";
 
 export default function GameIntro() {
   const [gameCode, setGameCode] = useState("");
-  const { userInfo, userToken } = useAuth();
+  const { userToken } = useAuth();
   const [joinGameDisabled, setJoinGameDisabled] = useState<boolean>(true);
 
   const colorScheme = useColorScheme();

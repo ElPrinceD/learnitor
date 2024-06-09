@@ -1,84 +1,175 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
-import axios from 'axios';
-import apiUrl from '../../../config';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+  useColorScheme,
+} from "react-native";
+import axios from "axios";
+import { Ionicons } from "@expo/vector-icons";
+import apiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
+import Colors from "../../../constants/Colors";
+import { SIZES, rMS, rS, rV } from "../../../constants";
 
 const ReportProblem: React.FC = () => {
-    const [problem, setProblem] = useState('');
+  const [problemType, setProblemType] = useState("");
+  const [problemDescription, setProblemDescription] = useState("");
+  const [contactMethod, setContactMethod] = useState("");
+  const [contactInfo, setContactInfo] = useState("");
+  const [loading, setLoading] = useState(false);
 
-    const { userToken, userInfo } = useAuth();
+  const { userToken, userInfo } = useAuth();
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
 
-    const handleReportProblem = async () => {
-        const data = {
-            problem,
-            // You may include additional data such as user ID or device information if needed
-        };
-        try {
-            const response = await axios.post(`${apiUrl}:8000/api/report/`, data, {
-                headers: {
-                    Authorization: `Token ${userToken?.token}`,
-                },
-            });
-            console.log('Problem reported:', response.data);
-            // Optionally, you can navigate to a success screen or display a confirmation message
-        } catch (error) {
-            console.error('Error reporting problem:', error);
-        }
+  const handleReportProblem = async () => {
+    setLoading(true);
+    const data = {
+      problemType,
+      problemDescription,
+      contactMethod,
+      contactInfo,
     };
+    try {
+      const response = await axios.post(`${apiUrl}:8000/api/report/`, data, {
+        headers: {
+          Authorization: `Token ${userToken?.token}`,
+        },
+      });
+      console.log("Issue reported:", response.data);
+      Alert.alert("Success", "Your issue has been reported.");
+    } catch (error) {
+      console.error("Error reporting issue:", error);
+      Alert.alert("Error", "There was an error reporting your issue.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return (
-        <ScrollView style={styles.container}>
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Problem Description</Text>
-                <TextInput
-                    style={[styles.input, styles.descriptionInput]}
-                    placeholder="Describe the problem..."
-                    value={problem}
-                    onChangeText={setProblem}
-                    multiline
-                />
-            </View>
-
-            {/* Save Button */}
-            <TouchableOpacity style={styles.saveButton} onPress={handleReportProblem}>
-                <Text style={styles.saveButtonText}>Report Problem</Text>
-            </TouchableOpacity>
-        </ScrollView>
-    );
-};
-
-const styles = StyleSheet.create({
+  const styles = StyleSheet.create({
     container: {
-        flex: 1,
-        padding: 20,
+      flex: 1,
+      padding: rS(20),
+      backgroundColor: themeColors.background,
     },
     inputContainer: {
-        marginBottom: 20,
+      marginBottom: rV(20),
     },
     label: {
-        fontSize: 16,
-        marginBottom: 5,
+      fontSize: SIZES.large,
+      marginBottom: rV(5),
+      color: themeColors.text,
+      fontWeight: "bold",
     },
     input: {
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 10,
-        padding: 20,
+      borderWidth: 1,
+      borderColor: themeColors.border,
+      borderRadius: rMS(10),
+      padding: rS(20),
+      backgroundColor: themeColors.card,
+      color: themeColors.text,
+      justifyContent: "center",
     },
     descriptionInput: {
-        height: 120,
+      height: rV(120),
+      textAlignVertical: "top",
     },
     saveButton: {
-        backgroundColor: '#007BFF',
-        paddingVertical: 12,
-        borderRadius: 5,
-        alignItems: 'center',
+      backgroundColor: themeColors.buttonBackground,
+      paddingVertical: rV(10),
+      marginBottom: rV(30),
+      borderRadius: rMS(10),
+      alignItems: "center",
+      flexDirection: "row",
+      justifyContent: "center",
     },
     saveButtonText: {
-        color: '#fff',
-        fontSize: 16,
+      color: "#fff",
+      fontSize: SIZES.medium,
+      fontWeight: "bold",
+      marginLeft: rS(10),
     },
-});
+  });
+
+  return (
+    <ScrollView style={styles.container}>
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>
+          What type of issue are you experiencing?
+        </Text>
+        <View style={styles.input}>
+          <TextInput
+            placeholder="Ex. Login, Accessing content, etc."
+            value={problemType}
+            onChangeText={setProblemType}
+            placeholderTextColor={themeColors.textSecondary}
+          />
+        </View>
+      </View>
+
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>
+          Please describe the problem you're facing in detail:
+        </Text>
+        <View style={[styles.input, styles.descriptionInput]}>
+          <TextInput
+            placeholder="Ex. I'm unable to log in with my credentials."
+            value={problemDescription}
+            onChangeText={setProblemDescription}
+            placeholderTextColor={themeColors.textSecondary}
+            multiline
+          />
+        </View>
+      </View>
+
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>How would you prefer to be contacted?</Text>
+        <View style={styles.input}>
+          <TextInput
+            placeholder="Ex. Email, Phone call, Text message"
+            value={contactMethod}
+            onChangeText={setContactMethod}
+            placeholderTextColor={themeColors.textSecondary}
+          />
+        </View>
+      </View>
+
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>
+          Please provide your contact information:
+        </Text>
+        <View style={styles.input}>
+          <TextInput
+            placeholder="Ex. john@example.com, 123-456-7890"
+            value={contactInfo}
+            onChangeText={setContactInfo}
+            placeholderTextColor={themeColors.textSecondary}
+          />
+        </View>
+      </View>
+
+      <TouchableOpacity
+        style={styles.saveButton}
+        onPress={handleReportProblem}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <>
+            <Ionicons name="send-outline" size={20} color="#fff" />
+            <Text style={styles.saveButtonText}>Report Issue</Text>
+          </>
+        )}
+      </TouchableOpacity>
+    </ScrollView>
+  );
+};
 
 export default ReportProblem;
