@@ -21,6 +21,7 @@ import axios from "axios";
 import ApiUrl from "../../config";
 import { Question } from "../../components/types";
 import { Player, GameDetailsResponse } from "../../components/types";
+import { SIZES, rMS, rS, rV } from "../../constants";
 
 export default function GameWaitingScreen() {
   const { userInfo, userToken } = useAuth();
@@ -81,7 +82,7 @@ export default function GameWaitingScreen() {
       fetchGameDetails();
 
       const ws = new WebSocket(
-        `ws://192.168.183.61:8000/games/${gameCode}/ws/`
+        `ws:///192.168.48.198:8000/games/${gameCode}/ws/`
       );
 
       ws.onopen = () => {
@@ -185,68 +186,62 @@ export default function GameWaitingScreen() {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      padding: 16,
+      padding: rMS(10),
     },
     topContainerTitle: {
       color: themeColors.text,
-      fontSize: 40,
+      fontSize: SIZES.xxxLarge,
       fontWeight: "bold",
-      marginTop: 140,
+      marginTop: rV(100),
     },
     header: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
-      marginVertical: 20,
+      marginVertical: rV(18),
     },
     gameCode: {
       color: themeColors.text,
-      fontSize: 24,
+      fontSize: SIZES.xLarge,
       fontWeight: "bold",
-      marginRight: 10,
+      marginRight: rS(10),
     },
     iconButton: {
-      padding: 5,
-      backgroundColor: "transparent",
-      borderRadius: 5,
+      marginHorizontal: rS(5),
     },
     waitingText: {
       color: themeColors.textSecondary,
-      fontSize: 18,
+      fontSize: SIZES.large,
       fontWeight: "bold",
       textAlign: "center",
-      marginBottom: 20,
+      marginBottom: rV(18),
     },
     playersList: {
-      paddingBottom: 80, // Add padding to ensure the last player is not obscured by the start button
+      paddingBottom: rV(60),
     },
     playerContainer: {
       flexDirection: "row",
       alignItems: "center",
-      padding: 10,
+      padding: rMS(10),
       backgroundColor: "transparent",
-      borderRadius: 10,
-      marginVertical: 5,
+      marginVertical: rV(5),
     },
     profileImage: {
       width: 50,
       height: 50,
       borderRadius: 25,
-      marginRight: 10,
+      marginRight: rS(15),
     },
     profileName: {
       color: themeColors.text,
-      fontSize: 16,
+      fontSize: SIZES.medium,
     },
     startButtonContainer: {
       position: "absolute",
-      bottom: 20,
-      width: 250,
+      bottom: rS(18),
+      width: rS(200),
       alignSelf: "center",
-      backgroundColor: themeColors.buttonBackground,
-      padding: 15,
-      borderRadius: 5,
-      marginHorizontal: 10,
+      padding: rMS(10),
       borderTopLeftRadius: 20,
       borderBottomRightRadius: 20,
     },
@@ -265,7 +260,7 @@ export default function GameWaitingScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.topContainerTitle}>
-        {isCreator ? userInfo?.user.first_name : creator}'s Crib
+        {isCreator ? userInfo?.user.first_name : creator}'s Arena
       </Text>
       <View style={styles.header}>
         <Text style={styles.gameCode}>{gameCode}</Text>

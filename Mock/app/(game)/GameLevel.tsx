@@ -7,10 +7,14 @@ import { useAuth } from "../../components/AuthContext";
 
 import axios from "axios";
 import ApiUrl from "../../config";
+import { SIZES, rMS, rV } from "../../constants";
+import Colors from "../../constants/Colors";
 
 const GameLevel: React.FC = () => {
   const { topics, topic, course } = useLocalSearchParams();
   const { userToken } = useAuth();
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
 
   const handleLevelPress = async (level: Level) => {
     try {
@@ -83,6 +87,22 @@ const GameLevel: React.FC = () => {
     { title: "Master", image: require("../../assets/images/Master.jpg") },
   ];
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: rMS(10),
+      marginTop: rV(50),
+    },
+    header: {
+      color: themeColors.text,
+      fontSize: SIZES.xLarge,
+      fontWeight: "bold",
+      marginTop: rV(8),
+      marginBottom: rV(10),
+      textAlign: "center",
+    },
+  });
+
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Select a Level</Text>
@@ -90,20 +110,5 @@ const GameLevel: React.FC = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 10,
-    marginTop: 50,
-  },
-  header: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginTop: 50,
-    marginBottom: 10,
-    textAlign: "center",
-  },
-});
 
 export default GameLevel;

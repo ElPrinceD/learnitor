@@ -14,6 +14,7 @@ import { useAuth } from "../../components/AuthContext";
 import Toast from "react-native-root-toast";
 import GameButton from "../../components/GameButton";
 import Colors from "../../constants/Colors";
+import { SIZES, rMS, rS, rV, useShadows } from "../../constants";
 
 export default function GameIntro() {
   const [gameCode, setGameCode] = useState("");
@@ -22,7 +23,7 @@ export default function GameIntro() {
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
-
+  const shadow = useShadows();
   const createGame = () => {
     router.navigate("GameCourses");
   };
@@ -81,78 +82,66 @@ export default function GameIntro() {
     },
 
     topContainer: {
-      flex: 2,
+      flex: 1,
+      paddingHorizontal: rS(10),
       justifyContent: "center",
-      paddingTop: 20,
-      paddingHorizontal: 10,
     },
     topRow: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "flex-start",
     },
+
     topImage: {
-      width: 300,
-      height: 300,
-      resizeMode: "contain", // Maintain aspect ratio
-      marginBottom: 16,
-      marginLeft: -40,
-      marginRight: 80,
+      width: rS(240),
+      resizeMode: "contain",
     },
 
     topContainerTitle: {
       color: themeColors.text,
-      fontSize: 40,
+      fontSize: SIZES.xxLarge,
       fontWeight: "bold",
-      marginBottom: 0,
     },
     topContainerSubtitle: {
-      fontSize: 24,
+      fontSize: SIZES.large,
       color: themeColors.textSecondary,
-      marginBottom: 90,
     },
 
     bottomContainer: {
-      flex: 2,
-      marginTop: -40,
+      flex: 1,
+      marginTop: rV(-40),
       borderTopLeftRadius: 30,
       borderTopRightRadius: 30,
       backgroundColor: themeColors.background,
-      padding: 20,
-      width: "100%",
-      alignItems: "center",
+      padding: rMS(18),
     },
     title: {
       color: themeColors.text,
-      fontSize: 24,
+      fontSize: SIZES.xLarge,
       fontWeight: "bold",
-      marginBottom: 20,
+      marginBottom: rV(18),
       textAlign: "center",
     },
     codeCard: {
       backgroundColor: themeColors.card,
       borderRadius: 10,
-      padding: 30,
-      paddingTop: 50,
-      marginTop: -100,
-      marginBottom: 20,
-      shadowColor: themeColors.shadow,
-      shadowOpacity: 0.1,
-      shadowRadius: 10,
-      elevation: 2,
-      width: "100%",
-      height: 240,
+      padding: rMS(28),
+      justifyContent: "center",
+      marginTop: rV(-80),
+      marginBottom: rV(18),
+      ...shadow.small,
+      flex: 0.6,
     },
     cardTitle: {
-      fontSize: 25,
+      fontSize: SIZES.xLarge,
       fontWeight: "bold",
-      marginBottom: 10,
+      marginBottom: rV(8),
       color: themeColors.text,
     },
     cardSubtitle: {
-      fontSize: 14,
+      fontSize: SIZES.medium,
       color: themeColors.textSecondary,
-      marginBottom: 20,
+      marginBottom: rV(18),
     },
     inputRow: {
       flexDirection: "row",
@@ -160,30 +149,27 @@ export default function GameIntro() {
     },
     input: {
       borderWidth: 2,
-      margin: 10,
+      margin: rMS(10),
       borderColor: themeColors.border,
-      borderRadius: 5,
-      padding: 6,
-      height: 40,
+      padding: rMS(6),
       flex: 1,
-      borderTopLeftRadius: 20,
-      borderBottomRightRadius: 20,
+      borderTopLeftRadius: rV(18),
+      borderBottomRightRadius: rV(18),
       color: themeColors.text,
     },
     joinButton: {
       backgroundColor: joinGameDisabled
         ? themeColors.buttonDisabled
         : themeColors.buttonBackground,
-      borderTopLeftRadius: 20,
-      borderBottomRightRadius: 20,
+      borderTopLeftRadius: rV(18),
+      borderBottomRightRadius: rV(18),
       opacity: joinGameDisabled ? 0.5 : 1,
     },
 
     createButton: {
-      marginTop: 20,
       backgroundColor: themeColors.buttonBackground,
-      borderTopLeftRadius: 20,
-      borderBottomRightRadius: 20,
+      borderTopLeftRadius: rV(18),
+      borderBottomRightRadius: rV(18),
     },
     noCodeContainer: {
       alignItems: "center",

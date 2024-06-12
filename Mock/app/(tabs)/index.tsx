@@ -112,6 +112,7 @@ const Index = () => {
     container: {
       flex: 1,
       padding: rMS(12),
+      flexGrow: 2,
     },
     cardContainer: {
       flex: 1,

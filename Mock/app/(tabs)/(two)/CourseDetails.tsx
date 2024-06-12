@@ -203,7 +203,7 @@ const CourseDetails: React.FC = () => {
   const imageTranslateY = scrollY.interpolate({
     inputRange: [-MAX_HEADER_HEIGHT, 0],
     outputRange: [4, 1],
-    extrapolateRight: "clamp",
+    extrapolate: "clamp",
   });
 
   const courseTitleOpacity = scrollY.interpolate({
@@ -321,7 +321,7 @@ const CourseDetails: React.FC = () => {
         <RNAnimated.View
           style={{
             ...StyleSheet.absoluteFillObject,
-            backgroundColor: themeColors.gradientBackground,
+            backgroundColor: themeColors.background,
             opacity: imageOpacity,
           }}
         />

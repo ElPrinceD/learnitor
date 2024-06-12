@@ -7,6 +7,7 @@ import { Course } from "../../components/types";
 import { useAuth } from "../../components/AuthContext";
 import ApiUrl from "../../config";
 import Colors from "../../constants/Colors";
+import { SIZES, rV } from "../../constants";
 
 const GameCourses: React.FC = () => {
   const { userToken } = useAuth();
@@ -39,13 +40,15 @@ const GameCourses: React.FC = () => {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
+      marginTop: rV(55),
     },
     header: {
+      flex: 1,
       color: themeColors.text,
-      fontSize: 24,
+      fontSize: SIZES.xLarge,
       fontWeight: "bold",
-      marginTop: 80,
-      marginBottom: 20,
+      marginTop: rV(8),
+      marginBottom: rV(10),
       textAlign: "center",
     },
   });

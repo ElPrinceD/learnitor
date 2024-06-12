@@ -19,7 +19,6 @@ interface Props {
   plan: Plan;
   categoryNames: { [key: number]: string };
   getCategoryColor: (type: string) => string;
-  handleDeletePlan: (planId: number) => void;
   handleEditPlan: (plan: Plan) => void;
 }
 

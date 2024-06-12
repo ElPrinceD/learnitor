@@ -169,7 +169,7 @@ const CreateNewTime: React.FC = () => {
       flex: 1,
     },
     picker: {
-      
+      flex: 0.7,
       color: themeColors.textSecondary,
       marginLeft: rS(35),
     },
