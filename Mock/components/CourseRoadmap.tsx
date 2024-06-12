@@ -154,20 +154,17 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
             {renderTimelineItem(topic, index * 2, false)}
             <View style={[styles.backgroundContainer]}>
               <SvgComponent
-                paths={[
-                  "M128.743 42.3268C150 50 200 120 250 150",
-                  "M250 150C300 200 350 150 400 200",
-                  "M400 200C450 250 500 200 550 250",
-
-                  "M550 250C600 300 650 250 700 300",
-
-                  "M10.3635 198.539C150 50 200 50 50 10",
-                  "M10.3635 198.539C150 50 200 400 250 150",
-                  ...(index === enrolledTopics.length - 1
-                    ? []
-                    : ["M10.3635 198.539L143.35 322.052"]),
+               paths={[
+                index % 2 === 1 ? "M10.3635 198.539C150 0 20 -50 250 150" : null,
+                "M128.743 42.3268C150 50 200 120 250 150",
+                "M250 150C300 200 350 150 400 200",
+                "m 300 178 L 139 365",
+                ...(index === enrolledTopics.length - 1
+                ? []
+                : ["M10.3635 198.539L143.35 322.052"]),
                 ]}
-              />
+                />
+              
             </View>
             {renderTimelineItem(topic, index * 2 + 1, true)}
           </View>

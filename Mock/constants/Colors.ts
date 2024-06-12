@@ -1,5 +1,6 @@
 // Define color constants
 const tintColor = '#844539';
+const tintColorSecond = '#'
 // const tintColor = '#097969';
 const gradientButton = 'linear-gradient(to right, #447A7A 0%, #F9E866 100%)';
 const lightTextColor = '#000';
