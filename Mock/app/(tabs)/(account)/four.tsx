@@ -8,6 +8,7 @@ import {
   Share,
   Alert,
   useColorScheme,
+  ScrollView,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -138,6 +139,7 @@ const Profile = () => {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
+      // flexGrow: 1,
       paddingTop: rV(18),
       backgroundColor: themeColors.background,
     },
@@ -230,7 +232,7 @@ const Profile = () => {
   });
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
       <View style={styles.profileContainer}>
         <TouchableOpacity
           onPress={handleProfilePictureUpdate}
@@ -320,7 +322,7 @@ const Profile = () => {
           <Text style={styles.optionText}>Log Out</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </ScrollView>
   );
 };
 

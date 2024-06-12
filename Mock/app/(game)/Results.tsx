@@ -14,20 +14,26 @@ import ApiUrl from "../../config";
 import { useAuth } from "../../components/AuthContext";
 import Colors from "../../constants/Colors";
 import GameButton from "../../components/GameButton";
+import { SIZES, rMS, rS, rV } from "../../constants";
 
 export default function ResultsScreen() {
   const { userInfo, userToken } = useAuth();
-  const { score: scoreParam, gameId, scores: scoresParam } = useLocalSearchParams<{
+  const {
+    score: scoreParam,
+    gameId,
+    scores: scoresParam,
+  } = useLocalSearchParams<{
     score: string;
     gameId: string;
     scores: string;
   }>();
 
   const score = typeof scoreParam === "string" ? scoreParam : "0";
-  const scores = JSON.parse(typeof scoresParam === "string" ? scoresParam : "{}");
+  const scores = JSON.parse(
+    typeof scoresParam === "string" ? scoresParam : "{}"
+  );
 
-  console.log(scores)
-
+  console.log(scores);
 
   const [creator, setCreator] = useState<string | undefined>();
   const [creatorId, setCreatorId] = useState<number | undefined>();
@@ -56,14 +62,13 @@ export default function ResultsScreen() {
         setCreatorId(data.creator.id);
         setGameCode(data.code);
 
-        console.log(data.players)
+        console.log(data.players);
         if (data.players) {
           const newPlayers = data.players.map((player) => ({
             id: player.id,
             score: scores[player.id] || "0.0",
             profileName: `${player.first_name} ${player.last_name}`,
-            profile_picture:
-            player.profile_picture
+            profile_picture: player.profile_picture,
           }));
           setPlayers(newPlayers);
         }
@@ -84,7 +89,7 @@ export default function ResultsScreen() {
       flex: 1,
       justifyContent: "center",
       alignItems: "center",
-      padding: 16,
+      padding: rMS(10),
     },
     title: {
       fontSize: 24,
@@ -96,56 +101,53 @@ export default function ResultsScreen() {
     },
     topContainerTitle: {
       color: themeColors.text,
-      fontSize: 40,
+      fontSize: SIZES.xxxLarge,
       fontWeight: "bold",
-      marginTop: 140,
-      alignSelf: "flex-start",
+      marginTop: rV(100),
+      alignItems: "flex-start",
     },
     playersList: {
-      paddingBottom: 80, // Add padding to ensure the last player is not obscured by the start button
+      paddingBottom: rV(60),
     },
     playerContainer: {
       flexDirection: "row",
       alignItems: "center",
-      padding: 10,
+      padding: rMS(10),
       backgroundColor: "transparent",
-      borderRadius: 10,
-      marginVertical: 5,
+      marginVertical: rV(5),
     },
     profileImage: {
       width: 50,
       height: 50,
       borderRadius: 25,
-      marginRight: 10,
+      marginRight: rS(15),
     },
     profileName: {
       color: themeColors.text,
-      fontSize: 16,
+      fontSize: SIZES.medium,
     },
     buttonContainer: {
       flexDirection: "row",
       justifyContent: "space-between",
-      paddingTop: 30,
+      paddingTop: rV(28),
+      gap: rS(5),
     },
     button: {
       flex: 1,
-      backgroundColor: themeColors.buttonBackground,
-      borderRadius: 5,
-      marginHorizontal: 8,
       borderTopLeftRadius: 20,
       borderBottomRightRadius: 20,
     },
   });
-  
 
   const renderPlayer = ({ item }: { item: Player }) => {
-    
     return (
       <View style={styles.playerContainer}>
         <Image
           source={{ uri: item.profile_picture }}
           style={styles.profileImage}
-          onError={() =>console.log(item.profile_picture,"Error loading picture")}
+          onError={() =>
+            console.log(item.profile_picture, "Error loading picture")
+          }
         />
         <Text style={styles.profileName}>{item.profileName}: </Text>
         <Text style={styles.profileName}>{item.score}</Text>
@@ -166,7 +168,7 @@ export default function ResultsScreen() {
       <View style={styles.buttonContainer}>
         <GameButton
           title="Replay"
-           //onPress={handleReplayGame}
+          //onPress={handleReplayGame}
           style={styles.button}
         />
         <GameButton

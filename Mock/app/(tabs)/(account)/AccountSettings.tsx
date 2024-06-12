@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../../components/AuthContext";
-import ApiUrl from "../../../config.js";
+import ApiUrl from "../../../config";
 import axios from "axios";
 import Colors from "../../../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../../../constants";
@@ -74,25 +74,26 @@ const AccountSettings = () => {
         },
         config
       );
-
-      setUserInfo({
-        ...userInfo,
-        user: {
-          ...userInfo.user,
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          email: formData.email,
-          dob: formData.dob,
-          address: {
-            ...userInfo.user.address,
-            street_1: formData.street1,
-            street_2: formData.street2,
-            city: formData.city,
-            region: formData.region,
-            country: formData.country,
+      if (userInfo) {
+        setUserInfo({
+          ...userInfo,
+          user: {
+            ...userInfo.user,
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            email: formData.email,
+            dob: formData.dob,
+            address: {
+              ...userInfo.user.address,
+              street_1: formData.street1,
+              street_2: formData.street2,
+              city: formData.city,
+              region: formData.region,
+              country: formData.country,
+            },
           },
-        },
-      });
+        });
+      }
 
       Alert.alert("Success", "Your information has been updated.");
     } catch (error) {
@@ -176,7 +177,11 @@ const AccountSettings = () => {
         <View style={styles.row}>
           <View style={styles.halfWidth}>
             <View style={styles.inputContainer}>
-              <Ionicons name="person-outline" size={20} style={styles.icon} />
+              <Ionicons
+                name="person-outline"
+                size={rMS(18)}
+                style={styles.icon}
+              />
               <TextInput
                 style={styles.input}
                 placeholder="First Name"
@@ -188,7 +193,11 @@ const AccountSettings = () => {
           </View>
           <View style={styles.halfWidth}>
             <View style={styles.inputContainer}>
-              <Ionicons name="person-outline" size={20} style={styles.icon} />
+              <Ionicons
+                name="person-outline"
+                size={rMS(18)}
+                style={styles.icon}
+              />
               <TextInput
                 style={styles.input}
                 placeholder="Last Name"
@@ -200,7 +209,11 @@ const AccountSettings = () => {
           </View>
         </View>
         <View style={styles.inputContainer}>
-          <Ionicons name="calendar-outline" size={20} style={styles.icon} />
+          <Ionicons
+            name="calendar-outline"
+            size={rMS(18)}
+            style={styles.icon}
+          />
           <TextInput
             style={styles.input}
             placeholder="Date of Birth"
@@ -210,7 +223,7 @@ const AccountSettings = () => {
           />
         </View>
         <View style={styles.inputContainer}>
-          <Ionicons name="mail-outline" size={20} style={styles.icon} />
+          <Ionicons name="mail-outline" size={rMS(18)} style={styles.icon} />
           <TextInput
             style={styles.input}
             placeholder="Email Address"
@@ -223,7 +236,11 @@ const AccountSettings = () => {
         <View style={styles.row}>
           <View style={styles.halfWidth}>
             <View style={styles.inputContainer}>
-              <Ionicons name="location-outline" size={20} style={styles.icon} />
+              <Ionicons
+                name="location-outline"
+                size={rMS(18)}
+                style={styles.icon}
+              />
               <TextInput
                 style={styles.input}
                 placeholder="Street 1"
@@ -235,7 +252,11 @@ const AccountSettings = () => {
           </View>
           <View style={styles.halfWidth}>
             <View style={styles.inputContainer}>
-              <Ionicons name="location-outline" size={20} style={styles.icon} />
+              <Ionicons
+                name="location-outline"
+                size={rMS(18)}
+                style={styles.icon}
+              />
               <TextInput
                 style={styles.input}
                 placeholder="Street 2"
@@ -249,7 +270,11 @@ const AccountSettings = () => {
         <View style={styles.row}>
           <View style={styles.halfWidth}>
             <View style={styles.inputContainer}>
-              <Ionicons name="location-outline" size={20} style={styles.icon} />
+              <Ionicons
+                name="location-outline"
+                size={rMS(18)}
+                style={styles.icon}
+              />
               <TextInput
                 style={styles.input}
                 placeholder="City"
@@ -261,7 +286,11 @@ const AccountSettings = () => {
           </View>
           <View style={styles.halfWidth}>
             <View style={styles.inputContainer}>
-              <Ionicons name="location-outline" size={20} style={styles.icon} />
+              <Ionicons
+                name="location-outline"
+                size={rMS(18)}
+                style={styles.icon}
+              />
               <TextInput
                 style={styles.input}
                 placeholder="Region"
@@ -273,7 +302,11 @@ const AccountSettings = () => {
           </View>
         </View>
         <View style={styles.inputContainer}>
-          <Ionicons name="location-outline" size={20} style={styles.icon} />
+          <Ionicons
+            name="location-outline"
+            size={rMS(18)}
+            style={styles.icon}
+          />
           <TextInput
             style={styles.input}
             placeholder="Country"
@@ -284,7 +317,7 @@ const AccountSettings = () => {
         </View>
         <Text style={styles.subTitle}>Institution Info</Text>
         <View style={styles.inputContainer}>
-          <Ionicons name="school-outline" size={20} style={styles.icon} />
+          <Ionicons name="school-outline" size={rMS(18)} style={styles.icon} />
           <TextInput
             style={styles.input}
             placeholder="School Name"

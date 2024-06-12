@@ -67,6 +67,7 @@ export default function Tab3Layout() {
               backgroundColor: themeColors.background,
             },
             animation: "slide_from_bottom",
+
             headerTitle: "Select Category",
             headerTitleAlign: "center",
             headerShadowVisible: false,

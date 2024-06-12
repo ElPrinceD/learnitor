@@ -17,6 +17,7 @@ import ApiUrl from "../../config";
 import TimelineCategoryItem from "../../components/TimelineCategoryItem";
 import GameButton from "../../components/GameButton";
 import Colors from "../../constants/Colors";
+import { SIZES, rMS, rS, rV } from "../../constants";
 
 const GameTopics: React.FC = () => {
   const { userToken } = useAuth();
@@ -122,38 +123,38 @@ const GameTopics: React.FC = () => {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      padding: 10,
-      marginTop: 50,
+      padding: rMS(10),
+      marginTop: rV(50),
     },
     header: {
       color: themeColors.text,
-      fontSize: 24,
+      fontSize: SIZES.xLarge,
       fontWeight: "bold",
-      marginTop: 10,
-      marginBottom: 20,
+      marginTop: rV(8),
+      marginBottom: rV(10),
       textAlign: "center",
     },
     row: {
       justifyContent: "space-between",
     },
     flatListContent: {
-      paddingBottom: 20,
+      paddingBottom: rV(18),
     },
     topicContainer: {
       flexDirection: "row",
       alignItems: "center",
-      marginBottom: 10,
+      marginBottom: rV(8),
       position: "relative",
     },
     checkBoxContainer: {
       position: "absolute",
-      top: 7,
-      right: -1.5,
+      top: rV(8),
+      right: 0,
       zIndex: 1,
     },
     checkBox: {
-      width: 24,
-      height: 24,
+      width: rS(22),
+      height: rV(22),
       justifyContent: "center",
       alignItems: "center",
       alignSelf: "flex-end",
@@ -165,23 +166,16 @@ const GameTopics: React.FC = () => {
     },
     selectAllText: {
       color: themeColors.text,
-      fontSize: 16,
+      fontSize: SIZES.medium,
       fontWeight: "bold",
-      marginLeft: 5,
+      marginLeft: rS(5),
     },
     continueButton: {
-      fontSize: 18,
-      fontWeight: "bold",
-      textAlign: "center",
-      marginTop: 20,
       position: "absolute",
-      bottom: 20,
-      width: 250,
+      bottom: rS(18),
+      width: rS(200),
       alignSelf: "center",
-      backgroundColor: themeColors.buttonBackground,
-      padding: 15,
-      borderRadius: 5,
-      marginHorizontal: 10,
+      padding: rMS(10),
       borderTopLeftRadius: 20,
       borderBottomRightRadius: 20,
     },
@@ -201,7 +195,7 @@ const GameTopics: React.FC = () => {
                   color={themeColors.icon}
                 />
               ) : (
-                <Feather name="circle" size={22} color="black" />
+                <Feather name="circle" size={24} color="black" />
               ))}
           </TouchableOpacity>
         </View>
