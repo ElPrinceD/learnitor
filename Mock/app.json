@@ -14,22 +14,26 @@
     },
     "assetBundlePatterns": [
       "**/*"
-      
     ],
-    "sourceExts":["js,json,ts,tsx,jsx,svg"],
+    "sourceExts": [
+      "js,json,ts,tsx,jsx,svg"
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.cradle.learnitor"
     },
     "android": {
       "usesCleartextTraffic": true,
-      "permissions": ["INTERNET", "OTHER_PERMISSION_IF_NEEDED"],
+      "permissions": [
+        "INTERNET",
+        "OTHER_PERMISSION_IF_NEEDED"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-
-      "softwareKeyboardLayoutMode": "pan"
-
+      "softwareKeyboardLayoutMode": "pan",
+      "package": "com.cradle.learnitor"
     },
     "web": {
       "bundler": "metro",
@@ -43,6 +47,14 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "01382f32-3985-47b3-b6a6-e493c0b560f7"
+      }
     }
   }
 }

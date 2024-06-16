@@ -1,27 +1,27 @@
-// Define color constants
-const tintColor = '#844539';
-const tintColorSecond = '#'
-// const tintColor = '#097969';
-const gradientButton = 'linear-gradient(to right, #447A7A 0%, #F9E866 100%)';
+const tintColor = '#0D47A1'; // Primary dark blue color
+const tintColorSecond = '#1565C0'; // Secondary dark blue color
+const gradientButton = 'linear-gradient(to right, #1565C0 0%, #0D47A1 100%)'; // Dark blue gradient button
 const lightTextColor = '#000';
 const lightTextSecondaryColor = '#666';
-const lightBackgroundColor = '#fff';
-const lightCardColor = '#f7f2f2';
-const lightBorderColor = '#844539';
+const lightBackgroundColor = '#fff'; // Keeping the original light background
+const lightCardColor = '#E3F2FD'; // Light blue card
+const lightBorderColor = '#0D47A1';
 const lightShadowColor = '#000';
 const lightTabIconDefaultColor = '#ccc';
-const lightButtonDisabledColor = '#ccffe5';
+const lightButtonDisabledColor = '#B3E5FC'; // Light blue disabled button
 const lightPlaceholderColor = '#666';
-const lightGradientBackgroundColor = '#f2f2f2'
+const lightGradientBackgroundColor = '#f2f2f2'; // Keeping the original light gradient background
 const darkTextColor = '#fff';
 const darkTextSecondaryColor = '#ccc';
-const darkBackgroundColor = '#000';
-const darkCardColor = '#181818';
+const darkBackgroundColor = '#000'; // Keeping the original dark background
+const darkCardColor = '#263238'; // Dark blue card
 const darkShadowColor = '#696969';
 const darkTabIconDefaultColor = '#ccc';
-const darkButtonDisabledColor = '#ccffe5';
+const darkButtonDisabledColor = '#003366'; // Dark blue disabled button
 const darkPlaceholderColor = '#aaa';
-const darkGradientBackgroundColor = '#000'
+const darkGradientBackgroundColor = '#000';
+
+
 
 
 // Export themes
@@ -31,6 +31,7 @@ export default {
     textSecondary: lightTextSecondaryColor,
     background: lightBackgroundColor,
     card: lightCardColor,
+    tintSecond: tintColorSecond,
     tint: tintColor,
     border: lightBorderColor,
     shadow: lightShadowColor,
@@ -47,6 +48,7 @@ export default {
   dark: {
     text: darkTextColor,
     textSecondary: darkTextSecondaryColor,
+    tintSecond: tintColorSecond,
     background: darkBackgroundColor,
     card: darkCardColor,
     tint: tintColor,

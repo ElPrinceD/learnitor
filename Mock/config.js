@@ -1,3 +1,3 @@
-const ApiUrl = "http://192.168.234.61";
+const ApiUrl = "http://192.168.221.61";
 export default ApiUrl;
 

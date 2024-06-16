@@ -88,8 +88,8 @@ const EnrolledCoursesList: React.FC<Props> = ({ enrolledCoursesData }) => {
 
     textContainer: {
       position: "absolute",
-      bottom: rV(8),
-      left: rS(8),
+      bottom: rV(1),
+      left: rS(1),
       right: rS(8),
       padding: rMS(8),
       borderRadius: 10,
@@ -101,7 +101,7 @@ const EnrolledCoursesList: React.FC<Props> = ({ enrolledCoursesData }) => {
       color: themeColors.text,
       textAlign: "left",
       marginBottom: rMS(5),
-      textShadowColor: themeColors.shadow,
+      
     },
   });
 
