@@ -8,8 +8,9 @@ import {
   TextStyle,
   ViewStyle,
   TouchableOpacity,
+  KeyboardTypeOptions,
 } from "react-native";
-import { SIZES, rMS, rS } from "../constants";
+import { SIZES, rMS } from "../constants";
 import Colors from "../constants/Colors";
 import { useColorScheme } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,13 +20,15 @@ type AnimatedTextInputProps = {
   value?: string;
   onChangeText?: (text: string) => void;
   onFocusChange?: (isFocused: boolean) => void;
+  onFocus?: () => void;
   placeholder?: string;
   placeholderTextColor?: string;
   secureTextEntry?: boolean;
-  style?: ViewStyle | ViewStyle[];
+  style?: ViewStyle | TextStyle | ViewStyle[];
   labelStyle?: TextStyle | TextStyle[];
   showToggleIcon?: boolean;
-  editable?: boolean; // Add the editable prop
+  editable?: boolean;
+  keyboardType?: KeyboardTypeOptions;
 };
 
 const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
@@ -33,12 +36,14 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
   value,
   onChangeText,
   onFocusChange,
+  onFocus,
   placeholder,
   placeholderTextColor,
   secureTextEntry,
   showToggleIcon,
   style,
-  editable = true, // Default to true if not provided
+  editable = true,
+  keyboardType,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
   const colorScheme = useColorScheme();
@@ -51,6 +56,7 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
     animateTransform(-30);
     animateBorderWidth(2);
     onFocusChange?.(true);
+    onFocus?.();
   };
 
   const handleBlur = () => {
@@ -171,6 +177,7 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
             onChangeText={onChangeText}
             secureTextEntry={!showPassword}
             editable={editable}
+            keyboardType={keyboardType}
           />
           <TouchableOpacity
             onPress={() => setShowPassword(!showPassword)}
@@ -194,6 +201,7 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
           onChangeText={onChangeText}
           secureTextEntry={secureTextEntry}
           editable={editable}
+          keyboardType={keyboardType}
           multiline
         />
       )}

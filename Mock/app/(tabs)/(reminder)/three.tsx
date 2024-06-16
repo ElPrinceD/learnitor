@@ -1,11 +1,15 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import {
   View,
   StyleSheet,
-  Alert,
   Text,
   useColorScheme,
-  FlatList,
   TouchableOpacity,
 } from "react-native";
 import axios from "axios";
@@ -16,24 +20,10 @@ import { useAuth } from "../../../components/AuthContext";
 import PlanItem from "../../../components/PlanItem";
 import DaySelector from "../../../components/DaySelector";
 import Colors from "../../../constants/Colors";
-import { SIZES, rMS, rS, rV } from "../../../constants";
-import Animated, {
-  useSharedValue,
-  useAnimatedScrollHandler,
-  Extrapolation,
-  interpolate,
-  useAnimatedStyle,
-} from "react-native-reanimated";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-
-interface Plan {
-  id: number;
-  title: string;
-  description: string;
-  due_date: string;
-  due_time: string;
-  category: number;
-}
+import { SIZES, rMS, rS, rV, useShadows } from "../../../constants";
+import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import { FontAwesome6 } from "@expo/vector-icons";
+import { Plan } from "../../../components/types";
 
 const Timeline: React.FC = () => {
   const [todayPlans, setTodayPlans] = useState<Plan[]>([]);
@@ -43,31 +33,11 @@ const Timeline: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
-  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const [month, setMonth] = useState<string>("");
-  const today = new Date();
   const { userToken } = useAuth();
-  const scrollY = useSharedValue(0);
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
-  const getMonthName = (date: Date): string => {
-    const monthNames = [
-      "January",
-      "February",
-      "March",
-      "April",
-      "May",
-      "June",
-      "July",
-      "August",
-      "September",
-      "October",
-      "November",
-      "December",
-    ];
-    return monthNames[date.getMonth()];
-  };
+  const shadow = useShadows();
 
   const getCategoryColor = (type: string) => {
     switch (type) {
@@ -120,9 +90,6 @@ const Timeline: React.FC = () => {
     fetchCategoryNames();
     fetchTodayPlans(selectedDate);
   }, [selectedDate, userToken, selectedCategory]);
-  useEffect(() => {
-    setMonth(getMonthName(selectedDate));
-  }, [selectedDate]);
 
   const fetchCategoryNames = async () => {
     try {
@@ -141,23 +108,11 @@ const Timeline: React.FC = () => {
       console.error("Error fetching category names:", error);
     }
   };
-
-  const handleDeletePlan = async (planId: number): Promise<void> => {
-    try {
-      await axios.delete(`${ApiUrl}:8000/api/tasks/${planId}/`, {
-        headers: {
-          Authorization: `Token ${userToken?.token}`,
-        },
-      });
-      fetchTodayPlans(selectedDate);
-    } catch (error) {
-      console.error("Error deleting task:", error);
-      Alert.alert("Error", "Failed to delete task");
-    }
-  };
+  const snapPoints = useMemo(() => ["50%", "80%"], []);
+  const BottomSheetRef = useRef<BottomSheet>(null);
 
   const handleEditPlan = (plan: Plan) => {
-    router.navigate("TimeTable");
+    router.navigate("EditPlan");
     const taskIdString = String(plan.id);
     router.setParams({
       taskId: taskIdString,
@@ -169,58 +124,13 @@ const Timeline: React.FC = () => {
       category_name: categoryNames[plan.category],
     });
   };
-  const getWeekDays = (date: Date): Date[] => {
-    const startOfWeek = new Date(date);
-    startOfWeek.setDate(date.getDate() - date.getDay());
-    const weekDays: Date[] = [];
-    for (let i = 0; i < 7; i++) {
-      const day = new Date(startOfWeek);
-      day.setDate(startOfWeek.getDate() + i);
-      weekDays.push(day);
-    }
-    return weekDays;
+  const handleNavigateCreateTask = () => {
+    router.navigate("createNewTime");
   };
-
-  const weekDays = getWeekDays(selectedDate);
-
-  const scrollHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      scrollY.value = event.contentOffset.y;
-    },
-  });
-  const handleScroll = (direction: "prev" | "next") => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(newDate.getDate() + (direction === "next" ? 7 : -7));
-    setSelectedDate(newDate);
-  };
-
-  const handleDayPress = (date: Date) => {
-    setSelectedDate(date);
-  };
-
-  const smallCalendarStyle = useAnimatedStyle(() => {
-    const opacity = interpolate(
-      scrollY.value,
-      [0, 320, 340],
-      [0, 0.01, 1],
-      Extrapolation.CLAMP
-    );
-    const translateY = interpolate(
-      scrollY.value,
-      [320, 340],
-      [-20, 0],
-      Extrapolation.CLAMP
-    );
-    return {
-      opacity,
-      transform: [{ translateY }],
-    };
-  });
 
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      // borderBottomLeftRadius: 30,
       backgroundColor: themeColors.background,
     },
     scrollViewContent: {
@@ -228,7 +138,7 @@ const Timeline: React.FC = () => {
     },
     bottom: {
       backgroundColor: themeColors.background,
-      flex: 1,
+      // flex: 1,
       borderTopLeftRadius: rMS(40),
       borderTopRightRadius: rMS(40),
     },
@@ -258,56 +168,42 @@ const Timeline: React.FC = () => {
       top: rV(-10),
       left: 0,
       right: 0,
-      height: 0.8,
-      backgroundColor: themeColors.border,
+      height: 0.3,
+      backgroundColor: "#ccc",
     },
-    smallCalendar: {
+    addButton: {
       position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      backgroundColor: themeColors.tint,
-      padding: rMS(10),
-    },
-    month: {
-      fontSize: rMS(23),
-      fontWeight: "bold",
-      textAlign: "center",
-    },
-    selectorContainer: {
-      marginTop: rV(5),
-      flexDirection: "row",
+      right: rS(20),
+      bottom: rV(20),
+      width: 60,
+      height: 60,
+      borderRadius: 20,
       justifyContent: "center",
       alignItems: "center",
-      paddingHorizontal: rS(10),
-    },
-    dayContainer: {
-      alignItems: "center",
-      marginHorizontal: rS(8),
-    },
-    date: {
-      fontSize: SIZES.medium,
-      color: themeColors.text,
-    },
-    selectedDay: {
-      color: "#1434A4",
-      fontWeight: "bold",
-    },
-    today: {
-      fontWeight: "bold",
-      color: "#FF6347",
+      backgroundColor: themeColors.buttonBackground,
+      ...shadow.medium,
     },
   });
 
   return (
     <View style={styles.container}>
-      <Animated.ScrollView scrollEventThrottle={1} onScroll={scrollHandler}>
-        <DaySelector
-          selectedDate={selectedDate}
-          setSelectedDate={setSelectedDate}
-          y={scrollY}
-        />
-        <View style={[styles.bottom]}>
+      <DaySelector
+        selectedDate={selectedDate}
+        setSelectedDate={setSelectedDate}
+        // plan={todayPlans}
+      />
+
+      <BottomSheet
+        ref={BottomSheetRef}
+        snapPoints={snapPoints}
+        index={1}
+        backgroundStyle={{ backgroundColor: themeColors.background }}
+        handleIndicatorStyle={{ backgroundColor: themeColors.tint }}
+      >
+        <BottomSheetScrollView
+          style={[styles.bottom]}
+          contentContainerStyle={styles.scrollViewContent}
+        >
           <View style={styles.plansContainer}>
             {todayPlans.length === 0 ? (
               <Text style={styles.noPlansText}>Hey, you have a free day!</Text>
@@ -333,63 +229,14 @@ const Timeline: React.FC = () => {
               })
             )}
           </View>
-        </View>
-      </Animated.ScrollView>
-      <Animated.View style={[smallCalendarStyle, styles.smallCalendar]}>
-        <Text style={styles.month}>{month}</Text>
-        <View style={styles.selectorContainer}>
-          <TouchableOpacity onPress={() => handleScroll("prev")}>
-            <MaterialCommunityIcons
-              name="code-less-than"
-              size={SIZES.xLarge}
-              color={themeColors.text}
-            />
-          </TouchableOpacity>
-          <FlatList
-            data={weekDays}
-            horizontal
-            keyExtractor={(item) => item.toISOString()}
-            renderItem={({ item: date }) => {
-              const isToday = date.toDateString() === today.toDateString();
-              const isSelected =
-                date.toDateString() === selectedDate.toDateString();
-              return (
-                <TouchableOpacity
-                  onPress={() => handleDayPress(date)}
-                  style={styles.dayContainer}
-                >
-                  <Text
-                    style={[
-                      styles.date,
-                      isSelected && styles.selectedDay,
-                      isToday && styles.today,
-                    ]}
-                  >
-                    {days[date.getDay()]}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.date,
-                      isSelected && styles.selectedDay,
-                      isToday && styles.today,
-                    ]}
-                  >
-                    {date.getDate()}
-                  </Text>
-                </TouchableOpacity>
-              );
-            }}
-            showsHorizontalScrollIndicator={false}
-          />
-          <TouchableOpacity onPress={() => handleScroll("next")}>
-            <MaterialCommunityIcons
-              name="code-greater-than"
-              size={SIZES.xLarge}
-              color={themeColors.text}
-            />
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
+        </BottomSheetScrollView>
+      </BottomSheet>
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={handleNavigateCreateTask}
+      >
+        <FontAwesome6 name="add" size={SIZES.xLarge} color={themeColors.text} />
+      </TouchableOpacity>
     </View>
   );
 };

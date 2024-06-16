@@ -8,8 +8,8 @@ import {
   useColorScheme,
   Switch,
   Alert,
+  TextInput,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker";
 import { useLocalSearchParams } from "expo-router";
 import axios from "axios";
 import { router } from "expo-router";
@@ -18,13 +18,11 @@ import { useAuth } from "../../../components/AuthContext";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import Colors from "../../../constants/Colors";
 import { rMS, rS, rV } from "../../../constants/responsive";
-import AnimatedTextInput from "../../../components/AnimatedTextInput";
 import { SIZES } from "../../../constants/theme";
 import GameButton from "../../../components/GameButton";
 import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import Animated, { FadeInLeft, ReduceMotion } from "react-native-reanimated";
 
-const EditPlan: React.FC = () => {
+const EditPlan = () => {
   const params = useLocalSearchParams();
   const id = params.taskId;
   const category_name = params.category_name as string;
@@ -145,6 +143,25 @@ const EditPlan: React.FC = () => {
     },
     inputContainer: {
       marginTop: rV(5),
+      flexDirection: "row",
+      alignItems: "center",
+      borderWidth: 1,
+      borderRadius: rMS(10),
+      paddingHorizontal: rS(10),
+      marginBottom: rV(15),
+      borderColor: "transparent",
+      backgroundColor: themeColors.card,
+      flex: 1,
+    },
+    icon: {
+      marginRight: rS(10),
+      color: themeColors.textSecondary,
+    },
+    input: {
+      flex: 1,
+      height: rV(40),
+      color: themeColors.text,
+      borderColor: "transparent",
     },
     categoryName: {
       fontSize: SIZES.xxLarge,
@@ -169,18 +186,12 @@ const EditPlan: React.FC = () => {
     switchContainer: {
       flexDirection: "row",
       alignItems: "center",
+      marginHorizontal: rS(55),
     },
-    switchLabel: {
-      marginLeft: rS(10),
-      fontSize: SIZES.medium,
-      color: themeColors.text,
-    },
-    recurrenceContainer: {
-      flexDirection: "row",
-    },
+
     planItemLine: {
-      height: rV(0.8),
-      backgroundColor: themeColors.border,
+      height: rV(0.3),
+      backgroundColor: "#ccc",
     },
     schedule: {
       flexDirection: "row",
@@ -188,8 +199,9 @@ const EditPlan: React.FC = () => {
       alignItems: "center",
     },
     dateTime: {
-      marginHorizontal: rS(50),
+      marginHorizontal: rS(30),
       flex: 1,
+      color: themeColors.text,
     },
     picker: {
       flex: 0.7,
@@ -197,36 +209,33 @@ const EditPlan: React.FC = () => {
       marginLeft: rS(35),
     },
     buttonContainer: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      marginTop: rV(40),
+      paddingHorizontal: rS(20),
+      paddingBottom: rV(20),
     },
     button: {
-      flex: 1,
+      width: rS(60),
       marginHorizontal: 5,
+      borderRadius: 20,
+      backgroundColor: "#DAB499",
+      alignSelf: "flex-end",
     },
   });
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.inputContainer}>
-        <Text style={styles.categoryName}>{category_name}</Text>
-      </View>
       <View style={styles.top}>
+        <GameButton
+          onPress={handleSaveTime}
+          title="Save"
+          style={styles.button}
+        />
         <View style={styles.inputContainer}>
-          <AnimatedTextInput
-            label="Edit Title"
+          <TextInput
+            style={[styles.input, { fontSize: SIZES.xxLarge, height: rV(60) }]}
+            placeholder="Edit Title"
             value={title}
             onChangeText={setTitle}
-          />
-        </View>
-
-        <View style={styles.inputContainer}>
-          <AnimatedTextInput
-            label="Edit Description"
-            value={description}
-            onChangeText={setDescription}
-            style={styles.descriptionInput}
+            placeholderTextColor={themeColors.textSecondary}
           />
         </View>
       </View>
@@ -283,9 +292,10 @@ const EditPlan: React.FC = () => {
             </View>
           </View>
         </TouchableOpacity>
+        <View style={styles.schedule}>
+          <Feather name="repeat" size={SIZES.xLarge} color={themeColors.icon} />
 
-        <View style={styles.switchContainer}>
-          <Text style={styles.label}>Update All Recurring Tasks</Text>
+          <Text style={styles.dateTime}>Update All Recurring Tasks</Text>
           <Switch
             value={updateAll}
             onValueChange={setUpdateAll}
@@ -294,21 +304,29 @@ const EditPlan: React.FC = () => {
               true: themeColors.buttonBackground,
             }}
             thumbColor={themeColors.icon}
+            // style={{ c }}
           />
         </View>
-
-        <View style={styles.buttonContainer}>
-          <GameButton
-            onPress={handleSaveTime}
-            title="Update Schedule"
-            style={styles.button}
-          />
-          <GameButton
-            onPress={handleDeletePlan}
-            title="Delete Schedule"
-            style={[styles.button, { backgroundColor: "#D22B2B" }]}
+      </View>
+      <View style={styles.planItemLine} />
+      <View style={styles.top}>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={[styles.input, { fontSize: SIZES.large, height: rV(150) }]}
+            placeholder="Edit Note"
+            value={description}
+            onChangeText={setDescription}
+            placeholderTextColor={themeColors.textSecondary}
+            multiline
           />
         </View>
+      </View>
+      <View style={styles.buttonContainer}>
+        <GameButton
+          onPress={handleDeletePlan}
+          title="Delete"
+          style={[styles.button, { backgroundColor: "#D22B2B" }]}
+        />
       </View>
     </ScrollView>
   );

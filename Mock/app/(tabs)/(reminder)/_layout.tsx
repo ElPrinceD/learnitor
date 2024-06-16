@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Link, Stack } from "expo-router";
 import React from "react";
 import { Pressable, useColorScheme } from "react-native";
@@ -25,20 +25,20 @@ export default function Tab3Layout() {
             headerTitleStyle: {
               fontWeight: "bold",
             },
-            headerRight: () => (
-              <Link href="../(reminder)/TimelineCategory" asChild>
-                <Pressable>
-                  {({ pressed }) => (
-                    <Ionicons
-                      name="add"
-                      size={25}
-                      color={Colors[colorScheme ?? "light"].text}
-                      style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
-                    />
-                  )}
-                </Pressable>
-              </Link>
-            ),
+            // headerRight: () => (
+            //   <Link href="../(reminder)/TimeTable" asChild>
+            //     <Pressable>
+            //       {({ pressed }) => (
+            //         <MaterialCommunityIcons
+            //           name="timetable"
+            //           size={25}
+            //           color={Colors[colorScheme ?? "light"].text}
+            //           style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
+            //         />
+            //       )}
+            //     </Pressable>
+            //   </Link>
+            // ),
           }} // Hide the header
         />
         <Stack.Screen
@@ -50,7 +50,7 @@ export default function Tab3Layout() {
             headerStyle: {
               backgroundColor: themeColors.background,
             },
-            headerTitle: "Edit Task",
+            headerTitle: "Edit Schedule",
             headerTitleAlign: "center",
             headerTitleStyle: {
               fontWeight: "bold",
@@ -59,7 +59,7 @@ export default function Tab3Layout() {
           }}
         />
         <Stack.Screen
-          name="TimelineCategory"
+          name="TimeTable"
           options={{
             headerShown: true,
             presentation: "modal",
@@ -68,7 +68,7 @@ export default function Tab3Layout() {
             },
             animation: "slide_from_bottom",
 
-            headerTitle: "Select Category",
+            headerTitle: "TimeTables",
             headerTitleAlign: "center",
             headerShadowVisible: false,
             headerTitleStyle: {
@@ -81,7 +81,7 @@ export default function Tab3Layout() {
           options={{
             headerShown: true,
             presentation: "modal",
-            animation: "slide_from_bottom",
+            animation: "fade",
             headerStyle: {
               backgroundColor: themeColors.background,
             },
@@ -93,6 +93,21 @@ export default function Tab3Layout() {
             headerShadowVisible: false,
           }}
         />
+        {/* <Stack.Screen
+          name="CourseForm"
+          options={{
+            headerShown: false,
+            headerStyle: {
+              backgroundColor: themeColors.background,
+            },
+            headerTitle: "Create TimeTable",
+            headerTitleAlign: "center",
+            headerTitleStyle: {
+              fontWeight: "bold",
+            },
+            headerShadowVisible: false,
+          }}
+        /> */}
       </Stack>
     </SafeAreaProvider>
   );

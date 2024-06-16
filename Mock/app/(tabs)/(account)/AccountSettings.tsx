@@ -137,7 +137,7 @@ const AccountSettings = () => {
     },
     input: {
       flex: 1,
-      height: rV(50),
+      height: rV(40),
       color: themeColors.text,
     },
     subTitle: {
