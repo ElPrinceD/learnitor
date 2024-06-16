@@ -212,7 +212,7 @@ const Profile = () => {
       alignItems: "center",
       paddingVertical: rV(15),
       paddingHorizontal: rS(10),
-      backgroundColor: themeColors.card,
+      // backgroundColor: themeColors.card,
       borderRadius: 10,
       marginBottom: rV(10),
     },

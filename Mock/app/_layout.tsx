@@ -14,6 +14,9 @@ import { AuthProvider, useAuth } from "../components/AuthContext"; // Update the
 import { useColorScheme } from "../components/useColorScheme";
 import { RootSiblingParent } from "react-native-root-siblings";
 // import "react-native-reanimated";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+
 export { ErrorBoundary } from "expo-router";
 
 export const unstable_settings = {
@@ -72,24 +75,30 @@ function RootLayoutNav() {
   }, [navigationCompleted]);
 
   return (
-    <SafeAreaProvider>
-      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen
-            name="(verification)"
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="(tabs)"
-            options={{ headerShown: false, headerShadowVisible: false }}
-          />
-          <Stack.Screen
-            name="modal"
-            options={{ presentation: "modal", headerShown: true }}
-          />
-          <Stack.Screen name="(game)" options={{ headerShown: false }} />
-        </Stack>
-      </ThemeProvider>
-    </SafeAreaProvider>
+    <BottomSheetModalProvider>
+      <GestureHandlerRootView>
+        <SafeAreaProvider>
+          <ThemeProvider
+            value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+          >
+            <Stack>
+              <Stack.Screen
+                name="(verification)"
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="(tabs)"
+                options={{ headerShown: false, headerShadowVisible: false }}
+              />
+              <Stack.Screen
+                name="modal"
+                options={{ presentation: "modal", headerShown: true }}
+              />
+              <Stack.Screen name="(game)" options={{ headerShown: false }} />
+            </Stack>
+          </ThemeProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </BottomSheetModalProvider>
   );
 }
