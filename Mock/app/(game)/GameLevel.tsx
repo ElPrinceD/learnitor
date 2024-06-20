@@ -36,7 +36,7 @@ const GameLevel: React.FC = () => {
 
       // Create a new game by making a POST request to the backend
       const response = await axios.post(
-        `${ApiUrl}:8000/games/`,
+        `${ApiUrl}/games/`,
         {
           level: level.title,
           topics: parsedTopics,

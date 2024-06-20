@@ -31,7 +31,7 @@ const Profile = () => {
   const handleLogout = async () => {
     try {
       await axios.post(
-        `${ApiUrl}:8000/api/logout/`,
+        `${ApiUrl}/api/logout/`,
         {},
         {
           headers: {
@@ -117,7 +117,7 @@ const Profile = () => {
         };
 
         const response = await axios.patch(
-          `${ApiUrl}:8000/api/update/user/${userInfo?.user.id}/`,
+          `${ApiUrl}/api/update/user/${userInfo?.user.id}/`,
           formData,
           config
         );

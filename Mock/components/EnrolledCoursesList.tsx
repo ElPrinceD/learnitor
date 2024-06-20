@@ -35,7 +35,7 @@ const EnrolledCoursesList: React.FC<Props> = ({ enrolledCoursesData }) => {
       const progressPromises = enrolledCoursesData.map(async (course) => {
         try {
           const response = await axios.get(
-            `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/course/${course.id}/progress/`,
+            `${ApiUrl}/api/learner/${userInfo?.user.id}/course/${course.id}/progress/`,
             {
               headers: {
                 Authorization: `Token ${userToken?.token}`,

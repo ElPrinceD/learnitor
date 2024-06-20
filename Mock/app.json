@@ -1,7 +1,8 @@
 {
   "expo": {
     "name": "Mock",
-    "slug": "Mock",
+    "slug": "mock",
+    "description": "Learn it all",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -14,22 +15,25 @@
     },
     "assetBundlePatterns": [
       "**/*"
-      
     ],
-    "sourceExts":["js,json,ts,tsx,jsx,svg"],
+    "sourceExts": [
+      "js,json,ts,tsx,jsx,svg"
+    ],
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "usesCleartextTraffic": true,
-      "permissions": ["INTERNET", "OTHER_PERMISSION_IF_NEEDED"],
+      "permissions": [
+        "INTERNET",
+        "OTHER_PERMISSION_IF_NEEDED"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-
-      "softwareKeyboardLayoutMode": "pan"
-
+      "softwareKeyboardLayoutMode": "pan",
+      "package": "com.mandey.mock"
     },
     "web": {
       "bundler": "metro",
@@ -43,6 +47,21 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "7fd80734-c8a7-49db-accf-6b9f79c74f9f"
+      }
+    },
+    "owner": "mandey",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/7fd80734-c8a7-49db-accf-6b9f79c74f9f"
     }
   }
 }

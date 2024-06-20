@@ -51,7 +51,7 @@ export default function ResultsScreen() {
     const fetchGameDetails = async () => {
       try {
         const response = await axios.get<GameDetailsResponse>(
-          `${ApiUrl}:8000/games/${gameId}/`,
+          `${ApiUrl}/games/${gameId}/`,
           {
             headers: { Authorization: `Token ${userToken?.token}` },
           }

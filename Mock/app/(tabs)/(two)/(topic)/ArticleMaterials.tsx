@@ -30,7 +30,7 @@ const ArticleMaterials: React.FC<ArticleMaterialsProps> = () => {
   const fetchData = async () => {
     try {
       const response = await axios.get(
-        `${ApiUrl}:8000/api/topic/materials/${parsedTopic.id}/`,
+        `${ApiUrl}/api/topic/materials/${parsedTopic.id}/`,
         {
           headers: {
             Authorization: `Token ${userToken?.token}`,

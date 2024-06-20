@@ -20,7 +20,7 @@ const GameCourses: React.FC = () => {
   }, []);
   const fetchData = async () => {
     try {
-      const course = await axios.get(`${ApiUrl}:8000/api/course/all/`, {
+      const course = await axios.get(`${ApiUrl}/api/course/all/`, {
         headers: {
           Authorization: `Token ${userToken?.token}`,
         },

@@ -57,7 +57,7 @@ export default function Game() {
   // Establish WebSocket connection
   useEffect(() => {
     webSocket.current = new WebSocket(
-      `ws:///192.168.48.198:8000/games/${gameCode}/ws/`
+      `ws:///learnitor.vercel.app/games/${gameCode}/ws/`
     );
 
     webSocket.current.onopen = () => {
@@ -118,7 +118,7 @@ export default function Game() {
   useEffect(() => {
     const fetchGameDetails = async () => {
       try {
-        const response = await axios.get(`${ApiUrl}:8000/games/${gameId}/`, {
+        const response = await axios.get(`${ApiUrl}/games/${gameId}/`, {
           headers: { Authorization: `Token ${userToken?.token}` },
         });
 
@@ -132,7 +132,7 @@ export default function Game() {
         const answersPromises = (gameData.questions || []).map(
           async (gameQuestion: Question) => {
             const answersResponse = await axios.get(
-              `${ApiUrl}:8000/api/course/topic/questions/${gameQuestion.id}/answers`,
+              `${ApiUrl}/api/course/topic/questions/${gameQuestion.id}/answers`,
               {
                 headers: { Authorization: `Token ${userToken?.token}` },
               }

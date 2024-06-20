@@ -67,7 +67,7 @@ const PracticeQuestions: React.FC = () => {
   const fetchData = async () => {
     try {
       const questionsResponse = await axios.get(
-        `${ApiUrl}:8000/api/course/topic/${parsedTopic.id}/questions/`,
+        `${ApiUrl}/api/course/topic/${parsedTopic.id}/questions/`,
         {
           headers: {
             Authorization: `Token ${userToken?.token}`,
@@ -83,7 +83,7 @@ const PracticeQuestions: React.FC = () => {
       const answersPromises = filteredQuestions.map(
         async (question: Question) => {
           const answersResponse = await axios.get(
-            `${ApiUrl}:8000/api/course/topic/questions/${question.id}/answers`,
+            `${ApiUrl}/api/course/topic/questions/${question.id}/answers`,
             {
               headers: {
                 Authorization: `Token ${userToken?.token}`,

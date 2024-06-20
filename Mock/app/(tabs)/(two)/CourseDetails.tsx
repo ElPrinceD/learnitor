@@ -48,7 +48,7 @@ const CourseDetails: React.FC = () => {
   const fetchData = async () => {
     try {
       const response = await axios.get(
-        `${ApiUrl}:8000/api/course/${parsedCourse.id}/topics/`,
+        `${ApiUrl}/api/course/${parsedCourse.id}/topics/`,
         {
           headers: {
             Authorization: `Token ${userToken?.token}`,
@@ -63,7 +63,7 @@ const CourseDetails: React.FC = () => {
     const fetchEnrollmentStatus = async () => {
       try {
         const response = await axios.get(
-          `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/course/${parsedCourse.id}/enrollment/`,
+          `${ApiUrl}/api/learner/${userInfo?.user.id}/course/${parsedCourse.id}/enrollment/`,
           {
             headers: {
               Authorization: `Token ${userToken?.token}`,
@@ -89,7 +89,7 @@ const CourseDetails: React.FC = () => {
   const fetchProgress = async () => {
     try {
       const response = await axios.get(
-        `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/course/${parsedCourse.id}/progress/`,
+        `${ApiUrl}/api/learner/${userInfo?.user.id}/course/${parsedCourse.id}/progress/`,
         {
           headers: {
             Authorization: `Token ${userToken?.token}`,
@@ -119,7 +119,7 @@ const CourseDetails: React.FC = () => {
     try {
       const topicIds = selectedTopics.map((topic) => topic.id);
       const response = await axios.post(
-        `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/course/${parsedCourse.id}/enroll/`,
+        `${ApiUrl}/api/learner/${userInfo?.user.id}/course/${parsedCourse.id}/enroll/`,
         { selectedTopics: topicIds },
         {
           headers: {
@@ -140,7 +140,7 @@ const CourseDetails: React.FC = () => {
   const unenrollCourse = async () => {
     try {
       const response = await axios.post(
-        `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/course/${parsedCourse.id}/unenroll/`,
+        `${ApiUrl}/api/learner/${userInfo?.user.id}/course/${parsedCourse.id}/unenroll/`,
         {},
         {
           headers: {

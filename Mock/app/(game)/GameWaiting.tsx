@@ -48,7 +48,7 @@ export default function GameWaitingScreen() {
     const fetchGameDetails = async () => {
       try {
         const response = await axios.get<GameDetailsResponse>(
-          `${ApiUrl}:8000/games/${id || gameId}/`,
+          `${ApiUrl}/games/${id || gameId}/`,
           {
             headers: { Authorization: `Token ${userToken?.token}` },
           }
@@ -68,7 +68,7 @@ export default function GameWaitingScreen() {
             profile_picture:
               player.id === userInfo?.user.id
                 ? userInfo.user.profile_picture
-                : `${ApiUrl}:8000${player.profile_picture}`,
+                : `${ApiUrl}${player.profile_picture}`,
           }));
           setPlayers(newPlayers);
           console.log("Hey", players);
@@ -82,7 +82,7 @@ export default function GameWaitingScreen() {
       fetchGameDetails();
 
       const ws = new WebSocket(
-        `ws:///192.168.48.198:8000/games/${gameCode}/ws/`
+        `ws:///learnitor.vercel.app/games/${gameCode}/ws/`
       );
 
       ws.onopen = () => {
@@ -104,7 +104,7 @@ export default function GameWaitingScreen() {
               profile_picture:
                 player.id === userInfo?.user.id
                   ? userInfo.user.profile_picture
-                  : `${ApiUrl}:8000${player.profile_picture}`, // Placeholder URL, update as needed
+                  : `${ApiUrl}${player.profile_picture}`, // Placeholder URL, update as needed
             }));
 
             setPlayers(newPlayers);
@@ -155,7 +155,7 @@ export default function GameWaitingScreen() {
   const handleStartGame = async () => {
     try {
       const response = await axios.post(
-        `${ApiUrl}:8000/games/${id || gameId}/start_game/`,
+        `${ApiUrl}/games/${id || gameId}/start_game/`,
         {},
         {
           headers: { Authorization: `Token ${userToken?.token}` },

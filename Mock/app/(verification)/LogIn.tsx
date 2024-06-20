@@ -58,7 +58,7 @@ const LogIn = () => {
 
     setLoading(true);
     axios
-      .post(`${ApiUrl}:8000/api/login/`, {
+      .post(`${ApiUrl}/api/login/`, {
         email: email,
         password: password,
       })
@@ -290,4 +290,3 @@ const LogIn = () => {
 };
 
 export default LogIn;
-

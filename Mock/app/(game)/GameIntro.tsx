@@ -31,7 +31,7 @@ export default function GameIntro() {
   const joinGame = async () => {
     try {
       const response = await axios.post(
-        `${ApiUrl}:8000/games/join/`,
+        `${ApiUrl}/games/join/`,
         { game_code: gameCode },
         {
           headers: {

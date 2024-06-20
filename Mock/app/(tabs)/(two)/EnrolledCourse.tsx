@@ -42,7 +42,7 @@ const EnrolledCourse: React.FC = () => {
   const fetchData = async () => {
     try {
       const response = await axios.get(
-        `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/course/${parsedCourse.id}/topics/`,
+        `${ApiUrl}/api/learner/${userInfo?.user.id}/course/${parsedCourse.id}/topics/`,
         {
           headers: {
             Authorization: `Token ${userToken?.token}`,
@@ -61,7 +61,7 @@ const EnrolledCourse: React.FC = () => {
   const fetchProgress = async () => {
     try {
       const response = await axios.get(
-        `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/course/${parsedCourse.id}/progress/`,
+        `${ApiUrl}/api/learner/${userInfo?.user.id}/course/${parsedCourse.id}/progress/`,
         {
           headers: {
             Authorization: `Token ${userToken?.token}`,

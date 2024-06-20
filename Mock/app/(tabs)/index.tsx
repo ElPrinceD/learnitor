@@ -45,7 +45,7 @@ const Index = () => {
 
   const fetchData = async (token) => {
     try {
-      const coursesUrl = `${ApiUrl}:8000/api/course/all/`;
+      const coursesUrl = `${ApiUrl}/api/course/all/`;
       const coursesResponse = await axios.get(coursesUrl, {
         headers: {
           Authorization: `Token ${token}`,
@@ -53,7 +53,7 @@ const Index = () => {
       });
       setRecommendedCoursesData(coursesResponse.data);
 
-      const enrolledCoursesUrl = `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/courses`;
+      const enrolledCoursesUrl = `${ApiUrl}/api/learner/${userInfo?.user.id}/courses`;
       const enrolledResponse = await axios.get(enrolledCoursesUrl, {
         headers: {
           Authorization: `Token ${token}`,

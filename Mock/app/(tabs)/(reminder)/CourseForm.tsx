@@ -179,7 +179,7 @@ const CourseForm: React.FC<CourseFormProps> = ({ onSubmit }) => {
 
     try {
       const response = await axios.post(
-        `${apiUrl}:8000/api/learner/task/create/`,
+        `${apiUrl}/api/learner/task/create/`,
         scheduleData,
         {
           headers: {

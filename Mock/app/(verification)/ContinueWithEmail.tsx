@@ -54,7 +54,7 @@ const ContinueWithEmail = () => {
       setAllFieldsError("");
     } else {
       axios
-        .post(`${ApiUrl}:8000/api/register/`, {
+        .post(`${ApiUrl}/api/register/`, {
           first_name: firstName,
           last_name: surname,
           email: email,
@@ -292,4 +292,3 @@ const ContinueWithEmail = () => {
 };
 
 export default ContinueWithEmail;
-

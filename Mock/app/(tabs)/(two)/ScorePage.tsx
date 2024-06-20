@@ -162,7 +162,7 @@ const ScorePage: React.FC = () => {
   const handleDone = async () => {
     try {
       await axios.post(
-        `${ApiUrl}:8000/api/learner/${userInfo?.user.id}/course/${parsedCourse.id}/topic/${parsedTopic.id}/mark-completed/`,
+        `${ApiUrl}/api/learner/${userInfo?.user.id}/course/${parsedCourse.id}/topic/${parsedTopic.id}/mark-completed/`,
         {},
         {
           headers: {

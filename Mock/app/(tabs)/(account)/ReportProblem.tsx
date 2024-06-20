@@ -37,7 +37,7 @@ const ReportProblem: React.FC = () => {
       contactInfo,
     };
     try {
-      const response = await axios.post(`${apiUrl}:8000/api/report/`, data, {
+      const response = await axios.post(`${apiUrl}/api/report/`, data, {
         headers: {
           Authorization: `Token ${userToken?.token}`,
         },
