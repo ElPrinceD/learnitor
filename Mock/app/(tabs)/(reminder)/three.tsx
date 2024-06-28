@@ -138,7 +138,6 @@ const Timeline: React.FC = () => {
     },
     bottom: {
       backgroundColor: themeColors.background,
-      // flex: 1,
       borderTopLeftRadius: rMS(40),
       borderTopRightRadius: rMS(40),
     },
@@ -190,7 +189,6 @@ const Timeline: React.FC = () => {
       <DaySelector
         selectedDate={selectedDate}
         setSelectedDate={setSelectedDate}
-        // plan={todayPlans}
       />
 
       <BottomSheet
@@ -209,9 +207,6 @@ const Timeline: React.FC = () => {
               <Text style={styles.noPlansText}>Hey, you have a free day!</Text>
             ) : (
               todayPlans.map((plan, index) => {
-                const categoryColor = getCategoryColor(
-                  categoryNames[plan.category]
-                );
                 return (
                   <View key={index} style={styles.planItemWrapper}>
                     <Text style={styles.planTime}>
