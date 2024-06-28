@@ -1,4 +1,4 @@
-const tintColor = '#0D47A1'; // Primary dark blue color
+const tintColor = "#0D47A1"; // Primary dark blue color
 const tintColorSecond = '#1565C0'; // Secondary dark blue color
 const gradientButton = 'linear-gradient(to right, #1565C0 0%, #0D47A1 100%)'; // Dark blue gradient button
 const lightTextColor = '#000';

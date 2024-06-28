@@ -67,7 +67,7 @@ const ContinueWithEmail = () => {
           //I am return the user, so you can accept the user information in the homepage and use it
           router.navigate({
             pathname: "LogIn",
-            params: { email: JSON.stringify(response.data.user.email) },
+            params: { email: response.data.user.email },
           });
         })
         .catch((error) => {

@@ -23,17 +23,20 @@ const CoursesScreen: React.FC = () => {
   }, []);
 
   const fetchData = async () => {
+
+    const headers = {
+      Authorization: `Token ${userToken?.token}`,
+      'Content-Type': 'application/json',
+    }
+    console.log(userToken?.token)
     try {
       const course = await axios.get(`${ApiUrl}/api/course/all/`, {
-        headers: {
-          Authorization: `Token ${userToken?.token}`,
-        },
+        headers 
       });
       const categories = await axios.get(`${ApiUrl}/api/category/all/`, {
-        headers: {
-          Authorization: `Token ${userToken?.token}`,
-        },
+        headers
       });
+      
       setCoursesData(course.data);
       setFilteredCourses(course.data);
       setCategoryData(categories.data);
