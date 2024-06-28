@@ -65,7 +65,7 @@ const LogIn = () => {
       .then((response) => {
         setLoading(false);
         login(response.data, response.data.token); // Logging in user with token
-        router.replace({ pathname: "(tabs)" });
+        router.replace({ pathname: "/home" });
       })
       .catch((error) => {
         setLoading(false);

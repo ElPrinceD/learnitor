@@ -153,8 +153,8 @@ const Profile = () => {
       position: "relative",
     },
     profileImage: {
-      width: rS(95),
-      height: rV(95),
+      width: 115,
+      height: 115,
       borderRadius: rMS(50),
       backgroundColor: "#ccc",
     },
@@ -212,7 +212,7 @@ const Profile = () => {
       alignItems: "center",
       paddingVertical: rV(15),
       paddingHorizontal: rS(10),
-      // backgroundColor: themeColors.card,
+      backgroundColor: themeColors.card,
       borderRadius: 10,
       marginBottom: rV(10),
     },
@@ -225,7 +225,7 @@ const Profile = () => {
       marginRight: rS(10),
     },
     logoutContainer: {
-      marginTop: "auto", // Pushes the logout button to the bottom
+      marginTop: "auto",
       paddingHorizontal: rS(25),
       paddingBottom: rV(25),
     },

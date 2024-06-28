@@ -7,65 +7,38 @@ import {
   DarkTheme,
   DefaultTheme,
 } from "@react-navigation/native";
-import { Stack, router } from "expo-router";
+import { Slot, Stack, router, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { AuthProvider, useAuth } from "../components/AuthContext"; // Update the path
-// import "react-native-reanimated";
 import { useColorScheme } from "../components/useColorScheme";
 import { RootSiblingParent } from "react-native-root-siblings";
-// import "react-native-reanimated";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 
 export { ErrorBoundary } from "expo-router";
 
-export const unstable_settings = {
-  initialRouteName: "",
-};
+// export const unstable_settings = {
+//   initialRouteName: "",
+// };
 
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
-    ...FontAwesome.font,
-  });
-
-  useEffect(() => {
-    if (error) throw error;
-  }, [error]);
-
-  if (!loaded) {
-    return null;
-  }
-
-  return (
-    <AuthProvider>
-      <RootSiblingParent>
-        <RootLayoutNav />
-      </RootSiblingParent>
-    </AuthProvider>
-  );
-}
-
-function RootLayoutNav() {
+const RootLayoutNav = () => {
   const colorScheme = useColorScheme();
+  const segments = useSegments();
   const { userToken, isLoading } = useAuth();
   const [navigationCompleted, setNavigationCompleted] = useState(false);
 
   useEffect(() => {
-    const initializeApp = async () => {
-      if (!isLoading) {
-        if (userToken) {
-          router.navigate("(tabs)");
-        } else {
-          router.push("./Intro");
-        }
-        setNavigationCompleted(true); // Set navigation completion flag
-      }
-    };
+    if (isLoading) return;
+    const inTabsGroup = segments[0] === "(tabs)";
 
-    initializeApp();
+    if (userToken && !inTabsGroup) {
+      router.replace({ pathname: "/home" });
+    } else if (!userToken) {
+      router.replace("/Intro");
+    }
+    setNavigationCompleted(true); // Set navigation completion flag
   }, [isLoading, userToken]);
 
   useEffect(() => {
@@ -81,24 +54,26 @@ function RootLayoutNav() {
           <ThemeProvider
             value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
           >
-            <Stack>
-              <Stack.Screen
-                name="(verification)"
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="(tabs)"
-                options={{ headerShown: false, headerShadowVisible: false }}
-              />
-              <Stack.Screen
-                name="modal"
-                options={{ presentation: "modal", headerShown: true }}
-              />
-              <Stack.Screen name="(game)" options={{ headerShown: false }} />
-            </Stack>
+            <Slot />
           </ThemeProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>
     </BottomSheetModalProvider>
   );
-}
+};
+
+const RootLayout = () => {
+  // const [loaded, error] = useFonts({
+  //   SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
+  //   ...FontAwesome.font,
+  // });
+
+  return (
+    <AuthProvider>
+      <RootSiblingParent>
+        <RootLayoutNav />
+      </RootSiblingParent>
+    </AuthProvider>
+  );
+};
+export default RootLayout;

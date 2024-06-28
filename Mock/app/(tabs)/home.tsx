@@ -12,7 +12,7 @@ import Colors from "../../constants/Colors";
 import CardSwiper from "../../components/CardSwiper";
 import { SIZES, rMS, rS } from "../../constants";
 
-const Index = () => {
+const home = () => {
   const { userToken, userInfo } = useAuth();
   const colorScheme = useColorScheme();
   const [recommendedCoursesData, setRecommendedCoursesData] = useState([]);
@@ -147,4 +147,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default home;
