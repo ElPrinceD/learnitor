@@ -307,6 +307,7 @@ const CreateNewTime = () => {
         <DateTimePickerModal
           isVisible={isDatePickerVisible}
           mode="date"
+          
           onConfirm={handleConfirmDate}
           onCancel={hideDatePicker}
           textColor={themeColors.text}
