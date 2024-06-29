@@ -7,22 +7,20 @@ import {
   ScrollView,
   useColorScheme,
   Switch,
-  Alert,
-  TextInput,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker";
-import { useLocalSearchParams } from "expo-router";
 import axios from "axios";
+import { useLocalSearchParams } from "expo-router";
 import { router } from "expo-router";
-import apiUrl from "../../../config.js";
+import ApiUrl from "../../../config.js";
 import { useAuth } from "../../../components/AuthContext";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import Colors from "../../../constants/Colors";
 import { rMS, rS, rV } from "../../../constants/responsive";
 import { SIZES } from "../../../constants/theme.js";
-import GameButton from "../../../components/GameButton";
-import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import AnimatedRoundTextInput from "../../../components/AnimatedRoundTextInput";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import Animated, { FadeInLeft, ReduceMotion } from "react-native-reanimated";
+import { Picker } from "@react-native-picker/picker";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
 
 const CreateNewTime = () => {
   const params = useLocalSearchParams();
@@ -37,35 +35,37 @@ const CreateNewTime = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(new Date());
-  const [time, setTime] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
   const [recurrenceOption, setRecurrenceOption] = useState("Does not repeat");
   const [recurrenceEndDate, setRecurrenceEndDate] = useState(new Date());
-  const [showRecurrenceEndDatePicker, setShowRecurrenceEndDatePicker] =
-    useState(false);
-  const [updateAll, setUpdateAll] = useState(false);
+  const [isRecurrenceEndDatePickerVisible, setRecurrenceEndDatePickerVisibility] = useState(false);
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
-  const showDatePickerHandler = () => {
-    setShowDatePicker(true);
+  const showDatePicker = () => {
+    setDatePickerVisibility(true);
   };
 
-  const showTimePickerHandler = () => {
-    setShowTimePicker(true);
+  const hideDatePicker = () => {
+    setDatePickerVisibility(false);
   };
 
-  const onDateChange = (event: any, selectedDate: Date | undefined) => {
-    const currentDate = selectedDate || date;
-    setShowDatePicker(false);
-    setDate(currentDate);
+  const handleConfirmDate = (selectedDate) => {
+    hideDatePicker();
+    if (selectedDate) setDate(selectedDate);
   };
 
-  const onTimeChange = (event: any, selectedTime: Date | undefined) => {
-    const currentTime = selectedTime || time;
-    setShowTimePicker(false);
-    setTime(currentTime);
+  const showRecurrenceEndDatePicker = () => {
+    setRecurrenceEndDatePickerVisibility(true);
+  };
+
+  const hideRecurrenceEndDatePicker = () => {
+    setRecurrenceEndDatePickerVisibility(false);
+  };
+
+  const handleConfirmRecurrenceEndDate = (selectedDate) => {
+    hideRecurrenceEndDatePicker();
+    if (selectedDate) setRecurrenceEndDate(selectedDate);
   };
 
   const handleSaveTime = async () => {
@@ -73,7 +73,7 @@ const CreateNewTime = () => {
       title,
       description,
       due_date: date.toISOString().split("T")[0],
-      due_time: time.toTimeString().split(" ")[0].slice(0, 5), // Only hours and minutes
+      due_time: date.toTimeString().split(" ")[0].slice(0, 5), // Only hours and minutes
       category: category_id,
       learner: userInfo?.user.id,
       is_recurring: recurrenceOption !== "Does not repeat",
@@ -85,12 +85,11 @@ const CreateNewTime = () => {
         recurrenceOption !== "Does not repeat"
           ? recurrenceEndDate.toISOString().split("T")[0]
           : null,
-      update_all: updateAll,
     };
 
     try {
       const response = await axios.post(
-        `${apiUrl}:8000/api/learner/task/create/`,
+        `${ApiUrl}/api/learner/task/create/`,
         data,
         {
           headers: {
@@ -105,8 +104,8 @@ const CreateNewTime = () => {
     }
   };
 
-  const formatDateString = (date: Date) => {
-    const options: Intl.DateTimeFormatOptions = {
+  const formatDateString = (date) => {
+    const options = {
       weekday: "short",
       day: "numeric",
       month: "short",
@@ -118,32 +117,30 @@ const CreateNewTime = () => {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: themeColors.background,
     },
-    top: {
-      padding: rMS(20),
+    topSection: {
       flex: 1,
+      backgroundColor: themeColors.tint,
+      paddingHorizontal: rMS(20),
+      paddingTop: rMS(20),
+      paddingBottom: rV(50),
+    },
+    bottomSection: {
+      flex: 2,
+      borderRadius: 30,
+      backgroundColor: themeColors.background,
+      paddingHorizontal: rMS(20),
+      paddingBottom: rV(20),
     },
     inputContainer: {
-      marginTop: rV(5),
-      flexDirection: "row",
-      alignItems: "center",
-      borderWidth: 1,
-      borderRadius: rMS(10),
-      paddingHorizontal: rS(10),
-      marginBottom: rV(15),
-      borderColor: "transparent",
-      backgroundColor: themeColors.card,
+      marginTop: rV(20),
       flex: 1,
-    },
-    icon: {
-      marginRight: rS(10),
-      color: themeColors.textSecondary,
     },
     input: {
       flex: 1,
-      height: rV(40),
+      height: rV(30),
       color: themeColors.text,
+      overflow: "hidden",
       borderColor: "transparent",
     },
     categoryName: {
@@ -162,14 +159,17 @@ const CreateNewTime = () => {
       width: "100%",
       height: rV(95),
     },
-    bottom: {
-      padding: rMS(20),
-      flex: 1,
-    },
     switchContainer: {
       flexDirection: "row",
       alignItems: "center",
-      marginHorizontal: rS(55),
+      justifyContent: "space-between",
+      
+    },
+    title: {
+      marginTop: rV(5),
+      fontSize: SIZES.large,
+      fontWeight: "bold",
+      color: themeColors.text,
     },
     planItemLine: {
       height: rV(0.3),
@@ -181,104 +181,93 @@ const CreateNewTime = () => {
       alignItems: "center",
     },
     dateTime: {
-      marginHorizontal: rS(30),
+      marginHorizontal: rS(3),
+      marginBottom: rS(20),
+      flexDirection: "row",
+      justifyContent: "space-between",
       flex: 1,
     },
     picker: {
       flex: 0.7,
       color: themeColors.textSecondary,
-      marginLeft: rS(18),
+      backgroundColor: "transparent",
+      marginLeft: rS(75),
     },
     buttonContainer: {
-      paddingHorizontal: rS(20),
-      paddingBottom: rV(20),
+      alignItems: "center",
+      marginVertical: rV(20),
     },
     button: {
-      width: rS(60),
-      marginHorizontal: 5,
+      width: rS(150),
+      paddingVertical: rV(10),
       borderRadius: 20,
-      backgroundColor: "#DAB499",
-      alignSelf: "flex-end",
+      backgroundColor: themeColors.tint,
+      alignItems: "center",
+    },
+    buttonText: {
+      color: themeColors.text,
+      fontSize: SIZES.medium,
+      fontWeight: "bold",
     },
   });
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.top}>
-        <GameButton
-          onPress={handleSaveTime}
-          title="Save"
-          style={styles.button}
-        />
+      <View style={styles.bottomSection}>
         <View style={styles.inputContainer}>
-          <TextInput
-            style={[styles.input, { fontSize: SIZES.xxLarge, height: rV(60) }]}
-            placeholder="Add Title"
+          <AnimatedRoundTextInput
+            placeholderTextColor={themeColors.textSecondary}
+            style={styles.input}
+            label="Title"
             value={title}
             onChangeText={setTitle}
-            placeholderTextColor={themeColors.textSecondary}
           />
         </View>
-      </View>
-      <View style={styles.planItemLine} />
-      <View style={styles.bottom}>
-        <TouchableOpacity onPress={showDatePickerHandler}>
-          <View style={styles.schedule}>
-            <Ionicons
-              name="calendar-outline"
-              size={SIZES.xLarge}
-              color={themeColors.icon}
-            />
-            <View style={styles.dateTime}>
+
+        <AnimatedRoundTextInput
+          placeholderTextColor={themeColors.textSecondary}
+          style={[styles.input, { borderRadius: 70, height: rV(30) }]}
+          label="Description"
+          value={description}
+          onChangeText={setDescription}
+        />
+
+        <TouchableOpacity onPress={showDatePicker}>
+        <View style={styles.dateTime}>
+        <Text style={styles.label}>Date</Text>
               <Text style={{ color: themeColors.text }}>
-                {formatDateString(date)}
+                {formatDateString(date)}{" "}
               </Text>
-              {showDatePicker && (
-                <DateTimePicker
-                  testID="dateTimePicker"
-                  value={date}
-                  mode="date"
-                  is24Hour={true}
-                  onChange={onDateChange}
-                  textColor={themeColors.text}
-                  accentColor={themeColors.icon}
-                />
-              )}
             </View>
+         
+          
+          <View style={styles.dateTime}>
+            
+            <Text style={[styles.label,]}>Time</Text>
+            <Text style={{ color: themeColors.text }}>
+
+            
+                {date.toTimeString().split(" ")[0].slice(0, 5)}
+              </Text>
           </View>
+          
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={showTimePickerHandler}>
-          <View style={styles.schedule}>
-            <MaterialCommunityIcons
-              name="clock-outline"
-              size={SIZES.xLarge}
-              color={themeColors.icon}
-            />
-            <View style={styles.dateTime}>
-              <Text style={{ color: themeColors.text }}>
-                {time.toTimeString().split(" ")[0].slice(0, 5)}
-              </Text>
-              {showTimePicker && (
-                <DateTimePicker
-                  testID="timePicker"
-                  value={time}
-                  mode="time"
-                  is24Hour={true}
-                  onChange={onTimeChange}
-                  textColor={themeColors.text}
-                  accentColor={themeColors.icon}
-                />
-              )}
-            </View>
-          </View>
-        </TouchableOpacity>
+        <DateTimePickerModal
+          isVisible={isDatePickerVisible}
+          mode="date"
+          onConfirm={handleConfirmDate}
+          onCancel={hideDatePicker}
+          textColor={themeColors.text}
+          accentColor={themeColors.icon}
+        />
 
-        <View style={styles.schedule}>
+        {/* <View style={styles.schedule}>
           <Feather name="repeat" size={SIZES.xLarge} color={themeColors.icon} />
           <View style={styles.picker}>
             <Picker
               selectedValue={recurrenceOption}
+              mode="dropdown"
               onValueChange={(itemValue) => setRecurrenceOption(itemValue)}
               style={{ color: themeColors.text }}
             >
@@ -287,12 +276,22 @@ const CreateNewTime = () => {
               <Picker.Item label="Weekly" value="Weekly" />
             </Picker>
           </View>
+        </View> */}
+        <View style={styles.switchContainer}>
+          <Text>Recussive</Text>
+          <Switch
+            trackColor={{ false: "#767577", true: "#81b0ff" }}
+            thumbColor={recurrenceOption !== "Does not repeat" ? "#f4f3f4" : "#f4f3f4"}
+            ios_backgroundColor="#3e3e3e"
+            onValueChange={(value) =>
+              setRecurrenceOption(value ? "Daily" : "Does not repeat")
+            }
+            value={recurrenceOption !== "Does not repeat"}
+          />
         </View>
 
         {recurrenceOption !== "Does not repeat" && (
-          <TouchableOpacity
-            onPress={() => setShowRecurrenceEndDatePicker(true)}
-          >
+          <TouchableOpacity onPress={showRecurrenceEndDatePicker}>
             <Animated.View
               entering={FadeInLeft.delay(200)
                 .randomDelay()
@@ -309,38 +308,25 @@ const CreateNewTime = () => {
                   <Text style={{ color: themeColors.text }}>
                     {formatDateString(recurrenceEndDate)}
                   </Text>
-                  {showRecurrenceEndDatePicker && (
-                    <DateTimePicker
-                      testID="recurrenceEndDatePicker"
-                      value={recurrenceEndDate}
-                      mode="date"
-                      is24Hour={true}
-                      onChange={(event, selectedDate) => {
-                        const currentDate = selectedDate || recurrenceEndDate;
-                        setShowRecurrenceEndDatePicker(false);
-                        setRecurrenceEndDate(currentDate);
-                      }}
-                      textColor={themeColors.text}
-                      accentColor={themeColors.icon}
-                    />
-                  )}
                 </View>
               </View>
             </Animated.View>
           </TouchableOpacity>
         )}
-      </View>
-      <View style={styles.planItemLine} />
-      <View style={styles.top}>
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={[styles.input, { fontSize: SIZES.large, height: rV(150) }]}
-            placeholder="Add Note"
-            value={description}
-            onChangeText={setDescription}
-            placeholderTextColor={themeColors.textSecondary}
-            multiline
-          />
+
+        <DateTimePickerModal
+          isVisible={isRecurrenceEndDatePickerVisible}
+          mode="date"
+          onConfirm={handleConfirmRecurrenceEndDate}
+          onCancel={hideRecurrenceEndDatePicker}
+          textColor={themeColors.text}
+          accentColor={themeColors.icon}
+        />
+
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.button} onPress={handleSaveTime}>
+            <Text style={styles.buttonText}>Save</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </ScrollView>

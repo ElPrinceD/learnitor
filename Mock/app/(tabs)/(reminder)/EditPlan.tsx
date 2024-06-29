@@ -73,7 +73,7 @@ const EditPlan = () => {
     };
     try {
       const response = await axios.put(
-        `${apiUrl}:8000/api/learner/tasks/update/${id}/`,
+        `${ApiUrl}:8000/api/learner/tasks/update/${id}/`,
         data,
         {
           headers: {
@@ -90,7 +90,7 @@ const EditPlan = () => {
 
   const handleDeletePlan = async () => {
     try {
-      await axios.delete(`${apiUrl}:8000/api/tasks/${id}/`, {
+      await axios.delete(`${ApiUrl}:8000/api/tasks/${id}/`, {
         headers: {
           Authorization: `Token ${userToken?.token}`,
         },

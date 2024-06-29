@@ -80,11 +80,12 @@ export default function Tab3Layout() {
           name="createNewTime"
           options={{
             headerShown: true,
+          
             presentation: "modal",
+
             animation: "fade",
-            headerStyle: {
-              backgroundColor: themeColors.background,
-            },
+          
+            
             headerTitle: "Create New Schedule",
             headerTitleAlign: "center",
             headerTitleStyle: {

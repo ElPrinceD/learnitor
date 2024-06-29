@@ -26,7 +26,7 @@ const TimelineCategory: React.FC = () => {
   const fetchCategories = async () => {
     try {
       const response = await axios.get<TimelineCategory[]>(
-        `${apiUrl}:8000/api/task/categories/`,
+        `${ApiUrl}:8000/api/task/categories/`,
         {
           headers: {
             Authorization: `Token ${userToken?.token}`,

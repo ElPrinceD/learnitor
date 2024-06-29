@@ -58,7 +58,7 @@ const Timeline: React.FC = () => {
     setLoading(true);
     try {
       const currentDate = date.toISOString().split("T")[0];
-      let apiUrl = `${ApiUrl}:8000/api/learner/tasks/?due_date=${currentDate}`;
+      let apiUrl = `${ApiUrl} /api/learner/tasks/?due_date=${currentDate}`;
       if (selectedCategory !== null) {
         apiUrl += `&category=${selectedCategory}`;
       }
@@ -94,7 +94,7 @@ const Timeline: React.FC = () => {
   const fetchCategoryNames = async () => {
     try {
       const response = await axios.get<{ id: number; name: string }[]>(
-        `${ApiUrl}:8000/api/task/categories/`,
+        `${ApiUrl}/api/task/categories/`,
         {
           headers: { Authorization: `Token ${userToken?.token}` },
         }

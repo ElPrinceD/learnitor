@@ -44,7 +44,7 @@ const ForgotPassword = () => {
     setLoading(true);
 
     axios
-      .post(`${apiUrl}:8000/api/forgetpassword`, { email })
+      .post(`${ApiUrl}:8000/api/forgetpassword`, { email })
       .then(() => {
         setLoading(false);
         setSent(true);
@@ -69,7 +69,7 @@ const ForgotPassword = () => {
     setLoading(true);
 
     axios
-      .post(`${apiUrl}:8000/api/verify-code`, {
+      .post(`${ApiUrl}:8000/api/verify-code`, {
         email,
         verification_code: resetCode,
       })
@@ -91,7 +91,7 @@ const ForgotPassword = () => {
     setLoading(true);
 
     axios
-      .post(`${apiUrl}:8000/api/reset-password`, {
+      .post(`${ApiUrl}:8000/api/reset-password`, {
         new_password: newPassword,
         verification_code: resetCode,
       })

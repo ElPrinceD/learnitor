@@ -53,7 +53,7 @@ const AccountSettings = () => {
     };
     try {
       await axios.put(
-        `${ApiUrl}:8000/api/update/user/${userInfo?.user.id}/`,
+        `${ApiUrl}/api/update/user/${userInfo?.user.id}/`,
         {
           first_name: formData.firstName,
           last_name: formData.lastName,
@@ -64,7 +64,7 @@ const AccountSettings = () => {
       );
 
       await axios.put(
-        `${ApiUrl}:8000/api/update/user/address/`,
+        `${ApiUrl}/api/update/user/address/`,
         {
           street_1: formData.street1,
           street_2: formData.street2,

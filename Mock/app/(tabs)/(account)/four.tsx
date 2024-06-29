@@ -31,7 +31,7 @@ const Profile = () => {
   const handleLogout = async () => {
     try {
       await axios.post(
-        `${ApiUrl}:8000/api/logout/`,
+        `${ApiUrl}/api/logout/`,
         {},
         {
           headers: {
