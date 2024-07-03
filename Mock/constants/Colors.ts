@@ -21,8 +21,10 @@ const darkButtonDisabledColor = '#003366'; // Dark blue disabled button
 const darkPlaceholderColor = '#aaa';
 const darkGradientBackgroundColor = '#000';
 
-
-
+const lightErrorBackground = '#f8d7da'; // Light red background
+const lightErrorText = '#721c24'; // Dark red text
+const darkErrorBackground = '#721c24'; // Dark red background
+const darkErrorText = '#f8d7da'; // Light red text
 
 // Export themes
 export default {
@@ -43,7 +45,9 @@ export default {
     icon: tintColor,
     selectedItem: tintColor,
     selectedText: tintColor,
-    gradientBackground: lightGradientBackgroundColor
+    gradientBackground: lightGradientBackgroundColor,
+    errorBackground: lightErrorBackground,
+    errorText: lightErrorText,
   },
   dark: {
     text: darkTextColor,
@@ -62,7 +66,8 @@ export default {
     icon: tintColor,
     selectedItem: tintColor,
     selectedText: tintColor,
-    gradientBackground:darkGradientBackgroundColor
+    gradientBackground: darkGradientBackgroundColor,
+    errorBackground: darkErrorBackground,
+    errorText: darkErrorText,
   },
 };
-

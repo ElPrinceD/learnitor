@@ -163,14 +163,12 @@ const LogIn = () => {
       fontWeight: "bold",
       color: themeColors.text,
     },
-    signupButton: {
-      marginLeft: rMS(8),
-    },
     loginText: {
       fontSize: SIZES.medium,
       fontWeight: "bold",
       textDecorationLine: "underline",
       color: themeColors.buttonBackground,
+      marginLeft: rMS(8),
     },
     errorMessage: {
       alignSelf: "flex-start",
@@ -266,9 +264,12 @@ const LogIn = () => {
 
           {error ? <Text style={styles.errorMessage}>{error}</Text> : null}
           <View style={styles.forgotPasswordContainer}>
-            <TouchableOpacity onPress={handleForgotPassword}>
-              <Text style={styles.forgotPasswordText}>Forgot password?</Text>
-            </TouchableOpacity>
+            <Text
+              style={styles.forgotPasswordText}
+              onPress={handleForgotPassword}
+            >
+              Forgot password?
+            </Text>
           </View>
 
           <VerificationButton
@@ -280,9 +281,9 @@ const LogIn = () => {
 
         <View style={styles.bottomContainer}>
           <Text style={styles.existingText}>Don't have an account?</Text>
-          <TouchableOpacity style={styles.signupButton} onPress={handleSignUp}>
-            <Text style={styles.loginText}>Register</Text>
-          </TouchableOpacity>
+          <Text style={styles.loginText} onPress={handleSignUp}>
+            Register
+          </Text>
         </View>
       </View>
     </TouchableWithoutFeedback>

@@ -1,110 +1,93 @@
-import axios from "axios";
 import React, { useState, useEffect, useCallback } from "react";
-import { useFocusEffect } from "@react-navigation/native";
-import { StyleSheet, useColorScheme } from "react-native";
+import {
+  StyleSheet,
+  useColorScheme,
+  RefreshControl,
+  ScrollView,
+} from "react-native";
+import { Text, View } from "../../components/Themed";
+import { useAuth } from "../../components/AuthContext";
+import Colors from "../../constants/Colors";
+import { SIZES, rMS } from "../../constants";
+import {
+  getRecommendedCourses,
+  getEnrolledCourses,
+  getCourseProgress,
+} from "../../CoursesApiCalls";
+import { useQuery } from "@tanstack/react-query";
+import { queryClient } from "../../QueryClient";
+
+import ErrorMessage from "../../components/ErrorMessage";
 import RecommendedCoursesList from "../../components/Recommended";
 import EnrolledCoursesList from "../../components/EnrolledCoursesList";
-import { Text, View } from "../../components/Themed";
-import ApiUrl from "../../config";
-import { useAuth } from "../../components/AuthContext";
-import { router } from "expo-router";
-import Colors from "../../constants/Colors";
-import CardSwiper from "../../components/CardSwiper";
-import { SIZES, rMS, rS } from "../../constants";
 
-const home = () => {
+const Home = () => {
   const { userToken, userInfo } = useAuth();
   const colorScheme = useColorScheme();
-  const [recommendedCoursesData, setRecommendedCoursesData] = useState([]);
-  const [enrolledCoursesData, setEnrolledCoursesData] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const dummyCardData = [
-    {
-      title: "Find all your academic schedules in one place",
-      description: "Timetables, Study timetables, Assignment deadlines",
-      colors: ["#ace2d1", "#54b099"],
-      category: "Timeline",
-      image: require("../../assets/images/clock1.png"),
-    },
-    {
-      title: "Tailor topics according to course",
-      description: "Variety of course topics, topic material & questions",
-      colors: ["#dabda2", "#9b7a5d"],
-      category: "Courses",
-      image: require("../../assets/images/books.png"),
-    },
-    {
-      title: "Games",
-      description: "This is the description for card 3.",
-      colors: ["#b1afe3", "#3d4e9b"],
-      category: "Games",
-      image: require("../../assets/images/mystery-box-collage (1).png"),
-    },
-  ];
+  const {
+    status: recommendedStatus,
+    data: coursesData,
+    error: recommendedError,
+  } = useQuery({
+    queryKey: ["courses", userToken?.token],
+    queryFn: () => getRecommendedCourses(userToken?.token),
+  });
 
-  const fetchData = async (token) => {
-    try {
-      const coursesUrl = `${ApiUrl}/api/course/all/`;
-      const coursesResponse = await axios.get(coursesUrl, {
-        headers: {
-          Authorization: `Token ${token}`,
-        },
-      });
-      setRecommendedCoursesData(coursesResponse.data);
+  const {
+    status: enrolledStatus,
+    data: enrolledCoursesData,
+    error: enrolledError,
+  } = useQuery({
+    queryKey: ["enrolledCourses", userToken?.token],
+    queryFn: () => getEnrolledCourses(userInfo?.user?.id, userToken?.token),
+  });
 
-      const enrolledCoursesUrl = `${ApiUrl}/api/learner/${userInfo?.user.id}/courses`;
-      const enrolledResponse = await axios.get(enrolledCoursesUrl, {
-        headers: {
-          Authorization: `Token ${token}`,
-        },
-      });
-      setEnrolledCoursesData(enrolledResponse.data);
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.error(
-          "Error fetching data:",
-          error.response?.status,
-          error.response?.data
+  const {
+    status: progressStatus,
+    data: progressMap,
+    error: progressError,
+  } = useQuery({
+    queryKey: ["progress", userToken?.token, enrolledCoursesData],
+    queryFn: async () => {
+      if (!enrolledCoursesData) return {};
+
+      const progressPromises = enrolledCoursesData.map(async (course) => {
+        const progress = await getCourseProgress(
+          userInfo?.user?.id,
+          course.id,
+          userToken?.token
         );
-        if (error.response?.status === 404) {
-          console.log(
-            "Enrolled courses not found for user ID:",
-            userInfo?.user.id
-          );
-        }
-      } else {
-        console.error("Unexpected error:", error);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+        return { courseId: course.id, progress };
+      });
 
-  useFocusEffect(
-    useCallback(() => {
-      if (userToken && userInfo) {
-        fetchData(userToken.token);
-      }
-    }, [userToken, userInfo])
-  );
+      const progressArray = await Promise.all(progressPromises);
+      const progressMap = {};
+      progressArray.forEach((item) => {
+        progressMap[item.courseId] = item.progress;
+      });
 
-  // Fetch data on initial load if token and user info are available
+      return progressMap;
+    },
+    enabled: !!enrolledCoursesData,
+  });
+
   useEffect(() => {
-    if (userToken && userInfo) {
-      fetchData(userToken.token);
+    if (
+      recommendedStatus === "error" ||
+      enrolledStatus === "error" ||
+      progressStatus === "error"
+    ) {
+      setErrorMessage(
+        recommendedError?.message ||
+          enrolledError?.message ||
+          progressError?.message ||
+          "An error occurred"
+      );
     }
-  }, [userToken, userInfo]);
-
-  const handleCardPress = (card) => {
-    if (card.category === "Timeline") {
-      router.navigate({ pathname: "three" });
-    } else if (card.category === "Courses") {
-      router.navigate({ pathname: "two" });
-    } else {
-      router.navigate({ pathname: "GameIntro" });
-    }
-  };
+  }, [recommendedStatus, enrolledStatus, progressStatus]);
 
   const themeColors = Colors[colorScheme ?? "light"];
 
@@ -130,21 +113,51 @@ const home = () => {
     },
   });
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({
+        queryKey: ["courses", userToken?.token],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["enrolledCourses", userToken?.token],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["progress", userToken?.token, enrolledCoursesData],
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  }, [queryClient, userToken?.token, enrolledCoursesData]);
+
   return (
     <View style={styles.container}>
-      <View style={styles.cardContainer}>
-        <CardSwiper cards={dummyCardData} onCardPress={handleCardPress} />
-      </View>
-      <View style={styles.coursesContainer}>
-        <Text style={styles.sectionTitle}>Enrolled Courses</Text>
-        <EnrolledCoursesList enrolledCoursesData={enrolledCoursesData} />
-        <Text style={styles.sectionTitle}>Recommended for you</Text>
-        <RecommendedCoursesList
-          RecommendedCoursesData={recommendedCoursesData}
-        />
-      </View>
+      <ScrollView
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        <View style={styles.coursesContainer}>
+          <Text style={styles.sectionTitle}>Enrolled Courses</Text>
+          <EnrolledCoursesList
+            enrolledCoursesData={enrolledCoursesData}
+            progressMap={progressMap || {}}
+            loading={enrolledStatus === "pending"}
+          />
+          <Text style={styles.sectionTitle}>Recommended for you</Text>
+          <RecommendedCoursesList
+            RecommendedCoursesData={coursesData}
+            loading={recommendedStatus === "pending"}
+          />
+        </View>
+      </ScrollView>
+      <ErrorMessage
+        message={errorMessage}
+        visible={!!errorMessage}
+        onDismiss={() => setErrorMessage(null)}
+      />
     </View>
   );
 };
 
-export default home;
+export default Home;

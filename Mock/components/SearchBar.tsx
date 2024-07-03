@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   TextInput,
   StyleSheet,
@@ -9,6 +9,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "../constants/Colors"; // Adjust the import path as necessary
 import { SIZES, rS, rV } from "../constants";
+import debounce from "lodash.debounce";
 
 interface Props {
   onSearch: (query: string) => void;
@@ -19,26 +20,42 @@ const SearchBar: React.FC<Props> = ({ onSearch }) => {
   const themeColors = Colors[colorScheme ?? "light"];
   const [searchQuery, setSearchQuery] = useState("");
 
-  const handleSearch = (text: string) => {
-    setSearchQuery(text);
-    onSearch(text);
-  };
+  // Debounced search handler
+  const debouncedSearch = useCallback(
+    debounce((text: string) => onSearch(text), 300),
+    []
+  );
+
+  const handleSearch = useCallback(
+    (text: string) => {
+      setSearchQuery(text);
+      debouncedSearch(text);
+    },
+    [debouncedSearch]
+  );
+
+  const themeStyles = useMemo(
+    () => ({
+      searchBarContainer: {
+        backgroundColor: themeColors.background,
+        borderColor: themeColors.border,
+      },
+      searchInput: {
+        color: themeColors.text,
+      },
+      placeholderTextColor: themeColors.placeholder,
+      iconColor: themeColors.icon,
+    }),
+    [themeColors]
+  );
 
   return (
     <View style={styles.container}>
-      <View
-        style={[
-          styles.searchBarContainer,
-          {
-            backgroundColor: themeColors.background,
-            borderColor: themeColors.border,
-          },
-        ]}
-      >
+      <View style={[styles.searchBarContainer, themeStyles.searchBarContainer]}>
         <TextInput
-          style={[styles.searchInput, { color: themeColors.text }]}
+          style={[styles.searchInput, themeStyles.searchInput]}
           placeholder="What do you want to learn today?"
-          placeholderTextColor={themeColors.placeholder}
+          placeholderTextColor={themeStyles.placeholderTextColor}
           onChangeText={handleSearch}
           value={searchQuery}
         />
@@ -46,7 +63,7 @@ const SearchBar: React.FC<Props> = ({ onSearch }) => {
           style={styles.searchIcon}
           onPress={() => handleSearch(searchQuery)}
         >
-          <Ionicons name="search" size={24} color={themeColors.icon} />
+          <Ionicons name="search" size={24} color={themeStyles.iconColor} />
         </TouchableOpacity>
       </View>
     </View>

@@ -94,14 +94,12 @@ const SignUp = () => {
       fontSize: SIZES.medium,
       fontWeight: "bold",
     },
-    loginButton: {
-      marginLeft: rMS(8),
-    },
     loginText: {
       fontSize: SIZES.medium,
       fontWeight: "bold",
       textDecorationLine: "underline",
       color: themeColors.buttonBackground,
+      marginLeft: rMS(8),
     },
   });
 
@@ -180,12 +178,9 @@ const SignUp = () => {
       </Animated.View>
       <View style={styles.bottomContainer}>
         <Text style={styles.existingText}>Existing User?</Text>
-        <TouchableOpacity
-          style={styles.loginButton}
-          onPress={handleNavigateToLogin}
-        >
-          <Text style={styles.loginText}>Login</Text>
-        </TouchableOpacity>
+        <Text style={styles.loginText} onPress={handleNavigateToLogin}>
+          Login
+        </Text>
       </View>
     </View>
   );

@@ -6,7 +6,6 @@ import axios from "axios";
 import ApiUrl from "../../../../config";
 
 import { useAuth } from "../../../../components/AuthContext";
-import TopicInformation from "../../../../components/TopicInformation";
 import Videos from "../../../../components/Videos";
 
 import { Topic, Material } from "../../../../components/types";

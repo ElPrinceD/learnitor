@@ -1,70 +1,34 @@
-import React, { useState, useEffect } from "react";
+import React, { memo, useCallback } from "react";
 import {
   View,
-  FlatList,
   Text,
   TouchableOpacity,
   Image,
   StyleSheet,
   useColorScheme,
+  FlatList,
 } from "react-native";
-
 import { router } from "expo-router";
-import axios from "axios";
-
 import { Course } from "./types";
-import ApiUrl from "../config";
-import { useAuth } from "./AuthContext";
 import ProgressBar from "./ProgressBar";
 import Colors from "../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../constants";
+import { Skeleton } from "moti/skeleton";
 
 interface Props {
   enrolledCoursesData: Course[];
+  progressMap: { [key: string]: number };
+  loading: boolean;
 }
 
-const EnrolledCoursesList: React.FC<Props> = ({ enrolledCoursesData }) => {
-  const { userToken, userInfo } = useAuth();
-  const [progressMap, setProgressMap] = useState<{ [key: string]: number }>({});
+const EnrolledCoursesList: React.FC<Props> = ({
+  enrolledCoursesData,
+  progressMap,
+  loading,
+}) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
-
-  useEffect(() => {
-    // Fetch progress for each enrolled course
-    const fetchProgress = async () => {
-      const progressPromises = enrolledCoursesData.map(async (course) => {
-        try {
-          const response = await axios.get(
-            `${ApiUrl}/api/learner/${userInfo?.user.id}/course/${course.id}/progress/`,
-            {
-              headers: {
-                Authorization: `Token ${userToken?.token}`,
-              },
-            }
-          );
-          return {
-            courseId: course.id,
-            progress: response.data.course_progress,
-          };
-        } catch (error) {
-          console.error("Error fetching progress:", error);
-          return { courseId: course.id, progress: 0 };
-        }
-      });
-
-      // Wait for all progress fetch requests to complete
-      const progressResults = await Promise.all(progressPromises);
-
-      // Update progress map with fetched progress data
-      const updatedProgressMap: { [key: string]: number } = {};
-      progressResults.forEach((result) => {
-        updatedProgressMap[result.courseId] = result.progress;
-      });
-      setProgressMap(updatedProgressMap);
-    };
-
-    fetchProgress();
-  }, [enrolledCoursesData, userToken, userInfo]);
+  const colorMode = colorScheme === "dark" ? "dark" : "light";
 
   const styles = StyleSheet.create({
     container: {
@@ -85,7 +49,6 @@ const EnrolledCoursesList: React.FC<Props> = ({ enrolledCoursesData }) => {
       width: rS(120),
       height: rV(105),
     },
-
     textContainer: {
       position: "absolute",
       bottom: rV(8),
@@ -103,47 +66,77 @@ const EnrolledCoursesList: React.FC<Props> = ({ enrolledCoursesData }) => {
       marginBottom: rMS(5),
       textShadowColor: themeColors.shadow,
     },
+    skeletonContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    skeletonItem: {
+      borderRadius: 10,
+      margin: rMS(5),
+    },
   });
 
+  const renderItem = useCallback(
+    ({ item }: { item: Course }) => (
+      <TouchableOpacity
+        onPress={() => {
+          router.navigate({
+            pathname: "/EnrolledCourse",
+            params: { course: JSON.stringify(item) },
+          });
+        }}
+        activeOpacity={0.5}
+        style={styles.touchable}
+      >
+        <View style={styles.container}>
+          <View style={styles.imageContainer}>
+            <Image source={{ uri: item.url }} style={styles.image} />
+          </View>
+          <View style={styles.textContainer}>
+            <Text style={styles.name} numberOfLines={1}>
+              {item.title}
+            </Text>
+            <ProgressBar
+              progress={progressMap[item.id] || 0}
+              containerStyle={{
+                backgroundColor: themeColors.text,
+                height: 7,
+              }}
+              fillStyle={{ backgroundColor: themeColors.icon }}
+            />
+          </View>
+        </View>
+      </TouchableOpacity>
+    ),
+    [progressMap, themeColors]
+  );
+
+  const keyExtractor = useCallback((item: Course) => item.id.toString(), []);
+  if (loading) {
+    return (
+      <View style={styles.skeletonContainer}>
+        {[...Array(5)].map((_, index) => (
+          <View key={index} style={styles.skeletonItem}>
+            <Skeleton colorMode={colorMode} height={rV(105)} width={rS(120)} />
+          </View>
+        ))}
+      </View>
+    );
+  }
   return (
     <FlatList
       horizontal
       data={enrolledCoursesData}
-      renderItem={({ item }) => (
-        <TouchableOpacity
-          onPress={() => {
-            router.navigate({
-              pathname: "/EnrolledCourse",
-              params: { course: JSON.stringify(item) },
-            });
-          }}
-          activeOpacity={0.5}
-          style={styles.touchable}
-        >
-          <View style={styles.container}>
-            <View style={styles.imageContainer}>
-              <Image source={{ uri: item.url }} style={styles.image} />
-            </View>
-            <View style={styles.textContainer}>
-              <Text style={styles.name} numberOfLines={1}>
-                {item.title}
-              </Text>
-              <ProgressBar
-                progress={progressMap[item.id] || 0}
-                containerStyle={{
-                  backgroundColor: themeColors.text,
-                  height: 7,
-                }}
-                fillStyle={{ backgroundColor: themeColors.icon }}
-              />
-            </View>
-          </View>
-        </TouchableOpacity>
-      )}
-      keyExtractor={(item) => item.id}
+      renderItem={renderItem}
+      keyExtractor={keyExtractor}
+      initialNumToRender={5}
+      maxToRenderPerBatch={10}
+      windowSize={10}
+      removeClippedSubviews={true}
       showsHorizontalScrollIndicator={false}
     />
   );
 };
 
-export default EnrolledCoursesList;
+export default memo(EnrolledCoursesList);
