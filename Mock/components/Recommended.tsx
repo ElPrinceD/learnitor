@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { memo, useCallback } from "react";
 import {
   View,
   Text,
@@ -142,4 +142,4 @@ const RecommendedCoursesList: React.FC<Props> = ({
   );
 };
 
-export default RecommendedCoursesList;
+export default memo(RecommendedCoursesList);

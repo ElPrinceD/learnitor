@@ -127,6 +127,7 @@ const Home = () => {
       });
     } finally {
       setRefreshing(false);
+      setErrorMessage(null);
     }
   }, [queryClient, userToken?.token, enrolledCoursesData]);
 
@@ -134,7 +135,13 @@ const Home = () => {
     <View style={styles.container}>
       <ScrollView
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={themeColors.tint}
+            colors={[themeColors.tint, themeColors.text]}
+            progressBackgroundColor={themeColors.background}
+          />
         }
       >
         <View style={styles.coursesContainer}>

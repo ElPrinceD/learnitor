@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "moti": "^0.29.0",
     "react-native-redash": "^18.1.3"
   }
 }

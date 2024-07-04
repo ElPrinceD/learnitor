@@ -1,30 +1,35 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   StyleSheet,
   ScrollView,
   Animated,
   useColorScheme,
+  RefreshControl,
 } from "react-native";
-import axios from "axios";
 import CourseRoadmap from "../../../components/CourseRoadmap";
 import RoadmapTitle from "../../../components/RoadmapTitle";
-import { Stack, useLocalSearchParams, router } from "expo-router";
-import ApiUrl from "../../../config";
+import { useLocalSearchParams, router } from "expo-router";
 import { useAuth } from "../../../components/AuthContext";
 import { Topic, Course } from "../../../components/types";
 import { useNavigation } from "@react-navigation/native";
 import Colors from "../../../constants/Colors";
 import ProgressBar from "../../../components/ProgressBar";
 import { SIZES, rS, rV } from "../../../constants";
+import { useQuery } from "@tanstack/react-query";
+import { queryClient } from "../../../QueryClient";
+import {
+  getCourseProgress,
+  getEnrolledCourseTopics,
+} from "../../../CoursesApiCalls";
+import ErrorMessage from "../../../components/ErrorMessage";
 
 const EnrolledCourse: React.FC = () => {
   const { userToken, userInfo } = useAuth();
   const { course } = useLocalSearchParams();
   const navigation = useNavigation();
-  const [enrolledTopics, setEnrolledTopics] = useState<Topic[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null); // State to manage error message
   const [progress, setProgress] = useState<number>(0);
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -34,46 +39,52 @@ const EnrolledCourse: React.FC = () => {
   const parsedCourse: Course =
     typeof course === "string" ? JSON.parse(course) : course;
 
+  const {
+    status: enrolledTopicsStatus,
+    data: enrolledTopics,
+    error: enrolledTopicsError,
+    refetch: refetchTopics,
+  } = useQuery({
+    queryKey: ["enrolledCourseTopics", parsedCourse?.id, userToken?.token],
+    queryFn: () =>
+      getEnrolledCourseTopics(
+        userInfo?.user.id,
+        parsedCourse?.id,
+        userToken?.token
+      ),
+    enabled: !!parsedCourse?.id,
+  });
+
+  const {
+    status: progressStatus,
+    data: courseProgress,
+    error: progressError,
+    refetch: refetchProgress,
+  } = useQuery({
+    queryKey: ["courseProgress", userInfo?.user?.id, parsedCourse?.id],
+    queryFn: () => {
+      // Check if user is enrolled before fetching progress
+      if (parsedCourse?.id && userInfo?.user?.id && userToken?.token) {
+        return getCourseProgress(
+          userInfo.user.id,
+          parsedCourse.id,
+          userToken.token
+        );
+      } else {
+        // Return a promise that resolves to a placeholder value when not enrolled
+        return Promise.resolve(null); // or any other suitable placeholder
+      }
+    },
+    enabled: !!parsedCourse?.id, // Enable query only if enrolled and course ID exists
+  });
+
   useEffect(() => {
-    fetchData();
-    fetchProgress();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      const response = await axios.get(
-        `${ApiUrl}/api/learner/${userInfo?.user.id}/course/${parsedCourse.id}/topics/`,
-        {
-          headers: {
-            Authorization: `Token ${userToken?.token}`,
-          },
-        }
-      );
-
-      setEnrolledTopics(response.data);
-      setLoading(false);
-    } catch (error) {
-      setError("Error fetching data");
-      setLoading(false);
+    if (progressError) {
+      setErrorMessage(progressError.message || "An error occurred");
+    } else if (courseProgress) {
+      setProgress(courseProgress);
     }
-  };
-
-  const fetchProgress = async () => {
-    try {
-      const response = await axios.get(
-        `${ApiUrl}/api/learner/${userInfo?.user.id}/course/${parsedCourse.id}/progress/`,
-        {
-          headers: {
-            Authorization: `Token ${userToken?.token}`,
-          },
-        }
-      );
-
-      setProgress(response.data.course_progress);
-    } catch (error) {
-      console.error("Error fetching progress:", error);
-    }
-  };
+  }, [courseProgress, progressError]);
 
   const titleOpacity = scrollY.interpolate({
     inputRange: [0, 100],
@@ -115,6 +126,21 @@ const EnrolledCourse: React.FC = () => {
       },
     });
   };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({
+        queryKey: ["enrolledCourseTopics", parsedCourse?.id, userToken?.token],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["courseProgress", userInfo?.user?.id, parsedCourse?.id],
+      });
+    } finally {
+      setRefreshing(false);
+      setErrorMessage(null);
+    }
+  }, [queryClient, userInfo?.user.id, parsedCourse.id]);
 
   const styles = StyleSheet.create({
     container: {
@@ -209,17 +235,33 @@ const EnrolledCourse: React.FC = () => {
         )}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={themeColors.tint}
+            colors={[themeColors.tint, themeColors.text]}
+            progressBackgroundColor={themeColors.background}
+          />
+        }
       >
         <View style={styles.container}>
           <RoadmapTitle course={parsedCourse} progress={progress} />
-          <CourseRoadmap
-            enrolledTopics={enrolledTopics}
-            course={parsedCourse}
-            handleTopicPress={handleTopicPress}
-            handleQuestionPress={handleQuestionPress}
-          />
+          {enrolledTopics && (
+            <CourseRoadmap
+              enrolledTopics={enrolledTopics}
+              course={parsedCourse}
+              handleTopicPress={handleTopicPress}
+              handleQuestionPress={handleQuestionPress}
+            />
+          )}
         </View>
       </ScrollView>
+      <ErrorMessage
+        message={errorMessage}
+        visible={!!errorMessage} // Control visibility based on errorMessage state
+        onDismiss={() => setErrorMessage(null)} // Clear error message when dismissed
+      />
     </>
   );
 };

@@ -144,3 +144,18 @@ export const getCourseProgress = async (userId, courseId, token) => {
     }
 };
 
+
+export const getEnrolledCourseTopics = async (userId, courseId, token) => {
+ try {
+      const response = await apiClient.get(`/api/learner/${userId}/course/${courseId}/topics/`,
+        {
+          headers: {
+            Authorization: `Token ${token}`,
+          },
+        }
+      ); return response.data;
+    } catch (error) {
+        console.error('Error fetching enrolled topics:', error);
+        throw error;
+    }
+};

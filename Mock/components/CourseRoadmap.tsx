@@ -1,5 +1,5 @@
 // CourseRoadmap.js
-import React from "react";
+import React, { memo } from "react";
 import {
   View,
   Text,
@@ -176,4 +176,4 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
   );
 };
 
-export default CourseRoadmap;
+export default memo(CourseRoadmap);

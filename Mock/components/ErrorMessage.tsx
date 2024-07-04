@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, memo } from "react";
 import { Animated, StyleSheet, Text, TouchableOpacity } from "react-native";
 import { useColorScheme } from "react-native";
 import Colors from "../constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { SIZES, rMS, rS } from "../constants";
 
-const ErrorMessage = ({ message, visible, duration = 30000, onDismiss }) => {
+const ErrorMessage = ({ message, visible, duration = 60000, onDismiss }) => {
   const [slideAnim] = useState(new Animated.Value(100)); // Initial position at the bottom
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -35,7 +35,7 @@ const ErrorMessage = ({ message, visible, duration = 30000, onDismiss }) => {
       duration: 300,
       useNativeDriver: true,
     }).start(() => {
-      if (onDismiss) {
+      if (onDismiss && !visible) {
         onDismiss();
       }
     });
@@ -101,4 +101,4 @@ const ErrorMessage = ({ message, visible, duration = 30000, onDismiss }) => {
   );
 };
 
-export default ErrorMessage;
+export default memo(ErrorMessage);

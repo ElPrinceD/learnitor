@@ -158,7 +158,13 @@ const CoursesList: React.FC<Props> = ({
         contentContainerStyle={styles.courseList}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={themeColors.tint}
+            colors={[themeColors.tint, themeColors.text]}
+            progressBackgroundColor={themeColors.background}
+          />
         }
       />
     </View>
