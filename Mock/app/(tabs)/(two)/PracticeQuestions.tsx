@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   StyleSheet,
@@ -8,20 +8,21 @@ import {
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import Toast from "react-native-root-toast";
-import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
 import Questions from "../../../components/Questions";
-import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
 import { Topic, Question, Answer } from "../../../components/types";
 import GameButton from "../../../components/GameButton";
 import Colors from "../../../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../../../constants";
+import {
+  getPracticeQuestions,
+  getPracticeAnswers,
+} from "../../../CoursesApiCalls";
 
 const PracticeQuestions: React.FC = () => {
-  const { topic, level, course, isTimed, duration } = useLocalSearchParams();
+  const { topic, level, isTimed, duration } = useLocalSearchParams();
   const { userToken } = useAuth();
-  const [practiceQuestions, setPracticeQuestions] = useState<Question[]>([]);
-  const [practiceAnswers, setPracticeAnswers] = useState<Answer[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<{
     [key: number]: number[];
@@ -36,9 +37,35 @@ const PracticeQuestions: React.FC = () => {
   const parsedTopic: Topic =
     typeof topic === "string" ? JSON.parse(topic) : topic;
 
-  useEffect(() => {
-    fetchData();
-  }, [parsedTopic.id]);
+  const {
+    status: questionsStatus,
+    data: practiceQuestions,
+    error: questionsError,
+  } = useQuery({
+    queryKey: ["topicQuestions", parsedTopic.id],
+    queryFn: () =>
+      getPracticeQuestions(parsedTopic.id, userToken?.token, parsedLevel),
+    enabled: !!parsedTopic.id,
+  });
+
+  const {
+    status: answersStatus,
+    data: practiceAnswers,
+    error: answersError,
+  } = useQuery({
+    queryKey: ["questionAnswers", parsedTopic.id],
+    queryFn: async () => {
+      if (practiceQuestions) {
+        const answersPromises = practiceQuestions.map((question: Question) =>
+          getPracticeAnswers(question.id, userToken?.token)
+        );
+        const answers = await Promise.all(answersPromises);
+        return answers.flat();
+      }
+      return [];
+    },
+    enabled: !!practiceQuestions?.length,
+  });
 
   useEffect(() => {
     if (isTimed === "true" && duration) {
@@ -48,7 +75,7 @@ const PracticeQuestions: React.FC = () => {
   }, [isTimed, duration]);
 
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timer: ReturnType<typeof setInterval>;
     if (timeLeft !== null) {
       timer = setInterval(() => {
         setTimeLeft((prevTime) => {
@@ -64,54 +91,19 @@ const PracticeQuestions: React.FC = () => {
     return () => clearInterval(timer); // Cleanup interval on unmount
   }, [timeLeft]);
 
-  const fetchData = async () => {
-    try {
-      const questionsResponse = await axios.get(
-        `${ApiUrl}/api/course/topic/${parsedTopic.id}/questions/`,
-        {
-          headers: {
-            Authorization: `Token ${userToken?.token}`,
-          },
-        }
-      );
-
-      const filteredQuestions = questionsResponse.data.filter(
-        (question: Question) => question.level === parsedLevel
-      );
-      setPracticeQuestions(filteredQuestions);
-
-      const answersPromises = filteredQuestions.map(
-        async (question: Question) => {
-          const answersResponse = await axios.get(
-            `${ApiUrl}/api/course/topic/questions/${question.id}/answers`,
-            {
-              headers: {
-                Authorization: `Token ${userToken?.token}`,
-              },
-            }
-          );
-          return answersResponse.data;
-        }
-      );
-
-      const answers = await Promise.all(answersPromises);
-      setPracticeAnswers(answers.flat());
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    }
-  };
-
   useEffect(() => {
-    const questionsWithMultipleCorrect: number[] = [];
-    practiceQuestions.forEach((question) => {
-      const correctAnswersCount = practiceAnswers.filter(
-        (answer) => answer.question === question.id && answer.isRight
-      ).length;
-      if (correctAnswersCount > 1) {
-        questionsWithMultipleCorrect.push(question.id);
-      }
-    });
-    setQuestionsWithMultipleCorrectAnswers(questionsWithMultipleCorrect);
+    if (practiceQuestions && practiceAnswers) {
+      const questionsWithMultipleCorrect: number[] = [];
+      practiceQuestions.forEach((question) => {
+        const correctAnswersCount = practiceAnswers.filter(
+          (answer) => answer.question === question.id && answer.isRight
+        ).length;
+        if (correctAnswersCount > 1) {
+          questionsWithMultipleCorrect.push(question.id);
+        }
+      });
+      setQuestionsWithMultipleCorrectAnswers(questionsWithMultipleCorrect);
+    }
   }, [practiceQuestions, practiceAnswers]);
 
   const handleAnswerSelection = (answerId: number, questionId: number) => {
@@ -148,12 +140,12 @@ const PracticeQuestions: React.FC = () => {
   };
 
   const handleSubmit = () => {
-    let totalQuestions = practiceQuestions.length;
+    let totalQuestions = practiceQuestions?.length;
     let correctAnswers = 0;
 
-    const results = practiceQuestions.map((question) => {
+    const results = practiceQuestions?.map((question) => {
       const selectedAnswerIds = selectedAnswers[question.id] || [];
-      const correctAnswerIds = practiceAnswers
+      const correctAnswerIds = practiceAnswers!
         .filter((answer) => answer.question === question.id && answer.isRight)
         .map((answer) => answer.id);
 
@@ -165,7 +157,7 @@ const PracticeQuestions: React.FC = () => {
         correctAnswers++;
       }
 
-      const allAnswers = practiceAnswers
+      const allAnswers = practiceAnswers!
         .filter((answer) => answer.question === question.id)
         .map((answer) => ({
           id: answer.id,
@@ -181,7 +173,7 @@ const PracticeQuestions: React.FC = () => {
       };
     });
 
-    let scorePercentage = (correctAnswers / totalQuestions) * 100;
+    let scorePercentage = (correctAnswers / totalQuestions!) * 100;
 
     // Defer the navigation call to avoid potential re-renders
     setTimeout(() => {
@@ -193,7 +185,6 @@ const PracticeQuestions: React.FC = () => {
           practiceQuestions: JSON.stringify(practiceQuestions),
           practiceAnswers: JSON.stringify(practiceAnswers),
           topic: topic,
-          course: course,
         },
       });
     }, 0);
@@ -206,7 +197,7 @@ const PracticeQuestions: React.FC = () => {
     );
   };
 
-  const allQuestionsAnswered = practiceQuestions.every(
+  const allQuestionsAnswered = practiceQuestions?.every(
     (question) =>
       selectedAnswers[question.id] && selectedAnswers[question.id].length > 0
   );
@@ -226,60 +217,63 @@ const PracticeQuestions: React.FC = () => {
       });
     }
   };
-  // Calculate progress percentage
-  const progress = (currentQuestion + 1) / practiceQuestions.length;
+
+  const progress = (currentQuestion + 1) / (practiceQuestions?.length || 1);
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      marginTop: rV(30),
-      padding: rMS(20),
-      elevation: 1,
-    },
-    questionNumberText: {
-      color: themeColors.tint,
-      fontSize: SIZES.medium,
-      fontWeight: "bold",
-    },
-    buttonContainer: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      paddingTop: rV(30),
-    },
-    button: {
-      backgroundColor: themeColors.buttonBackground,
-      padding: rMS(15),
-      flex: 1,
-      marginHorizontal: rS(10),
-      borderTopLeftRadius: 20,
-      borderBottomRightRadius: 20,
-      margin: rMS(10),
-    },
-
-    disabledButtonText: {
-      backgroundColor: themeColors.buttonDisabled,
-      padding: rMS(15),
-      flex: 1,
-      marginHorizontal: rS(10),
-      borderTopLeftRadius: 20,
-      borderBottomRightRadius: 20,
-      opacity: 0.5,
-      margin: rMS(10),
-    },
-    timer: {
-      fontSize: SIZES.medium,
-      textAlign: "center",
-      color: themeColors.text,
-      fontWeight: "bold",
-    },
-    timerRed: {
-      color: "#D22B2B",
-      fontWeight: "bold",
-    },
-  });
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          marginTop: rV(30),
+          padding: rMS(20),
+          elevation: 1,
+        },
+        questionNumberText: {
+          color: themeColors.tint,
+          fontSize: SIZES.medium,
+          fontWeight: "bold",
+        },
+        buttonContainer: {
+          flexDirection: "row",
+          justifyContent: "space-between",
+          paddingTop: rV(30),
+        },
+        button: {
+          backgroundColor: themeColors.buttonBackground,
+          padding: rMS(15),
+          flex: 1,
+          marginHorizontal: rS(10),
+          borderTopLeftRadius: 20,
+          borderBottomRightRadius: 20,
+          margin: rMS(10),
+        },
+        disabledButtonText: {
+          backgroundColor: themeColors.buttonDisabled,
+          padding: rMS(15),
+          flex: 1,
+          marginHorizontal: rS(10),
+          borderTopLeftRadius: 20,
+          borderBottomRightRadius: 20,
+          opacity: 0.5,
+          margin: rMS(10),
+        },
+        timer: {
+          fontSize: SIZES.medium,
+          textAlign: "center",
+          color: themeColors.text,
+          fontWeight: "bold",
+        },
+        timerRed: {
+          color: "#D22B2B",
+          fontWeight: "bold",
+        },
+      }),
+    [themeColors]
+  );
 
   return (
     <ScrollView
@@ -298,19 +292,21 @@ const PracticeQuestions: React.FC = () => {
           </Text>
         )}
         <Text style={styles.questionNumberText}>
-          Question {currentQuestion + 1} / {practiceQuestions.length}
+          Question {currentQuestion + 1} / {practiceQuestions?.length || 0}
         </Text>
       </View>
-      <Questions
-        practiceQuestions={practiceQuestions}
-        practiceAnswers={practiceAnswers}
-        currentQuestion={currentQuestion}
-        questionsWithMultipleCorrectAnswers={
-          questionsWithMultipleCorrectAnswers
-        }
-        isAnswerSelected={isAnswerSelected}
-        handleAnswerSelection={handleAnswerSelection}
-      />
+      {practiceQuestions && practiceAnswers && (
+        <Questions
+          practiceQuestions={practiceQuestions}
+          practiceAnswers={practiceAnswers}
+          currentQuestion={currentQuestion}
+          questionsWithMultipleCorrectAnswers={
+            questionsWithMultipleCorrectAnswers
+          }
+          isAnswerSelected={isAnswerSelected}
+          handleAnswerSelection={handleAnswerSelection}
+        />
+      )}
       <View style={styles.buttonContainer}>
         {currentQuestion > 0 && (
           <GameButton
@@ -320,14 +316,14 @@ const PracticeQuestions: React.FC = () => {
             title="Previous"
           />
         )}
-        {currentQuestion < practiceQuestions.length - 1 && (
+        {currentQuestion < (practiceQuestions?.length || 0) - 1 && (
           <GameButton
             onPress={handleNextQuestion}
             style={styles.button}
             title="Next"
           />
         )}
-        {currentQuestion === practiceQuestions.length - 1 && (
+        {currentQuestion === (practiceQuestions?.length || 0) - 1 && (
           <GameButton
             onPress={
               isSubmitDisabled ? handleDisabledSubmitPress : handleSubmit

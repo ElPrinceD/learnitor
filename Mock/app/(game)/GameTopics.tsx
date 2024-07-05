@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   StyleSheet,
@@ -8,55 +8,55 @@ import {
   TouchableOpacity,
   useColorScheme,
 } from "react-native";
+import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
-import axios from "axios";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { Course, Topic } from "../../components/types";
 import { useAuth } from "../../components/AuthContext";
-import ApiUrl from "../../config";
 import TimelineCategoryItem from "../../components/TimelineCategoryItem";
 import GameButton from "../../components/GameButton";
 import Colors from "../../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../../constants";
+import { getCourseTopics } from "../../CoursesApiCalls"; // Import the new API function
 
 const GameTopics: React.FC = () => {
   const { userToken } = useAuth();
   const { course } = useLocalSearchParams();
-  const [topics, setTopics] = useState<Topic[]>([]);
   const [selectedTopics, setSelectedTopics] = useState<Topic[]>([]);
+  const [topics, setTopics] = useState<Topic[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
   const screenWidth = Dimensions.get("window").width;
-
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
   const parsedCourse: Course =
     typeof course === "string" ? JSON.parse(course) : course;
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      const response = await axios.get(
-        `${ApiUrl}/api/course/${parsedCourse.id}/topics/`,
-        {
-          headers: {
-            Authorization: `Token ${userToken?.token}`,
-          },
-        }
-      );
-      const topicsWithColor = response.data.map((topic: Topic) => ({
-        ...topic,
-        color: getRandomColor(), // Generate a random color for each topic
-        isChecked: false, // Add isChecked property to track selection
-      }));
-      setTopics(topicsWithColor);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    }
+  const fetchTopics = async (): Promise<Topic[]> => {
+    const topics = await getCourseTopics(parsedCourse.id, userToken?.token);
+    return topics.map((topic: Topic) => ({
+      ...topic,
+      color: getRandomColor(),
+      isChecked: false,
+    }));
   };
+
+  const {
+    status: topicsStatus,
+    data: fetchedTopics,
+    error: topicsError,
+    refetch: refetchTopics,
+  } = useQuery<Topic[], Error>({
+    queryKey: ["courseTopics", parsedCourse.id],
+    queryFn: fetchTopics,
+    enabled: !!parsedCourse.id,
+  });
+
+  useEffect(() => {
+    if (fetchedTopics) {
+      setTopics(fetchedTopics);
+    }
+  }, [fetchedTopics]);
 
   const handleTopicPress = (topic: Topic) => {
     if (selectedTopics.length === 0) {
@@ -80,7 +80,7 @@ const GameTopics: React.FC = () => {
         (t) => t.id !== topic.id
       );
       setSelectedTopics(updatedSelectedTopics);
-      const updatedTopics = topics.map((t) =>
+      const updatedTopics = topics?.map((t) =>
         t.id === topic.id ? { ...t, isChecked: false } : t
       );
       setTopics(updatedTopics);
@@ -89,7 +89,7 @@ const GameTopics: React.FC = () => {
       }
     } else {
       setSelectedTopics([...selectedTopics, topic]);
-      const updatedTopics = topics.map((t) =>
+      const updatedTopics = topics?.map((t) =>
         t.id === topic.id ? { ...t, isChecked: true } : t
       );
       setTopics(updatedTopics);
@@ -97,14 +97,14 @@ const GameTopics: React.FC = () => {
   };
 
   const handleSelectAll = () => {
-    if (selectedTopics.length === topics.length) {
+    if (selectedTopics.length === topics?.length) {
       setSelectedTopics([]);
-      const updatedTopics = topics.map((t) => ({ ...t, isChecked: false }));
+      const updatedTopics = topics?.map((t) => ({ ...t, isChecked: false }));
       setTopics(updatedTopics);
       setSelectionMode(false);
     } else {
-      setSelectedTopics([...topics]);
-      const updatedTopics = topics.map((t) => ({ ...t, isChecked: true }));
+      setSelectedTopics(topics || []);
+      const updatedTopics = topics?.map((t) => ({ ...t, isChecked: true }));
       setTopics(updatedTopics);
       setSelectionMode(true);
     }
@@ -120,66 +120,70 @@ const GameTopics: React.FC = () => {
     });
   };
 
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      padding: rMS(10),
-      marginTop: rV(50),
-    },
-    header: {
-      color: themeColors.text,
-      fontSize: SIZES.xLarge,
-      fontWeight: "bold",
-      marginTop: rV(8),
-      marginBottom: rV(10),
-      textAlign: "center",
-    },
-    row: {
-      justifyContent: "space-between",
-    },
-    flatListContent: {
-      paddingBottom: rV(18),
-    },
-    topicContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      marginBottom: rV(8),
-      position: "relative",
-    },
-    checkBoxContainer: {
-      position: "absolute",
-      top: rV(8),
-      right: 0,
-      zIndex: 1,
-    },
-    checkBox: {
-      width: rS(22),
-      height: rV(22),
-      justifyContent: "center",
-      alignItems: "center",
-      alignSelf: "flex-end",
-    },
-    selectAllContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      alignSelf: "flex-end",
-    },
-    selectAllText: {
-      color: themeColors.text,
-      fontSize: SIZES.medium,
-      fontWeight: "bold",
-      marginLeft: rS(5),
-    },
-    continueButton: {
-      position: "absolute",
-      bottom: rS(18),
-      width: rS(200),
-      alignSelf: "center",
-      padding: rMS(10),
-      borderTopLeftRadius: 20,
-      borderBottomRightRadius: 20,
-    },
-  });
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          padding: rMS(10),
+          marginTop: rV(50),
+        },
+        header: {
+          color: themeColors.text,
+          fontSize: SIZES.xLarge,
+          fontWeight: "bold",
+          marginTop: rV(8),
+          marginBottom: rV(10),
+          textAlign: "center",
+        },
+        row: {
+          justifyContent: "space-between",
+        },
+        flatListContent: {
+          paddingBottom: rV(18),
+        },
+        topicContainer: {
+          flexDirection: "row",
+          alignItems: "center",
+          marginBottom: rV(8),
+          position: "relative",
+        },
+        checkBoxContainer: {
+          position: "absolute",
+          top: rV(8),
+          right: 0,
+          zIndex: 1,
+        },
+        checkBox: {
+          width: rS(22),
+          height: rV(22),
+          justifyContent: "center",
+          alignItems: "center",
+          alignSelf: "flex-end",
+        },
+        selectAllContainer: {
+          flexDirection: "row",
+          alignItems: "center",
+          alignSelf: "flex-end",
+        },
+        selectAllText: {
+          color: themeColors.text,
+          fontSize: SIZES.medium,
+          fontWeight: "bold",
+          marginLeft: rS(5),
+        },
+        continueButton: {
+          position: "absolute",
+          bottom: rS(18),
+          width: rS(200),
+          alignSelf: "center",
+          padding: rMS(10),
+          borderTopLeftRadius: 20,
+          borderBottomRightRadius: 20,
+        },
+      }),
+    [themeColors]
+  );
 
   const renderItem = ({ item }: { item: Topic }) => {
     const opacity = item.isChecked ? 0.9 : 1;
@@ -224,7 +228,7 @@ const GameTopics: React.FC = () => {
         style={styles.selectAllContainer}
       >
         <View style={styles.checkBox}>
-          {selectedTopics.length === topics.length ? (
+          {selectedTopics.length === topics?.length ? (
             <Ionicons
               name="checkmark-circle-sharp"
               size={24}
@@ -271,6 +275,7 @@ const darkColors = [
   "#5A5F72",
   "#665D7E",
   "#77618F",
+
   "#876A9D",
   "#977CA7",
   "#A788B5",
