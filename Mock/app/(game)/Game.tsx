@@ -57,7 +57,7 @@ export default function Game() {
   // Establish WebSocket connection
   useEffect(() => {
     webSocket.current = new WebSocket(
-      `ws:///learnitor.vercel.app/games/${gameCode}/ws/`
+      `wss://learnitor.onrender.com/games/${gameCode}/ws/`
     );
 
     webSocket.current.onopen = () => {

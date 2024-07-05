@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -35,6 +35,7 @@ export default function GameWaitingScreen() {
   if (!userInfo) {
     return null;
   }
+
   const [creator, setCreator] = useState<string | undefined>();
   const [creatorId, setCreatorId] = useState<number | undefined>();
   const [gameCode, setGameCode] = useState<string>(code || "");
@@ -43,6 +44,7 @@ export default function GameWaitingScreen() {
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+  const ws = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     const fetchGameDetails = async () => {
@@ -81,34 +83,39 @@ export default function GameWaitingScreen() {
     if (gameCode && userToken) {
       fetchGameDetails();
 
-      const ws = new WebSocket(
-        `ws:///learnitor.vercel.app/games/${gameCode}/ws/`
+      ws.current = new WebSocket(
+        `wss://learnitor.onrender.com/games/${gameCode}/ws/`
       );
 
-      ws.onopen = () => {
+      ws.current.onopen = () => {
         console.log("WebSocket connection opened");
       };
 
-      ws.onerror = (error) => {
+      ws.current.onerror = (error) => {
         console.error("WebSocket connection error:", error);
       };
 
-      ws.onmessage = (event) => {
+      ws.current.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          
+         
+          
+          if (data && data.data) {
 
-          if (data.players) {
-            const newPlayers = data.players.map((player: any) => ({
+          if (data.data.players) {
+            const newPlayers = data.data.players.map((player: any) => ({
               id: player.id,
               profileName: `${player.first_name} ${player.last_name}`,
               profile_picture:
                 player.id === userInfo?.user.id
                   ? userInfo.user.profile_picture
-                  : `${ApiUrl}${player.profile_picture}`, // Placeholder URL, update as needed
+                  : `${ApiUrl}${player.profile_picture}`,
             }));
 
             setPlayers(newPlayers);
           }
+        }
 
           if (data.type === "game.start") {
             console.log(
@@ -124,7 +131,7 @@ export default function GameWaitingScreen() {
 
       // Close WebSocket connection on component unmount
       return () => {
-        ws.close();
+        ws.current?.close();
       };
     }
   }, [gameCode, userToken, gameId, id]);
