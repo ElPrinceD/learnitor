@@ -68,6 +68,7 @@
     "react-native-screens": "3.31.1",
     "react-native-share": "^10.2.0",
     "react-native-size-matters": "^0.4.2",
+    "react-native-snap-carousel": "^3.9.1",
     "react-native-sse": "^1.2.1",
     "react-native-svg": "15.2.0",
     "react-native-svg-circular-progress": "^1.0.4",
