@@ -5,79 +5,32 @@ import { useLocalSearchParams, router } from "expo-router";
 import ApiUrl from "../../config";
 import { useAuth } from "../../components/AuthContext";
 import { StatusBar } from "expo-status-bar";
-
 import Questions from "../../components/Questions";
 import { Question, Answer } from "../../components/types";
+import Pusher from 'pusher-js/react-native';
 
 export default function Game() {
   const { userToken, userInfo } = useAuth();
   const { gameId, gameCode } = useLocalSearchParams();
   const [gameAnswers, setGameAnswers] = useState<Answer[]>([]);
-
-  const [selectedAnswers, setSelectedAnswers] = useState<{
-    [key: number]: number[];
-  }>({});
-  const [
-    questionsWithMultipleCorrectAnswers,
-    setQuestionsWithMultipleCorrectAnswers,
-  ] = useState<number[]>([]);
+  const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: number[] }>({});
+  const [questionsWithMultipleCorrectAnswers, setQuestionsWithMultipleCorrectAnswers] = useState<number[]>([]);
   const [gameQuestions, setGameQuestions] = useState<Question[]>([]);
   const [allScores, setAllScores] = useState({});
   const [currentQuestion, setCurrentQuestion] = useState<number>(0);
   const [questionDuration, setQuestionDuration] = useState<number>(20000); // Default duration set to 20 seconds
-  const webSocket = useRef<WebSocket | null>(null);
 
-  // Function to send WebSocket message when a user attempts a question
+  // Initialize Pusher
+  const pusher = useRef(new Pusher('22084425c1dbb10259f9', {
+    cluster: 'eu',
+  }));
 
-  const sendWebSocketMessage = (questionId: number) => {
-    if (webSocket.current && webSocket.current.readyState === WebSocket.OPEN) {
-      const message = {
-        type: "attempt_question",
-        question_id: questionId,
-
-        game_id: gameId,
-      };
-      webSocket.current.send(JSON.stringify(message));
-      console.log("We have sent a message");
-    }
-  };
-
-  const sendSubmitScoreMessage = (scorePercentage: number) => {
-    if (webSocket.current && webSocket.current.readyState === WebSocket.OPEN) {
-      const message = {
-        type: "submit_score",
-        score: scorePercentage,
-        user_id: userInfo?.user.id,
-        game_id: gameId,
-      };
-      webSocket.current.send(JSON.stringify(message));
-    }
-  };
-
-  // Establish WebSocket connection
+  // Establish Pusher channel subscription
   useEffect(() => {
-    webSocket.current = new WebSocket(
-      `ws:///learnitor.vercel.app/games/${gameCode}/ws/`
-    );
+    const channel = pusher.current.subscribe(`games-${gameCode}`);
 
-    webSocket.current.onopen = () => {
-      console.log("WebSocket connection opened");
-    };
-
-    webSocket.current.onclose = () => {
-      console.log("WebSocket connection closed");
-    };
-
-    webSocket.current.onerror = (error) => {
-      console.error("WebSocket error:", error);
-    };
-
-    webSocket.current.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      if (
-        message.type === "question.attempted" &&
-        message.question_id === gameQuestions[currentQuestion].id
-      ) {
+    channel.bind('question.attempted', (data) => {
+      if (data.question_id === gameQuestions[currentQuestion].id) {
         console.log("We have a message");
         if (currentQuestion < gameQuestions.length - 1) {
           console.log("We're here");
@@ -85,32 +38,31 @@ export default function Game() {
         } else {
           handleSubmit();
         }
-      } else if (message.type === "all_scores_submitted") {
-        console.log(message.scores);
-        const scoresObject = message.scores.reduce((acc, score) => {
-          acc[score.user_id] = score.score;
-          return acc;
-        }, {});
-        setAllScores(scoresObject);
-        setTimeout(() => {
-          router.replace({
-            pathname: "Results",
-            params: {
-              scores: JSON.stringify(scoresObject),
-              gameId: gameId,
-
-              practiceQuestions: JSON.stringify(gameQuestions), // Corrected parameter name
-              practiceAnswers: JSON.stringify(gameAnswers),
-            },
-          });
-        }, 0);
       }
-    };
+    });
+
+    channel.bind('all_scores_submitted', (data) => {
+      console.log(data.scores);
+      const scoresObject = data.scores.reduce((acc, score) => {
+        acc[score.user_id] = score.score;
+        return acc;
+      }, {});
+      setAllScores(scoresObject);
+      setTimeout(() => {
+        router.replace({
+          pathname: "Results",
+          params: {
+            scores: JSON.stringify(scoresObject),
+            gameId: gameId,
+            practiceQuestions: JSON.stringify(gameQuestions),
+            practiceAnswers: JSON.stringify(gameAnswers),
+          },
+        });
+      }, 0);
+    });
 
     return () => {
-      if (webSocket.current) {
-        webSocket.current.close();
-      }
+      pusher.current.unsubscribe(`games-${gameCode}`);
     };
   }, [gameCode, gameQuestions, currentQuestion, userInfo]);
 
@@ -123,10 +75,7 @@ export default function Game() {
         });
 
         const gameData = response.data;
-        // Debugging
-
         setGameQuestions(gameData.questions || []);
-
         setQuestionDuration((gameData.duration || 20) * 1000); // Convert duration to milliseconds
 
         const answersPromises = (gameData.questions || []).map(
@@ -209,15 +158,25 @@ export default function Game() {
           updatedAnswers[questionId] = selected;
           console.log("selected", selected.length);
 
-          // Send WebSocket message if the correct number of answers is selected
+          // Send Pusher message if the correct number of answers is selected
           if (selected.length === correctAnswersCount) {
-            sendWebSocketMessage(questionId);
+            axios.post(`${ApiUrl}/trigger-question-attempt/`, {
+              question_id: questionId,
+              game_id: gameId,
+            }, {
+              headers: { Authorization: `Token ${userToken?.token}` },
+            });
           }
         }
       } else {
         // For single correct answer questions
         updatedAnswers[questionId] = [answerId];
-        sendWebSocketMessage(questionId);
+        axios.post(`${ApiUrl}/trigger-question-attempt/`, {
+          question_id: questionId,
+          game_id: gameId,
+        }, {
+          headers: { Authorization: `Token ${userToken?.token}` },
+        });
       }
 
       return updatedAnswers;
@@ -260,9 +219,13 @@ export default function Game() {
 
     let scorePercentage = (correctAnswers / totalQuestions) * 100;
 
-    sendSubmitScoreMessage(scorePercentage);
-
-    // Defer the navigation call to avoid potential re-renders
+    axios.post(`${ApiUrl}/trigger-submit-score/`, {
+      score: scorePercentage,
+      user_id: userInfo?.user.id,
+      game_id: gameId,
+    }, {
+      headers: { Authorization: `Token ${userToken?.token}` },
+    });
   };
 
   const isAnswerSelected = (questionId: number, answerId: number) => {
@@ -287,9 +250,7 @@ export default function Game() {
           practiceQuestions={gameQuestions}
           practiceAnswers={gameAnswers}
           currentQuestion={currentQuestion}
-          questionsWithMultipleCorrectAnswers={
-            questionsWithMultipleCorrectAnswers
-          }
+          questionsWithMultipleCorrectAnswers={questionsWithMultipleCorrectAnswers}
           isAnswerSelected={isAnswerSelected}
           handleAnswerSelection={handleAnswerSelection}
         />

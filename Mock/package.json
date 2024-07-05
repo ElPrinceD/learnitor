@@ -42,6 +42,7 @@
     "expo-system-ui": "~3.0.4",
     "expo-updates": "~0.25.17",
     "expo-web-browser": "~13.0.3",
+    "pusher-js": "^8.4.0-rc2",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-hook-form": "^7.51.5",

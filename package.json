@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "pusher-js": "^8.4.0-rc2",
     "react-native-redash": "^18.1.3"
   }
 }
