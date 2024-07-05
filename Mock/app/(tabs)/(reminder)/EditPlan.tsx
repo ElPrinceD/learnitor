@@ -1,18 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  useColorScheme,
-  Switch,
-  Alert,
   TextInput,
+  Alert,
+  useColorScheme,
 } from "react-native";
-import { useLocalSearchParams } from "expo-router";
 import axios from "axios";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import apiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -20,17 +18,15 @@ import Colors from "../../../constants/Colors";
 import { rMS, rS, rV } from "../../../constants/responsive";
 import { SIZES } from "../../../constants/theme";
 import GameButton from "../../../components/GameButton";
-import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 const EditPlan = () => {
   const params = useLocalSearchParams();
   const id = params.taskId;
-  const category_name = params.category_name as string;
   const oldDescription = params.description as string;
   const oldTitle = params.title as string;
   const oldDate = params.duedate as string;
   const oldTime = params.duetime as string;
-  const categories = params.categoryNames as string[];
   const { userToken, userInfo } = useAuth();
 
   const [title, setTitle] = useState(oldTitle || "");
@@ -39,10 +35,29 @@ const EditPlan = () => {
   const [time, setTime] = useState(parseTimeString(oldTime));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [updateAll, setUpdateAll] = useState(false);
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+
+  // Fetch categories from API
+  const [categories, setCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get(`${apiUrl}/api/task/categories/`, {
+          headers: {
+            Authorization: `Token ${userToken?.token}`,
+          },
+        });
+        setCategories(response.data);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   function parseTimeString(timeString: string) {
     const [hours, minutes] = timeString.split(":").map(Number);
@@ -69,7 +84,6 @@ const EditPlan = () => {
       due_time: formattedDueTime,
       category: params.category_id,
       learner: userInfo?.user.id,
-      update_all: updateAll,
     };
     try {
       const response = await axios.put(
@@ -163,13 +177,6 @@ const EditPlan = () => {
       color: themeColors.text,
       borderColor: "transparent",
     },
-    categoryName: {
-      fontSize: SIZES.xxLarge,
-      fontWeight: "bold",
-      color: themeColors.selectedText,
-      textAlign: "center",
-      textDecorationLine: "underline",
-    },
     label: {
       fontSize: SIZES.medium,
       marginBottom: rV(5),
@@ -183,12 +190,6 @@ const EditPlan = () => {
       padding: rMS(20),
       flex: 1,
     },
-    switchContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      marginHorizontal: rS(55),
-    },
-
     planItemLine: {
       height: rV(0.3),
       backgroundColor: "#ccc",
@@ -224,11 +225,7 @@ const EditPlan = () => {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.top}>
-        <GameButton
-          onPress={handleSaveTime}
-          title="Save"
-          style={styles.button}
-        />
+        <GameButton onPress={handleSaveTime} title="Save" style={styles.button} />
         <View style={styles.inputContainer}>
           <TextInput
             style={[styles.input, { fontSize: SIZES.xxLarge, height: rV(60) }]}
@@ -292,21 +289,6 @@ const EditPlan = () => {
             </View>
           </View>
         </TouchableOpacity>
-        <View style={styles.schedule}>
-          <Feather name="repeat" size={SIZES.xLarge} color={themeColors.icon} />
-
-          <Text style={styles.dateTime}>Update All Recurring Tasks</Text>
-          <Switch
-            value={updateAll}
-            onValueChange={setUpdateAll}
-            trackColor={{
-              false: themeColors.text,
-              true: themeColors.buttonBackground,
-            }}
-            thumbColor={themeColors.icon}
-            // style={{ c }}
-          />
-        </View>
       </View>
       <View style={styles.planItemLine} />
       <View style={styles.top}>

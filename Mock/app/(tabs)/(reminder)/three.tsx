@@ -67,7 +67,7 @@ const Timeline: React.FC = () => {
       });
       const sortedPlans = response.data.sort((a, b) => {
         const dateA = new Date(a.due_date + "T" + a.due_time);
-        const dateB = new Date(b.due_date + "T" + a.due_time);
+        const dateB = new Date(b.due_date + "T" + b.due_time); // Fixed typo here
         return dateA.getTime() - dateB.getTime();
       });
       setTodayPlans(sortedPlans);
@@ -108,6 +108,7 @@ const Timeline: React.FC = () => {
       console.error("Error fetching category names:", error);
     }
   };
+
   const snapPoints = useMemo(() => ["50%", "80%"], []);
   const BottomSheetRef = useRef<BottomSheet>(null);
 
@@ -124,6 +125,7 @@ const Timeline: React.FC = () => {
       category_name: categoryNames[plan.category],
     });
   };
+
   const handleNavigateCreateTask = () => {
     router.navigate("createNewTime");
   };

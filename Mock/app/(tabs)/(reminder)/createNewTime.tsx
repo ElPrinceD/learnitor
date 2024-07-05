@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -16,8 +16,8 @@ import Colors from "../../../constants/Colors";
 import { rMS, rS, rV } from "../../../constants/responsive";
 import { SIZES } from "../../../constants/theme.js";
 import AnimatedRoundTextInput from "../../../components/AnimatedRoundTextInput.tsx";
-import {  MaterialCommunityIcons } from "@expo/vector-icons";
-import Animated, { FadeInLeft, ReduceMotion } from "react-native-reanimated";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import Animated from "react-native-reanimated";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import DropDownPicker from "react-native-dropdown-picker";
 
@@ -39,15 +39,38 @@ const CreateNewTime = () => {
   const [recurrenceOption, setRecurrenceOption] = useState("Does not repeat");
   const [recurrenceEndDate, setRecurrenceEndDate] = useState(new Date());
   const [isRecurrenceEndDatePickerVisible, setRecurrenceEndDatePickerVisibility] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [recurrenceOpen, setRecurrenceOpen] = useState(false);
   const [recurrenceItems, setRecurrenceItems] = useState([
     { label: 'Does not repeat', value: 'Does not repeat' },
     { label: 'Daily', value: 'Daily' },
     { label: 'Weekly', value: 'Weekly' }
   ]);
-  const [selectedColor, setSelectedColor] = useState("red");
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const [categories, setCategories] = useState([]);
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+
+  useEffect(() => {
+    // Fetch categories from the API
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get(`${ApiUrl}/api/task/categories/`, {
+          headers: {
+            Authorization: `Token ${userToken?.token}`,
+          },
+        });
+        setCategories(response.data.map(category => ({
+          label: category.name,
+          value: category.id,
+        })));
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      }
+    };
+
+    fetchCategories();
+  }, [userToken]);
 
   const showDatePicker = () => {
     setDatePickerVisibility(true);
@@ -99,7 +122,7 @@ const CreateNewTime = () => {
       description,
       due_date: date.toISOString().split("T")[0],
       due_time: date.toTimeString().split(" ")[0].slice(0, 5), // Only hours and minutes
-      category: category_id,
+      category: selectedCategory,
       learner: userInfo?.user.id,
       is_recurring: recurrenceOption !== "Does not repeat",
       recurrence_interval:
@@ -110,7 +133,6 @@ const CreateNewTime = () => {
         recurrenceOption !== "Does not repeat"
           ? recurrenceEndDate.toISOString().split("T")[0]
           : null,
-      color: selectedColor, // Add color to data
     };
 
     try {
@@ -157,12 +179,11 @@ const CreateNewTime = () => {
     bottomSection: {
       flex: 2,
       borderRadius: 30,
-    
     },
     inputContainer: {
       marginTop: rV(20),
       flex: 1,
-      marginBottom: rV(15)
+      marginBottom: rV(15),
     },
     input: {
       flex: 1,
@@ -214,7 +235,7 @@ const CreateNewTime = () => {
     buttonContainer: {
       alignItems: "center",
       marginVertical: rV(20),
-      },
+    },
     button: {
       width: rS(150),
       paddingVertical: rV(10),
@@ -229,7 +250,7 @@ const CreateNewTime = () => {
     },
     dropdownContainer: {
       marginVertical: rV(15),
-      zIndex: 10, // Ensure dropdown is above other elements
+      zIndex: 20, // Ensure dropdown is above other elements
     },
     dropdownTouchable: {
       flexDirection: "row",
@@ -238,197 +259,128 @@ const CreateNewTime = () => {
       padding: 10,
       borderColor: '#ccc',
       borderRadius: 5,
-      backgroundColor: themeColors.background,
+      backgroundColor: themeColors.text,
     },
     dropdownText: {
-      color: themeColors.text,
+      color: themeColors.border,
       fontSize: SIZES.medium,
     },
-    colorContainer: {
-      width: '100%',
-      flexDirection: "row",
-      borderTopWidth: 1,
-      paddingTop: 30,
-      borderColor: themeColors.textSecondary,
-
-      alignItems: "center",
-      justifyContent: "space-between",
+    categoryContainer: {
       marginVertical: rV(15),
-    },
-    colorLabel: {
-      fontSize: SIZES.large,
-      color: themeColors.textSecondary,
-    },
-    colorOptions: {
-      flexDirection: "row",
-    },
-    colorOption: {
-      width: rS(20),
-      height: rS(20),
-      borderRadius: rS(15),
-      marginHorizontal: rS(5),
+      zIndex: 10, // Ensure dropdown is above other elements
     },
   });
 
   return (
     <ScrollView style={styles.container}>
-        <View style={styles.inputContainer}>
-          <AnimatedRoundTextInput
-            placeholderTextColor={themeColors.textSecondary}
-            style={styles.input}
-            label="Title"
-            value={title}
-            onChangeText={setTitle}
-          />
-        </View>
-
+      <View style={styles.inputContainer}>
         <AnimatedRoundTextInput
           placeholderTextColor={themeColors.textSecondary}
-          style={[styles.input, { borderRadius: 60, height: rV(20) }]}
-          label="Description"
-          value={description}
-          onChangeText={setDescription}
+          style={styles.input}
+          label="Title"
+          value={title}
+          onChangeText={setTitle}
         />
+      </View>
+      <AnimatedRoundTextInput
+        placeholderTextColor={themeColors.textSecondary}
+        style={styles.input}
+        label="Description"
+        value={description}
+        onChangeText={setDescription}
+      />
 
-        <View style={styles.dateTime}>
-          <Text style={styles.label}>Date</Text>
-          <TouchableOpacity onPress={showDatePicker}>
-            <Text style={{ color: themeColors.text }}>
-              {formatDateString(date)}{" "}
-              <MaterialCommunityIcons
-                name="chevron-right"
-                size={24}
-                color={themeColors.textSecondary}
-              />
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <DateTimePickerModal
-          isVisible={isDatePickerVisible}
-          mode="date"
-          
-          onConfirm={handleConfirmDate}
-          onCancel={hideDatePicker}
-          textColor={themeColors.text}
-          accentColor={themeColors.icon}
+      <Text style={styles.label}>Select Date</Text>
+      <TouchableOpacity style={styles.dateTime} onPress={showDatePicker}>
+        <MaterialCommunityIcons
+          name="calendar"
+          size={30}
+          color={themeColors.tint}
         />
+        <Text style={styles.title}>{formatDateString(date)}</Text>
+      </TouchableOpacity>
+      <DateTimePickerModal
+        isVisible={isDatePickerVisible}
+        mode="date"
+        onConfirm={handleConfirmDate}
+        onCancel={hideDatePicker}
+        date={date}
+        minimumDate={new Date()}
+      />
 
-        <View style={styles.dateTime}>
-          <Text style={styles.label}>Time</Text>
-          <TouchableOpacity onPress={showTimePicker}>
-            <Text style={{ color: themeColors.text }}>
-              {date.toTimeString().split(" ")[0].slice(0, 5)}
-              <MaterialCommunityIcons
-                name="chevron-right"
-                size={24}
-                color={themeColors.textSecondary}
-              />
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <DateTimePickerModal
-          isVisible={isTimePickerVisible}
-          mode="time"
-          onConfirm={handleConfirmTime}
-          onCancel={hideTimePicker}
-          textColor={themeColors.text}
-          accentColor={themeColors.icon}
+      <Text style={styles.label}>Select Time</Text>
+      <TouchableOpacity style={styles.dateTime} onPress={showTimePicker}>
+        <MaterialCommunityIcons
+          name="clock"
+          size={30}
+          color={themeColors.border}
         />
+        <Text style={styles.title}>{date.toTimeString().slice(0, 5)}</Text>
+      </TouchableOpacity>
+      <DateTimePickerModal
+        isVisible={isTimePickerVisible}
+        mode="time"
+        onConfirm={handleConfirmTime}
+        onCancel={hideTimePicker}
+        date={date}
+      />
 
-        <View style={styles.switchContainer}>
-          <Text style={styles.label}>Recurring</Text>
-          <TouchableOpacity
-            onPress={() => setOpen(!open)}
-            style={styles.dropdownContainer}
-          >
-            <View style={styles.dropdownTouchable}>
-              <Text style={styles.dropdownText}>{recurrenceOption}</Text>
-              <MaterialCommunityIcons
-                name="chevron-right"
-                size={24}
-                color={themeColors.textSecondary}
-              />
-            </View>
+      <Text style={styles.label}>Category</Text>
+      <DropDownPicker
+        open={categoriesOpen}
+        value={selectedCategory}
+        items={categories}
+        setOpen={setCategoriesOpen}
+        setValue={setSelectedCategory}
+        setItems={setCategories}
+        placeholder="Select a category"
+        containerStyle={styles.categoryContainer}
+        textStyle={styles.dropdownText}
+        dropDownDirection="TOP"
+      />
+
+      <Text style={styles.label}>Recurrence</Text>
+      <DropDownPicker
+        open={recurrenceOpen}
+        value={recurrenceOption}
+        items={recurrenceItems}
+        setOpen={setRecurrenceOpen}
+        setValue={setRecurrenceOption}
+        setItems={setRecurrenceItems}
+        placeholder="Does not repeat"
+        containerStyle={styles.dropdownContainer}
+        textStyle={styles.dropdownText}
+      />
+
+      {recurrenceOption !== "Does not repeat" && (
+        <>
+          <Text style={styles.label}>End Date</Text>
+          <TouchableOpacity style={styles.dateTime} onPress={showRecurrenceEndDatePicker}>
+            <MaterialCommunityIcons
+              name="calendar"
+              size={30}
+              color={themeColors.textSecondary}
+            />
+            <Text style={styles.title}>{formatDateString(recurrenceEndDate)}</Text>
           </TouchableOpacity>
-        </View>
-
-        {open && (
-          <DropDownPicker
-            open={open}
-            value={recurrenceOption}
-            items={recurrenceItems}
-            setOpen={setOpen}
-            setValue={(value) => setRecurrenceOption(value)}
-            setItems={setRecurrenceItems}
-            zIndex={1000} // Ensure dropdown is above other elements
-            style={{ backgroundColor: themeColors.background }}
+          <DateTimePickerModal
+            isVisible={isRecurrenceEndDatePickerVisible}
+            mode="date"
+            onConfirm={handleConfirmRecurrenceEndDate}
+            onCancel={hideRecurrenceEndDatePicker}
+            date={recurrenceEndDate}
+            minimumDate={new Date()}
           />
-        )}
+        </>
+      )}
 
-        {recurrenceOption !== "Does not repeat" && (
-          <TouchableOpacity onPress={showRecurrenceEndDatePicker}>
-            <Animated.View
-              entering={FadeInLeft.delay(200)
-                .randomDelay()
-                .reduceMotion(ReduceMotion.Never)}
-              style={{ flexDirection: "row", alignItems: "center" }}
-            >
-              <View style={styles.dateTime}>
-                <Text style={styles.label}>End Date</Text>
-                <Text style={{ color: themeColors.text }}>
-                  {formatDateString(recurrenceEndDate)}{" "}
-                
-                <MaterialCommunityIcons
-                  name="chevron-right"
-                  size={24}
-                  color={themeColors.textSecondary}
-                />
-                </Text>
-              </View>
-            </Animated.View>
-          </TouchableOpacity>
-        )}
-
-        <DateTimePickerModal
-          isVisible={isRecurrenceEndDatePickerVisible}
-          mode="date"
-          onConfirm={handleConfirmRecurrenceEndDate}
-          onCancel={hideRecurrenceEndDatePicker}
-          textColor={themeColors.text}
-          accentColor={themeColors.icon}
-        />
-
-        <View style={styles.colorContainer}>
-          <Text style={styles.colorLabel}>Color</Text>
-          <View style={styles.colorOptions}>
-            {["red", "blue", "green"].map((color) => (
-              <TouchableOpacity
-                key={color}
-                style={[
-                  styles.colorOption,
-                  { backgroundColor: color },
-                  selectedColor === color && {
-                    borderWidth: 2,
-                    borderColor: themeColors.text,
-                  },
-                ]}
-                onPress={() => setSelectedColor(color)}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.button} onPress={handleSaveTime}>
-            <Text style={styles.buttonText}>Save</Text>
-          </TouchableOpacity>
-        </View>
-      
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity style={styles.button} onPress={handleSaveTime}>
+          <Text style={styles.buttonText}>Save</Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 };
 
 export default CreateNewTime;
-
