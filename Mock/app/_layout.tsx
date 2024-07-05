@@ -14,6 +14,8 @@ import { useColorScheme } from "../components/useColorScheme";
 import { RootSiblingParent } from "react-native-root-siblings";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "../QueryClient";
 
 export { ErrorBoundary } from "expo-router";
 
@@ -51,11 +53,13 @@ const RootLayoutNav = () => {
     <BottomSheetModalProvider>
       <GestureHandlerRootView>
         <SafeAreaProvider>
-          <ThemeProvider
-            value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-          >
-            <Slot />
-          </ThemeProvider>
+          <QueryClientProvider client={queryClient}>
+            <ThemeProvider
+              value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+            >
+              <Slot />
+            </ThemeProvider>
+          </QueryClientProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>
     </BottomSheetModalProvider>

@@ -153,14 +153,12 @@ const ContinueWithEmail = () => {
       fontSize: SIZES.medium,
       fontWeight: "bold",
     },
-    signupButton: {
-      marginLeft: rMS(8),
-    },
     loginText: {
       fontSize: SIZES.medium,
       fontWeight: "bold",
       textDecorationLine: "underline",
       color: themeColors.buttonBackground,
+      marginLeft: rMS(8),
     },
     errorMessage: {
       fontSize: SIZES.medium,
@@ -281,9 +279,9 @@ const ContinueWithEmail = () => {
           </Text>
           <View style={styles.bottomContainer}>
             <Text style={styles.existingText}>Existing user?</Text>
-            <TouchableOpacity style={styles.signupButton} onPress={handleLogin}>
-              <Text style={styles.loginText}>Login</Text>
-            </TouchableOpacity>
+            <Text style={styles.loginText} onPress={handleLogin}>
+              Login
+            </Text>
           </View>
         </Animated.View>
       </View>

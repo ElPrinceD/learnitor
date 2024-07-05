@@ -1,11 +1,10 @@
 // CourseRoadmap.js
-import React from "react";
+import React, { memo } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  Image,
   useColorScheme,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -177,4 +176,4 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
   );
 };
 
-export default CourseRoadmap;
+export default memo(CourseRoadmap);

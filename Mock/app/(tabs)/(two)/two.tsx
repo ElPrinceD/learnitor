@@ -1,81 +1,103 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { View, StyleSheet, useColorScheme } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { View, StyleSheet } from "react-native";
 import SearchBar from "../../../components/SearchBar";
 import CoursesList from "../../../components/CoursesList";
 import CoursesCategories from "../../../components/CoursesCategories";
-import axios from "axios";
-import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
-import { Course, Category } from "../../../components/types";
+import { Course } from "../../../components/types";
 import { router } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
+import { getCourseCategories, getCourses } from "../../../CoursesApiCalls";
+import ErrorMessage from "../../../components/ErrorMessage";
+import { queryClient } from "../../../QueryClient";
 
 const CoursesScreen: React.FC = () => {
-  const [coursesData, setCoursesData] = useState<Course[]>([]);
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
-  const [categoryData, setCategoryData] = useState<Category[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
     null
   );
-  const { userToken } = useAuth();
+  const { userToken, userInfo } = useAuth();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const {
+    status: coursesStatus,
+    data: coursesData,
+    error: coursesError,
+    refetch: refetchCourses,
+  } = useQuery({
+    queryKey: ["courses", userToken?.token],
+    queryFn: () => getCourses(userToken?.token),
+  });
+
+  const {
+    status: categoryStatus,
+    data: categoryData,
+    error: categoryError,
+  } = useQuery({
+    queryKey: ["coursesCategory", userToken?.token, userInfo?.user?.id],
+    queryFn: () => getCourseCategories(userToken?.token),
+  });
 
   useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-
-    const headers = {
-      Authorization: `Token ${userToken?.token}`,
-      'Content-Type': 'application/json',
+    if (categoryStatus === "error" || coursesStatus === "error") {
+      setErrorMessage(
+        categoryError?.message || coursesError?.message || "An error occurred"
+      );
     }
-    console.log(userToken?.token)
-    try {
-      const course = await axios.get(`${ApiUrl}/api/course/all/`, {
-        headers 
-      });
-      const categories = await axios.get(`${ApiUrl}/api/category/all/`, {
-        headers
-      });
-      
-      setCoursesData(course.data);
-      setFilteredCourses(course.data);
-      setCategoryData(categories.data);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    }
-  };
+  }, [categoryStatus, coursesStatus]);
 
-  const handleSearch = (query: string) => {
-    const filtered = coursesData.filter((course) =>
-      course.title.toLowerCase().includes(query.toLowerCase())
-    );
-    setFilteredCourses(filtered);
-  };
+  const handleSearch = useCallback(
+    (query: string) => {
+      const filtered = coursesData?.filter((course: Course) =>
+        course.title.toLowerCase().includes(query.toLowerCase())
+      );
+      setFilteredCourses(filtered);
+    },
+    [coursesData]
+  );
 
-  const handleCategoryPress = (categoryId: number | null) => {
-    // Toggle the selected category
-    const newCategoryId = selectedCategoryId === categoryId ? null : categoryId;
-    setSelectedCategoryId(newCategoryId);
+  const handleCategoryPress = useCallback(
+    (categoryId: number | null) => {
+      const newCategoryId =
+        selectedCategoryId === categoryId ? null : categoryId;
+      setSelectedCategoryId(newCategoryId);
 
-    // Filter courses based on the new selected category ID
-    const filtered =
-      newCategoryId !== null
-        ? coursesData.filter((course) =>
-            course.category.includes(newCategoryId)
-          )
-        : coursesData;
-    setFilteredCourses(filtered);
-  };
+      const filtered =
+        newCategoryId !== null
+          ? coursesData?.filter((course: Course) =>
+              course.category.includes(newCategoryId)
+            )
+          : coursesData;
 
-  const handleCoursePress = React.useCallback(
+      setFilteredCourses(filtered);
+    },
+    [coursesData, selectedCategoryId]
+  );
+
+  const handleCoursePress = useCallback(
     (course: Course) => {
       router.navigate("CourseDetails");
       router.setParams({
         course: JSON.stringify(course),
       });
     },
-    [router] // Include router in the dependencies array
+    [router]
   );
+
+  useEffect(() => {
+    setFilteredCourses(coursesData);
+  }, [coursesData]);
+
+  const onRefresh = useCallback(async () => {
+    try {
+      await queryClient.invalidateQueries({
+        queryKey: ["courses", userToken?.token],
+      });
+      refetchCourses();
+    } catch (error) {
+      setErrorMessage("Failed to refresh courses");
+    }
+  }, [queryClient, userToken?.token, refetchCourses]);
 
   const styles = StyleSheet.create({
     container: {
@@ -90,10 +112,19 @@ const CoursesScreen: React.FC = () => {
         categories={categoryData}
         onPressCategory={handleCategoryPress}
         selectedCategoryId={selectedCategoryId}
+        loading={coursesStatus === "pending"}
       />
       <CoursesList
         courses={filteredCourses}
         onCoursePress={handleCoursePress}
+        onRefresh={onRefresh}
+        refreshing={coursesStatus === "pending"}
+        loading={coursesStatus === "pending"}
+      />
+      <ErrorMessage
+        message={errorMessage}
+        visible={!!errorMessage}
+        onDismiss={() => setErrorMessage(null)}
       />
     </View>
   );
