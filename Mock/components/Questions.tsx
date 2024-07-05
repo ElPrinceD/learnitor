@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ const Questions = ({
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const shadow = useShadows();
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -191,4 +192,4 @@ const Questions = ({
   );
 };
 
-export default Questions;
+export default memo(Questions);

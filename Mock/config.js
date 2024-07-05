@@ -1,3 +1,3 @@
-const ApiUrl = "https://learnitor.vercel.app";
+const ApiUrl = "https://learnitor.onrender.com";
 export default ApiUrl;
 

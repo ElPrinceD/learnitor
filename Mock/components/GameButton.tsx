@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import {
   TouchableOpacity,
   Text,
@@ -74,4 +74,4 @@ const GameButton: React.FC<GameButtonProps> = ({
   );
 };
 
-export default GameButton;
+export default memo(GameButton);

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import ApiUrl from './config'; // Assuming you have a config file for API URL
+import { Answer, Question, Topic } from './components/types';
 
 const apiClient = axios.create({
     baseURL: ApiUrl,
@@ -9,6 +10,7 @@ const apiClient = axios.create({
 });
 
 
+// {GET APIs}
 
 export const getCourses = async (token) => {
 
@@ -86,6 +88,7 @@ export const getCourseTopics = async (courseId, token) => {
     
 };
 
+
 export const getEnrollmentStatus = async (userId, courseId, token) => {
     try {
         const response = await apiClient.get(`/api/learner/${userId}/course/${courseId}/enrollment/`, {
@@ -96,36 +99,6 @@ export const getEnrollmentStatus = async (userId, courseId, token) => {
         return response.data;
     } catch (error) {
         console.error('Error fetching enrollment status:', error);
-        throw error;
-    }
-};
-
-export const enrollInCourse = async (userId, courseId, topicIds, token) => {
-    try {
-        const response = await apiClient.post(`/api/learner/${userId}/course/${courseId}/enroll/`, {
-            selectedTopics: topicIds,
-        }, {
-            headers: {
-                Authorization: `Token ${token}`,
-            },
-        });
-        return response.data;
-    } catch (error) {
-        console.error('Error enrolling in course:', error);
-        throw error;
-    }
-};
-
-export const unenrollFromCourse = async (userId, courseId, token) => {
-    try {
-        const response = await apiClient.post(`/api/learner/${userId}/course/${courseId}/unenroll/`, {}, {
-            headers: {
-                Authorization: `Token ${token}`,
-            },
-        });
-        return response.data;
-    } catch (error) {
-        console.error('Error unenrolling from course:', error);
         throw error;
     }
 };
@@ -159,3 +132,68 @@ export const getEnrolledCourseTopics = async (userId, courseId, token) => {
         throw error;
     }
 };
+
+export const getPracticeQuestions = async (topicId: number, token, level: string): Promise<Question[]> => {
+ try {
+      const response = await apiClient.get(`/api/course/topic/${topicId}/questions/`,
+        {
+          headers: {
+            Authorization: `Token ${token}`,
+          },
+        }
+      );   return response.data.filter((question: Question) => question.level === level);
+
+    } catch (error) {
+        console.error('Error fetching practice questions:', error);
+        throw error;
+    }
+};
+export const getPracticeAnswers = async (questionId: number, token): Promise<Answer[]> => {
+ try {
+      const response = await apiClient.get(`/api/course/topic/questions/${questionId}/answers`,
+        {
+          headers: {
+            Authorization: `Token ${token}`,
+          },
+        }
+      ); return response.data;
+    } catch (error) {
+        console.error('Error fetching practice answers:', error);
+        throw error;
+    }
+};
+
+// {POST APIs}
+
+export const enrollInCourse = async (userId, courseId, topicIds, token) => {
+    try {
+        const response = await apiClient.post(`/api/learner/${userId}/course/${courseId}/enroll/`, {
+            selectedTopics: topicIds,
+        }, {
+            headers: {
+                Authorization: `Token ${token}`,
+            },
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error enrolling in course:', error);
+        throw error;
+    }
+};
+
+export const unenrollFromCourse = async (userId, courseId, token) => {
+    try {
+        const response = await apiClient.post(`/api/learner/${userId}/course/${courseId}/unenroll/`, {}, {
+            headers: {
+                Authorization: `Token ${token}`,
+            },
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error unenrolling from course:', error);
+        throw error;
+    }
+};
+
+
+
