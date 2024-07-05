@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -19,9 +19,9 @@ import { Ionicons } from "@expo/vector-icons";
 import Colors from "../../constants/Colors";
 import axios from "axios";
 import ApiUrl from "../../config";
-import { Question, Player, GameDetailsResponse } from "../../components/types";
+import { Question } from "../../components/types";
+import { Player, GameDetailsResponse } from "../../components/types";
 import { SIZES, rMS, rS, rV } from "../../constants";
-import Pusher from 'pusher-js/react-native';
 
 export default function GameWaitingScreen() {
   const { userInfo, userToken } = useAuth();
@@ -35,6 +35,7 @@ export default function GameWaitingScreen() {
   if (!userInfo) {
     return null;
   }
+
   const [creator, setCreator] = useState<string | undefined>();
   const [creatorId, setCreatorId] = useState<number | undefined>();
   const [gameCode, setGameCode] = useState<string>(code || "");
@@ -43,6 +44,7 @@ export default function GameWaitingScreen() {
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+  const ws = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     const fetchGameDetails = async () => {
@@ -59,7 +61,7 @@ export default function GameWaitingScreen() {
         setCreator(data.creator.first_name);
         setCreatorId(data.creator.id);
         setGameCode(data.code);
-
+        console.log("Players", data.players);
         if (data.players) {
           const newPlayers = data.players.map((player) => ({
             id: player.id,
@@ -71,6 +73,7 @@ export default function GameWaitingScreen() {
                 : `${ApiUrl}${player.profile_picture}`,
           }));
           setPlayers(newPlayers);
+          console.log("Hey", players);
         }
       } catch (error) {
         console.error("Error fetching game details:", error);
@@ -80,38 +83,55 @@ export default function GameWaitingScreen() {
     if (gameCode && userToken) {
       fetchGameDetails();
 
-      // Initialize Pusher
-      const pusher = new Pusher('YOUR_PUSHER_APP_KEY', {
-        cluster: 'YOUR_PUSHER_APP_CLUSTER',
-        encrypted: true,
-      });
+      ws.current = new WebSocket(
+        `wss://learnitor.onrender.com/games/${gameCode}/ws/`
+      );
 
-      const channel = pusher.subscribe(`game_${gameCode}`);
-      
-      channel.bind('game.update', (data: any) => {
-        console.log('Received game update:', data);
-        if (data.players) {
-          const newPlayers = data.players.map((player: any) => ({
-            id: player.id,
-            profileName: `${player.first_name} ${player.last_name}`,
-            profile_picture:
-              player.id === userInfo?.user.id
-                ? userInfo.user.profile_picture
-                : `${ApiUrl}${player.profile_picture}`,
-          }));
+      ws.current.onopen = () => {
+        console.log("WebSocket connection opened");
+      };
 
-          setPlayers(newPlayers);
+      ws.current.onerror = (error) => {
+        console.error("WebSocket connection error:", error);
+      };
+
+      ws.current.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          
+         
+          
+          if (data && data.data) {
+
+          if (data.data.players) {
+            const newPlayers = data.data.players.map((player: any) => ({
+              id: player.id,
+              profileName: `${player.first_name} ${player.last_name}`,
+              profile_picture:
+                player.id === userInfo?.user.id
+                  ? userInfo.user.profile_picture
+                  : `${ApiUrl}${player.profile_picture}`,
+            }));
+
+            setPlayers(newPlayers);
+          }
         }
 
-        if (data.type === "game.start") {
-          console.log("User has received start game ", userInfo?.user.first_name);
-          goToGame();
+          if (data.type === "game.start") {
+            console.log(
+              "User has received start game ",
+              userInfo?.user.first_name
+            );
+            goToGame();
+          }
+        } catch (error) {
+          console.error("Error parsing JSON data:", error);
         }
-      });
+      };
 
+      // Close WebSocket connection on component unmount
       return () => {
-        channel.unbind_all();
-        channel.unsubscribe();
+        ws.current?.close();
       };
     }
   }, [gameCode, userToken, gameId, id]);
