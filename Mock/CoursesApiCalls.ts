@@ -57,6 +57,10 @@ export const getRecommendedCourses = async (token) => {
     }
 };
 
+
+
+
+
 export const getEnrolledCourses = async (userId, token) => {
     try {
         const response = await apiClient.get(`/api/learner/${userId}/courses`, {
@@ -133,21 +137,20 @@ export const getEnrolledCourseTopics = async (userId, courseId, token) => {
     }
 };
 
-export const getPracticeQuestions = async (topicId: number, token, level: string): Promise<Question[]> => {
- try {
-      const response = await apiClient.get(`/api/course/topic/${topicId}/questions/`,
-        {
-          headers: {
-            Authorization: `Token ${token}`,
-          },
-        }
-      );   return response.data.filter((question: Question) => question.level === level);
-
-    } catch (error) {
-        console.error('Error fetching practice questions:', error);
-        throw error;
-    }
+export const getPracticeQuestions = async (topicId, token, level = "all") => {
+  try {
+    const response = await apiClient.get(`/api/course/topic/${topicId}/questions/`, {
+      headers: {
+        Authorization: `Token ${token}`,
+      },
+    });
+    return response.data.filter((question) => level === "all" || question.level === level);
+  } catch (error) {
+    console.error('Error fetching practice questions:', error);
+    throw error;
+  }
 };
+
 export const getPracticeAnswers = async (questionId: number, token): Promise<Answer[]> => {
  try {
       const response = await apiClient.get(`/api/course/topic/questions/${questionId}/answers`,

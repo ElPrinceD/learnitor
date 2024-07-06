@@ -9,13 +9,14 @@ import {
   FlatList,
 } from "react-native";
 import { router } from "expo-router";
-import { Course } from "./types";
+import { RecommendedCourse } from "./types";
 import Colors from "../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../constants";
 import { Skeleton } from "moti/skeleton";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 interface Props {
-  RecommendedCoursesData: Course[];
+  RecommendedCoursesData: RecommendedCourse[];
   loading: boolean;
 }
 
@@ -72,6 +73,13 @@ const RecommendedCoursesList: React.FC<Props> = ({
       color: themeColors.textSecondary,
       textAlign: "left",
     },
+    topicsNumber: {
+      fontSize: SIZES.medium,
+      color: themeColors.icon,
+      textAlign: "left",
+      fontWeight: "bold",
+    },
+
     skeletonContainer: {
       flexDirection: "row",
       alignItems: "center",
@@ -85,7 +93,7 @@ const RecommendedCoursesList: React.FC<Props> = ({
   });
 
   const renderItem = useCallback(
-    ({ item }: { item: Course }) => (
+    ({ item }: { item: RecommendedCourse }) => (
       <TouchableOpacity
         onPress={() => {
           router.navigate({
@@ -104,6 +112,15 @@ const RecommendedCoursesList: React.FC<Props> = ({
             <Text style={styles.name} numberOfLines={2}>
               {item.title}
             </Text>
+            <Text style={styles.topicsNumber}>
+              <MaterialCommunityIcons
+                name="notebook-multiple"
+                size={rMS(16)}
+                color={themeColors.icon}
+              />{" "}
+              {item.topicsCount} Topics
+            </Text>
+            <Text>{item.questionsCount} Questions</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -111,7 +128,11 @@ const RecommendedCoursesList: React.FC<Props> = ({
     [themeColors]
   );
 
-  const keyExtractor = useCallback((item: Course) => item.id.toString(), []);
+  const keyExtractor = useCallback(
+    (item: RecommendedCourse) => item.id.toString(),
+    []
+  );
+
   if (loading) {
     return (
       <View style={styles.skeletonContainer}>
@@ -125,6 +146,7 @@ const RecommendedCoursesList: React.FC<Props> = ({
       </View>
     );
   }
+
   return (
     <View style={styles.container}>
       <FlatList

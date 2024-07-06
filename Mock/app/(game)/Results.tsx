@@ -15,6 +15,8 @@ import { useAuth } from "../../components/AuthContext";
 import Colors from "../../constants/Colors";
 import GameButton from "../../components/GameButton";
 import { SIZES, rMS, rS, rV } from "../../constants";
+import { useQuery } from "@tanstack/react-query";
+import { getGameDetails } from "../../GamesApiCalls";
 
 export default function ResultsScreen() {
   const { userInfo, userToken } = useAuth();
@@ -47,37 +49,33 @@ export default function ResultsScreen() {
     return null;
   }
 
+  const {
+    data: gameDetails,
+    error: gameDetailsError,
+    refetch: refetchGameDetails,
+  } = useQuery<GameDetailsResponse, Error>({
+    queryKey: ["gameDetails", gameId, userToken?.token],
+    queryFn: () => getGameDetails(gameId, userToken?.token),
+    enabled: !!userToken,
+  });
+
   useEffect(() => {
-    const fetchGameDetails = async () => {
-      try {
-        const response = await axios.get<GameDetailsResponse>(
-          `${ApiUrl}/games/${gameId}/`,
-          {
-            headers: { Authorization: `Token ${userToken?.token}` },
-          }
-        );
+    if (gameDetails) {
+      setCreator(gameDetails.creator.first_name);
+      setCreatorId(gameDetails.creator.id);
+      setGameCode(gameDetails.code);
 
-        const { data } = response;
-        setCreator(data.creator.first_name);
-        setCreatorId(data.creator.id);
-        setGameCode(data.code);
-
-        console.log(data.players);
-        if (data.players) {
-          const newPlayers = data.players.map((player) => ({
-            id: player.id,
-            score: scores[player.id] || "0.0",
-            profileName: `${player.first_name} ${player.last_name}`,
-            profile_picture: player.profile_picture,
-          }));
-          setPlayers(newPlayers);
-        }
-      } catch (error) {
-        console.error("Error fetching game details:", error);
+      console.log(gameDetails.players);
+      if (gameDetails.players) {
+        const newPlayers = gameDetails.players.map((player) => ({
+          id: player.id,
+          score: scores[player.id] || "0.0",
+          profileName: `${player.first_name} ${player.last_name}`,
+          profile_picture: player.profile_picture,
+        }));
+        setPlayers(newPlayers);
       }
-    };
-
-    fetchGameDetails();
+    }
   }, [gameId, userToken]);
 
   const handleCreateNewGame = () => {

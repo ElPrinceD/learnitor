@@ -10,9 +10,11 @@ import { useAuth } from "../../components/AuthContext";
 import Colors from "../../constants/Colors";
 import { SIZES, rMS } from "../../constants";
 import {
-  getRecommendedCourses,
   getEnrolledCourses,
   getCourseProgress,
+  getRecommendedCourses,
+  getCourseTopics,
+  getPracticeQuestions,
 } from "../../CoursesApiCalls";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "../../QueryClient";
@@ -27,13 +29,37 @@ const Home = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  const fetchRecommendedCoursesWithDetails = async (token) => {
+    const courses = await getRecommendedCourses(token);
+    const coursesWithDetails = await Promise.all(
+      courses.map(async (course) => {
+        const topics = await getCourseTopics(course.id, token);
+        const questionsCount = (
+          await Promise.all(
+            topics.map(async (topic) => {
+              const questions = await getPracticeQuestions(topic.id, token);
+              return questions.length;
+            })
+          )
+        ).reduce((acc, count) => acc + count, 0);
+
+        return {
+          ...course,
+          topicsCount: topics.length,
+          questionsCount,
+        };
+      })
+    );
+    return coursesWithDetails;
+  };
+
   const {
     status: recommendedStatus,
-    data: coursesData,
+    data: coursesData = [],
     error: recommendedError,
   } = useQuery({
-    queryKey: ["courses", userToken?.token],
-    queryFn: () => getRecommendedCourses(userToken?.token),
+    queryKey: ["coursesWithDetails", userToken?.token],
+    queryFn: () => fetchRecommendedCoursesWithDetails(userToken?.token),
   });
 
   const {
@@ -117,7 +143,7 @@ const Home = () => {
     setRefreshing(true);
     try {
       await queryClient.invalidateQueries({
-        queryKey: ["courses", userToken?.token],
+        queryKey: ["coursesWithDetails", userToken?.token],
       });
       await queryClient.invalidateQueries({
         queryKey: ["enrolledCourses", userToken?.token],

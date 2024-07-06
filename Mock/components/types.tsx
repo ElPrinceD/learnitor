@@ -13,6 +13,16 @@ export interface Course {
   category: number[];
   id: string;
 }
+export interface RecommendedCourse {
+  title: string;
+  description: string;
+  level: string;
+  url: string;
+  category: number[];
+  id: string;
+  topicsCount: number;
+  questionsCount: number;
+}
 
 export interface Topic {
   title: string;
