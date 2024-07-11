@@ -4,6 +4,7 @@ import {
   useColorScheme,
   RefreshControl,
   ScrollView,
+  Dimensions,
 } from "react-native";
 import { Text, View } from "../../components/Themed";
 import { useAuth } from "../../components/AuthContext";
@@ -22,14 +23,19 @@ import { queryClient } from "../../QueryClient";
 import ErrorMessage from "../../components/ErrorMessage";
 import RecommendedCoursesList from "../../components/Recommended";
 import EnrolledCoursesList from "../../components/EnrolledCoursesList";
+import ReanimatedCarousel from "../../components/ReanimatedCarousel"; // Import the carousel component
 
-const Home = () => {
+interface UserToken {
+  token: string;
+}
+
+const Home: React.FC = () => {
   const { userToken, userInfo } = useAuth();
   const colorScheme = useColorScheme();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchRecommendedCoursesWithDetails = async (token) => {
+  const fetchRecommendedCoursesWithDetails = async (token: string) => {
     const courses = await getRecommendedCourses(token);
     const coursesWithDetails = await Promise.all(
       courses.map(async (course) => {
@@ -59,7 +65,8 @@ const Home = () => {
     error: recommendedError,
   } = useQuery({
     queryKey: ["coursesWithDetails", userToken?.token],
-    queryFn: () => fetchRecommendedCoursesWithDetails(userToken?.token),
+    queryFn: () => fetchRecommendedCoursesWithDetails(userToken?.token!),
+    enabled: !!userToken?.token,
   });
 
   const {
@@ -68,7 +75,8 @@ const Home = () => {
     error: enrolledError,
   } = useQuery({
     queryKey: ["enrolledCourses", userToken?.token],
-    queryFn: () => getEnrolledCourses(userInfo?.user?.id, userToken?.token),
+    queryFn: () => getEnrolledCourses(userInfo?.user?.id!, userToken?.token!),
+    enabled: !!userToken?.token && !!userInfo?.user?.id,
   });
 
   const {
@@ -82,22 +90,22 @@ const Home = () => {
 
       const progressPromises = enrolledCoursesData.map(async (course) => {
         const progress = await getCourseProgress(
-          userInfo?.user?.id,
+          userInfo?.user?.id!,
           course.id,
-          userToken?.token
+          userToken?.token!
         );
         return { courseId: course.id, progress };
       });
 
       const progressArray = await Promise.all(progressPromises);
-      const progressMap = {};
+      const progressMap: { [key: string]: number } = {};
       progressArray.forEach((item) => {
         progressMap[item.courseId] = item.progress;
       });
 
       return progressMap;
     },
-    enabled: !!enrolledCoursesData,
+    enabled: !!userToken?.token && !!enrolledCoursesData,
   });
 
   useEffect(() => {
@@ -157,6 +165,24 @@ const Home = () => {
     }
   }, [queryClient, userToken?.token, enrolledCoursesData]);
 
+  const carouselItems = [
+    {
+      title: "Arranged Timeline",
+      description: "All your schedules and tasks in one place",
+      image: "https://img.freepik.com/free-photo/clipboard-with-checklist-paper-note-icon-symbol-purple-background-3d-rendering_56104-1491.jpg?t=st=1720695928~exp=1720699528~hmac=c01f700d3fb1485935bcaea8c8f58e3138e0e1926932e00a354e64b942b7759f&w=740",
+    },
+    {
+      title: "Tailored Courses",
+      description: "Our platform curates a unique selection of courses based on your interests",
+      image: "https://images.unsplash.com/photo-1526170160160-1a5eb242ab58?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    },
+    {
+      title: "",
+      description: "",
+      image: "https://img.freepik.com/free-vector/quote-blog-banner-template-editable-inspirational-message-everyday-is-fresh-start-vector_53876-146703.jpg?t=st=1720698178~exp=1720701778~hmac=6fdc12b09cfa7c01741c595f934cdc6b6c20e63350fe0f1c3b1a6c1c4bdc3517&w=900",
+    },
+  ];
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -170,6 +196,7 @@ const Home = () => {
           />
         }
       >
+        <ReanimatedCarousel data={carouselItems} />
         <View style={styles.coursesContainer}>
           <Text style={styles.sectionTitle}>Enrolled Courses</Text>
           <EnrolledCoursesList
@@ -183,6 +210,7 @@ const Home = () => {
             loading={recommendedStatus === "pending"}
           />
         </View>
+        
       </ScrollView>
       <ErrorMessage
         message={errorMessage}
