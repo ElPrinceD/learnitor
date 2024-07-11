@@ -4,7 +4,6 @@ import {
   useColorScheme,
   RefreshControl,
   ScrollView,
-  Dimensions,
 } from "react-native";
 import { Text, View } from "../../components/Themed";
 import { useAuth } from "../../components/AuthContext";
@@ -23,11 +22,7 @@ import { queryClient } from "../../QueryClient";
 import ErrorMessage from "../../components/ErrorMessage";
 import RecommendedCoursesList from "../../components/Recommended";
 import EnrolledCoursesList from "../../components/EnrolledCoursesList";
-import ReanimatedCarousel from "../../components/ReanimatedCarousel"; // Import the carousel component
-
-interface UserToken {
-  token: string;
-}
+import ReanimatedCarousel from "../../components/ReanimatedCarousel";
 
 const Home: React.FC = () => {
   const { userToken, userInfo } = useAuth();
@@ -169,17 +164,21 @@ const Home: React.FC = () => {
     {
       title: "Arranged Timeline",
       description: "All your schedules and tasks in one place",
-      image: "https://img.freepik.com/free-photo/clipboard-with-checklist-paper-note-icon-symbol-purple-background-3d-rendering_56104-1491.jpg?t=st=1720695928~exp=1720699528~hmac=c01f700d3fb1485935bcaea8c8f58e3138e0e1926932e00a354e64b942b7759f&w=740",
+      image:
+        "https://img.freepik.com/free-photo/clipboard-with-checklist-paper-note-icon-symbol-purple-background-3d-rendering_56104-1491.jpg?t=st=1720695928~exp=1720699528~hmac=c01f700d3fb1485935bcaea8c8f58e3138e0e1926932e00a354e64b942b7759f&w=740",
     },
     {
       title: "Tailored Courses",
-      description: "Our platform curates a unique selection of courses based on your interests",
-      image: "https://images.unsplash.com/photo-1526170160160-1a5eb242ab58?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      description:
+        "Our platform curates a unique selection of courses based on your interests",
+      image:
+        "https://images.unsplash.com/photo-1526170160160-1a5eb242ab58?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
     },
     {
       title: "",
       description: "",
-      image: "https://img.freepik.com/free-vector/quote-blog-banner-template-editable-inspirational-message-everyday-is-fresh-start-vector_53876-146703.jpg?t=st=1720698178~exp=1720701778~hmac=6fdc12b09cfa7c01741c595f934cdc6b6c20e63350fe0f1c3b1a6c1c4bdc3517&w=900",
+      image:
+        "https://img.freepik.com/free-vector/quote-blog-banner-template-editable-inspirational-message-everyday-is-fresh-start-vector_53876-146703.jpg?t=st=1720698178~exp=1720701778~hmac=6fdc12b09cfa7c01741c595f934cdc6b6c20e63350fe0f1c3b1a6c1c4bdc3517&w=900",
     },
   ];
 
@@ -210,7 +209,6 @@ const Home: React.FC = () => {
             loading={recommendedStatus === "pending"}
           />
         </View>
-        
       </ScrollView>
       <ErrorMessage
         message={errorMessage}

@@ -91,6 +91,7 @@ export interface GameDetailsResponse {
   }[];
   questions: Question[];
   code: string;
+  duration: number;
 }
 export interface Plan {
   id: number;
