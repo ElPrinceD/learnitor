@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -17,12 +17,11 @@ import { router, useLocalSearchParams } from "expo-router";
 import GameButton from "../../components/GameButton";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "../../constants/Colors";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { getGameDetails, startGame } from "../../GamesApiCalls";
-import { queryClient } from "../../QueryClient";
-import { useWebSocket } from "../../GameWebSocket";
-import { GameDetailsResponse, Player, Question } from "../../components/types";
+import axios from "axios";
 import ApiUrl from "../../config";
+import { Question } from "../../components/types";
+import { Player, GameDetailsResponse } from "../../components/types";
+import { SIZES, rMS, rS, rV } from "../../constants";
 
 export default function GameWaitingScreen() {
   const { userInfo, userToken } = useAuth();
@@ -41,65 +40,96 @@ export default function GameWaitingScreen() {
   const [creatorId, setCreatorId] = useState<number | undefined>();
   const [gameCode, setGameCode] = useState<string>(code || "");
   const [players, setPlayers] = useState<Player[]>([]);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [gameQuestions, setGameQuestions] = useState<Question[]>([]);
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
-
-  const {
-    data: gameDetails,
-    error: gameDetailsError,
-    refetch: refetchGameDetails,
-  } = useQuery<GameDetailsResponse, Error>({
-    queryKey: ["gameDetails", id || gameId, userToken?.token],
-    queryFn: () => getGameDetails(id || gameId, userToken?.token),
-    enabled: !!userToken,
-  });
-
-  const goToGame = () => {
-    router.navigate({
-      pathname: "Game",
-      params: {
-        questions: JSON.stringify(gameQuestions),
-        isCreator: isCreator,
-        gameId: gameId || id,
-        joinerGameId: id || gameId,
-        gameCode: gameCode,
-      },
-    });
-  };
-
-  useWebSocket(
-    gameCode,
-    userInfo,
-    setPlayers,
-    goToGame,
-    id || gameId,
-    userToken
-  );
+  const ws = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    if (gameDetails) {
-      setGameQuestions(gameDetails.questions);
-      setCreator(gameDetails.creator.first_name);
-      setCreatorId(gameDetails.creator.id);
-      setGameCode(gameDetails.code);
+    const fetchGameDetails = async () => {
+      try {
+        const response = await axios.get<GameDetailsResponse>(
+          `${ApiUrl}/games/${id || gameId}/`,
+          {
+            headers: { Authorization: `Token ${userToken?.token}` },
+          }
+        );
 
-      if (gameDetails.players) {
-        const newPlayers = gameDetails.players.map((player) => ({
-          id: player.id,
-          score: "0",
-          profileName: `${player.first_name} ${player.last_name}`,
-          profile_picture:
-            player.id === userInfo?.user.id
-              ? userInfo.user.profile_picture
-              : `${ApiUrl}${player.profile_picture}`,
-        }));
-        setPlayers(newPlayers);
+        const { data } = response;
+        setGameQuestions(data.questions);
+        setCreator(data.creator.first_name);
+        setCreatorId(data.creator.id);
+        setGameCode(data.code);
+        console.log("Players", data.players);
+        if (data.players) {
+          const newPlayers = data.players.map((player) => ({
+            id: player.id,
+            score: "0",
+            profileName: `${player.first_name} ${player.last_name}`,
+            profile_picture:
+              player.id === userInfo?.user.id
+                ? userInfo.user.profile_picture
+                : `${ApiUrl}${player.profile_picture}`,
+          }));
+          setPlayers(newPlayers);
+          console.log("Hey", players);
+        }
+      } catch (error) {
+        console.error("Error fetching game details:", error);
       }
+    };
+
+    if (gameCode && userToken) {
+      fetchGameDetails();
+
+      ws.current = new WebSocket(
+        `wss://learnitor.onrender.com/games/${gameCode}/ws/`
+      );
+
+      ws.current.onopen = () => {
+        console.log("WebSocket connection opened");
+      };
+
+      ws.current.onerror = (error) => {
+        console.error("WebSocket connection error:", error);
+      };
+
+      ws.current.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data && data.data) {
+            if (data.data.players) {
+              const newPlayers = data.data.players.map((player: any) => ({
+                id: player.id,
+                profileName: `${player.first_name} ${player.last_name}`,
+                profile_picture:
+                  player.id === userInfo?.user.id
+                    ? userInfo.user.profile_picture
+                    : `${ApiUrl}${player.profile_picture}`,
+              }));
+
+              setPlayers(newPlayers);
+            }
+          }
+
+          if (data.type === "game.start") {
+            console.log(
+              "User has received start game ",
+              userInfo?.user.first_name
+            );
+            goToGame();
+          }
+        } catch (error) {
+          console.error("Error parsing JSON data:", error);
+        }
+      }; // Close WebSocket connection on component unmount
+
+      return () => {
+        ws.current?.close();
+      };
     }
-  }, [gameDetails]);
+  }, [gameCode, userToken, gameId, id]);
 
   const copyToClipboard = async () => {
     await Clipboard.setStringAsync(gameCode);
@@ -124,84 +154,96 @@ export default function GameWaitingScreen() {
     }
   };
 
-  const startGameMutation = useMutation<any, any, any>({
-    mutationFn: async ({ gameId, token }) => {
-      await startGame(id || gameId, token);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["gameDetails", id || gameId],
-      });
-      goToGame();
-    },
-    onError: (error: Error) => {
-      setErrorMessage(error.message || "Error starting game");
-    },
-  });
-
   const handleStartGame = async () => {
-    startGameMutation.mutate({ gameId: gameId, token: userToken?.token });
+    try {
+      const response = await axios.post(
+        `${ApiUrl}/games/${id || gameId}/start_game/`,
+        {},
+        {
+          headers: { Authorization: `Token ${userToken?.token}` },
+        }
+      );
+      if (response.status === 200) {
+        console.log("Game started");
+        goToGame();
+      }
+    } catch (error) {
+      console.error("Error starting the game:", error);
+    }
+  };
+
+  const goToGame = () => {
+    router.navigate({
+      pathname: "Game",
+      params: {
+        questions: JSON.stringify(gameQuestions),
+        isCreator: isCreator,
+        gameId: gameId || id,
+        joinerGameId: id || gameId,
+        gameCode: gameCode,
+      },
+    });
   };
 
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      padding: 10,
+      padding: rMS(10),
     },
     topContainerTitle: {
       color: themeColors.text,
-      fontSize: 24,
+      fontSize: SIZES.xxxLarge,
       fontWeight: "bold",
-      marginTop: 100,
+      marginTop: rV(100),
     },
     header: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
-      marginVertical: 18,
+      marginVertical: rV(18),
     },
     gameCode: {
       color: themeColors.text,
-      fontSize: 24,
+      fontSize: SIZES.xLarge,
       fontWeight: "bold",
-      marginRight: 10,
+      marginRight: rS(10),
     },
     iconButton: {
-      marginHorizontal: 5,
+      marginHorizontal: rS(5),
     },
     waitingText: {
       color: themeColors.textSecondary,
-      fontSize: 18,
+      fontSize: SIZES.large,
       fontWeight: "bold",
       textAlign: "center",
-      marginBottom: 18,
+      marginBottom: rV(18),
     },
     playersList: {
-      paddingBottom: 60,
+      paddingBottom: rV(60),
     },
     playerContainer: {
       flexDirection: "row",
       alignItems: "center",
-      padding: 10,
+      padding: rMS(10),
       backgroundColor: "transparent",
-      marginVertical: 5,
+      marginVertical: rV(5),
     },
     profileImage: {
       width: 50,
       height: 50,
       borderRadius: 25,
-      marginRight: 15,
+      marginRight: rS(15),
     },
     profileName: {
       color: themeColors.text,
-      fontSize: 16,
+      fontSize: SIZES.medium,
     },
     startButtonContainer: {
       position: "absolute",
-      bottom: 18,
-      width: 200,
+      bottom: rS(18),
+      width: rS(200),
       alignSelf: "center",
-      padding: 10,
+      padding: rMS(10),
       borderTopLeftRadius: 20,
       borderBottomRightRadius: 20,
     },
@@ -222,11 +264,14 @@ export default function GameWaitingScreen() {
       <Text style={styles.topContainerTitle}>
         {isCreator ? userInfo?.user.first_name : creator}'s Arena
       </Text>
+
       <View style={styles.header}>
         <Text style={styles.gameCode}>{gameCode}</Text>
+
         <TouchableOpacity onPress={copyToClipboard} style={styles.iconButton}>
           <Ionicons name="copy-outline" size={30} color={themeColors.icon} />
         </TouchableOpacity>
+
         <TouchableOpacity onPress={shareGameCode} style={styles.iconButton}>
           <Ionicons
             name={
@@ -237,18 +282,22 @@ export default function GameWaitingScreen() {
           />
         </TouchableOpacity>
       </View>
-      <Text style={styles.waitingText}>
-        Waiting for other players to join...
-      </Text>
+      <Text style={styles.waitingText}>Waiting for others...</Text>
+
       <FlatList
         data={players}
         renderItem={renderPlayer}
         keyExtractor={(item) => item.id.toString()}
-        style={styles.playersList}
+        contentContainerStyle={styles.playersList}
       />
-      {isCreator && (
-        <View style={styles.startButtonContainer}>
-          <GameButton title="Start Game" onPress={handleStartGame} />
+
+      {(isCreator || creatorId === userInfo?.user.id) && (
+        <View>
+          <GameButton
+            title="Start Game"
+            onPress={handleStartGame}
+            style={styles.startButtonContainer}
+          />
         </View>
       )}
     </View>

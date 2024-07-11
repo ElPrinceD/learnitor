@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { View, StyleSheet } from "react-native";
 import axios from "axios";
 import { useLocalSearchParams, router } from "expo-router";
@@ -8,12 +8,12 @@ import { StatusBar } from "expo-status-bar";
 
 import Questions from "../../components/Questions";
 import { Question, Answer } from "../../components/types";
-import { useWebSocket } from "../../GameWebSocket";
 
 export default function Game() {
   const { userToken, userInfo } = useAuth();
   const { gameId, gameCode } = useLocalSearchParams();
   const [gameAnswers, setGameAnswers] = useState<Answer[]>([]);
+
   const [selectedAnswers, setSelectedAnswers] = useState<{
     [key: number]: number[];
   }>({});
@@ -25,85 +25,92 @@ export default function Game() {
   const [allScores, setAllScores] = useState({});
   const [currentQuestion, setCurrentQuestion] = useState<number>(0);
   const [questionDuration, setQuestionDuration] = useState<number>(20000); // Default duration set to 20 seconds
+  const webSocket = useRef<WebSocket | null>(null); // Function to send WebSocket message when a user attempts a question
 
-  const goToGame = () => {
-    // Navigate to game logic
-  };
+  const sendWebSocketMessage = (questionId: number) => {
+    if (webSocket.current && webSocket.current.readyState === WebSocket.OPEN) {
+      const message = {
+        type: "attempt_question",
+        question_id: questionId,
 
-  const handleSubmit = () => {
-    let totalQuestions = gameQuestions.length;
-    let correctAnswers = 0;
-
-    const results = gameQuestions.map((question) => {
-      const selectedAnswerIds = selectedAnswers[question.id] || [];
-      const correctAnswerIds = gameAnswers
-        .filter((answer) => answer.question === question.id && answer.isRight)
-        .map((answer) => answer.id);
-
-      const isCorrect =
-        selectedAnswerIds.length === correctAnswerIds.length &&
-        selectedAnswerIds.every((id) => correctAnswerIds.includes(id));
-
-      if (isCorrect) {
-        correctAnswers++;
-      }
-
-      const allAnswers = gameAnswers
-        .filter((answer) => answer.question === question.id)
-        .map((answer) => ({
-          id: answer.id,
-          text: answer.text,
-          isSelected: selectedAnswerIds.includes(answer.id),
-          isCorrect: answer.isRight,
-        }));
-
-      return {
-        question: question.text,
-        allAnswers,
-        isCorrect,
+        game_id: gameId,
       };
-    });
-
-    let scorePercentage = (correctAnswers / totalQuestions) * 100;
-
-    sendSubmitScoreMessage(scorePercentage);
-  };
-
-  const { sendWebSocketMessage, refetchGameDetails } = useWebSocket(
-    gameCode,
-    userInfo,
-    (newPlayers) => {},
-    goToGame,
-    gameId,
-    userToken,
-    setAllScores,
-    setCurrentQuestion,
-    currentQuestion,
-    gameQuestions,
-    handleSubmit
-  );
-
-  // Function to send WebSocket message when a user attempts a question
-  const sendAttemptQuestionMessage = (questionId: number) => {
-    const message = {
-      type: "attempt_question",
-      question_id: questionId,
-      game_id: gameId,
-    };
-    sendWebSocketMessage(message);
+      webSocket.current.send(JSON.stringify(message));
+      console.log("We have sent a message");
+    }
   };
 
   const sendSubmitScoreMessage = (scorePercentage: number) => {
-    const message = {
-      type: "submit_score",
-      score: scorePercentage,
-      user_id: userInfo?.user.id,
-      game_id: gameId,
-    };
-    sendWebSocketMessage(message);
-  };
+    if (webSocket.current && webSocket.current.readyState === WebSocket.OPEN) {
+      const message = {
+        type: "submit_score",
+        score: scorePercentage,
+        user_id: userInfo?.user.id,
+        game_id: gameId,
+      };
+      webSocket.current.send(JSON.stringify(message));
+    }
+  }; // Establish WebSocket connection
 
-  // Fetch game details, including questions, from the server
+  useEffect(() => {
+    webSocket.current = new WebSocket(
+      `wss://learnitor.onrender.com/games/${gameCode}/ws/`
+    );
+
+    webSocket.current.onopen = () => {
+      console.log("WebSocket connection opened");
+    };
+
+    webSocket.current.onclose = () => {
+      console.log("WebSocket connection closed");
+    };
+
+    webSocket.current.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+
+    webSocket.current.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      if (
+        message.type === "question.attempted" &&
+        message.question_id === gameQuestions[currentQuestion].id
+      ) {
+        console.log("We have a message");
+        if (currentQuestion < gameQuestions.length - 1) {
+          console.log("We're here");
+          setCurrentQuestion((prevQuestion) => prevQuestion + 1);
+        } else {
+          handleSubmit();
+        }
+      } else if (message.type === "all_scores_submitted") {
+        console.log(message.scores);
+        const scoresObject = message.scores.reduce((acc, score) => {
+          acc[score.user_id] = score.score;
+          return acc;
+        }, {});
+        setAllScores(scoresObject);
+        setTimeout(() => {
+          router.replace({
+            pathname: "Results",
+            params: {
+              scores: JSON.stringify(scoresObject),
+              gameId: gameId,
+
+              practiceQuestions: JSON.stringify(gameQuestions), // Corrected parameter name
+              practiceAnswers: JSON.stringify(gameAnswers),
+            },
+          });
+        }, 0);
+      }
+    };
+
+    return () => {
+      if (webSocket.current) {
+        webSocket.current.close();
+      }
+    };
+  }, [gameCode, gameQuestions, currentQuestion, userInfo]); // Fetch game details, including questions, from the server
+
   useEffect(() => {
     const fetchGameDetails = async () => {
       try {
@@ -111,8 +118,9 @@ export default function Game() {
           headers: { Authorization: `Token ${userToken?.token}` },
         });
 
-        const gameData = response.data;
+        const gameData = response.data; // Debugging
         setGameQuestions(gameData.questions || []);
+
         setQuestionDuration((gameData.duration || 20) * 1000); // Convert duration to milliseconds
 
         const answersPromises = (gameData.questions || []).map(
@@ -176,6 +184,13 @@ export default function Game() {
         (answer) => answer.question === questionId && answer.isRight
       ).length;
 
+      console.log(
+        "Correct answers count for question",
+        questionId,
+        ":",
+        correctAnswersCount
+      ); // If question allows multiple correct answers
+
       if (questionsWithMultipleCorrectAnswers.includes(questionId)) {
         const selected = updatedAnswers[questionId] || [];
 
@@ -185,18 +200,59 @@ export default function Game() {
         ) {
           selected.push(answerId);
           updatedAnswers[questionId] = selected;
+          console.log("selected", selected.length); // Send WebSocket message if the correct number of answers is selected
 
           if (selected.length === correctAnswersCount) {
-            sendAttemptQuestionMessage(questionId);
+            sendWebSocketMessage(questionId);
           }
         }
       } else {
+        // For single correct answer questions
         updatedAnswers[questionId] = [answerId];
-        sendAttemptQuestionMessage(questionId);
+        sendWebSocketMessage(questionId);
       }
 
       return updatedAnswers;
     });
+  };
+
+  const handleSubmit = () => {
+    let totalQuestions = gameQuestions.length;
+    let correctAnswers = 0;
+
+    const results = gameQuestions.map((question) => {
+      const selectedAnswerIds = selectedAnswers[question.id] || [];
+      const correctAnswerIds = gameAnswers
+        .filter((answer) => answer.question === question.id && answer.isRight)
+        .map((answer) => answer.id);
+
+      const isCorrect =
+        selectedAnswerIds.length === correctAnswerIds.length &&
+        selectedAnswerIds.every((id) => correctAnswerIds.includes(id));
+
+      if (isCorrect) {
+        correctAnswers++;
+      }
+
+      const allAnswers = gameAnswers
+        .filter((answer) => answer.question === question.id)
+        .map((answer) => ({
+          id: answer.id,
+          text: answer.text,
+          isSelected: selectedAnswerIds.includes(answer.id),
+          isCorrect: answer.isRight,
+        }));
+
+      return {
+        question: question.text,
+        allAnswers,
+        isCorrect,
+      };
+    });
+
+    let scorePercentage = (correctAnswers / totalQuestions) * 100;
+
+    sendSubmitScoreMessage(scorePercentage); // Defer the navigation call to avoid potential re-renders
   };
 
   const isAnswerSelected = (questionId: number, answerId: number) => {
