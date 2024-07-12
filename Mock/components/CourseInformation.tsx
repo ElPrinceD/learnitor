@@ -170,7 +170,11 @@ const CourseInformation = ({
         </>
       ) : (
         <GameButton
-          onPress={enrollLoading || enrollDisabled ? null : enrollCourse}
+          onPress={
+            enrollLoading || enrollDisabled
+              ? onEnrollDisabledPress
+              : enrollCourse
+          }
           style={[
             styles.enrollButton,
             enrollLoading && { opacity: 0.5 },

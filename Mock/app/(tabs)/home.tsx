@@ -185,6 +185,7 @@ const Home: React.FC = () => {
   return (
     <View style={styles.container}>
       <ScrollView
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
