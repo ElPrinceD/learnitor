@@ -1,4 +1,3 @@
-// Game.tsx
 import React, { useState, useEffect, useRef } from "react";
 import { View, StyleSheet } from "react-native";
 import { useQuery } from "@tanstack/react-query";
@@ -177,10 +176,11 @@ export default function Game() {
 
       if (questionsWithMultipleCorrectAnswers.includes(questionId)) {
         const selected = updatedAnswers[questionId] || [];
-        if (
-          !selected.includes(answerId) &&
-          selected.length < correctAnswersCount
-        ) {
+        if (selected.includes(answerId)) {
+          // Deselect the answer if it is already selected
+          updatedAnswers[questionId] = selected.filter((id) => id !== answerId);
+        } else if (selected.length < correctAnswersCount) {
+          // Add the answer if it is not already selected and under the limit
           selected.push(answerId);
           updatedAnswers[questionId] = selected;
           if (selected.length === correctAnswersCount) {
@@ -188,8 +188,11 @@ export default function Game() {
           }
         }
       } else {
-        updatedAnswers[questionId] = [answerId];
-        sendWebSocketMessage(questionId);
+        // For questions with a single correct answer, prevent changing the answer once selected
+        if (!updatedAnswers[questionId]) {
+          updatedAnswers[questionId] = [answerId];
+          sendWebSocketMessage(questionId);
+        }
       }
 
       return updatedAnswers;
