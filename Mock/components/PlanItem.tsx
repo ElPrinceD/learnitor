@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { memo, useState } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,6 @@ import {
 } from "react-native-gesture-handler";
 import { Plan } from "./types";
 import { SIZES, rMS, rS, rV, useShadows } from "../constants";
-import Colors from "../constants/Colors";
 
 interface Props {
   plan: Plan;
@@ -28,10 +27,8 @@ const PlanItem: React.FC<Props> = ({
   getCategoryColor,
   handleEditPlan,
 }) => {
-  const [isSwipeableOpen, setIsSwipeableOpen] = useState(false);
   const categoryColor = getCategoryColor(categoryNames[plan.category]);
   const colorScheme = useColorScheme();
-  const themeColors = Colors[colorScheme ?? "light"];
   const shadow = useShadows();
 
   const getCategoryIcon = (type: string): keyof typeof Ionicons.glyphMap => {
@@ -47,10 +44,6 @@ const PlanItem: React.FC<Props> = ({
       default:
         return "help-circle"; // Default icon name
     }
-  };
-
-  const closeSwipeable = () => {
-    setIsSwipeableOpen(false);
   };
 
   const styles = StyleSheet.create({
@@ -96,93 +89,88 @@ const PlanItem: React.FC<Props> = ({
   });
 
   return (
-    <GestureHandlerRootView>
-      <TouchableOpacity
-        onPress={() => {
-          // Handle tap to close Swipeable
-          // You might need to implement a function to close the Swipeable component here
-        }}
-        activeOpacity={1} // Prevent visual feedback on tap
-        style={styles.wrapper} // Ensure the wrapper covers the entire screen
+    <TouchableOpacity
+      onPress={() => {
+        // Handle tap to close Swipeable
+        // You might need to implement a function to close the Swipeable component here
+      }}
+      activeOpacity={1} // Prevent visual feedback on tap
+      style={styles.wrapper} // Ensure the wrapper covers the entire screen
+    >
+      <Swipeable
+        renderRightActions={() => (
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => handleEditPlan(plan)}
+          >
+            <Feather name="edit" size={rMS(24)} color="white" />
+          </TouchableOpacity>
+        )}
       >
-        <Swipeable
-          renderRightActions={() => (
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => handleEditPlan(plan)}
-            >
-              <Feather name="edit" size={rMS(24)} color="white" />
-            </TouchableOpacity>
-          )}
-        >
-          <View style={styles.planItemWrapper}>
-            <Ionicons
-              name={getCategoryIcon(categoryNames[plan.category])}
-              size={rMS(24)}
-              color={categoryColor}
-            />
-            <View
-              style={[
-                styles.planItemContainer,
-                { backgroundColor: categoryColor },
-              ]}
-            >
-              <View style={styles.planContent}>
-                <Text
-                  style={[
-                    styles.planCategory,
-                    {
-                      color:
-                        categoryNames[plan.category] ===
-                        "Assignments & Projects"
-                          ? colorScheme === "dark"
-                            ? "#000"
-                            : "#fff"
-                          : "#fff",
-                    },
-                  ]}
-                >
-                  {categoryNames[plan.category] || "Unknown Category"}
-                </Text>
-                <Text
-                  style={[
-                    styles.planTitle,
-                    {
-                      color:
-                        categoryNames[plan.category] ===
-                        "Assignments & Projects"
-                          ? colorScheme === "dark"
-                            ? "#000"
-                            : "#fff"
-                          : "#fff",
-                    },
-                  ]}
-                >
-                  {plan.title}
-                </Text>
-                <Text
-                  style={[
-                    styles.planDescription,
-                    {
-                      color:
-                        categoryNames[plan.category] ===
-                        "Assignments & Projects"
-                          ? colorScheme === "dark"
-                            ? "#000"
-                            : "#fff"
-                          : "#fff",
-                    },
-                  ]}
-                >
-                  {plan.description}
-                </Text>
-              </View>
+        <View style={styles.planItemWrapper}>
+          <Ionicons
+            name={getCategoryIcon(categoryNames[plan.category])}
+            size={rMS(24)}
+            color={categoryColor}
+          />
+          <View
+            style={[
+              styles.planItemContainer,
+              { backgroundColor: categoryColor },
+            ]}
+          >
+            <View style={styles.planContent}>
+              <Text
+                style={[
+                  styles.planCategory,
+                  {
+                    color:
+                      categoryNames[plan.category] === "Assignments & Projects"
+                        ? colorScheme === "dark"
+                          ? "#000"
+                          : "#fff"
+                        : "#fff",
+                  },
+                ]}
+              >
+                {categoryNames[plan.category] || "Unknown Category"}
+              </Text>
+              <Text
+                style={[
+                  styles.planTitle,
+                  {
+                    color:
+                      categoryNames[plan.category] === "Assignments & Projects"
+                        ? colorScheme === "dark"
+                          ? "#000"
+                          : "#fff"
+                        : "#fff",
+                  },
+                ]}
+              >
+                {plan.title}
+              </Text>
+              <Text
+                style={[
+                  styles.planDescription,
+                  {
+                    color:
+                      categoryNames[plan.category] === "Assignments & Projects"
+                        ? colorScheme === "dark"
+                          ? "#000"
+                          : "#fff"
+                        : "#fff",
+                  },
+                ]}
+              >
+                {plan.description}
+              </Text>
             </View>
           </View>
-        </Swipeable>
-      </TouchableOpacity>
-    </GestureHandlerRootView>
+        </View>
+      </Swipeable>
+    </TouchableOpacity>
   );
 };
 
-export default PlanItem;
+export default memo(PlanItem);

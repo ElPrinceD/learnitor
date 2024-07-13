@@ -199,4 +199,21 @@ export const unenrollFromCourse = async (userId, courseId, token) => {
 };
 
 
+export const markTopicAsComplete = async (userId, courseId, topicId, token) => {
+    try {
+        const response = await apiClient.post(
+            `/api/learner/${userId}/course/${courseId}/topic/${topicId}/mark-completed/`,
+            {},
+            {
+                headers: {
+                    Authorization: `Token ${token}`,
+                },
+            }
+        );
+        return response.data;
+    } catch (error) {
+        console.error('Error marking topic completed:', error);
+        throw error;
+    }
+}
 

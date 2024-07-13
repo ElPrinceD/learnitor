@@ -1,9 +1,9 @@
 import React, {
-  useEffect,
   useState,
-  useCallback,
   useMemo,
   useRef,
+  useEffect,
+  useCallback,
 } from "react";
 import {
   View,
@@ -11,11 +11,12 @@ import {
   Text,
   useColorScheme,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
-import axios from "axios";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
-import ApiUrl from "../../../config";
+import { useQuery } from "@tanstack/react-query";
+import { getTodayPlans, getCategoryNames } from "../../../TimelineApiCalls";
 import { useAuth } from "../../../components/AuthContext";
 import PlanItem from "../../../components/PlanItem";
 import DaySelector from "../../../components/DaySelector";
@@ -23,23 +24,24 @@ import Colors from "../../../constants/Colors";
 import { SIZES, rMS, rS, rV, useShadows } from "../../../constants";
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { FontAwesome6 } from "@expo/vector-icons";
-import { Plan } from "../../../components/types";
+import { queryClient } from "../../../QueryClient";
+import ErrorMessage from "../../../components/ErrorMessage";
 
-const Timeline: React.FC = () => {
-  const [todayPlans, setTodayPlans] = useState<Plan[]>([]);
-  const [categoryNames, setCategoryNames] = useState<{ [key: number]: string }>(
-    {}
-  );
+const Timeline = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [loading, setLoading] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const { userToken } = useAuth();
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const shadow = useShadows();
 
-  const getCategoryColor = (type: string) => {
+  const BottomSheetRef = useRef(null);
+  const snapPoints = useMemo(() => ["50%", "80%"], []);
+
+  const getCategoryColor = (type) => {
     switch (type) {
       case "Assignments & Projects":
         return themeColors.text;
@@ -54,69 +56,59 @@ const Timeline: React.FC = () => {
     }
   };
 
-  const fetchTodayPlans = async (date: Date) => {
-    setLoading(true);
-    try {
-      const currentDate = date.toISOString().split("T")[0];
-      let apiUrl = `${ApiUrl}/api/learner/tasks/?due_date=${currentDate}`;
-      if (selectedCategory !== null) {
-        apiUrl += `&category=${selectedCategory}`;
-      }
-      const response = await axios.get<Plan[]>(apiUrl, {
-        headers: { Authorization: `Token ${userToken?.token}` },
-      });
-      const sortedPlans = response.data.sort((a, b) => {
-        const dateA = new Date(a.due_date + "T" + a.due_time);
-        const dateB = new Date(b.due_date + "T" + b.due_time); // Fixed typo here
-        return dateA.getTime() - dateB.getTime();
-      });
-      setTodayPlans(sortedPlans);
-    } catch (error) {
-      console.error("Error fetching today's plans:", error);
-    } finally {
-      setLoading(false);
+  const {
+    data: todayPlans,
+    status: plansStatus,
+    error: plansError,
+    refetch: refetchTodayPlans,
+  } = useQuery({
+    queryKey: ["todayPlans", userToken],
+    queryFn: () =>
+      getTodayPlans(userToken?.token, selectedDate, selectedCategory),
+    enabled: !!userToken,
+  });
+
+  const {
+    data: categoryNames,
+    status: categoriesStatus,
+    error: categoriesError,
+    refetch: refetchCategoryNames,
+  } = useQuery({
+    queryKey: ["categoryNames", userToken],
+    queryFn: () => getCategoryNames(userToken?.token),
+    enabled: !!userToken,
+  });
+
+  useEffect(() => {
+    if (userToken && selectedDate) {
+      refetchTodayPlans();
+      refetchCategoryNames();
     }
-  };
+  }, [userToken, selectedDate]);
 
   useFocusEffect(
     useCallback(() => {
       if (userToken) {
-        fetchTodayPlans(selectedDate);
+        refetchTodayPlans();
+        refetchCategoryNames();
       }
-    }, [userToken, selectedDate, selectedCategory])
+    }, [userToken])
   );
 
   useEffect(() => {
-    fetchCategoryNames();
-    fetchTodayPlans(selectedDate);
-  }, [selectedDate, userToken, selectedCategory]);
-
-  const fetchCategoryNames = async () => {
-    try {
-      const response = await axios.get<{ id: number; name: string }[]>(
-        `${ApiUrl}/api/task/categories/`,
-        {
-          headers: { Authorization: `Token ${userToken?.token}` },
-        }
+    if (plansStatus === "error" || categoriesStatus === "error") {
+      setErrorMessage(
+        plansError?.message || categoriesError?.message || "An error occurred"
       );
-      const categories = response.data.reduce((acc, category) => {
-        acc[category.id] = category.name;
-        return acc;
-      }, {} as { [key: number]: string });
-      setCategoryNames(categories);
-    } catch (error) {
-      console.error("Error fetching category names:", error);
+    } else {
+      setErrorMessage(null);
     }
-  };
+  }, [plansStatus, categoriesStatus]);
 
-  const snapPoints = useMemo(() => ["50%", "80%"], []);
-  const BottomSheetRef = useRef<BottomSheet>(null);
-
-  const handleEditPlan = (plan: Plan) => {
+  const handleEditPlan = (plan) => {
     router.navigate("EditPlan");
-    const taskIdString = String(plan.id);
     router.setParams({
-      taskId: taskIdString,
+      taskId: String(plan.id),
       title: plan.title,
       description: plan.description,
       duedate: plan.due_date,
@@ -130,22 +122,22 @@ const Timeline: React.FC = () => {
     router.navigate("createNewTime");
   };
 
+  const memoizedPlans = useMemo(() => {
+    if (plansStatus === "success") {
+      return todayPlans || [];
+    }
+    return [];
+  }, [todayPlans, plansStatus]);
+
   const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: themeColors.background,
-    },
-    scrollViewContent: {
-      flexGrow: 1,
-    },
+    container: { flex: 1, backgroundColor: themeColors.background },
+    scrollViewContent: { flexGrow: 1 },
     bottom: {
       backgroundColor: themeColors.background,
       borderTopLeftRadius: rMS(40),
       borderTopRightRadius: rMS(40),
     },
-    plansContainer: {
-      marginTop: rV(18),
-    },
+    plansContainer: { marginTop: rV(18) },
     planItemWrapper: {
       flexDirection: "row",
       alignItems: "center",
@@ -205,25 +197,30 @@ const Timeline: React.FC = () => {
           contentContainerStyle={styles.scrollViewContent}
         >
           <View style={styles.plansContainer}>
-            {todayPlans.length === 0 ? (
+            {plansStatus === "pending" ? (
+              <View style={{ flex: 1, justifyContent: "center" }}>
+                <ActivityIndicator size="large" color="#0D47A1" />
+              </View>
+            ) : memoizedPlans.length === 0 ? (
               <Text style={styles.noPlansText}>Hey, you have a free day!</Text>
             ) : (
-              todayPlans.map((plan, index) => {
-                return (
-                  <View key={index} style={styles.planItemWrapper}>
-                    <Text style={styles.planTime}>
-                      {plan.due_time.slice(0, -3)}
-                    </Text>
-                    <View style={styles.planItemLine} />
-                    <PlanItem
-                      plan={plan}
-                      categoryNames={categoryNames}
-                      getCategoryColor={getCategoryColor}
-                      handleEditPlan={handleEditPlan}
-                    />
-                  </View>
-                );
-              })
+              memoizedPlans.map(
+                (plan, index) =>
+                  plan && (
+                    <View key={index} style={styles.planItemWrapper}>
+                      <Text style={styles.planTime}>
+                        {plan.due_time.slice(0, -3)}
+                      </Text>
+                      <View style={styles.planItemLine} />
+                      <PlanItem
+                        plan={plan}
+                        categoryNames={categoryNames}
+                        getCategoryColor={getCategoryColor}
+                        handleEditPlan={handleEditPlan}
+                      />
+                    </View>
+                  )
+              )
             )}
           </View>
         </BottomSheetScrollView>
@@ -234,6 +231,13 @@ const Timeline: React.FC = () => {
       >
         <FontAwesome6 name="add" size={SIZES.xLarge} color={themeColors.text} />
       </TouchableOpacity>
+      {errorMessage && (
+        <ErrorMessage
+          message={errorMessage}
+          visible={!!errorMessage}
+          onDismiss={() => setErrorMessage(null)}
+        />
+      )}
     </View>
   );
 };

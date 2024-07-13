@@ -1,17 +1,18 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   View,
   StyleSheet,
   ScrollView,
   Text,
   useColorScheme,
+  ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import Toast from "react-native-root-toast";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Questions from "../../../components/Questions";
 import { useAuth } from "../../../components/AuthContext";
-import { Topic, Question, Answer } from "../../../components/types";
+import { Topic, Question } from "../../../components/types";
 import GameButton from "../../../components/GameButton";
 import Colors from "../../../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../../../constants";
@@ -19,6 +20,7 @@ import {
   getPracticeQuestions,
   getPracticeAnswers,
 } from "../../../CoursesApiCalls";
+import ErrorMessage from "../../../components/ErrorMessage";
 
 const PracticeQuestions: React.FC = () => {
   const { topic, level, isTimed, duration } = useLocalSearchParams();
@@ -32,26 +34,32 @@ const PracticeQuestions: React.FC = () => {
     setQuestionsWithMultipleCorrectAnswers,
   ] = useState<number[]>([]);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const parsedLevel: string = typeof level === "string" ? level : "";
   const parsedTopic: Topic =
     typeof topic === "string" ? JSON.parse(topic) : topic;
 
+  const queryClient = useQueryClient();
+
   const {
     status: questionsStatus,
     data: practiceQuestions,
     error: questionsError,
+    refetch: refetchPracticeQuestions,
   } = useQuery({
     queryKey: ["topicQuestions", parsedTopic.id],
     queryFn: () =>
       getPracticeQuestions(parsedTopic.id, userToken?.token, parsedLevel),
     enabled: !!parsedTopic.id,
+    staleTime: 0,
   });
 
   const {
     status: answersStatus,
     data: practiceAnswers,
     error: answersError,
+    refetch: refetchPracticeAnswers,
   } = useQuery({
     queryKey: ["questionAnswers", parsedTopic.id],
     queryFn: async () => {
@@ -65,12 +73,23 @@ const PracticeQuestions: React.FC = () => {
       return [];
     },
     enabled: !!practiceQuestions?.length,
+    staleTime: 0,
   });
+
+  // console.log("Yes:", practiceAnswers);
+  // console.log("NO:", practiceQuestions);
+
+  useEffect(() => {
+    if (userToken) {
+      refetchPracticeQuestions();
+      refetchPracticeAnswers();
+    }
+  }, [userToken]);
 
   useEffect(() => {
     if (isTimed === "true" && duration) {
       const durationInMinutes = Number(duration);
-      setTimeLeft(durationInMinutes * 60); // Convert minutes to seconds
+      setTimeLeft(durationInMinutes * 60);
     }
   }, [isTimed, duration]);
 
@@ -81,14 +100,14 @@ const PracticeQuestions: React.FC = () => {
         setTimeLeft((prevTime) => {
           if (prevTime === 0) {
             clearInterval(timer);
-            handleSubmit(); // Trigger submission when timer reaches zero
+            handleSubmit();
             return 0;
           }
           return prevTime! - 1;
         });
       }, 1000);
     }
-    return () => clearInterval(timer); // Cleanup interval on unmount
+    return () => clearInterval(timer);
   }, [timeLeft]);
 
   useEffect(() => {
@@ -106,46 +125,61 @@ const PracticeQuestions: React.FC = () => {
     }
   }, [practiceQuestions, practiceAnswers]);
 
-  const handleAnswerSelection = (answerId: number, questionId: number) => {
-    setSelectedAnswers((prevSelectedAnswers) => {
-      const updatedAnswers = { ...prevSelectedAnswers };
+  useEffect(() => {
+    if (questionsError || answersError) {
+      setErrorMessage(
+        questionsError?.message || answersError?.message || "An error occurred"
+      );
+    } else {
+      setErrorMessage(null);
+    }
+  }, [questionsError, answersError]);
 
-      if (questionsWithMultipleCorrectAnswers.includes(questionId)) {
-        const selected = updatedAnswers[questionId] || [];
-        const index = selected.indexOf(answerId);
-        if (index !== -1) {
-          selected.splice(index, 1);
+  const handleAnswerSelection = useCallback(
+    (answerId: number, questionId: number) => {
+      setSelectedAnswers((prevSelectedAnswers) => {
+        const updatedAnswers = { ...prevSelectedAnswers };
+
+        if (questionsWithMultipleCorrectAnswers.includes(questionId)) {
+          const selected = updatedAnswers[questionId] || [];
+          const index = selected.indexOf(answerId);
+          if (index !== -1) {
+            selected.splice(index, 1);
+          } else {
+            selected.push(answerId);
+          }
+          updatedAnswers[questionId] = selected;
         } else {
-          selected.push(answerId);
+          if (updatedAnswers[questionId]?.[0] === answerId) {
+            updatedAnswers[questionId] = [];
+          } else {
+            updatedAnswers[questionId] = [answerId];
+          }
         }
-        updatedAnswers[questionId] = selected;
-      } else {
-        if (updatedAnswers[questionId]?.[0] === answerId) {
-          updatedAnswers[questionId] = [];
-        } else {
-          updatedAnswers[questionId] = [answerId];
-        }
-      }
 
-      return updatedAnswers;
-    });
-  };
+        return updatedAnswers;
+      });
+    },
+    [questionsWithMultipleCorrectAnswers]
+  );
 
-  const handleNextQuestion = () => {
+  const handleNextQuestion = useCallback(() => {
     setCurrentQuestion((prevQuestion) => prevQuestion + 1);
-  };
+  }, []);
 
-  const handlePreviousQuestion = () => {
+  const handlePreviousQuestion = useCallback(() => {
     setCurrentQuestion((prevQuestion) => prevQuestion - 1);
-  };
+  }, []);
 
-  const handleSubmit = () => {
-    let totalQuestions = practiceQuestions?.length;
+  const handleSubmit = useCallback(() => {
+    if (!practiceQuestions || !practiceAnswers) return;
+
+    let totalQuestions = practiceQuestions.length;
     let correctAnswers = 0;
 
-    const results = practiceQuestions?.map((question) => {
+    const results = practiceQuestions.map((question) => {
       const selectedAnswerIds = selectedAnswers[question.id] || [];
-      const correctAnswerIds = practiceAnswers!
+      const correctAnswerIds = practiceAnswers
         .filter((answer) => answer.question === question.id && answer.isRight)
         .map((answer) => answer.id);
 
@@ -157,7 +191,7 @@ const PracticeQuestions: React.FC = () => {
         correctAnswers++;
       }
 
-      const allAnswers = practiceAnswers!
+      const allAnswers = practiceAnswers
         .filter((answer) => answer.question === question.id)
         .map((answer) => ({
           id: answer.id,
@@ -173,9 +207,8 @@ const PracticeQuestions: React.FC = () => {
       };
     });
 
-    let scorePercentage = (correctAnswers / totalQuestions!) * 100;
+    let scorePercentage = (correctAnswers / totalQuestions) * 100;
 
-    // Defer the navigation call to avoid potential re-renders
     setTimeout(() => {
       router.replace({
         pathname: "ScorePage",
@@ -188,14 +221,17 @@ const PracticeQuestions: React.FC = () => {
         },
       });
     }, 0);
-  };
+  }, [practiceQuestions, practiceAnswers, selectedAnswers, topic]);
 
-  const isAnswerSelected = (questionId: number, answerId: number) => {
-    return (
-      selectedAnswers[questionId] &&
-      selectedAnswers[questionId].includes(answerId)
-    );
-  };
+  const isAnswerSelected = useCallback(
+    (questionId: number, answerId: number) => {
+      return (
+        selectedAnswers[questionId] &&
+        selectedAnswers[questionId].includes(answerId)
+      );
+    },
+    [selectedAnswers]
+  );
 
   const allQuestionsAnswered = practiceQuestions?.every(
     (question) =>
@@ -229,18 +265,17 @@ const PracticeQuestions: React.FC = () => {
         container: {
           flex: 1,
           marginTop: rV(30),
-          padding: rMS(20),
           elevation: 1,
         },
         questionNumberText: {
           color: themeColors.tint,
           fontSize: SIZES.medium,
           fontWeight: "bold",
+          marginLeft: rS(20),
         },
         buttonContainer: {
           flexDirection: "row",
           justifyContent: "space-between",
-          paddingTop: rV(30),
         },
         button: {
           backgroundColor: themeColors.buttonBackground,
@@ -268,7 +303,7 @@ const PracticeQuestions: React.FC = () => {
           fontWeight: "bold",
         },
         timerRed: {
-          color: "#D22B2B",
+          color: themeColors.errorText,
           fontWeight: "bold",
         },
       }),
@@ -279,60 +314,68 @@ const PracticeQuestions: React.FC = () => {
     <ScrollView
       contentContainerStyle={{ flexGrow: 1, justifyContent: "space-between" }}
     >
-      <View style={styles.container}>
-        {timeLeft !== null && (
-          <Text
-            style={[
-              styles.timer,
-              timeLeft <= 60 && styles.timerRed, // Apply the red color when time is less than or equal to 60 seconds
-            ]}
-          >
-            {Math.floor(timeLeft / 60)}:
-            {timeLeft % 60 < 10 ? `0${timeLeft % 60}` : timeLeft % 60}
+      {questionsStatus === "pending" || answersStatus === "pending" ? (
+        <View style={{ flex: 1, justifyContent: "center" }}>
+          <ActivityIndicator size="large" color="#0D47A1" />
+        </View>
+      ) : (
+        <View style={styles.container}>
+          {timeLeft !== null && (
+            <Text style={[styles.timer, timeLeft <= 60 && styles.timerRed]}>
+              {Math.floor(timeLeft / 60)}:
+              {timeLeft % 60 < 10 ? `0${timeLeft % 60}` : timeLeft % 60}
+            </Text>
+          )}
+          <Text style={styles.questionNumberText}>
+            Question {currentQuestion + 1} / {practiceQuestions?.length || 0}
           </Text>
-        )}
-        <Text style={styles.questionNumberText}>
-          Question {currentQuestion + 1} / {practiceQuestions?.length || 0}
-        </Text>
-      </View>
-      {practiceQuestions && practiceAnswers && (
-        <Questions
-          practiceQuestions={practiceQuestions}
-          practiceAnswers={practiceAnswers}
-          currentQuestion={currentQuestion}
-          questionsWithMultipleCorrectAnswers={
-            questionsWithMultipleCorrectAnswers
-          }
-          isAnswerSelected={isAnswerSelected}
-          handleAnswerSelection={handleAnswerSelection}
-        />
+          {practiceQuestions && practiceAnswers && (
+            <Questions
+              practiceQuestions={practiceQuestions}
+              practiceAnswers={practiceAnswers}
+              currentQuestion={currentQuestion}
+              questionsWithMultipleCorrectAnswers={
+                questionsWithMultipleCorrectAnswers
+              }
+              isAnswerSelected={isAnswerSelected}
+              handleAnswerSelection={handleAnswerSelection}
+            />
+          )}
+          <View style={styles.buttonContainer}>
+            {currentQuestion > 0 && (
+              <GameButton
+                onPress={handlePreviousQuestion}
+                disabled={currentQuestion === 0}
+                style={styles.button}
+                title="Previous"
+              />
+            )}
+            {currentQuestion < (practiceQuestions?.length || 0) - 1 && (
+              <GameButton
+                onPress={handleNextQuestion}
+                style={styles.button}
+                title="Next"
+              />
+            )}
+            {currentQuestion === (practiceQuestions?.length || 0) - 1 && (
+              <GameButton
+                onPress={
+                  isSubmitDisabled ? handleDisabledSubmitPress : handleSubmit
+                }
+                style={
+                  isSubmitDisabled ? styles.disabledButtonText : styles.button
+                }
+                title="Submit"
+              />
+            )}
+          </View>
+          <ErrorMessage
+            message={errorMessage}
+            visible={!!errorMessage}
+            onDismiss={() => setErrorMessage(null)}
+          />
+        </View>
       )}
-      <View style={styles.buttonContainer}>
-        {currentQuestion > 0 && (
-          <GameButton
-            onPress={handlePreviousQuestion}
-            disabled={currentQuestion === 0}
-            style={styles.button}
-            title="Previous"
-          />
-        )}
-        {currentQuestion < (practiceQuestions?.length || 0) - 1 && (
-          <GameButton
-            onPress={handleNextQuestion}
-            style={styles.button}
-            title="Next"
-          />
-        )}
-        {currentQuestion === (practiceQuestions?.length || 0) - 1 && (
-          <GameButton
-            onPress={
-              isSubmitDisabled ? handleDisabledSubmitPress : handleSubmit
-            }
-            style={isSubmitDisabled ? styles.disabledButtonText : styles.button}
-            title="Submit"
-          />
-        )}
-      </View>
     </ScrollView>
   );
 };

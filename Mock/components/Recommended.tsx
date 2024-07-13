@@ -96,8 +96,8 @@ const RecommendedCoursesList: React.FC<Props> = ({
     ({ item }: { item: RecommendedCourse }) => (
       <TouchableOpacity
         onPress={() => {
-          router.navigate({
-            pathname: "/CourseDetails",
+          router.push({
+            pathname: "CourseDetails",
             params: { course: JSON.stringify(item) },
           });
         }}

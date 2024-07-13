@@ -43,7 +43,6 @@ export default function TabLayout() {
     },
     "text"
   );
-  const themeColors = Colors[colorScheme ?? "light"];
 
   const { userInfo } = useAuth();
 
@@ -178,5 +177,6 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row-reverse",
+    backgroundColor: "transparent",
   },
 });

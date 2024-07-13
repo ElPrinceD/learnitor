@@ -57,7 +57,22 @@ const RootLayoutNav = () => {
             <ThemeProvider
               value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
             >
-              <Slot />
+              <Stack>
+                <Stack.Screen name="index" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="(verification)"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="(tabs)"
+                  options={{ headerShown: false, headerShadowVisible: false }}
+                />
+                <Stack.Screen
+                  name="modal"
+                  options={{ presentation: "modal", headerShown: true }}
+                />
+                <Stack.Screen name="(game)" options={{ headerShown: false }} />
+              </Stack>
             </ThemeProvider>
           </QueryClientProvider>
         </SafeAreaProvider>

@@ -115,6 +115,8 @@ const Home: React.FC = () => {
           progressError?.message ||
           "An error occurred"
       );
+    } else {
+      setErrorMessage(null);
     }
   }, [recommendedStatus, enrolledStatus, progressStatus]);
 

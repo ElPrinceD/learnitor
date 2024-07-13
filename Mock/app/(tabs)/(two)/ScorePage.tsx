@@ -17,6 +17,9 @@ import Colors from "../../../constants/Colors";
 import GameButton from "../../../components/GameButton";
 import { useNavigation } from "@react-navigation/native";
 import { SIZES, rMS, rS, rV, useShadows } from "../../../constants";
+import { useMutation } from "@tanstack/react-query";
+import { markTopicAsComplete } from "../../../CoursesApiCalls";
+import { queryClient } from "../../../QueryClient";
 
 const AnimatedText = Animated.createAnimatedComponent(Text);
 
@@ -36,6 +39,7 @@ const ScorePage: React.FC = () => {
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const [showAnswers, setShowAnswers] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null); // State to manage error message
 
   const styles = StyleSheet.create({
     container: {
@@ -159,21 +163,26 @@ const ScorePage: React.FC = () => {
     setShowAnswers((prevShowAnswers) => !prevShowAnswers);
   };
 
-  const handleDone = async () => {
-    try {
-      await axios.post(
-        `${ApiUrl}/api/learner/${userInfo?.user.id}/course/${parsedCourse.id}/topic/${parsedTopic.id}/mark-completed/`,
-        {},
-        {
-          headers: {
-            Authorization: `Token ${userToken?.token}`,
-          },
-        }
-      );
+  const markTopicAsCompletedMutation = useMutation<any, any, any, any>({
+    mutationFn: async ({ userId, courseId, topicId, token }) => {
+      await markTopicAsComplete(userId, courseId, topicId, token);
+    },
+    onSuccess: () => {
       router.dismiss(2);
-    } catch (error) {
-      console.error("Error marking topic as completed:", error);
-    }
+      setErrorMessage(null);
+    },
+    onError: (error: any) => {
+      setErrorMessage(error.message || "Error marking topic as completed");
+    },
+  });
+
+  const handleDone = () => {
+    markTopicAsCompletedMutation.mutate({
+      userId: userInfo?.user?.id,
+      courseId: parsedCourse?.id,
+      topicId: parsedTopic.id,
+      token: userToken?.token,
+    });
   };
 
   // Animation for the header title and score

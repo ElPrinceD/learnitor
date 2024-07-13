@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -6,12 +6,10 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  Alert,
   useColorScheme,
+  ActivityIndicator,
 } from "react-native";
-import axios from "axios";
 import { router, useLocalSearchParams } from "expo-router";
-import apiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import Colors from "../../../constants/Colors";
@@ -19,10 +17,13 @@ import { rMS, rS, rV } from "../../../constants/responsive";
 import { SIZES } from "../../../constants/theme";
 import GameButton from "../../../components/GameButton";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useMutation } from "@tanstack/react-query";
+import { deleteTask, updateTask } from "../../../TimelineApiCalls";
+import ErrorMessage from "../../../components/ErrorMessage"; // Import ErrorMessage component
 
 const EditPlan = () => {
   const params = useLocalSearchParams();
-  const id = params.taskId;
+  const id = params.taskId as string;
   const oldDescription = params.description as string;
   const oldTitle = params.title as string;
   const oldDate = params.duedate as string;
@@ -35,29 +36,10 @@ const EditPlan = () => {
   const [time, setTime] = useState(parseTimeString(oldTime));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null); // Error message state
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
-
-  // Fetch categories from API
-  const [categories, setCategories] = useState<string[]>([]);
-
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await axios.get(`${apiUrl}/api/task/categories/`, {
-          headers: {
-            Authorization: `Token ${userToken?.token}`,
-          },
-        });
-        setCategories(response.data);
-      } catch (error) {
-        console.error("Error fetching categories:", error);
-      }
-    };
-
-    fetchCategories();
-  }, []);
 
   function parseTimeString(timeString: string) {
     const [hours, minutes] = timeString.split(":").map(Number);
@@ -74,7 +56,20 @@ const EditPlan = () => {
     return `${hours}:${minutes}`;
   };
 
-  const handleSaveTime = async () => {
+  const updateTaskMutation = useMutation<any, any, any>({
+    mutationFn: async ({ taskId, taskData, token }) => {
+      await updateTask(taskId, taskData, token);
+    },
+    onSuccess: () => {
+      router.navigate("three");
+      setErrorMessage(null); // Clear error message on successful update
+    },
+    onError: (error) => {
+      setErrorMessage(error.message || "Error updating schedule");
+    },
+  });
+
+  const handleSaveTime = () => {
     const formattedDueDate = date.toISOString().split("T")[0];
     const formattedDueTime = formatTime(time);
     const data = {
@@ -85,35 +80,31 @@ const EditPlan = () => {
       category: params.category_id,
       learner: userInfo?.user.id,
     };
-    try {
-      const response = await axios.put(
-        `${apiUrl}/api/learner/tasks/update/${id}/`,
-        data,
-        {
-          headers: {
-            Authorization: `Token ${userToken?.token}`,
-          },
-        }
-      );
-      router.navigate("three");
-      console.log("Schedule updated:", response.data);
-    } catch (error) {
-      console.error("Error updating schedule:", error);
-    }
+    updateTaskMutation.mutate({
+      taskId: id,
+      taskData: data,
+      token: userToken?.token,
+    });
   };
 
-  const handleDeletePlan = async () => {
-    try {
-      await axios.delete(`${apiUrl}/api/tasks/${id}/`, {
-        headers: {
-          Authorization: `Token ${userToken?.token}`,
-        },
-      });
+  const deleteTaskMutation = useMutation<any, any, any>({
+    mutationFn: async ({ taskId, token }) => {
+      await deleteTask(taskId, token);
+    },
+    onSuccess: () => {
       router.navigate("three");
-    } catch (error) {
-      console.error("Error deleting task:", error);
-      Alert.alert("Error", "Failed to delete task");
-    }
+      setErrorMessage(null); // Clear error message on successful delete
+    },
+    onError: (error) => {
+      setErrorMessage(error.message || "Error deleting schedule");
+    },
+  });
+
+  const handleDeletePlan = () => {
+    deleteTaskMutation.mutate({
+      taskId: id,
+      token: userToken?.token,
+    });
   };
 
   const showDatePickerHandler = () => {
@@ -223,94 +214,122 @@ const EditPlan = () => {
   });
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.top}>
-        <GameButton onPress={handleSaveTime} title="Save" style={styles.button} />
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={[styles.input, { fontSize: SIZES.xxLarge, height: rV(60) }]}
-            placeholder="Edit Title"
-            value={title}
-            onChangeText={setTitle}
-            placeholderTextColor={themeColors.textSecondary}
-          />
-        </View>
-      </View>
-      <View style={styles.planItemLine} />
-      <View style={styles.bottom}>
-        <TouchableOpacity onPress={showDatePickerHandler}>
-          <View style={styles.schedule}>
-            <Ionicons
-              name="calendar-outline"
-              size={SIZES.xLarge}
-              color={themeColors.icon}
+    <View style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.top}>
+          <GameButton
+            onPress={handleSaveTime}
+            title={"Save"}
+            style={styles.button}
+            disabled={updateTaskMutation.isPending}
+          >
+            {updateTaskMutation.isPending && (
+              <ActivityIndicator size="small" color={themeColors.text} />
+            )}
+          </GameButton>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={[
+                styles.input,
+                { fontSize: SIZES.xxLarge, height: rV(60) },
+              ]}
+              placeholder="Edit Title"
+              value={title}
+              onChangeText={setTitle}
+              placeholderTextColor={themeColors.textSecondary}
             />
-            <View style={styles.dateTime}>
-              <Text style={{ color: themeColors.text }}>
-                {formatDateString(date)}
-              </Text>
-              {showDatePicker && (
-                <DateTimePicker
-                  testID="dateTimePicker"
-                  value={date}
-                  mode="date"
-                  is24Hour={true}
-                  onChange={onDateChange}
-                  textColor={themeColors.text}
-                  accentColor={themeColors.icon}
-                />
-              )}
-            </View>
           </View>
-        </TouchableOpacity>
+        </View>
+        <View style={styles.planItemLine} />
+        <View style={styles.bottom}>
+          <TouchableOpacity onPress={showDatePickerHandler}>
+            <View style={styles.schedule}>
+              <Ionicons
+                name="calendar-outline"
+                size={SIZES.xLarge}
+                color={themeColors.icon}
+              />
+              <View style={styles.dateTime}>
+                <Text style={{ color: themeColors.text }}>
+                  {formatDateString(date)}
+                </Text>
+                {showDatePicker && (
+                  <DateTimePicker
+                    testID="dateTimePicker"
+                    value={date}
+                    mode="date"
+                    is24Hour={true}
+                    onChange={onDateChange}
+                    textColor={themeColors.text}
+                    accentColor={themeColors.icon}
+                  />
+                )}
+              </View>
+            </View>
+          </TouchableOpacity>
 
-        <TouchableOpacity onPress={showTimePickerHandler}>
-          <View style={styles.schedule}>
-            <MaterialCommunityIcons
-              name="clock-outline"
-              size={SIZES.xLarge}
-              color={themeColors.icon}
-            />
-            <View style={styles.dateTime}>
-              <Text style={{ color: themeColors.text }}>
-                {time.toTimeString().split(" ")[0].slice(0, 5)}
-              </Text>
-              {showTimePicker && (
-                <DateTimePicker
-                  testID="timePicker"
-                  value={time}
-                  mode="time"
-                  is24Hour={true}
-                  onChange={onTimeChange}
-                  textColor={themeColors.text}
-                  accentColor={themeColors.icon}
-                />
-              )}
+          <TouchableOpacity onPress={showTimePickerHandler}>
+            <View style={styles.schedule}>
+              <MaterialCommunityIcons
+                name="clock-outline"
+                size={SIZES.xLarge}
+                color={themeColors.icon}
+              />
+              <View style={styles.dateTime}>
+                <Text style={{ color: themeColors.text }}>
+                  {formatTime(time)}
+                </Text>
+                {showTimePicker && (
+                  <DateTimePicker
+                    testID="dateTimePicker"
+                    value={time}
+                    mode="time"
+                    is24Hour={true}
+                    onChange={onTimeChange}
+                    textColor={themeColors.text}
+                    accentColor={themeColors.icon}
+                  />
+                )}
+              </View>
+            </View>
+          </TouchableOpacity>
+
+          <View>
+            <Text style={styles.label}>Edit Description</Text>
+            <View style={[styles.inputContainer, styles.descriptionInput]}>
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                placeholder="Edit Description"
+                value={description}
+                onChangeText={setDescription}
+                multiline
+                placeholderTextColor={themeColors.textSecondary}
+              />
             </View>
           </View>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.planItemLine} />
-      <View style={styles.top}>
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={[styles.input, { fontSize: SIZES.large, height: rV(150) }]}
-            placeholder="Edit Note"
-            value={description}
-            onChangeText={setDescription}
-            placeholderTextColor={themeColors.textSecondary}
-            multiline
-          />
         </View>
-      </View>
-      <View style={styles.buttonContainer}>
-        <GameButton
-          onPress={handleDeletePlan}
-          title="Delete"
-          style={[styles.button, { backgroundColor: "#D22B2B" }]}
+        <View style={styles.buttonContainer}>
+          <GameButton
+            onPress={handleDeletePlan}
+            title={"Delete"}
+            style={[styles.button, { backgroundColor: "#D22B2B" }]}
+            disabled={deleteTaskMutation.isPending}
+          >
+            {deleteTaskMutation.isPending && (
+              <ActivityIndicator size="small" color={themeColors.text} />
+            )}
+          </GameButton>
+        </View>
+      </ScrollView>
+
+      {errorMessage && (
+        <ErrorMessage
+          message={errorMessage}
+          visible={!!errorMessage}
+          onDismiss={() => setErrorMessage(null)}
         />
-      </View>
-    </ScrollView>
+      )}
+    </View>
   );
 };
 

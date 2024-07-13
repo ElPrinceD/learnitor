@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, memo } from "react";
 import { View, StyleSheet, useColorScheme } from "react-native";
 import { Calendar } from "react-native-calendars";
 import Colors from "../constants/Colors";
@@ -69,4 +69,4 @@ const DaySelector: React.FC<DaySelectorProps> = ({
   );
 };
 
-export default DaySelector;
+export default memo(DaySelector);
