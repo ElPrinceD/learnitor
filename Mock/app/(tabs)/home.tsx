@@ -4,11 +4,14 @@ import {
   useColorScheme,
   RefreshControl,
   ScrollView,
+  TouchableOpacity,
 } from "react-native";
 import { Text, View } from "../../components/Themed";
 import { useAuth } from "../../components/AuthContext";
 import Colors from "../../constants/Colors";
 import { SIZES, rMS } from "../../constants";
+import TaskList from "../../components/TaskList";
+import { getTodayPlans, getCategoryNames } from "../../TimelineApiCalls";
 import {
   getEnrolledCourses,
   getCourseProgress,
@@ -18,6 +21,7 @@ import {
 } from "../../CoursesApiCalls";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "../../QueryClient";
+import Icon from 'react-native-vector-icons/Ionicons'; // Importing the Icon component
 
 import ErrorMessage from "../../components/ErrorMessage";
 import RecommendedCoursesList from "../../components/Recommended";
@@ -27,6 +31,7 @@ import ReanimatedCarousel from "../../components/ReanimatedCarousel";
 const Home: React.FC = () => {
   const { userToken, userInfo } = useAuth();
   const colorScheme = useColorScheme();
+  
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -73,6 +78,36 @@ const Home: React.FC = () => {
     queryFn: () => getEnrolledCourses(userInfo?.user?.id!, userToken?.token!),
     enabled: !!userToken?.token && !!userInfo?.user?.id,
   });
+
+  const fetchTasks = async () => {
+    if (!userToken?.token) return { tasks: [], categories: {} };
+
+    const date = new Date();
+    const selectedCategory = null; // Adjust this if you have a category filter
+
+    const tasks = await getTodayPlans(userToken.token, date, selectedCategory);
+    const categories = await getCategoryNames(userToken.token);
+
+    return { tasks, categories };
+  };
+
+  const {
+    status: tasksStatus,
+    data: tasksData = { tasks: [], categories: {} },
+    error: tasksError,
+  } = useQuery({
+    queryKey: ["todayTasks", userToken?.token],
+    queryFn: fetchTasks,
+    enabled: !!userToken?.token,
+  });
+
+  useEffect(() => {
+    if (tasksStatus === "error") {
+      setErrorMessage(tasksError?.message || "An error occurred");
+    } else {
+      setErrorMessage(null);
+    }
+  }, [tasksStatus]);
 
   const {
     status: progressStatus,
@@ -134,13 +169,27 @@ const Home: React.FC = () => {
     coursesContainer: {
       flex: 2.5,
     },
+    sectionTitleContainer: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: rMS(5),
+      marginTop: rMS(15),
+    },
     sectionTitle: {
       fontSize: SIZES.xLarge,
       color: themeColors.text,
       fontWeight: "bold",
-      marginBottom: rMS(5),
-      marginTop: rMS(15),
       alignSelf: "flex-start",
+    },
+    seeAllButton: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    seeAllText: {
+      fontSize: SIZES.medium,
+      color: themeColors.tint,
+      marginRight: rMS(1),
     },
   });
 
@@ -167,20 +216,20 @@ const Home: React.FC = () => {
       title: "Arranged Timeline",
       description: "All your schedules and tasks in one place",
       image:
-        "https://img.freepik.com/free-photo/clipboard-with-checklist-paper-note-icon-symbol-purple-background-3d-rendering_56104-1491.jpg?t=st=1720695928~exp=1720699528~hmac=c01f700d3fb1485935bcaea8c8f58e3138e0e1926932e00a354e64b942b7759f&w=740",
+        "https://img.freepik.com/free-photo/flat-lay-wall-clock-still-life_23-2150417219.jpg?t=st=1721731839~exp=1721735439~hmac=06ab143336c02017b48d2c0e3d9f8a823700c56e4221af57f651987c6b08325a&w=826",
     },
     {
       title: "Tailored Courses",
       description:
-        "Our platform curates a unique selection of courses based on your interests",
+        "Enroll to your courses and topics",
       image:
-        "https://images.unsplash.com/photo-1526170160160-1a5eb242ab58?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+        "https://img.freepik.com/free-photo/colorful-books-with-pink-background_23-2148898315.jpg?t=st=1721738186~exp=1721741786~hmac=e8a0b87e317cf9191688af050934850e9ced4db90d9d39a03f78bbdb566fb991&w=826",
     },
     {
-      title: "",
-      description: "",
+      title: "Gaming Centre",
+      description: "Enjoy breathe-taking study games with your pals",
       image:
-        "https://img.freepik.com/free-vector/quote-blog-banner-template-editable-inspirational-message-everyday-is-fresh-start-vector_53876-146703.jpg?t=st=1720698178~exp=1720701778~hmac=6fdc12b09cfa7c01741c595f934cdc6b6c20e63350fe0f1c3b1a6c1c4bdc3517&w=900",
+        "https://img.freepik.com/free-photo/target-board-with-arrow-red-background-copy-space-challenge-setup-business-achievement-goal-objective-target-concept-by-3d-render_616485-105.jpg?t=st=1721738864~exp=1721742464~hmac=98b1e9d066411242f7b0ab9854d6100217fac99729d8b45173de54464d24e210&w=900",
     },
   ];
 
@@ -200,17 +249,48 @@ const Home: React.FC = () => {
       >
         <ReanimatedCarousel data={carouselItems} />
         <View style={styles.coursesContainer}>
-          <Text style={styles.sectionTitle}>Enrolled Courses</Text>
-          <EnrolledCoursesList
-            enrolledCoursesData={enrolledCoursesData}
-            progressMap={progressMap || {}}
-            loading={enrolledStatus === "pending"}
-          />
-          <Text style={styles.sectionTitle}>Recommended for you</Text>
-          <RecommendedCoursesList
-            RecommendedCoursesData={coursesData}
-            loading={recommendedStatus === "pending"}
-          />
+          {enrolledCoursesData?.length ? (
+            <>
+              <View style={styles.sectionTitleContainer}>
+                <Text style={styles.sectionTitle}>Enrolled Courses</Text>
+              </View>
+              <EnrolledCoursesList
+                enrolledCoursesData={enrolledCoursesData}
+                progressMap={progressMap || {}}
+                loading={enrolledStatus === "pending"}
+              />
+            </>
+          ) : (
+            <>
+              <View style={styles.sectionTitleContainer}>
+                <Text style={styles.sectionTitle}>Recommended for you</Text>
+                <TouchableOpacity style={styles.seeAllButton}>
+                  <Text style={styles.seeAllText}>See All</Text>
+                  <Icon name="arrow-forward" size={SIZES.medium} color={themeColors.tint} />
+                </TouchableOpacity>
+              </View>
+              <RecommendedCoursesList
+                RecommendedCoursesData={coursesData}
+                loading={recommendedStatus === "pending"}
+              />
+            </>
+          )}
+          {tasksData.tasks.length > 0 && (
+            <View style={styles.sectionTitleContainer}>
+              <Text style={styles.sectionTitle}>Today's Tasks</Text>
+              <TouchableOpacity style={styles.seeAllButton}>
+                <Text style={styles.seeAllText}>See All</Text>
+                <Icon name="arrow-forward" size={SIZES.medium} color={themeColors.tint} />
+              </TouchableOpacity>
+            </View>
+          )}
+          {tasksData.tasks.length > 0 && (
+            <TaskList
+              tasks={tasksData.tasks}
+              categoryNames={tasksData.categories}
+              getCategoryColor={(category) => themeColors[category]}
+            />
+          )}
         </View>
       </ScrollView>
       <ErrorMessage
