@@ -21,7 +21,7 @@ import {
 } from "../../CoursesApiCalls";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "../../QueryClient";
-import Icon from 'react-native-vector-icons/Ionicons'; // Importing the Icon component
+import { Ionicons } from "@expo/vector-icons"; // Importing the Icon component
 
 import ErrorMessage from "../../components/ErrorMessage";
 import RecommendedCoursesList from "../../components/Recommended";
@@ -31,7 +31,7 @@ import ReanimatedCarousel from "../../components/ReanimatedCarousel";
 const Home: React.FC = () => {
   const { userToken, userInfo } = useAuth();
   const colorScheme = useColorScheme();
-  
+
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -101,14 +101,6 @@ const Home: React.FC = () => {
     enabled: !!userToken?.token,
   });
 
-  useEffect(() => {
-    if (tasksStatus === "error") {
-      setErrorMessage(tasksError?.message || "An error occurred");
-    } else {
-      setErrorMessage(null);
-    }
-  }, [tasksStatus]);
-
   const {
     status: progressStatus,
     data: progressMap,
@@ -142,18 +134,20 @@ const Home: React.FC = () => {
     if (
       recommendedStatus === "error" ||
       enrolledStatus === "error" ||
-      progressStatus === "error"
+      progressStatus === "error" ||
+      tasksStatus === "error"
     ) {
       setErrorMessage(
         recommendedError?.message ||
           enrolledError?.message ||
           progressError?.message ||
+          tasksError?.message ||
           "An error occurred"
       );
     } else {
       setErrorMessage(null);
     }
-  }, [recommendedStatus, enrolledStatus, progressStatus]);
+  }, [recommendedStatus, enrolledStatus, progressStatus, tasksStatus]);
 
   const themeColors = Colors[colorScheme ?? "light"];
 
@@ -205,6 +199,9 @@ const Home: React.FC = () => {
       await queryClient.invalidateQueries({
         queryKey: ["progress", userToken?.token, enrolledCoursesData],
       });
+      await queryClient.invalidateQueries({
+        queryKey: ["todayTasks", userToken?.token],
+      });
     } finally {
       setRefreshing(false);
       setErrorMessage(null);
@@ -220,8 +217,7 @@ const Home: React.FC = () => {
     },
     {
       title: "Tailored Courses",
-      description:
-        "Enroll to your courses and topics",
+      description: "Enroll to your courses and topics",
       image:
         "https://img.freepik.com/free-photo/colorful-books-with-pink-background_23-2148898315.jpg?t=st=1721738186~exp=1721741786~hmac=e8a0b87e317cf9191688af050934850e9ced4db90d9d39a03f78bbdb566fb991&w=826",
     },
@@ -266,7 +262,11 @@ const Home: React.FC = () => {
                 <Text style={styles.sectionTitle}>Recommended for you</Text>
                 <TouchableOpacity style={styles.seeAllButton}>
                   <Text style={styles.seeAllText}>See All</Text>
-                  <Icon name="arrow-forward" size={SIZES.medium} color={themeColors.tint} />
+                  <Ionicons
+                    name="arrow-forward"
+                    size={SIZES.medium}
+                    color={themeColors.tint}
+                  />
                 </TouchableOpacity>
               </View>
               <RecommendedCoursesList
@@ -280,7 +280,11 @@ const Home: React.FC = () => {
               <Text style={styles.sectionTitle}>Today's Tasks</Text>
               <TouchableOpacity style={styles.seeAllButton}>
                 <Text style={styles.seeAllText}>See All</Text>
-                <Icon name="arrow-forward" size={SIZES.medium} color={themeColors.tint} />
+                <Ionicons
+                  name="arrow-forward"
+                  size={SIZES.medium}
+                  color={themeColors.tint}
+                />
               </TouchableOpacity>
             </View>
           )}
