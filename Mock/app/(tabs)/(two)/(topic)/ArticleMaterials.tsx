@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from "react";
-import { View, Linking } from "react-native";
+import React, { useState, useEffect, useCallback } from "react";
+import { View, Linking, ScrollView, RefreshControl } from "react-native";
 import { useGlobalSearchParams } from "expo-router";
-import axios from "axios";
-
-import ApiUrl from "../../../../config";
 
 import { useAuth } from "../../../../components/AuthContext";
 import Articles from "../../../../components/Articles";
 import { Topic, ArticleMaterial } from "../../../../components/types";
+import { useQuery } from "@tanstack/react-query";
+import { fetchTopicMaterials } from "../../../../CoursesApiCalls";
+import { queryClient } from "../../../../QueryClient";
+import ErrorMessage from "../../../../components/ErrorMessage";
 
 interface ArticleMaterialsProps {
   topic: Topic[];
@@ -17,31 +18,46 @@ interface ArticleMaterialsProps {
 const ArticleMaterials: React.FC<ArticleMaterialsProps> = () => {
   const { topic } = useGlobalSearchParams();
   const { userToken } = useAuth();
-  const [selectedArticleMaterials, setSelectedArticleMaterials] = useState<
-    ArticleMaterial[]
-  >([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const parsedTopic: Topic =
     typeof topic === "string" ? JSON.parse(topic) : topic;
 
+  const {
+    status: selectedArticleMaterialsStatus,
+    data: selectedArticleMaterials,
+    error: selectedArticleMaterialsError,
+    refetch: refetchSelectedArticleMaterials,
+  } = useQuery({
+    queryKey: ["topicMaterials", parsedTopic.id],
+    queryFn: () => fetchTopicMaterials(parsedTopic.id, userToken?.token),
+
+    enabled: !!parsedTopic.id,
+  });
+
   useEffect(() => {
-    fetchData();
-  }, [parsedTopic.id]);
-  const fetchData = async () => {
-    try {
-      const response = await axios.get(
-        `${ApiUrl}/api/topic/materials/${parsedTopic.id}/`,
-        {
-          headers: {
-            Authorization: `Token ${userToken?.token}`,
-          },
-        }
+    if (selectedArticleMaterialsStatus) {
+      setErrorMessage(
+        selectedArticleMaterialsError?.message || "An error occurred"
       );
-      setSelectedArticleMaterials(response.data);
-    } catch (error) {
-      console.error("Error fetching data:", error);
     }
-  };
+  }, [selectedArticleMaterialsStatus]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+
+    try {
+      await queryClient.invalidateQueries({
+        queryKey: ["courses", userToken?.token],
+      });
+      refetchSelectedArticleMaterials();
+    } finally {
+      setRefreshing(false);
+      setErrorMessage(null);
+    }
+  }, [queryClient, userToken?.token, refetchSelectedArticleMaterials]);
+
   const handleArticlePress = (articleMaterial: ArticleMaterial) => {
     if (articleMaterial.link) {
       Linking.openURL(articleMaterial.link).catch((error) =>
@@ -53,10 +69,21 @@ const ArticleMaterials: React.FC<ArticleMaterialsProps> = () => {
   };
 
   return (
-    <View>
-      <Articles
-        articleMaterials={selectedArticleMaterials}
-        handleArticlePress={handleArticlePress}
+    <View style={{ flex: 1 }}>
+      <ScrollView
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        <Articles
+          articleMaterials={selectedArticleMaterials || []}
+          handleArticlePress={handleArticlePress}
+        />
+      </ScrollView>
+      <ErrorMessage
+        message={errorMessage}
+        visible={!!errorMessage}
+        onDismiss={() => setErrorMessage(null)}
       />
     </View>
   );

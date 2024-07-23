@@ -293,6 +293,7 @@ const CourseDetails: React.FC = () => {
         container: {
           flex: 1,
           ...StyleSheet.absoluteFillObject,
+          backgroundColor: themeColors.background,
         },
         headerTitle: {
           fontSize: SIZES.large,
@@ -417,7 +418,7 @@ const CourseDetails: React.FC = () => {
             <LinearGradient
               style={StyleSheet.absoluteFill}
               start={[0, 0.3]}
-              end={[0, 1.1]}
+              end={[0, 2]}
               colors={["transparent", "rgba(0, 0, 0, 0.2)", "#000"]}
             />
           </RNAnimated.View>

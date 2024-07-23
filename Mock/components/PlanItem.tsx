@@ -7,10 +7,7 @@ import {
   useColorScheme,
 } from "react-native";
 import { Feather, Ionicons } from "@expo/vector-icons";
-import {
-  Swipeable,
-  GestureHandlerRootView,
-} from "react-native-gesture-handler";
+import { Swipeable } from "react-native-gesture-handler";
 import { Plan } from "./types";
 import { SIZES, rMS, rS, rV, useShadows } from "../constants";
 

@@ -94,7 +94,6 @@ const AccountSettings = () => {
           },
         });
       }
-
       Alert.alert("Success", "Your information has been updated.");
     } catch (error) {
       console.error("Error updating information:", error);

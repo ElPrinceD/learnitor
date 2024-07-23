@@ -23,7 +23,7 @@ import {
 import ErrorMessage from "../../../components/ErrorMessage";
 
 const PracticeQuestions: React.FC = () => {
-  const { topic, level, isTimed, duration } = useLocalSearchParams();
+  const { topic, level, isTimed, duration, course } = useLocalSearchParams();
   const { userToken } = useAuth();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<{
@@ -218,6 +218,7 @@ const PracticeQuestions: React.FC = () => {
           practiceQuestions: JSON.stringify(practiceQuestions),
           practiceAnswers: JSON.stringify(practiceAnswers),
           topic: topic,
+          course: course,
         },
       });
     }, 0);
