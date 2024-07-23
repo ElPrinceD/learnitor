@@ -1,13 +1,13 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import Icon from 'react-native-vector-icons/Ionicons'; // Assuming Ionicons is being used
 
-const Notification = ({ image, message, onPress }) => {
+const Notification = ({ message }) => {
   return (
     <View style={[styles.container, styles.notificationContainer]}>
-      <Image source={image} style={styles.image} />
+      <Icon name="notifications-outline" size={24} color="#333" style={styles.icon} />
       <View style={styles.content}>
         <Text style={styles.message}>{message}</Text>
-        <Text style={styles.button} onPress={onPress}>Dismiss</Text>
       </View>
     </View>
   );
@@ -17,35 +17,31 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 1,
-    marginBottom: 1,
-    alignSelf: 'flex-start', // Aligns the container to the left
+    padding: 12,
+    marginBottom: 8,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 3,
   },
   notificationContainer: {
-    backgroundColor: '#fff',
-    
-    width: "100%",
-    
+    width: '100%',
   },
-  image: {
-    width: 100,
-    height: 100,
-    borderRadius: 20,
-    marginRight: 1,
+  icon: {
+    marginRight: 12,
   },
   content: {
-    
+    flex: 1,
     flexDirection: 'row',
-   
+    alignItems: 'center',
   },
   message: {
     fontSize: 16,
     color: '#333',
-  },
-  button: {
-    fontSize: 16,
-    color: '#007bff',
-    marginLeft: 16,
+    flex: 1,
   },
 });
 
