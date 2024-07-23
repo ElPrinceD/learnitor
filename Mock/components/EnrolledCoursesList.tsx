@@ -46,8 +46,8 @@ const EnrolledCoursesList: React.FC<Props> = ({
       overflow: "hidden",
     },
     image: {
-      width: rS(120),
-      height: rV(105),
+      width: rS(150),
+      height: rV(155),
     },
     textContainer: {
       position: "absolute",
@@ -59,12 +59,23 @@ const EnrolledCoursesList: React.FC<Props> = ({
       backgroundColor: "transparent",
     },
     name: {
+      fontSize: SIZES.large,
+      fontWeight: "900", // Very bold font weight
+      color: "white",
+      textAlign: "left",
+      marginVertical: rMS(10), // Adjust margin to move title higher
+      textShadowColor: themeColors.shadow,
+      textShadowOffset: { width: -1, height: 1 },
+      textShadowRadius: 10,
+      flexWrap: "wrap", // Allow text to wrap to the next line
+    },
+    description: {
       fontSize: SIZES.medium,
-      fontWeight: "bold",
-      color: themeColors.text,
+      color: "white",
       textAlign: "left",
       marginBottom: rMS(5),
-      textShadowColor: themeColors.shadow,
+      textShadowOffset: { width: -1, height: 1 },
+      textShadowRadius: 10,
     },
     skeletonContainer: {
       flexDirection: "row",
@@ -94,9 +105,10 @@ const EnrolledCoursesList: React.FC<Props> = ({
             <Image source={{ uri: item.url }} style={styles.image} />
           </View>
           <View style={styles.textContainer}>
-            <Text style={styles.name} numberOfLines={1}>
+            <Text style={styles.name} numberOfLines={2}>
               {item.title}
             </Text>
+            <Text style={styles.description}>{item.description}</Text>
             <ProgressBar
               progress={progressMap[item.id] || 0}
               containerStyle={{
