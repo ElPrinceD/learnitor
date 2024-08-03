@@ -261,9 +261,9 @@ const Home: React.FC = () => {
               <View style={styles.sectionTitleContainer}>
                 <Text style={styles.sectionTitle}>Recommended for you</Text>
                 <TouchableOpacity style={styles.seeAllButton}>
-                  <Text style={styles.seeAllText}>See All</Text>
+                  <Text style={styles.seeAllText}>See All </Text>
                   <FontAwesome6
-                    name="arrow-forward"
+                    name="arrow-right"
                     size={SIZES.medium}
                     color={themeColors.tint}
                   />

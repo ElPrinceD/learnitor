@@ -5,21 +5,22 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  TextInput,
   useColorScheme,
   ActivityIndicator,
+  Switch,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useAuth } from "../../../components/AuthContext";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
 import Colors from "../../../constants/Colors";
 import { rMS, rS, rV } from "../../../constants/responsive";
 import { SIZES } from "../../../constants/theme";
 import GameButton from "../../../components/GameButton";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useMutation } from "@tanstack/react-query";
 import { deleteTask, updateTask } from "../../../TimelineApiCalls";
-import ErrorMessage from "../../../components/ErrorMessage"; // Import ErrorMessage component
+import ErrorMessage from "../../../components/ErrorMessage";
+import AnimatedRoundTextInput from "../../../components/AnimatedRoundTextInput";
 
 const EditPlan = () => {
   const params = useLocalSearchParams();
@@ -33,10 +34,11 @@ const EditPlan = () => {
   const [title, setTitle] = useState(oldTitle || "");
   const [description, setDescription] = useState(oldDescription || "");
   const [date, setDate] = useState(new Date(oldDate));
+  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+  const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
   const [time, setTime] = useState(parseTimeString(oldTime));
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null); // Error message state
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [affectAllRecurring, setAffectAllRecurring] = useState(false);
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -79,6 +81,7 @@ const EditPlan = () => {
       due_time: formattedDueTime,
       category: params.category_id,
       learner: userInfo?.user.id,
+      affect_all_recurring: affectAllRecurring,
     };
     updateTaskMutation.mutate({
       taskId: id,
@@ -107,24 +110,35 @@ const EditPlan = () => {
     });
   };
 
-  const showDatePickerHandler = () => {
-    setShowDatePicker(true);
+  const showDatePicker = () => {
+    setDatePickerVisibility(true);
   };
 
-  const showTimePickerHandler = () => {
-    setShowTimePicker(true);
+  const hideDatePicker = () => {
+    setDatePickerVisibility(false);
   };
 
-  const onDateChange = (event: any, selectedDate: Date | undefined) => {
-    const currentDate = selectedDate || date;
-    setShowDatePicker(false);
-    setDate(currentDate);
+  const handleConfirmDate = (selectedDate) => {
+    hideDatePicker();
+    if (selectedDate) setDate(selectedDate);
   };
 
-  const onTimeChange = (event: any, selectedTime: Date | undefined) => {
-    const currentTime = selectedTime || time;
-    setShowTimePicker(false);
-    setTime(currentTime);
+  const showTimePicker = () => {
+    setTimePickerVisibility(true);
+  };
+
+  const hideTimePicker = () => {
+    setTimePickerVisibility(false);
+  };
+
+  const handleConfirmTime = (selectedTime) => {
+    hideTimePicker();
+    if (selectedTime) {
+      const newDate = new Date(date);
+      newDate.setHours(selectedTime.getHours());
+      newDate.setMinutes(selectedTime.getMinutes());
+      setTime(newDate);
+    }
   };
 
   const formatDateString = (date: Date) => {
@@ -141,194 +155,156 @@ const EditPlan = () => {
     container: {
       flex: 1,
       backgroundColor: themeColors.background,
-    },
-    top: {
-      padding: rMS(20),
-      flex: 1,
+      paddingHorizontal: rMS(20),
+      paddingBottom: rV(20),
     },
     inputContainer: {
-      marginTop: rV(5),
-      flexDirection: "row",
-      alignItems: "center",
-      borderWidth: 1,
-      borderRadius: rMS(10),
-      paddingHorizontal: rS(10),
-      marginBottom: rV(15),
-      borderColor: "transparent",
-      backgroundColor: themeColors.card,
+      marginTop: rV(20),
       flex: 1,
-    },
-    icon: {
-      marginRight: rS(10),
-      color: themeColors.textSecondary,
+      marginBottom: rV(15),
     },
     input: {
       flex: 1,
-      height: rV(40),
-      color: themeColors.text,
+      height: rV(20),
+      color: themeColors.textSecondary,
+      overflow: "hidden",
       borderColor: "transparent",
     },
     label: {
-      fontSize: SIZES.medium,
+      fontSize: SIZES.large,
       marginBottom: rV(5),
+      color: themeColors.textSecondary,
+    },
+    title: {
+      marginTop: rV(5),
+      fontSize: SIZES.large,
+      fontWeight: "bold",
       color: themeColors.text,
-    },
-    descriptionInput: {
-      width: "100%",
-      height: rV(95),
-    },
-    bottom: {
-      padding: rMS(20),
-      flex: 1,
-    },
-    planItemLine: {
-      height: rV(0.3),
-      backgroundColor: "#ccc",
-    },
-    schedule: {
-      flexDirection: "row",
-      marginVertical: rV(15),
-      alignItems: "center",
     },
     dateTime: {
-      marginHorizontal: rS(30),
+      marginHorizontal: rS(3),
+      marginTop: rV(25),
+      marginBottom: rS(20),
+      flexDirection: "row",
+      justifyContent: "space-between",
       flex: 1,
-      color: themeColors.text,
-    },
-    picker: {
-      flex: 0.7,
-      color: themeColors.textSecondary,
-      marginLeft: rS(35),
     },
     buttonContainer: {
-      paddingHorizontal: rS(20),
-      paddingBottom: rV(20),
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginVertical: rV(20),
     },
     button: {
-      width: rS(60),
-      marginHorizontal: 5,
+      flex: 1,
+      paddingVertical: rV(15),
       borderRadius: 20,
-      backgroundColor: "#DAB499",
-      alignSelf: "flex-end",
+      backgroundColor: themeColors.tint,
+      alignItems: "center",
+      marginHorizontal: rS(10),
+    },
+    buttonText: {
+      color: themeColors.text,
+      fontSize: SIZES.large,
+      fontWeight: "bold",
+    },
+    toggleContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginVertical: rV(10),
+      justifyContent: "space-between", // Ensure label is left and toggle is right
+    },
+    toggleLabel: {
+      fontSize: SIZES.large,
+      color: themeColors.text,
+      marginLeft: rS(10), // Adjust left margin if needed
     },
   });
 
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.top}>
-          <GameButton
-            onPress={handleSaveTime}
-            title={"Save"}
-            style={styles.button}
-            disabled={updateTaskMutation.isPending}
-          >
-            {updateTaskMutation.isPending && (
-              <ActivityIndicator size="small" color={themeColors.text} />
-            )}
-          </GameButton>
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={[
-                styles.input,
-                { fontSize: SIZES.xxLarge, height: rV(60) },
-              ]}
-              placeholder="Edit Title"
-              value={title}
-              onChangeText={setTitle}
-              placeholderTextColor={themeColors.textSecondary}
-            />
-          </View>
+        <View style={styles.inputContainer}>
+          <AnimatedRoundTextInput
+            placeholderTextColor={themeColors.textSecondary}
+            style={styles.input}
+            label="Title"
+            value={title}
+            onChangeText={setTitle}
+          />
         </View>
-        <View style={styles.planItemLine} />
-        <View style={styles.bottom}>
-          <TouchableOpacity onPress={showDatePickerHandler}>
-            <View style={styles.schedule}>
-              <Ionicons
-                name="calendar-outline"
-                size={SIZES.xLarge}
-                color={themeColors.icon}
-              />
-              <View style={styles.dateTime}>
-                <Text style={{ color: themeColors.text }}>
-                  {formatDateString(date)}
-                </Text>
-                {showDatePicker && (
-                  <DateTimePicker
-                    testID="dateTimePicker"
-                    value={date}
-                    mode="date"
-                    is24Hour={true}
-                    onChange={onDateChange}
-                    textColor={themeColors.text}
-                    accentColor={themeColors.icon}
-                  />
-                )}
-              </View>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={showTimePickerHandler}>
-            <View style={styles.schedule}>
-              <MaterialCommunityIcons
-                name="clock-outline"
-                size={SIZES.xLarge}
-                color={themeColors.icon}
-              />
-              <View style={styles.dateTime}>
-                <Text style={{ color: themeColors.text }}>
-                  {formatTime(time)}
-                </Text>
-                {showTimePicker && (
-                  <DateTimePicker
-                    testID="dateTimePicker"
-                    value={time}
-                    mode="time"
-                    is24Hour={true}
-                    onChange={onTimeChange}
-                    textColor={themeColors.text}
-                    accentColor={themeColors.icon}
-                  />
-                )}
-              </View>
-            </View>
-          </TouchableOpacity>
-
-          <View>
-            <Text style={styles.label}>Edit Description</Text>
-            <View style={[styles.inputContainer, styles.descriptionInput]}>
-              <TextInput
-                style={[styles.input, { flex: 1 }]}
-                placeholder="Edit Description"
-                value={description}
-                onChangeText={setDescription}
-                multiline
-                placeholderTextColor={themeColors.textSecondary}
-              />
-            </View>
-          </View>
-        </View>
-        <View style={styles.buttonContainer}>
-          <GameButton
-            onPress={handleDeletePlan}
-            title={"Delete"}
-            style={[styles.button, { backgroundColor: "#D22B2B" }]}
-            disabled={deleteTaskMutation.isPending}
-          >
-            {deleteTaskMutation.isPending && (
-              <ActivityIndicator size="small" color={themeColors.text} />
-            )}
-          </GameButton>
-        </View>
-      </ScrollView>
-
-      {errorMessage && (
-        <ErrorMessage
-          message={errorMessage}
-          visible={!!errorMessage}
-          onDismiss={() => setErrorMessage(null)}
+        <AnimatedRoundTextInput
+          placeholderTextColor={themeColors.textSecondary}
+          style={styles.input}
+          label="Description"
+          value={description}
+          onChangeText={setDescription}
         />
-      )}
+
+        <Text style={styles.label}>Select Date</Text>
+        <TouchableOpacity style={styles.dateTime} onPress={showDatePicker}>
+          <MaterialCommunityIcons
+            name="calendar"
+            size={30}
+            color={themeColors.tint}
+          />
+          <Text style={styles.title}>{formatDateString(date)}</Text>
+        </TouchableOpacity>
+        <DateTimePickerModal
+          isVisible={isDatePickerVisible}
+          mode="date"
+          onConfirm={handleConfirmDate}
+          onCancel={hideDatePicker}
+          date={date}
+          minimumDate={new Date()}
+        />
+
+        <Text style={styles.label}>Select Time</Text>
+        <TouchableOpacity style={styles.dateTime} onPress={showTimePicker}>
+          <MaterialCommunityIcons
+            name="clock"
+            size={30}
+            color={themeColors.border}
+          />
+          <Text style={styles.title}>{formatTime(time)}</Text>
+        </TouchableOpacity>
+        <DateTimePickerModal
+          isVisible={isTimePickerVisible}
+          mode="time"
+          onConfirm={handleConfirmTime}
+          onCancel={hideTimePicker}
+          date={time}
+        />
+
+        <View style={styles.toggleContainer}>
+          <Text style={styles.toggleLabel}>Affect All Recurring Tasks</Text>
+          <Switch
+            value={affectAllRecurring}
+            onValueChange={setAffectAllRecurring}
+            trackColor={{ false: "#767577", true: themeColors.tint }}
+            thumbColor={affectAllRecurring ? themeColors.background : "#f4f3f4"}
+          />
+        </View>
+
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.button} onPress={handleSaveTime}>
+            <Text style={styles.buttonText}>Save</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.button} onPress={handleDeletePlan}>
+            <Text style={styles.buttonText}>Delete</Text>
+          </TouchableOpacity>
+        </View>
+
+        {(updateTaskMutation.isPending || deleteTaskMutation.isPending) && (
+          <ActivityIndicator size="large" color={themeColors.tint} />
+        )}
+        {errorMessage && (
+          <ErrorMessage
+            message={errorMessage}
+            visible={!!errorMessage}
+            onDismiss={() => setErrorMessage(null)}
+          />
+        )}
+      </ScrollView>
     </View>
   );
 };

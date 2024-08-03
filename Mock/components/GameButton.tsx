@@ -38,7 +38,7 @@ const GameButton: React.FC<GameButtonProps> = ({
       justifyContent: "center",
     },
     buttonDisabled: {
-      backgroundColor: "red",
+      backgroundColor: themeColors.buttonDisabled,
     },
     text: {
       color: themeColors.text,
