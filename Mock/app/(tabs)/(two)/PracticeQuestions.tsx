@@ -274,6 +274,9 @@ const PracticeQuestions: React.FC = () => {
           fontWeight: "bold",
           marginLeft: rS(20),
         },
+        selectedAnswer: {
+          backgroundColor: themeColors.selectedItem,
+        },
         buttonContainer: {
           flexDirection: "row",
           justifyContent: "space-between",
@@ -340,6 +343,7 @@ const PracticeQuestions: React.FC = () => {
               }
               isAnswerSelected={isAnswerSelected}
               handleAnswerSelection={handleAnswerSelection}
+              styles={styles}
             />
           )}
           <View style={styles.buttonContainer}>

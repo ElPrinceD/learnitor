@@ -298,10 +298,16 @@ const EditPlan = () => {
           </TouchableOpacity>
         </View>
 
-        {(updateTaskMutation.isLoading || deleteTaskMutation.isLoading) && (
+        {(updateTaskMutation.isPending || deleteTaskMutation.isPending) && (
           <ActivityIndicator size="large" color={themeColors.tint} />
         )}
-        {errorMessage && <ErrorMessage errorMessage={errorMessage} />}
+        {errorMessage && (
+          <ErrorMessage
+            message={errorMessage}
+            visible={!!errorMessage}
+            onDismiss={() => setErrorMessage(null)}
+          />
+        )}
       </ScrollView>
     </View>
   );
