@@ -61,12 +61,12 @@ const EnrolledCoursesList: React.FC<Props> = ({
     name: {
       fontSize: SIZES.large,
       fontWeight: "900", // Very bold font weight
-      color: "white",
+      color: themeColors.background,
       textAlign: "left",
       marginVertical: rMS(10), // Adjust margin to move title higher
-      textShadowColor: themeColors.shadow,
-      textShadowOffset: { width: -1, height: 1 },
-      textShadowRadius: 10,
+       textShadowColor: themeColors.shadow,
+       textShadowOffset: { width: -1, height: 1 },
+       textShadowRadius: 1,
       flexWrap: "wrap", // Allow text to wrap to the next line
     },
     description: {

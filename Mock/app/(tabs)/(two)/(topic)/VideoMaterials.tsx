@@ -1,49 +1,58 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { View, Linking, RefreshControl, ScrollView } from "react-native";
 import { useGlobalSearchParams } from "expo-router";
-import axios from "axios";
-
-import ApiUrl from "../../../../config";
+import { useQuery } from "@tanstack/react-query";
 
 import { useAuth } from "../../../../components/AuthContext";
 import Videos from "../../../../components/Videos";
 
 import { Topic, Material } from "../../../../components/types";
+import { fetchTopicMaterials } from "../../../../CoursesApiCalls";
+import ErrorMessage from "../../../../components/ErrorMessage";
+import { queryClient } from "../../../../QueryClient";
 
-interface VideoMaterialsProps {
-  topic: Topic[];
-  topicMaterials: Material[];
-}
-
-const VideoMaterials: React.FC<VideoMaterialsProps> = () => {
+const VideoMaterials: React.FC = () => {
   const { topic } = useGlobalSearchParams();
   const { userToken } = useAuth();
-  const [selectedTopicMaterials, setSelectedTopicMaterials] = useState<
-    Material[]
-  >([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const parsedTopic: Topic =
     typeof topic === "string" ? JSON.parse(topic) : topic;
 
+  const {
+    status: selectedTopicMaterialsStatus,
+    data: selectedTopicMaterials,
+    error: selectedTopicMaterialsError,
+    refetch: refetchSelectedTopicMaterials,
+  } = useQuery({
+    queryKey: ["topicMaterials", parsedTopic.id],
+    queryFn: () => fetchTopicMaterials(parsedTopic.id, userToken?.token),
+
+    enabled: !!parsedTopic.id,
+  });
+
   useEffect(() => {
-    fetchData();
-  }, [parsedTopic.id]);
-  const fetchData = async () => {
-    try {
-      const response = await axios.get(
-        `${ApiUrl}/api/topic/materials/${parsedTopic.id}/`,
-        {
-          headers: {
-            Authorization: `Token ${userToken?.token}`,
-          },
-        }
+    if (selectedTopicMaterialsStatus) {
+      setErrorMessage(
+        selectedTopicMaterialsError?.message || "An error occurred"
       );
-      setSelectedTopicMaterials(response.data);
-    } catch (error) {
-      console.error("Error fetching data:", error);
     }
-  };
+  }, [selectedTopicMaterialsStatus]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+
+    try {
+      await queryClient.invalidateQueries({
+        queryKey: ["courses", userToken?.token],
+      });
+      refetchSelectedTopicMaterials();
+    } finally {
+      setRefreshing(false);
+      setErrorMessage(null);
+    }
+  }, [queryClient, userToken?.token, refetchSelectedTopicMaterials]);
 
   const handleVideoPress = (material: Material) => {
     if (material.link) {
@@ -54,23 +63,26 @@ const VideoMaterials: React.FC<VideoMaterialsProps> = () => {
       console.log("No link available for this material");
     }
   };
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    fetchData().finally(() => setRefreshing(false));
-  }, []);
 
   return (
-    <ScrollView
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
-      {/* <TopicInformation topic={parsedTopic} /> */}
-      <Videos
-        videoMaterials={selectedTopicMaterials}
-        handleVideoPress={handleVideoPress}
+    <View style={{ flex: 1 }}>
+      <ScrollView
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {/* <TopicInformation topic={parsedTopic} /> */}
+        <Videos
+          videoMaterials={selectedTopicMaterials || []}
+          handleVideoPress={handleVideoPress}
+        />
+      </ScrollView>
+      <ErrorMessage
+        message={errorMessage}
+        visible={!!errorMessage}
+        onDismiss={() => setErrorMessage(null)}
       />
-    </ScrollView>
+    </View>
   );
 };
 

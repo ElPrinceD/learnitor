@@ -166,6 +166,22 @@ export const getPracticeAnswers = async (questionId: number, token): Promise<Ans
     }
 };
 
+export const fetchTopicMaterials = async (topicId, token) => {
+    try {
+        
+        const response = await apiClient.get(`/api/topic/materials/${topicId}/`, {
+          headers: {
+            Authorization: `Token ${token}`,
+          },
+        });
+        return response.data;
+    }
+    catch (error) {
+        console.error('Error fetching materials:', error);
+        throw error;
+    }
+};
+
 // {POST APIs}
 
 export const enrollInCourse = async (userId, courseId, topicIds, token) => {

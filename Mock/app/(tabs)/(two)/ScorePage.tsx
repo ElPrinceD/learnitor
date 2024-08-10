@@ -7,10 +7,9 @@ import {
   ScrollView,
   Animated,
   useColorScheme,
+  ActivityIndicator,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import axios from "axios";
-import ApiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
 import { Course, Topic, Result } from "../../../components/types";
 import Colors from "../../../constants/Colors";
@@ -19,7 +18,7 @@ import { useNavigation } from "@react-navigation/native";
 import { SIZES, rMS, rS, rV, useShadows } from "../../../constants";
 import { useMutation } from "@tanstack/react-query";
 import { markTopicAsComplete } from "../../../CoursesApiCalls";
-import { queryClient } from "../../../QueryClient";
+import ErrorMessage from "../../../components/ErrorMessage";
 
 const AnimatedText = Animated.createAnimatedComponent(Text);
 
@@ -290,72 +289,89 @@ const ScorePage: React.FC = () => {
   ]);
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      onScroll={Animated.event(
-        [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-        { useNativeDriver: false }
-      )}
-      scrollEventThrottle={16}
-    >
-      <View style={styles.topContainer}>
-        <Text style={styles.title}>Your Score</Text>
-        <Text style={styles.score}>{score}%</Text>
-        <View style={styles.buttonContainer}>
-          <GameButton style={styles.button} onPress={handleToggleAnswers}>
-            <Text style={styles.buttonText}>
-              {showAnswers ? "Hide Answers" : "Show Answers"}
-            </Text>
-          </GameButton>
-
-          <TouchableOpacity onPress={handleDone} style={styles.button}>
-            <Text style={styles.buttonText}>Done</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      {showAnswers && (
-        <View style={styles.answersContainer}>
-          {results.map((result, index) => (
-            <View key={index} style={styles.card}>
-              <Text style={styles.questionText}>{result.question}</Text>
-              <View style={styles.answersList}>
-                {result.allAnswers.map((answer, i) => (
-                  <View
-                    key={i}
-                    style={{ flexDirection: "row", alignItems: "center" }}
-                  >
-                    {answer.isSelected && <Text style={styles.bullet}>•</Text>}
-                    <Text
-                      style={[
-                        styles.answerText,
-                        answer.isCorrect && styles.correctAnswer,
-                        answer.isSelected && styles.selectedAnswer,
-                        answer.isSelected && {
-                          textDecorationLine: "underline",
-                          color: result.isCorrect
-                            ? styles.correct.color
-                            : styles.incorrect.color,
-                        },
-                      ]}
-                    >
-                      {answer.text}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-              <Text
-                style={[
-                  styles.resultText,
-                  result.isCorrect ? styles.correct : styles.incorrect,
-                ]}
-              >
-                {result.isCorrect ? "You're right!" : "Incorrect"}
+    <View>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+        scrollEventThrottle={16}
+      >
+        <View style={styles.topContainer}>
+          <Text style={styles.title}>Your Score</Text>
+          <Text style={styles.score}>{score}%</Text>
+          <View style={styles.buttonContainer}>
+            <GameButton style={styles.button} onPress={handleToggleAnswers}>
+              <Text style={styles.buttonText}>
+                {showAnswers ? "Hide Answers" : "Show Answers"}
               </Text>
-            </View>
-          ))}
+            </GameButton>
+
+            <GameButton
+              onPress={handleDone}
+              title={"Done"}
+              style={styles.button}
+              disabled={markTopicAsCompletedMutation.isPending}
+            >
+              {markTopicAsCompletedMutation.isPending && (
+                <ActivityIndicator size="small" color={themeColors.text} />
+              )}
+            </GameButton>
+          </View>
         </View>
-      )}
-    </ScrollView>
+        {showAnswers && (
+          <View style={styles.answersContainer}>
+            {results.map((result, index) => (
+              <View key={index} style={styles.card}>
+                <Text style={styles.questionText}>{result.question}</Text>
+                <View style={styles.answersList}>
+                  {result.allAnswers.map((answer, i) => (
+                    <View
+                      key={i}
+                      style={{ flexDirection: "row", alignItems: "center" }}
+                    >
+                      {answer.isSelected && (
+                        <Text style={styles.bullet}>•</Text>
+                      )}
+                      <Text
+                        style={[
+                          styles.answerText,
+                          answer.isCorrect && styles.correctAnswer,
+                          answer.isSelected && styles.selectedAnswer,
+                          answer.isSelected && {
+                            textDecorationLine: "underline",
+                            color: result.isCorrect
+                              ? styles.correct.color
+                              : styles.incorrect.color,
+                          },
+                        ]}
+                      >
+                        {answer.text}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+                <Text
+                  style={[
+                    styles.resultText,
+                    result.isCorrect ? styles.correct : styles.incorrect,
+                  ]}
+                >
+                  {result.isCorrect ? "You're right!" : "Incorrect"}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </ScrollView>
+      <ErrorMessage
+        message={errorMessage}
+        visible={!!errorMessage}
+        onDismiss={() => setErrorMessage(null)}
+      />
+    </View>
   );
 };
 

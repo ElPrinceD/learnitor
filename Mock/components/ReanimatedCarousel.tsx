@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { StyleSheet, Image, Dimensions, View, Text, TouchableOpacity,useColorScheme, } from 'react-native';
 import Carousel from 'react-native-reanimated-carousel';
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import Colors from "../constants/Colors";
+import Colors from '../constants/Colors';
+import { SIZES, rMS } from "../constants";
+
 
 interface CarouselItem {
   title: string;
@@ -67,7 +69,7 @@ const ReanimatedCarousel: React.FC<ReanimatedCarouselProps> = ({ data }) => {
       marginRight: 5,
     },
     title: {
-      fontSize: 30,
+      fontSize: SIZES.xLarge,
       paddingTop: 10,
       textAlign: "center",
       fontWeight: 'bold',
@@ -75,7 +77,7 @@ const ReanimatedCarousel: React.FC<ReanimatedCarouselProps> = ({ data }) => {
       
     },
     description: {
-      fontSize: 14,
+      fontSize: SIZES.medium,
       color: 'white',
       textAlign: 'center',
     },

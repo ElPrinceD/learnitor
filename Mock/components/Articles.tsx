@@ -1,6 +1,14 @@
-import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import React, { memo } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  useColorScheme,
+} from "react-native";
 import { ArticleMaterial } from "./types";
+import { Colors } from "react-native/Libraries/NewAppScreen";
+import { rMS, SIZES, rV } from "../constants";
 
 interface ArticlesProps {
   articleMaterials: ArticleMaterial[];
@@ -15,6 +23,32 @@ const Articles: React.FC<ArticlesProps> = ({
   const books = articleMaterials.filter(
     (articleMaterial) => articleMaterial.type === "journal"
   );
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
+
+  const styles = StyleSheet.create({
+    container: {
+      padding: rMS(20),
+      borderRadius: 10,
+    },
+    title: {
+      fontSize: SIZES.large,
+      fontWeight: "bold",
+      marginBottom: rV(10),
+    },
+    material: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: rV(10),
+    },
+    detailsContainer: {
+      flex: 1,
+    },
+    materialName: {
+      fontSize: SIZES.medium,
+      fontWeight: "bold",
+    },
+  });
 
   return (
     <View style={styles.container}>
@@ -23,7 +57,7 @@ const Articles: React.FC<ArticlesProps> = ({
           key={index}
           onPress={() => handleArticlePress(articleMaterial)}
         >
-          <View style={styles.articleMaterial}>
+          <View style={styles.material}>
             <View style={styles.detailsContainer}>
               <Text style={styles.materialName}>{articleMaterial.name}</Text>
             </View>
@@ -34,29 +68,4 @@ const Articles: React.FC<ArticlesProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 10,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-  articleMaterial: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  detailsContainer: {
-    flex: 1,
-  },
-  materialName: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-});
-
-export default Articles;
+export default memo(Articles);

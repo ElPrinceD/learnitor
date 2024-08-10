@@ -21,7 +21,7 @@ import {
 } from "../../CoursesApiCalls";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "../../QueryClient";
-import Icon from 'react-native-vector-icons/Ionicons'; // Importing the Icon component
+import { FontAwesome6 } from "@expo/vector-icons"; // Replace this line
 
 import ErrorMessage from "../../components/ErrorMessage";
 import RecommendedCoursesList from "../../components/Recommended";
@@ -266,7 +266,7 @@ const Home: React.FC = () => {
                 <Text style={styles.sectionTitle}>Recommended for you</Text>
                 <TouchableOpacity style={styles.seeAllButton}>
                   <Text style={styles.seeAllText}>See All</Text>
-                  <Icon name="arrow-forward" size={SIZES.medium} color={themeColors.tint} />
+                  <FontAwesome6 name="arrow-right" size={SIZES.medium} color={themeColors.tint} />
                 </TouchableOpacity>
               </View>
               <RecommendedCoursesList
@@ -280,7 +280,7 @@ const Home: React.FC = () => {
               <Text style={styles.sectionTitle}>Today's Tasks</Text>
               <TouchableOpacity style={styles.seeAllButton}>
                 <Text style={styles.seeAllText}>See All</Text>
-                <Icon name="arrow-forward" size={SIZES.medium} color={themeColors.tint} />
+                <FontAwesome6 name="arrow-right" size={SIZES.medium} color={themeColors.tint} />  
               </TouchableOpacity>
             </View>
           )}

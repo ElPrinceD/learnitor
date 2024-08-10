@@ -76,6 +76,7 @@ const TaskList: React.FC<Props> = ({ tasks, categoryNames}) => {
     planItemWrapper: {
       flexDirection: "row",
       alignItems: "center",
+      
       marginVertical: rV(2), // Adjusted vertical margin for spacing
     },
     iconWrapper: {
@@ -94,7 +95,6 @@ const TaskList: React.FC<Props> = ({ tasks, categoryNames}) => {
       borderTopLeftRadius: rMS(15),
       borderBottomLeftRadius: rMS(15),
       padding: rS(10),
-      ...shadow.medium,
     },
     planContent: {
       paddingTop: rV(1),
