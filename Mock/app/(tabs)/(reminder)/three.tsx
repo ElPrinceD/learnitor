@@ -24,7 +24,6 @@ import Colors from "../../../constants/Colors";
 import { SIZES, rMS, rS, rV, useShadows } from "../../../constants";
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { FontAwesome6 } from "@expo/vector-icons";
-import { queryClient } from "../../../QueryClient";
 import ErrorMessage from "../../../components/ErrorMessage";
 
 const Timeline = () => {

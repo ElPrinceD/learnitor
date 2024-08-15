@@ -8,14 +8,14 @@ const apiClient = axios.create({
         'Content-Type': 'application/json',
     },
 });
-
+const LEARNER_API_BASE_URL = '/api/learner';
 
 // {GET APIs}
 
 export const getCourses = async (token) => {
 
 try {
- const response = await apiClient.get('/api/course/all/', {
+ const response = await apiClient.get('/api/courses/', {
       headers: {
                 Authorization: `Token ${token}`,
             },
@@ -30,7 +30,7 @@ try {
 export const getCourseCategories = async (token) => {
   
   try {
-    const response = await apiClient.get('/api/category/all/', {
+    const response = await apiClient.get('/api/categories/', {
      headers: {
                 Authorization: `Token ${token}`,
             },
@@ -45,7 +45,7 @@ export const getCourseCategories = async (token) => {
 export const getRecommendedCourses = async (token) => {
 
     try {
-        const response = await apiClient.get('/api/course/all/', {
+        const response = await apiClient.get('/api/courses/', {
             headers: {
                 Authorization: `Token ${token}`,
             },
@@ -63,7 +63,7 @@ export const getRecommendedCourses = async (token) => {
 
 export const getEnrolledCourses = async (userId, token) => {
     try {
-        const response = await apiClient.get(`/api/learner/${userId}/courses`, {
+        const response = await apiClient.get(`${LEARNER_API_BASE_URL}/${userId}/courses`, {
             headers: {
                 Authorization: `Token ${token}`,
             },
@@ -77,7 +77,7 @@ export const getEnrolledCourses = async (userId, token) => {
 
 export const getCourseTopics = async (courseId, token) => {
     try {
-        const response = await apiClient.get(`/api/course/${courseId}/topics/`, {
+        const response = await apiClient.get(`/api/topics/?course_id=${courseId}`, {
             headers: {
                 Authorization: `Token ${token}`,
             },
@@ -95,7 +95,7 @@ export const getCourseTopics = async (courseId, token) => {
 
 export const getEnrollmentStatus = async (userId, courseId, token) => {
     try {
-        const response = await apiClient.get(`/api/learner/${userId}/course/${courseId}/enrollment/`, {
+        const response = await apiClient.get(`${LEARNER_API_BASE_URL}/${userId}/course/${courseId}/enrollment/`, {
             headers: {
                 Authorization: `Token ${token}`,
             },
@@ -109,7 +109,7 @@ export const getEnrollmentStatus = async (userId, courseId, token) => {
 
 export const getCourseProgress = async (userId, courseId, token) => {
     try {
-        const response = await apiClient.get(`/api/learner/${userId}/course/${courseId}/progress/`, {
+        const response = await apiClient.get(`${LEARNER_API_BASE_URL}/${userId}/course/${courseId}/progress/`, {
             headers: {
                 Authorization: `Token ${token}`,
             },
@@ -124,7 +124,7 @@ export const getCourseProgress = async (userId, courseId, token) => {
 
 export const getEnrolledCourseTopics = async (userId, courseId, token) => {
  try {
-      const response = await apiClient.get(`/api/learner/${userId}/course/${courseId}/topics/`,
+      const response = await apiClient.get(`${LEARNER_API_BASE_URL}/${userId}/course/${courseId}/topics/`,
         {
           headers: {
             Authorization: `Token ${token}`,
@@ -139,7 +139,7 @@ export const getEnrolledCourseTopics = async (userId, courseId, token) => {
 
 export const getPracticeQuestions = async (topicId, token, level = "all") => {
   try {
-    const response = await apiClient.get(`/api/course/topic/${topicId}/questions/`, {
+    const response = await apiClient.get(`/api/questions/?topic_id=${topicId}`, {
       headers: {
         Authorization: `Token ${token}`,
       },
@@ -153,7 +153,7 @@ export const getPracticeQuestions = async (topicId, token, level = "all") => {
 
 export const getPracticeAnswers = async (questionId: number, token): Promise<Answer[]> => {
  try {
-      const response = await apiClient.get(`/api/course/topic/questions/${questionId}/answers`,
+      const response = await apiClient.get(`/api/answers/?question_id=${questionId}`,
         {
           headers: {
             Authorization: `Token ${token}`,
@@ -169,7 +169,7 @@ export const getPracticeAnswers = async (questionId: number, token): Promise<Ans
 export const fetchTopicMaterials = async (topicId, token) => {
     try {
         
-        const response = await apiClient.get(`/api/topic/materials/${topicId}/`, {
+        const response = await apiClient.get(`/api/materials/?topic_id=${topicId}`, {
           headers: {
             Authorization: `Token ${token}`,
           },
@@ -186,7 +186,7 @@ export const fetchTopicMaterials = async (topicId, token) => {
 
 export const enrollInCourse = async (userId, courseId, topicIds, token) => {
     try {
-        const response = await apiClient.post(`/api/learner/${userId}/course/${courseId}/enroll/`, {
+        const response = await apiClient.post(`${LEARNER_API_BASE_URL}/${userId}/course/${courseId}/enroll/`, {
             selectedTopics: topicIds,
         }, {
             headers: {
@@ -202,7 +202,7 @@ export const enrollInCourse = async (userId, courseId, topicIds, token) => {
 
 export const unenrollFromCourse = async (userId, courseId, token) => {
     try {
-        const response = await apiClient.post(`/api/learner/${userId}/course/${courseId}/unenroll/`, {}, {
+        const response = await apiClient.post(`${LEARNER_API_BASE_URL}/${userId}/course/${courseId}/unenroll/`, {}, {
             headers: {
                 Authorization: `Token ${token}`,
             },
@@ -218,7 +218,7 @@ export const unenrollFromCourse = async (userId, courseId, token) => {
 export const markTopicAsComplete = async (userId, courseId, topicId, token) => {
     try {
         const response = await apiClient.post(
-            `/api/learner/${userId}/course/${courseId}/topic/${topicId}/mark-completed/`,
+            `${LEARNER_API_BASE_URL}/${userId}/course/${courseId}/topic/${topicId}/mark-completed/`,
             {},
             {
                 headers: {

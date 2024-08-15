@@ -53,7 +53,7 @@ export const getCategories = async (token) => {
       value: category.id,
     }));
           } catch (error)
-   {  console.error('Error fetching task categories:', error);
+   {  console.error('Error fetching task categoriess:', error);
     throw error;
   }
 };
