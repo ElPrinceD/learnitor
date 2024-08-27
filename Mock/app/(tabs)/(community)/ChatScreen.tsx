@@ -49,6 +49,7 @@ const CommunityChatScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isMember, setIsMember] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingMembership, setIsCheckingMembership] = useState(true); // New state
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -64,18 +65,24 @@ const CommunityChatScreen: React.FC = () => {
           },
         }
       );
-      setIsMember(response.data.is_member);
-      if (response.data) {
+      const membershipStatus = response.data.is_member;
+      setIsMember(membershipStatus);
+
+      if (membershipStatus) {
         fetchMessageHistory();
         connectWebSocket();
       }
     } catch (error) {
       console.error("Error checking membership status:", error);
       setError("Failed to check membership status");
+    } finally {
+      setIsCheckingMembership(false); // Mark the membership check as complete
     }
   };
-  console.log("HAHA", isMember);
+
   const fetchMessageHistory = async () => {
+    if (!isMember) return;
+
     try {
       const response = await axios.get<Message[]>(
         `https://learnitor.onrender.com/api/messages/${communityId}/get_messages/`,
@@ -96,56 +103,56 @@ const CommunityChatScreen: React.FC = () => {
   };
 
   const connectWebSocket = useCallback(() => {
-    if (communityId && userToken?.token) {
-      if (ws.current) {
-        ws.current.close();
-      }
+    if (!isMember || !communityId || !userToken?.token) return;
 
-      ws.current = new WebSocket(
-        `wss://learnitor.onrender.com/community/${communityId}/?token=${userToken.token}`
-      );
-
-      ws.current.onopen = () => {
-        console.log(`WebSocket connection opened for community ${communityId}`);
-        setIsConnected(true);
-      };
-
-      ws.current.onerror = (error) => {
-        console.error("WebSocket error:", error);
-        setError("Connection error");
-        setIsConnected(false);
-        setTimeout(connectWebSocket, 5000);
-      };
-
-      ws.current.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (!Array.isArray(data)) {
-            const newMessage = {
-              ...data,
-              sender: data.sender || user?.first_name,
-              sent_at: formatTime(new Date().toISOString()),
-            };
-            setMessages((prevMessages) => {
-              const updatedMessages = [...prevMessages, newMessage].sort(
-                (a, b) =>
-                  new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime()
-              );
-              return updatedMessages;
-            });
-          }
-        } catch (error) {
-          console.error("Error parsing WebSocket message:", error);
-          setError("Error parsing message");
-        }
-      };
-
-      ws.current.onclose = () => {
-        console.log(`WebSocket connection closed for community ${communityId}`);
-        setIsConnected(false);
-      };
+    if (ws.current) {
+      ws.current.close();
     }
-  }, [communityId, userToken]);
+
+    ws.current = new WebSocket(
+      `wss://learnitor.onrender.com/community/${communityId}/?token=${userToken.token}`
+    );
+
+    ws.current.onopen = () => {
+      console.log(`WebSocket connection opened for community ${communityId}`);
+      setIsConnected(true);
+    };
+
+    ws.current.onerror = (error) => {
+      console.error("WebSocket error:", error);
+      setError("Connection error");
+      setIsConnected(false);
+      setTimeout(connectWebSocket, 5000);
+    };
+
+    ws.current.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (!Array.isArray(data)) {
+          const newMessage = {
+            ...data,
+            sender: data.sender || user?.first_name,
+            sent_at: formatTime(new Date().toISOString()),
+          };
+          setMessages((prevMessages) => {
+            const updatedMessages = [...prevMessages, newMessage].sort(
+              (a, b) =>
+                new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime()
+            );
+            return updatedMessages;
+          });
+        }
+      } catch (error) {
+        console.error("Error parsing WebSocket message:", error);
+        setError("Error parsing message");
+      }
+    };
+
+    ws.current.onclose = () => {
+      console.log(`WebSocket connection closed for community ${communityId}`);
+      setIsConnected(false);
+    };
+  }, [communityId, userToken, isMember]);
 
   useEffect(() => {
     checkMembershipStatus();
@@ -244,7 +251,9 @@ const CommunityChatScreen: React.FC = () => {
       style={[styles.container, { backgroundColor: themeColors.background }]}
     >
       {error && <Text style={styles.errorText}>{error}</Text>}
-      {isLoading ? (
+      {isCheckingMembership ? (
+        <ActivityIndicator size="large" color={themeColors.tint} />
+      ) : isLoading ? (
         <ActivityIndicator size="large" color={themeColors.tint} />
       ) : isMember ? (
         <>
