@@ -13,6 +13,46 @@ export interface Course {
   category: number[];
   id: string;
 }
+
+export interface User {
+  id: number;
+  username: string;  // or any other relevant field
+  first_name: string;
+  last_name: string;
+  email: string;
+  profile_picture: string;  // Assuming profile_picture is a URL
+}
+
+export interface Message {
+  id: number;
+  community: string;  // Assuming community is identified by an ID or similar string
+  sender: string;  // Email or username of the sender
+  message: string;
+  sent_at: string;  // ISO 8601 date string
+}
+
+export interface Community {
+  id: string;
+  name: string;
+  description: string;
+  image_url: string;
+  isMember: boolean;
+  shareable_link: string;
+  membersCount: number;
+  allowMessages: boolean;
+  lastMessageTime: string;  // ISO 8601 date string
+  lastMessage: string;
+  lastMessageSender: string;  // Email or username of the sender
+  members?: User[];  // Array of detailed user objects
+  messages?: Message[];  // Array of detailed message objects
+}
+
+
+
+
+
+
+
 export interface RecommendedCourse {
   title: string;
   description: string;

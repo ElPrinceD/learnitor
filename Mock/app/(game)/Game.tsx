@@ -330,7 +330,7 @@ export default function Game() {
     },
     aiPrediction: {
       fontSize: SIZES.medium,
-      color: themeColors.textSecondary,
+      color: themeColors.text,
       textAlign: "center",
       alignSelf: "center",
     },
