@@ -9,12 +9,12 @@ export default function ModalScreen() {
     <View style={styles.container}>
       <View style={styles.notificationsContainer}>
         <Notification
-          image={require('./../assets/images/splash.png')}
+          
           message="This is a notification message!"
           onPress={() => console.log('Notification dismissed!')}
         />
         <Notification
-          image={require('./../assets/images/splash.png')}
+          
           message="This is a notification!"
           onPress={() => console.log('Notification dismissed!')}
         />
@@ -31,11 +31,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "flex-start",
     justifyContent: "flex-start", // Align items at the top
-    paddingTop: Platform.OS === 'ios' ? 40 : 0, // Adjust paddingTop for iOS to avoid status bar overlap
+    paddingTop: Platform.OS === 'ios' ? 10 : 0, // Adjust paddingTop for iOS to avoid status bar overlap
   },
   notificationsContainer: {
     width: '100%', // Ensure notifications take full width
     paddingHorizontal: 16, // Add horizontal padding
-    marginTop: Platform.OS === 'ios' ? 20 : 0, // Adjust marginTop for iOS to avoid status bar overlap
+    marginTop: Platform.OS === 'ios' ? 0 : 0, // Adjust marginTop for iOS to avoid status bar overlap
   },
 });

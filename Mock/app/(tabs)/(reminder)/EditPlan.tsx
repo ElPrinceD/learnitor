@@ -83,11 +83,15 @@ const EditPlan = () => {
       learner: userInfo?.user.id,
       affect_all_recurring: affectAllRecurring,
     };
+
+
     updateTaskMutation.mutate({
       taskId: id,
       taskData: data,
       token: userToken?.token,
     });
+
+    
   };
 
   const deleteTaskMutation = useMutation<any, any, any>({

@@ -212,7 +212,7 @@ const Timeline = () => {
                       </Text>
                       <View style={styles.planItemLine} />
                       <PlanItem
-                        plan={plan || []}
+                        plan={plan}
                         categoryNames={categoryNames}
                         getCategoryColor={getCategoryColor}
                         handleEditPlan={handleEditPlan}

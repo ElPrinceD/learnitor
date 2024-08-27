@@ -232,4 +232,3 @@ export const markTopicAsComplete = async (userId, courseId, topicId, token) => {
         throw error;
     }
 }
-

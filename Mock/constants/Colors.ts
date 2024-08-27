@@ -3,7 +3,7 @@ const tintColorSecond = '#1565C0'; // Secondary dark blue color
 const gradientButton = 'linear-gradient(to right, #1565C0 0%, #0D47A1 100%)'; // Dark blue gradient button
 const lightTextColor = '#000';
 const lightTextSecondaryColor = '#666';
-const lightBackgroundColor = '#fff'; // Keeping the original light background
+const lightBackgroundColor = '#f0f1f2'; // Keeping the original light background
 const lightCardColor = '#E3F2FD'; // Light blue card
 const lightBorderColor = '#0D47A1';
 const lightShadowColor = '#000';
@@ -13,7 +13,7 @@ const lightPlaceholderColor = '#666';
 const lightGradientBackgroundColor = '#f2f2f2'; // Keeping the original light gradient background
 const darkTextColor = '#fff';
 const darkTextSecondaryColor = '#ccc';
-const darkBackgroundColor = '#000'; // Keeping the original dark background
+const darkBackgroundColor = '#18191a'; // Keeping the original dark background
 const darkCardColor = '#263238'; // Dark blue card
 const darkShadowColor = '#696969';
 const darkTabIconDefaultColor = '#ccc';
@@ -30,6 +30,7 @@ const darkErrorText = '#f8d7da'; // Light red text
 export default {
   light: {
     text: lightTextColor,
+    reverseText: darkTextColor,
     textSecondary: lightTextSecondaryColor,
     background: lightBackgroundColor,
     card: lightCardColor,
@@ -51,6 +52,7 @@ export default {
   },
   dark: {
     text: darkTextColor,
+    reverseText: lightTextColor,
     textSecondary: darkTextSecondaryColor,
     tintSecond: tintColorSecond,
     background: darkBackgroundColor,

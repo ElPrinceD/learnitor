@@ -81,7 +81,7 @@ export default function Tab3Layout() {
           options={{
             headerShown: true,
             presentation: "modal",
-            animation: "fade",
+            animation: "fade_from_bottom",
             headerStyle: {
               backgroundColor: themeColors.background,
             },

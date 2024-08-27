@@ -140,6 +140,19 @@ export default function TabLayout() {
             headerShadowVisible: false,
           }}
         />
+        <Tabs.Screen
+  name="(community)"
+  options={{
+    title: "Community",
+    tabBarIcon: ({ color, focused }) => (
+      <TabBarIcon name="account-group" color={color} focused={focused} />
+    ),
+    headerShown: false,
+    headerTitle: "Community",
+    headerShadowVisible: false,
+  }}
+/>
+
 
         <Tabs.Screen
           name="(reminder)"
