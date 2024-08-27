@@ -76,8 +76,8 @@ const PracticeQuestions: React.FC = () => {
     staleTime: 0,
   });
 
-  console.log("Yes:", practiceAnswers);
-  console.log("NO:", practiceQuestions);
+  // console.log("Yes:", practiceAnswers);
+  // console.log("NO:", practiceQuestions);
 
   useEffect(() => {
     if (userToken) {

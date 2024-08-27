@@ -26,7 +26,7 @@ export const getCommunities = async (token: string) => {
     }
 };
 
-export const getCommunityDetails = async (communityId: string, token: string) => {
+export const getCommunityDetails = async (communityId: string, token: any) => {
     try {
         const response = await apiClient.get(`${COMMUNITY_API_BASE_URL}/${communityId}/`, {
             headers: {

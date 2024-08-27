@@ -29,7 +29,9 @@ const CommunityDetailScreen: React.FC = () => {
   const [community, setCommunity] = useState<Community | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'Links' | 'Documents' | 'Images'>('Links');
+  const [activeTab, setActiveTab] = useState<"Links" | "Documents" | "Images">(
+    "Links"
+  );
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
@@ -54,7 +56,7 @@ const CommunityDetailScreen: React.FC = () => {
   }, [id, userToken]);
 
   const shareCommunity = async () => {
-    console.log(community?.shareable_link)
+    console.log(community?.shareable_link);
     try {
       const result = await Share.share({
         message: `Check out this community: ${community?.name}\nJoin here: ${community?.shareable_link}`, // Replace with actual community link
@@ -75,7 +77,9 @@ const CommunityDetailScreen: React.FC = () => {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <View
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+      >
         <ActivityIndicator size="large" color={themeColors.tint} />
       </View>
     );
@@ -83,7 +87,9 @@ const CommunityDetailScreen: React.FC = () => {
 
   if (error) {
     return (
-      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <View
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+      >
         <Text style={{ color: themeColors.text }}>{error}</Text>
       </View>
     );
@@ -91,7 +97,9 @@ const CommunityDetailScreen: React.FC = () => {
 
   if (!community) {
     return (
-      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <View
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+      >
         <Text style={{ color: themeColors.text }}>Community not found.</Text>
       </View>
     );
@@ -103,7 +111,9 @@ const CommunityDetailScreen: React.FC = () => {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+    <View
+      style={[styles.container, { backgroundColor: themeColors.background }]}
+    >
       <View style={styles.communityHeader}>
         <Image
           source={{ uri: community.image_url }}
@@ -112,31 +122,69 @@ const CommunityDetailScreen: React.FC = () => {
         <Text style={[styles.communityName, { color: themeColors.text }]}>
           {community.name}
         </Text>
-        <Text style={[styles.membersCount, { color: themeColors.textSecondary }]}>
+        <Text
+          style={[styles.membersCount, { color: themeColors.textSecondary }]}
+        >
           {community.members?.length} Members
         </Text>
         <View style={styles.iconRow}>
-          <View style={[styles.iconContainer, { backgroundColor: themeColors.reverseText }]}>
+          <View
+            style={[
+              styles.iconContainer,
+              { backgroundColor: themeColors.reverseText },
+            ]}
+          >
             <FontAwesome6 name="bell" size={24} color={themeColors.text} />
-            <Text style={[styles.iconLabel, { color: themeColors.textSecondary }]}>Mute</Text>
+            <Text
+              style={[styles.iconLabel, { color: themeColors.textSecondary }]}
+            >
+              Mute
+            </Text>
           </View>
-          <View style={[styles.iconContainer, { backgroundColor: themeColors.reverseText }]}>
-            <FontAwesome6 name="magnifying-glass" size={24} color={themeColors.text} />
-            <Text style={[styles.iconLabel, { color: themeColors.textSecondary }]}>Search</Text>
+          <View
+            style={[
+              styles.iconContainer,
+              { backgroundColor: themeColors.reverseText },
+            ]}
+          >
+            <FontAwesome6
+              name="magnifying-glass"
+              size={24}
+              color={themeColors.text}
+            />
+            <Text
+              style={[styles.iconLabel, { color: themeColors.textSecondary }]}
+            >
+              Search
+            </Text>
           </View>
           <TouchableOpacity
-            style={[styles.iconContainer, { backgroundColor: themeColors.reverseText }]}
+            style={[
+              styles.iconContainer,
+              { backgroundColor: themeColors.reverseText },
+            ]}
             onPress={shareCommunity}
           >
             <FontAwesome6 name="share" size={24} color={themeColors.text} />
-            <Text style={[styles.iconLabel, { color: themeColors.textSecondary }]}>Share</Text>
+            <Text
+              style={[styles.iconLabel, { color: themeColors.textSecondary }]}
+            >
+              Share
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Members Section */}
-      <View style={[styles.membersSection, { backgroundColor: themeColors.reverseText }]}>
-        <Text style={[styles.membersTitle, { color: themeColors.text }]}>Members</Text>
+      <View
+        style={[
+          styles.membersSection,
+          { backgroundColor: themeColors.reverseText },
+        ]}
+      >
+        <Text style={[styles.membersTitle, { color: themeColors.text }]}>
+          Members
+        </Text>
         <FlatList
           data={sortedMembers}
           keyExtractor={(item) => item.id.toString()}
@@ -152,7 +200,12 @@ const CommunityDetailScreen: React.FC = () => {
             </View>
           )}
           ListEmptyComponent={
-            <Text style={[styles.noMembersText, { color: themeColors.textSecondary }]}>
+            <Text
+              style={[
+                styles.noMembersText,
+                { color: themeColors.textSecondary },
+              ]}
+            >
               No members found.
             </Text>
           }
@@ -164,58 +217,76 @@ const CommunityDetailScreen: React.FC = () => {
         <TouchableOpacity
           style={[
             styles.tab,
-            activeTab === 'Links' && { backgroundColor: themeColors.background },
+            activeTab === "Links" && {
+              backgroundColor: themeColors.background,
+            },
           ]}
-          onPress={() => setActiveTab('Links')}
+          onPress={() => setActiveTab("Links")}
         >
-          <Text style={[
-            styles.tabText,
-            { color: themeColors.text },
-            activeTab === 'Links' && { color: themeColors.tint },
-          ]}>Links</Text>
+          <Text
+            style={[
+              styles.tabText,
+              { color: themeColors.text },
+              activeTab === "Links" && { color: themeColors.tint },
+            ]}
+          >
+            Links
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[
             styles.tab,
-            activeTab === 'Documents' && { backgroundColor: themeColors.background },
+            activeTab === "Documents" && {
+              backgroundColor: themeColors.background,
+            },
           ]}
-          onPress={() => setActiveTab('Documents')}
+          onPress={() => setActiveTab("Documents")}
         >
-          <Text style={[
-            styles.tabText,
-            { color: themeColors.text },
-            activeTab === 'Documents' && { color: themeColors.tint },
-          ]}>Documents</Text>
+          <Text
+            style={[
+              styles.tabText,
+              { color: themeColors.text },
+              activeTab === "Documents" && { color: themeColors.tint },
+            ]}
+          >
+            Documents
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[
             styles.tab,
-            activeTab === 'Images' && { backgroundColor: themeColors.background },
+            activeTab === "Images" && {
+              backgroundColor: themeColors.background,
+            },
           ]}
-          onPress={() => setActiveTab('Images')}
+          onPress={() => setActiveTab("Images")}
         >
-          <Text style={[
-            styles.tabText,
-            { color: themeColors.text },
-            activeTab === 'Images' && { color: themeColors.tint },
-          ]}>Images</Text>
+          <Text
+            style={[
+              styles.tabText,
+              { color: themeColors.text },
+              activeTab === "Images" && { color: themeColors.tint },
+            ]}
+          >
+            Images
+          </Text>
         </TouchableOpacity>
       </View>
 
       {/* Render Content Based on Active Tab */}
-      {activeTab === 'Links' && (
+      {activeTab === "Links" && (
         <View>
           <Text style={{ color: themeColors.text }}>Links Content</Text>
           {/* Add the actual Links content here */}
         </View>
       )}
-      {activeTab === 'Documents' && (
+      {activeTab === "Documents" && (
         <View>
           <Text style={{ color: themeColors.text }}>Documents Content</Text>
           {/* Add the actual Documents content here */}
         </View>
       )}
-      {activeTab === 'Images' && (
+      {activeTab === "Images" && (
         <View>
           <Text style={{ color: themeColors.text }}>Images Content</Text>
           {/* Add the actual Images content here */}
@@ -267,8 +338,8 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   tabsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+    flexDirection: "row",
+    justifyContent: "space-around",
     marginVertical: 10,
   },
   tab: {

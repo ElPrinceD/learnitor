@@ -17,18 +17,21 @@ import { useAuth } from "../../../components/AuthContext";
 import { Message } from "../../../components/types";
 
 const generateSenderColor = (name: string): string => {
-  const hash = name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const hash = name
+    .split("")
+    .reduce((acc, char) => acc + char.charCodeAt(0), 0);
   const hue = hash % 360;
   return `hsl(${hue}, 70%, 80%)`;
 };
 
 const formatTime = (dateString: string) => {
   const date = new Date(dateString);
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 };
 
 // Dummy image URL from Freepik
-const DUMMY_IMAGE_URL = "https://image.freepik.com/free-photo/portrait-beautiful-young-woman_1150-14455.jpg";
+const DUMMY_IMAGE_URL =
+  "https://image.freepik.com/free-photo/portrait-beautiful-young-woman_1150-14455.jpg";
 
 type RouteParams = {
   communityId: string;
@@ -53,12 +56,15 @@ const CommunityChatScreen: React.FC = () => {
 
   const checkMembershipStatus = async () => {
     try {
-      const response = await axios.get<boolean>(`https://learnitor.onrender.com/api/communities/${communityId}/is_member/`, {
-        headers: {
-          Authorization: `Token ${userToken?.token}`,
-        },
-      });
-      setIsMember(response.data);
+      const response = await axios.get(
+        `https://learnitor.onrender.com/api/communities/${communityId}/is_member/`,
+        {
+          headers: {
+            Authorization: `Token ${userToken?.token}`,
+          },
+        }
+      );
+      setIsMember(response.data.is_member);
       if (response.data) {
         fetchMessageHistory();
         connectWebSocket();
@@ -68,15 +74,20 @@ const CommunityChatScreen: React.FC = () => {
       setError("Failed to check membership status");
     }
   };
-
+  console.log("HAHA", isMember);
   const fetchMessageHistory = async () => {
     try {
-      const response = await axios.get<Message[]>(`https://learnitor.onrender.com/api/messages/${communityId}/get_messages/`, {
-        headers: {
-          Authorization: `Token ${userToken?.token}`,
-        },
-      });
-      const sortedMessages = response.data.sort((a, b) => new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime());
+      const response = await axios.get<Message[]>(
+        `https://learnitor.onrender.com/api/messages/${communityId}/get_messages/`,
+        {
+          headers: {
+            Authorization: `Token ${userToken?.token}`,
+          },
+        }
+      );
+      const sortedMessages = response.data.sort(
+        (a, b) => new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime()
+      );
       setMessages(sortedMessages);
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -89,8 +100,10 @@ const CommunityChatScreen: React.FC = () => {
       if (ws.current) {
         ws.current.close();
       }
-      
-      ws.current = new WebSocket(`wss://learnitor.onrender.com/community/${communityId}/?token=${userToken.token}`);
+
+      ws.current = new WebSocket(
+        `wss://learnitor.onrender.com/community/${communityId}/?token=${userToken.token}`
+      );
 
       ws.current.onopen = () => {
         console.log(`WebSocket connection opened for community ${communityId}`);
@@ -114,7 +127,10 @@ const CommunityChatScreen: React.FC = () => {
               sent_at: formatTime(new Date().toISOString()),
             };
             setMessages((prevMessages) => {
-              const updatedMessages = [...prevMessages, newMessage].sort((a, b) => new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime());
+              const updatedMessages = [...prevMessages, newMessage].sort(
+                (a, b) =>
+                  new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime()
+              );
               return updatedMessages;
             });
           }
@@ -183,7 +199,7 @@ const CommunityChatScreen: React.FC = () => {
 
   const renderMessage = ({ item }: { item: Message }) => {
     const isCurrentUser = item.sender === user?.first_name;
-    const backgroundColor = isCurrentUser ? themeColors.tint : 'white';
+    const backgroundColor = isCurrentUser ? themeColors.tint : "white";
     const textColor = isCurrentUser ? themeColors.background : themeColors.text;
     const senderColor = generateSenderColor(item.sender);
 
@@ -204,7 +220,7 @@ const CommunityChatScreen: React.FC = () => {
               backgroundColor,
               borderBottomLeftRadius: isCurrentUser ? 0 : 10,
               borderBottomRightRadius: isCurrentUser ? 10 : 0,
-            }
+            },
           ]}
         >
           {!isCurrentUser && (
@@ -224,10 +240,10 @@ const CommunityChatScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      {error && (
-        <Text style={styles.errorText}>{error}</Text>
-      )}
+    <View
+      style={[styles.container, { backgroundColor: themeColors.background }]}
+    >
+      {error && <Text style={styles.errorText}>{error}</Text>}
       {isLoading ? (
         <ActivityIndicator size="large" color={themeColors.tint} />
       ) : isMember ? (
@@ -240,18 +256,29 @@ const CommunityChatScreen: React.FC = () => {
           />
           <View style={styles.inputContainer}>
             <TextInput
-              style={[styles.input, { backgroundColor: themeColors.background }]}
+              style={[
+                styles.input,
+                { backgroundColor: themeColors.background },
+              ]}
               placeholder="Type a message..."
               placeholderTextColor={themeColors.textSecondary}
               value={messageInput}
               onChangeText={setMessageInput}
             />
-            <Button title="Send" onPress={sendMessage} color={themeColors.tint} />
+            <Button
+              title="Send"
+              onPress={sendMessage}
+              color={themeColors.tint}
+            />
           </View>
         </>
       ) : (
         <View style={styles.joinContainer}>
-          <Button title="Join Community" onPress={joinCommunity} color={themeColors.tint} />
+          <Button
+            title="Join Community"
+            onPress={joinCommunity}
+            color={themeColors.tint}
+          />
         </View>
       )}
     </View>
@@ -280,10 +307,10 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   messageBubble: {
-    maxWidth: '80%',
+    maxWidth: "80%",
     padding: 10,
     borderRadius: 10,
-    position: 'relative',
+    position: "relative",
     elevation: 1, // Shadow effect
     borderBottomRightRadius: 10, // Rounded bottom-right corner
   },
@@ -311,8 +338,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   errorText: {
-    color: 'red',
-    textAlign: 'center',
+    color: "red",
+    textAlign: "center",
     marginBottom: 10,
   },
   joinContainer: {
