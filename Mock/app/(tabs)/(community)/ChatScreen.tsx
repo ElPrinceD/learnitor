@@ -171,7 +171,7 @@ const CommunityChatScreen: React.FC = () => {
 
     try {
       await axios.post(
-        `https://learnitor.onrender.com/api/community/${communityId}/join/`,
+        `https://learnitor.onrender.com/api/communities/${communityId}/join/`,
         {},
         {
           headers: {
@@ -189,7 +189,7 @@ const CommunityChatScreen: React.FC = () => {
       setIsLoading(false);
     }
   };
-
+  console.log(communityId);
   const sendMessage = () => {
     if (messageInput.trim() && ws.current && isConnected) {
       const messageData = {
