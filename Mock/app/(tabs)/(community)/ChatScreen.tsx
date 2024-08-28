@@ -15,6 +15,13 @@ import axios from "axios";
 import Colors from "../../../constants/Colors";
 import { useAuth } from "../../../components/AuthContext";
 import { Message } from "../../../components/types";
+import {
+  format,
+  isToday,
+  isYesterday,
+  subDays,
+  parseISO,
+} from "date-fns";
 
 const generateSenderColor = (name: string): string => {
   const hash = name
@@ -49,7 +56,7 @@ const CommunityChatScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isMember, setIsMember] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isCheckingMembership, setIsCheckingMembership] = useState(true); // New state
+  const [isCheckingMembership, setIsCheckingMembership] = useState(true);
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -76,7 +83,7 @@ const CommunityChatScreen: React.FC = () => {
       console.error("Error checking membership status:", error);
       setError("Failed to check membership status");
     } finally {
-      setIsCheckingMembership(false); // Mark the membership check as complete
+      setIsCheckingMembership(false);
     }
   };
 
@@ -132,7 +139,7 @@ const CommunityChatScreen: React.FC = () => {
           const newMessage = {
             ...data,
             sender: data.sender || user?.first_name,
-            sent_at: formatTime(new Date().toISOString()),
+            sent_at: new Date().toISOString(),
           };
           setMessages((prevMessages) => {
             const updatedMessages = [...prevMessages, newMessage].sort(
@@ -171,7 +178,7 @@ const CommunityChatScreen: React.FC = () => {
 
     try {
       await axios.post(
-        `https://learnitor.onrender.com/api/community/${communityId}/join/`,
+        `https://learnitor.onrender.com/api/communities/${communityId}/join/`,
         {},
         {
           headers: {
@@ -202,6 +209,35 @@ const CommunityChatScreen: React.FC = () => {
       console.error("Cannot send message: WebSocket is not connected");
       setError("Cannot send message: WebSocket is not connected");
     }
+  };
+
+  const groupMessagesByDate = (messages: Message[]) => {
+    const groupedMessages: { title: string; data: Message[] }[] = [];
+    let currentGroup: { title: string; data: Message[] } | null = null;
+
+    messages.forEach((message) => {
+      const date = parseISO(message.sent_at);
+      let title = "";
+
+      if (isToday(date)) {
+        title = "Today";
+      } else if (isYesterday(date)) {
+        title = "Yesterday";
+      } else if (isToday(subDays(date, 2))) {
+        title = "2 Days Ago";
+      } else {
+        title = format(date, "MMMM d, yyyy");
+      }
+
+      if (!currentGroup || currentGroup.title !== title) {
+        currentGroup = { title, data: [message] };
+        groupedMessages.push(currentGroup);
+      } else {
+        currentGroup.data.push(message);
+      }
+    });
+
+    return groupedMessages;
   };
 
   const renderMessage = ({ item }: { item: Message }) => {
@@ -235,14 +271,36 @@ const CommunityChatScreen: React.FC = () => {
               {item.sender}
             </Text>
           )}
-          <Text style={[styles.message, { color: textColor }]}>
-            {item.message}
-          </Text>
-          <Text style={[styles.timestamp, { color: textColor }]}>
-            {formatTime(item.sent_at)}
-          </Text>
+          <View style={styles.messageRow}>
+            <Text style={[styles.message, { color: textColor }]}>
+              {item.message}
+            </Text>
+            <Text style={[styles.timestamp, { color: textColor }]}>
+              {formatTime(item.sent_at)}
+            </Text>
+          </View>
         </View>
       </View>
+    );
+  };
+
+  const renderGroupedMessages = () => {
+    const groupedMessages = groupMessagesByDate(messages);
+
+    return (
+      <FlatList
+        data={groupedMessages}
+        keyExtractor={(item) => item.title}
+        renderItem={({ item }) => (
+          <View>
+            <Text style={styles.dateHeader}>{item.title}</Text>
+            {item.data.map((message) => (
+              <View key={message.sent_at}>{renderMessage({ item: message })}</View>
+            ))}
+          </View>
+        )}
+        contentContainerStyle={styles.messagesContainer}
+      />
     );
   };
 
@@ -257,12 +315,7 @@ const CommunityChatScreen: React.FC = () => {
         <ActivityIndicator size="large" color={themeColors.tint} />
       ) : isMember ? (
         <>
-          <FlatList
-            data={messages}
-            renderItem={renderMessage}
-            keyExtractor={(item) => item.sent_at}
-            contentContainerStyle={styles.messagesContainer}
-          />
+          {renderGroupedMessages()}
           <View style={styles.inputContainer}>
             <TextInput
               style={[
@@ -312,7 +365,7 @@ const styles = StyleSheet.create({
   senderImage: {
     width: 50,
     height: 50,
-    borderRadius: 25, // Circle shape
+    borderRadius: 25,
     marginRight: 10,
   },
   messageBubble: {
@@ -320,12 +373,16 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 10,
     position: "relative",
-    elevation: 1, // Shadow effect
-    borderBottomRightRadius: 10, // Rounded bottom-right corner
+    elevation: 1,
   },
   sender: {
     fontWeight: "bold",
     fontSize: 16,
+  },
+  messageRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   message: {
     fontSize: 16,
@@ -334,6 +391,7 @@ const styles = StyleSheet.create({
   timestamp: {
     fontSize: 12,
     textAlign: "right",
+    marginLeft: 8,
   },
   inputContainer: {
     flexDirection: "row",
@@ -352,9 +410,17 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   joinContainer: {
-    flex: 1,
+    flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    marginTop: "auto",
+  },
+  dateHeader: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "gray",
+    marginVertical: 10,
+    textAlign: "center",
   },
 });
 

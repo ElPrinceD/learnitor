@@ -39,14 +39,12 @@ export default function CommunityLayout() {
       <Stack.Screen
         name="ChatScreen"
         component={ChatScreen}
-        
         options={({ route, navigation }) => ({
-          
           title: route.params?.name || "Chat",
-          
           headerBackTitle: "Back",
-         
-         
+          headerStyle: {
+            backgroundColor: themeColors.reverseText, // Set the header background to red
+          },
           headerTitle: () => (
             <TouchableOpacity
               onPress={() =>

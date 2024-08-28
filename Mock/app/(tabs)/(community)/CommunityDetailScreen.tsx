@@ -8,10 +8,12 @@ import {
   FlatList,
   TouchableOpacity,
   useColorScheme,
-  Share, // Import Share from React Native
+  Share,
+  Alert, // Import Alert from React Native
 } from "react-native";
-import { useRoute } from "@react-navigation/native";
-import { getCommunityDetails } from "../../../CommunityApiCalls";
+import { useRoute, useNavigation } from "@react-navigation/native";
+import { router } from "expo-router";
+import { getCommunityDetails, leaveCommunity } from "../../../CommunityApiCalls"; // Import leaveCommunity API function
 import { useAuth } from "../../../components/AuthContext";
 import Colors from "../../../constants/Colors";
 import { Community } from "../../../components/types";
@@ -25,6 +27,7 @@ type RouteParams = {
 const CommunityDetailScreen: React.FC = () => {
   const route = useRoute();
   const { id } = route.params as RouteParams;
+  const navigation = useNavigation();
   const { userToken } = useAuth();
   const [community, setCommunity] = useState<Community | null>(null);
   const [loading, setLoading] = useState(true);
@@ -72,6 +75,40 @@ const CommunityDetailScreen: React.FC = () => {
       }
     } catch (error) {
       console.error("Error sharing community:", error);
+    }
+  };
+
+  const confirmLeaveCommunity = () => {
+    Alert.alert(
+      "Leave Community",
+      "Are you sure you want to leave this community?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Leave",
+          style: "destructive",
+          onPress: leaveCommunityHandler,
+        },
+      ]
+    );
+  };
+
+  const leaveCommunityHandler = async () => {
+    try {
+      if (userToken) {
+        // Call the API to leave the community
+        await leaveCommunity(id, userToken.token);
+        Alert.alert("Success", "You have left the community.");
+        router.navigate("CommunityScreen")
+      } else {
+        Alert.alert("Error", "User not authenticated.");
+      }
+    } catch (error) {
+      console.error("Error leaving community:", error);
+      Alert.alert("Error", "Failed to leave the community.");
     }
   };
 
@@ -141,23 +178,24 @@ const CommunityDetailScreen: React.FC = () => {
               Mute
             </Text>
           </View>
-          <View
+          <TouchableOpacity
             style={[
               styles.iconContainer,
               { backgroundColor: themeColors.reverseText },
             ]}
+            onPress={confirmLeaveCommunity} // Replace search with leave confirmation
           >
             <FontAwesome6
-              name="magnifying-glass"
+              name="right-from-bracket" // Icon for leaving the group
               size={24}
               color={themeColors.text}
             />
             <Text
               style={[styles.iconLabel, { color: themeColors.textSecondary }]}
             >
-              Search
+              Leave
             </Text>
-          </View>
+          </TouchableOpacity>
           <TouchableOpacity
             style={[
               styles.iconContainer,
