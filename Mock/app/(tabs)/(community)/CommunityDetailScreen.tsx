@@ -13,7 +13,10 @@ import {
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { router } from "expo-router";
-import { getCommunityDetails, leaveCommunity } from "../../../CommunityApiCalls"; // Import leaveCommunity API function
+import {
+  getCommunityDetails,
+  leaveCommunity,
+} from "../../../CommunityApiCalls"; // Import leaveCommunity API function
 import { useAuth } from "../../../components/AuthContext";
 import Colors from "../../../constants/Colors";
 import { Community } from "../../../components/types";
@@ -102,7 +105,7 @@ const CommunityDetailScreen: React.FC = () => {
         // Call the API to leave the community
         await leaveCommunity(id, userToken.token);
         Alert.alert("Success", "You have left the community.");
-        router.navigate("CommunityScreen")
+        router.dismiss(2);
       } else {
         Alert.alert("Error", "User not authenticated.");
       }

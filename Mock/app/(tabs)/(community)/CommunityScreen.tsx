@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+} from "react";
 import {
   View,
   StyleSheet,
@@ -55,12 +61,15 @@ const CommunityScreen: React.FC = () => {
 
       const messagesResponse = await Promise.all(
         userCommunities.map((community) =>
-          getCommunityMessages(community.id, userToken?.token || "").then((messages) => ({
-            id: community.id,
-            messages,
-          }))
+          getCommunityMessages(community.id, userToken?.token || "").then(
+            (messages) => ({
+              id: community.id,
+              messages,
+            })
+          )
         )
       );
+      console.log(userCommunities);
 
       const messagesMap = messagesResponse.reduce((acc, { id, messages }) => {
         acc[id] = messages;
@@ -162,7 +171,10 @@ const CommunityScreen: React.FC = () => {
 
   const sortedGlobalCommunities = useMemo(() => {
     return globalCommunities
-      .filter((community) => !myCommunities.some((myComm) => myComm.id === community.id)) // Filter out user's communities
+      .filter(
+        (community) =>
+          !myCommunities.some((myComm) => myComm.id === community.id)
+      ) // Filter out user's communities
       .map((community) => ({
         ...community,
         lastMessageTime:
@@ -201,10 +213,7 @@ const CommunityScreen: React.FC = () => {
   if (loading) {
     return (
       <View
-        style={[
-          styles.container,
-          { backgroundColor: themeColors.background },
-        ]}
+        style={[styles.container, { backgroundColor: themeColors.background }]}
       >
         <ActivityIndicator size="large" color={themeColors.tint} />
       </View>
