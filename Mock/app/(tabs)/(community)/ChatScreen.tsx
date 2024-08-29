@@ -199,7 +199,7 @@ const CommunityChatScreen: React.FC = () => {
 
   const sendMessage = () => {
     if (messageInput.trim() && ws.current && isConnected) {
-      console.log(messageInput)
+     
       const messageData = {
         type: "send_message",
         message: messageInput,
