@@ -101,8 +101,8 @@ const CommunityDetailScreen: React.FC = () => {
 
   const leaveCommunityHandler = async () => {
     try {
-      if (userToken) {
-        // Call the API to leave the community
+      if (userToken?.token) {
+        
         await leaveCommunity(id, userToken.token);
         Alert.alert("Success", "You have left the community.");
         router.dismiss(2);

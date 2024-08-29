@@ -138,7 +138,7 @@ const CommunityChatScreen: React.FC = () => {
         if (!Array.isArray(data)) {
           const newMessage = {
             ...data,
-            sender: data.sender || user?.first_name,
+            sender:  user?.first_name,
             sent_at: new Date().toISOString(),
           };
           setMessages((prevMessages) => {
@@ -196,9 +196,10 @@ const CommunityChatScreen: React.FC = () => {
       setIsLoading(false);
     }
   };
-  console.log(communityId);
+
   const sendMessage = () => {
     if (messageInput.trim() && ws.current && isConnected) {
+     
       const messageData = {
         type: "send_message",
         message: messageInput,
@@ -241,8 +242,9 @@ const CommunityChatScreen: React.FC = () => {
   };
 
   const renderMessage = ({ item }: { item: Message }) => {
+   
     const isCurrentUser = item.sender === user?.first_name;
-    const backgroundColor = isCurrentUser ? themeColors.tint : "white";
+    const backgroundColor = isCurrentUser ? themeColors.tint : themeColors.reverseText;
     const textColor = isCurrentUser ? themeColors.background : themeColors.text;
     const senderColor = generateSenderColor(item.sender);
 
@@ -320,7 +322,7 @@ const CommunityChatScreen: React.FC = () => {
             <TextInput
               style={[
                 styles.input,
-                { backgroundColor: themeColors.background },
+                { backgroundColor: themeColors.background, color: themeColors.text },
               ]}
               placeholder="Type a message..."
               placeholderTextColor={themeColors.textSecondary}
@@ -350,7 +352,7 @@ const CommunityChatScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+    padding:2,
   },
   messagesContainer: {
     flexGrow: 1,
