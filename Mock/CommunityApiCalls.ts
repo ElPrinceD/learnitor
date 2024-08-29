@@ -98,7 +98,8 @@ export const joinCommunity = async (communityId: number, token: string) => {
     }
 };
 
-export const leaveCommunity = async (communityId: number, token: string) => {
+export const leaveCommunity = async (communityId: string, token: string) => {
+    console.log("leaving")
     try {
         const response = await apiClient.post(`${COMMUNITY_API_BASE_URL}/${communityId}/leave/`, {}, {
             headers: {
