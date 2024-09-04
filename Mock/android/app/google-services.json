@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "214047247223",
+    "project_id": "learnitor-push-notifications",
+    "storage_bucket": "learnitor-push-notifications.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:214047247223:android:dba7332096478319ce6f72",
+        "android_client_info": {
+          "package_name": "com.cradle.learnitor"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCYR9AQ_WyuULTteV5e8I066b4tvGdGaX4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

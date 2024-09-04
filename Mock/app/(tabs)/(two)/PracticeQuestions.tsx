@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import Toast from "react-native-root-toast";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import Questions from "../../../components/Questions";
 import { useAuth } from "../../../components/AuthContext";
 import { Topic, Question } from "../../../components/types";
@@ -39,8 +39,6 @@ const PracticeQuestions: React.FC = () => {
   const parsedLevel: string = typeof level === "string" ? level : "";
   const parsedTopic: Topic =
     typeof topic === "string" ? JSON.parse(topic) : topic;
-
-  const queryClient = useQueryClient();
 
   const {
     status: questionsStatus,

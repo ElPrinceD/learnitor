@@ -7,7 +7,7 @@ import {
   DarkTheme,
   DefaultTheme,
 } from "@react-navigation/native";
-import { Slot, Stack, router, useSegments } from "expo-router";
+import { Stack, router, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { AuthProvider, useAuth } from "../components/AuthContext"; // Update the path
 import { useColorScheme } from "../components/useColorScheme";
@@ -16,6 +16,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "../QueryClient";
+import { usePushNotifications } from "../usePushNotifications";
 
 export { ErrorBoundary } from "expo-router";
 
@@ -30,6 +31,8 @@ const RootLayoutNav = () => {
   const segments = useSegments();
   const { userToken, isLoading } = useAuth();
   const [navigationCompleted, setNavigationCompleted] = useState(false);
+  const { expoPushToken, notification } = usePushNotifications();
+  console.log(expoPushToken, notification);
 
   useEffect(() => {
     if (isLoading) return;

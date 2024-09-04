@@ -14,13 +14,23 @@
       "backgroundColor": "#ffffff"
     },
     "assetBundlePatterns": [
-      "**/*"
+      "/*"
     ],
     "sourceExts": [
       "js,json,ts,tsx,jsx,svg"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.cradle.learnitor",
+      "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.271786646768-bochuac1f49p0cof1h309iv85ml8codl"
+            ]
+          }
+        ]
+      }
     },
     "android": {
       "usesCleartextTraffic": true,
@@ -33,7 +43,8 @@
         "backgroundColor": "#ffffff"
       },
       "softwareKeyboardLayoutMode": "pan",
-      "package": "com.mandey.mock"
+      "package": "com.cradle.learnitor",
+      "googleServicesFile":"./android/app/google-services.json"
     },
     "web": {
       "bundler": "metro",
@@ -57,9 +68,7 @@
       }
     },
     "owner": "mandey",
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.0",
     "updates": {
       "url": "https://u.expo.dev/7fd80734-c8a7-49db-accf-6b9f79c74f9f"
     }
