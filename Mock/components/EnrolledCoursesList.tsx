@@ -64,19 +64,19 @@ const EnrolledCoursesList: React.FC<Props> = ({
       color: themeColors.background,
       textAlign: "left",
       marginVertical: rMS(10), // Adjust margin to move title higher
-       textShadowColor: themeColors.shadow,
-       textShadowOffset: { width: -1, height: 1 },
-       textShadowRadius: 1,
+      textShadowColor: themeColors.shadow,
+      textShadowOffset: { width: -1, height: 1 },
+      textShadowRadius: 1,
       flexWrap: "wrap", // Allow text to wrap to the next line
     },
-    description: {
-      fontSize: SIZES.medium,
-      color: "white",
-      textAlign: "left",
-      marginBottom: rMS(5),
-      textShadowOffset: { width: -1, height: 1 },
-      textShadowRadius: 10,
-    },
+    // description: {
+    //   fontSize: SIZES.medium,
+    //   color: "white",
+    //   textAlign: "left",
+    //   marginBottom: rMS(5),
+    //   textShadowOffset: { width: -1, height: 1 },
+    //   textShadowRadius: 10,
+    // },
     skeletonContainer: {
       flexDirection: "row",
       alignItems: "center",
@@ -108,7 +108,6 @@ const EnrolledCoursesList: React.FC<Props> = ({
             <Text style={styles.name} numberOfLines={2}>
               {item.title}
             </Text>
-            <Text style={styles.description}>{item.description}</Text>
             <ProgressBar
               progress={progressMap[item.id] || 0}
               containerStyle={{

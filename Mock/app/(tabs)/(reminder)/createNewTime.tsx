@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   useColorScheme,
-  FlatList,
   ScrollView,
   ActivityIndicator,
 } from "react-native";
@@ -21,10 +20,10 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import DropDownPicker from "react-native-dropdown-picker";
 import { createTask, getCategories } from "../../../TimelineApiCalls.ts";
-import { dataTagSymbol, useMutation, useQuery } from "@tanstack/react-query";
-import { queryClient } from "../../../QueryClient.ts";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import ErrorMessage from "../../../components/ErrorMessage.tsx";
 import GameButton from "../../../components/GameButton.tsx";
+import { Select } from "@tamagui/select";
 
 const CreateNewTime = () => {
   const params = useLocalSearchParams();
@@ -52,7 +51,6 @@ const CreateNewTime = () => {
     { label: "Daily", value: "Daily" },
     { label: "Weekly", value: "Weekly" },
   ]);
-  const [categories, setCategories] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null); // State to manage error message

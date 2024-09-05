@@ -21,8 +21,8 @@ const ArticleMaterials: React.FC<ArticleMaterialsProps> = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const parsedTopic: Topic =
-    typeof topic === "string" ? JSON.parse(topic) : topic;
+  const parsedTopic: Topic | null =
+    typeof topic === "string" ? JSON.parse(topic) : topic || null;
 
   const {
     status: selectedArticleMaterialsStatus,
@@ -30,14 +30,17 @@ const ArticleMaterials: React.FC<ArticleMaterialsProps> = () => {
     error: selectedArticleMaterialsError,
     refetch: refetchSelectedArticleMaterials,
   } = useQuery({
-    queryKey: ["topicMaterials", parsedTopic.id],
-    queryFn: () => fetchTopicMaterials(parsedTopic.id, userToken?.token),
+    queryKey: ["topicMaterials", parsedTopic?.id],
+    queryFn: () =>
+      parsedTopic
+        ? fetchTopicMaterials(parsedTopic.id, userToken?.token)
+        : null,
 
-    enabled: !!parsedTopic.id,
+    enabled: !!parsedTopic?.id,
   });
 
   useEffect(() => {
-    if (selectedArticleMaterialsStatus) {
+    if (selectedArticleMaterialsStatus === "error") {
       setErrorMessage(
         selectedArticleMaterialsError?.message || "An error occurred"
       );

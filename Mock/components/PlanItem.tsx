@@ -24,7 +24,8 @@ const PlanItem: React.FC<Props> = ({
   getCategoryColor,
   handleEditPlan,
 }) => {
-  const categoryColor = getCategoryColor(categoryNames[plan.category]);
+  const category = categoryNames[plan.category] || "Unknown Category";
+  const categoryColor = getCategoryColor(category);
   const colorScheme = useColorScheme();
   const shadow = useShadows();
 
@@ -106,7 +107,7 @@ const PlanItem: React.FC<Props> = ({
       >
         <View style={styles.planItemWrapper}>
           <Ionicons
-            name={getCategoryIcon(categoryNames[plan.category])}
+            name={getCategoryIcon(category)}
             size={rMS(24)}
             color={categoryColor}
           />
@@ -130,7 +131,7 @@ const PlanItem: React.FC<Props> = ({
                   },
                 ]}
               >
-                {categoryNames[plan.category] || "Unknown Category"}
+                {category}
               </Text>
               <Text
                 style={[
@@ -145,7 +146,7 @@ const PlanItem: React.FC<Props> = ({
                   },
                 ]}
               >
-                {plan.title}
+                {plan.title || ""}
               </Text>
               <Text
                 style={[
@@ -160,7 +161,7 @@ const PlanItem: React.FC<Props> = ({
                   },
                 ]}
               >
-                {plan.description}
+                {plan.description || ""}
               </Text>
             </View>
           </View>

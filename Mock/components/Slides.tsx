@@ -6,19 +6,22 @@ import {
   TouchableOpacity,
   useColorScheme,
 } from "react-native";
-import Entypo from "@expo/vector-icons/Entypo"; // Importing the icon for books
-import { BookMaterial } from "./types";
-import Colors from "../constants/Colors"; // Adjusting Colors import
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { SlideMaterial } from "./types";
+import Colors from "../constants/Colors";
 import { rMS, SIZES, rV } from "../constants";
 
-interface BooksProps {
-  bookMaterials: BookMaterial[];
-  handleBookPress: (bookMaterial: BookMaterial) => void;
+interface SlidesProps {
+  slideMaterials: SlideMaterial[];
+  handleSlidePress: (slideMaterial: SlideMaterial) => void;
 }
 
-const Books: React.FC<BooksProps> = ({ bookMaterials, handleBookPress }) => {
-  const books = bookMaterials.filter(
-    (bookMaterial) => bookMaterial.type === "book"
+const Slides: React.FC<SlidesProps> = ({
+  slideMaterials,
+  handleSlidePress,
+}) => {
+  const slides = slideMaterials.filter(
+    (material) => material.type === "slides"
   );
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -34,6 +37,11 @@ const Books: React.FC<BooksProps> = ({ bookMaterials, handleBookPress }) => {
       backgroundColor: themeColors.card,
       borderRadius: 10,
       marginBottom: rV(10),
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3, // For Android shadow
     },
     detailsContainer: {
       flex: 1,
@@ -48,16 +56,20 @@ const Books: React.FC<BooksProps> = ({ bookMaterials, handleBookPress }) => {
 
   return (
     <View style={styles.container}>
-      {books.map((bookMaterial, index) => (
+      {slides.map((slideMaterial, index) => (
         <TouchableOpacity
           key={index}
           activeOpacity={0.5}
-          onPress={() => handleBookPress(bookMaterial)}
+          onPress={() => handleSlidePress(slideMaterial)}
         >
           <View style={styles.materialCard}>
-            <Entypo name="book" size={27} color={themeColors.icon} />
+            <MaterialCommunityIcons
+              name="presentation"
+              size={27}
+              color={themeColors.icon}
+            />
             <View style={styles.detailsContainer}>
-              <Text style={styles.materialName}>{bookMaterial.name}</Text>
+              <Text style={styles.materialName}>{slideMaterial.name}</Text>
             </View>
           </View>
         </TouchableOpacity>
@@ -66,4 +78,4 @@ const Books: React.FC<BooksProps> = ({ bookMaterials, handleBookPress }) => {
   );
 };
 
-export default memo(Books);
+export default memo(Slides);

@@ -61,7 +61,7 @@ const Timeline = () => {
     error: plansError,
     refetch: refetchTodayPlans,
   } = useQuery({
-    queryKey: ["todayPlans", userToken],
+    queryKey: ["todayPlans", userToken?.token],
     queryFn: () =>
       getTodayPlans(userToken?.token, selectedDate, selectedCategory),
     enabled: !!userToken,
@@ -208,15 +208,17 @@ const Timeline = () => {
                   plan && (
                     <View key={index} style={styles.planItemWrapper}>
                       <Text style={styles.planTime}>
-                        {plan.due_time.slice(0, -3)}
+                        {plan.due_time?.slice(0, -3) || "No time specified"}
                       </Text>
                       <View style={styles.planItemLine} />
-                      <PlanItem
-                        plan={plan}
-                        categoryNames={categoryNames}
-                        getCategoryColor={getCategoryColor}
-                        handleEditPlan={handleEditPlan}
-                      />
+                      {categoryNames && (
+                        <PlanItem
+                          plan={plan}
+                          categoryNames={categoryNames}
+                          getCategoryColor={getCategoryColor}
+                          handleEditPlan={handleEditPlan}
+                        />
+                      )}
                     </View>
                   )
               )

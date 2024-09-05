@@ -17,8 +17,8 @@ const VideoMaterials: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const parsedTopic: Topic =
-    typeof topic === "string" ? JSON.parse(topic) : topic;
+  const parsedTopic: Topic | null =
+    typeof topic === "string" ? JSON.parse(topic) : topic || null;
 
   const {
     status: selectedTopicMaterialsStatus,
@@ -26,17 +26,17 @@ const VideoMaterials: React.FC = () => {
     error: selectedTopicMaterialsError,
     refetch: refetchSelectedTopicMaterials,
   } = useQuery({
-    queryKey: ["topicMaterials", parsedTopic.id],
-    queryFn: () => fetchTopicMaterials(parsedTopic.id, userToken?.token),
-
-    enabled: !!parsedTopic.id,
+    queryKey: ["topicMaterials", parsedTopic?.id], // Use optional chaining to avoid accessing 'id' if parsedTopic is undefined
+    queryFn: () =>
+      parsedTopic
+        ? fetchTopicMaterials(parsedTopic.id, userToken?.token)
+        : null,
+    enabled: !!parsedTopic?.id, // Ensure query only runs when parsedTopic and id are valid
   });
 
   useEffect(() => {
-    if (selectedTopicMaterialsStatus) {
-      setErrorMessage(
-        selectedTopicMaterialsError?.message || "An error occurred"
-      );
+    if (selectedTopicMaterialsStatus === "error") {
+      setErrorMessage(selectedTopicMaterialsError?.message);
     }
   }, [selectedTopicMaterialsStatus]);
 

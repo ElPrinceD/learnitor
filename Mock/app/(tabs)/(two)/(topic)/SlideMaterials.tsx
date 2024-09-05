@@ -3,19 +3,19 @@ import { View, Linking, ScrollView, RefreshControl } from "react-native";
 import { useGlobalSearchParams } from "expo-router";
 
 import { useAuth } from "../../../../components/AuthContext";
-import { Topic, BookMaterial } from "../../../../components/types";
-import Books from "../../../../components/Books";
+import { Topic, SlideMaterial } from "../../../../components/types";
+import Slides from "../../../../components/Slides"; // Import the new Slides component
 import { useQuery } from "@tanstack/react-query";
 import { fetchTopicMaterials } from "../../../../CoursesApiCalls";
 import { queryClient } from "../../../../QueryClient";
 import ErrorMessage from "../../../../components/ErrorMessage";
 
-interface BookMaterialsProps {
+interface SlideMaterialsProps {
   topic: Topic[];
-  bookMaterials: BookMaterial[];
+  slideMaterials: SlideMaterial[];
 }
 
-const BookMaterials: React.FC<BookMaterialsProps> = () => {
+const SlideMaterials: React.FC<SlideMaterialsProps> = () => {
   const { topic } = useGlobalSearchParams();
   const { userToken } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -23,28 +23,28 @@ const BookMaterials: React.FC<BookMaterialsProps> = () => {
 
   const parsedTopic: Topic | null =
     typeof topic === "string" ? JSON.parse(topic) : topic || null;
+
   const {
-    status: selectedBookMaterialsStatus,
-    data: selectedBookMaterials,
-    error: selectedBookMaterialsError,
-    refetch: refetchSelectedBookMaterials,
+    status: selectedSlideMaterialsStatus,
+    data: selectedSlideMaterials,
+    error: selectedSlideMaterialsError,
+    refetch: refetchSelectedSlideMaterials,
   } = useQuery({
     queryKey: ["topicMaterials", parsedTopic?.id],
     queryFn: () =>
       parsedTopic
-        ? fetchTopicMaterials(parsedTopic?.id, userToken?.token)
+        ? fetchTopicMaterials(parsedTopic.id, userToken?.token)
         : null,
-
     enabled: !!parsedTopic?.id,
   });
 
   useEffect(() => {
-    if (selectedBookMaterialsStatus === "error") {
+    if (selectedSlideMaterialsStatus === "error") {
       setErrorMessage(
-        selectedBookMaterialsError?.message || "An error occurred"
+        selectedSlideMaterialsError?.message || "An error occurred"
       );
     }
-  }, [selectedBookMaterialsStatus]);
+  }, [selectedSlideMaterialsStatus]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -53,20 +53,20 @@ const BookMaterials: React.FC<BookMaterialsProps> = () => {
       await queryClient.invalidateQueries({
         queryKey: ["courses", userToken?.token],
       });
-      refetchSelectedBookMaterials();
+      refetchSelectedSlideMaterials();
     } finally {
       setRefreshing(false);
       setErrorMessage(null);
     }
-  }, [queryClient, userToken?.token, refetchSelectedBookMaterials]);
+  }, [queryClient, userToken?.token, refetchSelectedSlideMaterials]);
 
-  const handleBookPress = (bookMaterial: BookMaterial) => {
-    if (bookMaterial.link) {
-      Linking.openURL(bookMaterial.link).catch((error) =>
+  const handleSlidePress = (slideMaterial: SlideMaterial) => {
+    if (slideMaterial.link) {
+      Linking.openURL(slideMaterial.link).catch((error) =>
         console.error("Error opening link:", error)
       );
     } else {
-      console.log("No link available for this bookMaterial");
+      console.log("No link available for this slideMaterial");
     }
   };
 
@@ -77,9 +77,9 @@ const BookMaterials: React.FC<BookMaterialsProps> = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <Books
-          bookMaterials={selectedBookMaterials || []}
-          handleBookPress={handleBookPress}
+        <Slides
+          slideMaterials={selectedSlideMaterials || []}
+          handleSlidePress={handleSlidePress}
         />
       </ScrollView>
       <ErrorMessage
@@ -91,4 +91,4 @@ const BookMaterials: React.FC<BookMaterialsProps> = () => {
   );
 };
 
-export default BookMaterials;
+export default SlideMaterials;

@@ -49,6 +49,10 @@ const TopicLayout = () => {
         name="ArticleMaterials"
         options={{ title: "Articles" }}
       />
+      <MaterialTopTabs.Screen
+        name="SlideMaterials"
+        options={{ title: "Slides" }}
+      />
     </MaterialTopTabs>
   );
 };

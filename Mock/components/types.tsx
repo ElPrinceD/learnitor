@@ -16,19 +16,19 @@ export interface Course {
 
 export interface User {
   id: number;
-  username: string;  // or any other relevant field
+  username: string; // or any other relevant field
   first_name: string;
   last_name: string;
   email: string;
-  profile_picture: string;  // Assuming profile_picture is a URL
+  profile_picture: string; // Assuming profile_picture is a URL
 }
 
 export interface Message {
   id: number;
-  community: string;  // Assuming community is identified by an ID or similar string
-  sender: string;  // Email or username of the sender
+  community: string; // Assuming community is identified by an ID or similar string
+  sender: string; // Email or username of the sender
   message: string;
-  sent_at: string;  // ISO 8601 date string
+  sent_at: string; // ISO 8601 date string
 }
 
 export interface Community {
@@ -40,18 +40,12 @@ export interface Community {
   shareable_link: string;
   membersCount: number;
   allowMessages: boolean;
-  lastMessageTime: string;  // ISO 8601 date string
+  lastMessageTime: string; // ISO 8601 date string
   lastMessage: string;
-  lastMessageSender: string;  // Email or username of the sender
-  members?: User[];  // Array of detailed user objects
-  messages?: Message[];  // Array of detailed message objects
+  lastMessageSender: string; // Email or username of the sender
+  members?: User[]; // Array of detailed user objects
+  messages?: Message[]; // Array of detailed message objects
 }
-
-
-
-
-
-
 
 export interface RecommendedCourse {
   title: string;
@@ -103,6 +97,11 @@ export interface ArticleMaterial {
 export interface BookMaterial {
   name: string;
   type: "book";
+  link: string;
+}
+export interface SlideMaterial {
+  name: string;
+  type: "slides";
   link: string;
 }
 export interface Material {
