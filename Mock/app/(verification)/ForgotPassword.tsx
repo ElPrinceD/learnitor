@@ -4,11 +4,9 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  TouchableOpacity,
   ActivityIndicator,
   useColorScheme,
   Linking,
-  Easing,
   ScrollView,
 } from "react-native";
 import { router } from "expo-router";
@@ -19,11 +17,8 @@ import { SIZES, rMS, rS } from "../../constants";
 import VerificationButton from "../../components/VerificationButton";
 import Animated, {
   ReduceMotion,
-  SlideInDown,
   SlideInUp,
   SlideOutUp,
-  StretchInY,
-  StretchOutY,
 } from "react-native-reanimated";
 import { StatusBar } from "expo-status-bar";
 

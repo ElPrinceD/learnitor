@@ -39,7 +39,7 @@ const RootLayoutNav = () => {
     const inTabsGroup = segments[0] === "(tabs)";
 
     if (userToken && !inTabsGroup) {
-      router.replace({ pathname: "/home" });
+      router.replace({ pathname: "/Intro" });
     } else if (!userToken) {
       router.replace("/Intro");
     }
