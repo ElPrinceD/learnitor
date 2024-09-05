@@ -69,7 +69,7 @@ const CommunityScreen: React.FC = () => {
           )
         )
       );
-      console.log(userCommunities);
+  
 
       const messagesMap = messagesResponse.reduce((acc, { id, messages }) => {
         acc[id] = messages;
