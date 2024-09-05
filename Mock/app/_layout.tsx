@@ -70,10 +70,7 @@ const RootLayoutNav = () => {
                   name="(tabs)"
                   options={{ headerShown: false, headerShadowVisible: false }}
                 />
-                <Stack.Screen
-                  name="modal"
-                  options={{ presentation: "modal", headerShown: true }}
-                />
+               
                 <Stack.Screen name="(game)" options={{ headerShown: false }} />
               </Stack>
             </ThemeProvider>
