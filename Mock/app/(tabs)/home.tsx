@@ -31,6 +31,7 @@ import ReanimatedCarousel from "../../components/ReanimatedCarousel";
 const Home: React.FC = () => {
   const { userToken, userInfo } = useAuth();
   const colorScheme = useColorScheme();
+ 
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -213,19 +214,25 @@ const Home: React.FC = () => {
       title: "Arranged Timeline",
       description: "All your schedules and tasks in one place",
       image:
-        "https://img.freepik.com/free-photo/flat-lay-wall-clock-still-life_23-2150417219.jpg?t=st=1721731839~exp=1721735439~hmac=06ab143336c02017b48d2c0e3d9f8a823700c56e4221af57f651987c6b08325a&w=826",
+        "https://images.pexels.com/photos/5412227/pexels-photo-5412227.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
     },
     {
       title: "Tailored Courses",
       description: "Enroll to your courses and topics",
       image:
-        "https://img.freepik.com/free-photo/colorful-books-with-pink-background_23-2148898315.jpg?t=st=1721738186~exp=1721741786~hmac=e8a0b87e317cf9191688af050934850e9ced4db90d9d39a03f78bbdb566fb991&w=826",
+        "https://images.pexels.com/photos/1340588/pexels-photo-1340588.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
     },
     {
       title: "Gaming Centre",
       description: "Enjoy breathe-taking study games with your pals",
       image:
-        "https://img.freepik.com/free-photo/target-board-with-arrow-red-background-copy-space-challenge-setup-business-achievement-goal-objective-target-concept-by-3d-render_616485-105.jpg?t=st=1721738864~exp=1721742464~hmac=98b1e9d066411242f7b0ab9854d6100217fac99729d8b45173de54464d24e210&w=900",
+        "https://images.pexels.com/photos/5477776/pexels-photo-5477776.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+    },
+    {
+      title: "Community Arena",
+      description: "Share a place with people with common interests",
+      image:
+        "https://images.pexels.com/photos/27844392/pexels-photo-27844392/free-photo-of-people-riding-in-a-gondola-on-a-blue-sky-day.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
     },
   ];
 

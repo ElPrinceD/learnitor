@@ -79,23 +79,7 @@ export default function TabLayout() {
             headerShadowVisible: false,
             headerRight: () => (
               <View style={styles.container}>
-                <View style={styles.container}>
-                  <Link href="/modal" asChild>
-                    <Pressable>
-                      {({ pressed }) => (
-                        <Ionicons
-                          name="notifications-outline"
-                          size={27}
-                          color={Colors[colorScheme ?? "light"].text}
-                          style={{
-                            marginRight: 15,
-                            opacity: pressed ? 0.5 : 1,
-                          }}
-                        />
-                      )}
-                    </Pressable>
-                  </Link>
-                </View>
+                
                 <View style={styles.container}>
                   <Link href="/GameIntro" asChild>
                     <Pressable>

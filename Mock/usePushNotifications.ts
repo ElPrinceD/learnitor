@@ -4,8 +4,10 @@ import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
 import ApiUrl from './config';
 import { useAuth } from "./components/AuthContext";
+import { router, useFocusEffect } from "expo-router";
 import { Platform } from "react-native";
 import axios from "axios";
+import { useNavigation } from "@react-navigation/native";
 
 export interface PushNotificationState {
   expoPushToken?: Notifications.ExpoPushToken;
@@ -13,23 +15,14 @@ export interface PushNotificationState {
 }
 
 export const usePushNotifications = (): PushNotificationState => {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldPlaySound: false,
-      shouldShowAlert: true,
-      shouldSetBadge: false,
-    }),
-  });
-
   const [expoPushToken, setExpoPushToken] = useState<
     Notifications.ExpoPushToken | undefined
   >();
-
-  const { userToken } = useAuth(); // Get userToken from auth context
-
   const [notification, setNotification] = useState<
     Notifications.Notification | undefined
   >();
+  const { userToken } = useAuth(); // Get userToken from auth context
+  const navigation = useNavigation(); // For navigating to the chat screen
 
   const notificationListener = useRef<Notifications.Subscription>();
   const responseListener = useRef<Notifications.Subscription>();
@@ -110,14 +103,23 @@ export const usePushNotifications = (): PushNotificationState => {
 
     responseListener.current =
       Notifications.addNotificationResponseReceivedListener((response) => {
-        console.log("Notification response received:", response);
+        const { data } = response.notification.request.content;
+        if (data && data.community_id && data.message_id) {
+          // Navigate to the chat screen with community_id and message_id
+          console.log(data)
+          router.navigate({ 
+            pathname: 'ChatScreen', 
+            params: { communityId: data.community_id, name: data.community_name},
+          }
+          );
+        }
       });
 
     return () => {
       Notifications.removeNotificationSubscription(notificationListener.current!);
       Notifications.removeNotificationSubscription(responseListener.current!);
     };
-  }, [userToken]); // Effect runs when userToken updates
+  }, [userToken, navigation]); // Effect runs when userToken updates
 
   return {
     expoPushToken,
