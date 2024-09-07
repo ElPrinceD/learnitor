@@ -69,11 +69,11 @@ export const usePushNotifications = (): PushNotificationState => {
 
     try {
       const response = await axios.post(
-        ${ApiUrl}/api/register-device/,
+        `${ApiUrl}/api/register-device/`,
         { token: tokenData.data },
         {
           headers: {
-            Authorization: Token ${authToken},
+            Authorization: `Token ${authToken}`,
           },
         }
       );
