@@ -61,6 +61,7 @@ const CommunityChatScreen: React.FC = () => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const ws = useRef<WebSocket | null>(null);
+  const flatListRef = useRef<FlatList<Message>>(null);
 
   const checkMembershipStatus = async () => {
     try {
@@ -103,6 +104,9 @@ const CommunityChatScreen: React.FC = () => {
         (a, b) => new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime()
       );
       setMessages(sortedMessages);
+
+      // Scroll to the latest message once messages are fetched
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 500);
     } catch (error) {
       console.error("Error fetching messages:", error);
       setError("Failed to load messages");
@@ -148,6 +152,9 @@ const CommunityChatScreen: React.FC = () => {
             );
             return updatedMessages;
           });
+
+          // Scroll to the latest message after a new message is received
+          setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 500);
         }
       } catch (error) {
         console.error("Error parsing WebSocket message:", error);
@@ -291,6 +298,7 @@ const CommunityChatScreen: React.FC = () => {
 
     return (
       <FlatList
+        ref={flatListRef}
         data={groupedMessages}
         keyExtractor={(item) => item.title}
         renderItem={({ item }) => (
@@ -352,7 +360,7 @@ const CommunityChatScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding:2,
+    padding: 2,
   },
   messagesContainer: {
     flexGrow: 1,
