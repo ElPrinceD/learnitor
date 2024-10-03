@@ -5,7 +5,7 @@ import { useAuth } from "../../../components/AuthContext";
 import apiUrl from "../../../config";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import TimelineCategoryItem from ".,/../../components/TimelineCategoryItem"; // Adjust the import path as needed
+import TimelineCategoryItem from "../../../components/TimelineCategoryItem"; // Adjust the import path as needed
 import { rMS } from "../../../constants";
 import Colors from "../../../constants/Colors";
 

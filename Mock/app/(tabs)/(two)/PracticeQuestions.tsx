@@ -46,7 +46,7 @@ const PracticeQuestions: React.FC = () => {
     error: questionsError,
     refetch: refetchPracticeQuestions,
   } = useQuery({
-    queryKey: ["topicQuestions", parsedTopic.id],
+    queryKey: ["topicQuestions", course, parsedTopic.id, level],
     queryFn: () =>
       getPracticeQuestions(parsedTopic.id, userToken?.token, parsedLevel),
     enabled: !!parsedTopic.id,
@@ -59,7 +59,7 @@ const PracticeQuestions: React.FC = () => {
     error: answersError,
     refetch: refetchPracticeAnswers,
   } = useQuery({
-    queryKey: ["questionAnswers", parsedTopic.id],
+    queryKey: ["questionAnswers", course, parsedTopic.id, level],
     queryFn: async () => {
       if (practiceQuestions) {
         const answersPromises = practiceQuestions.map((question: Question) =>

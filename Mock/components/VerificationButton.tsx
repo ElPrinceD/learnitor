@@ -40,7 +40,7 @@ const VerificationButton: React.FC<VerificationButtonProps> = ({
       borderRadius: 10,
     },
     buttonDisabled: {
-      backgroundColor: "gray",
+      backgroundColor: themeColors.card,
     },
     text: {
       fontSize: SIZES.medium,

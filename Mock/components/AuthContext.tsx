@@ -6,13 +6,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 interface UserToken {
   token: string | null;
 }
-interface Address{
-
-  street_1: string,
-  street_2: string
-  city: string,
-  region: string,
-  country: string
+interface Address {
+  street_1: string;
+  street_2: string;
+  city: string;
+  region: string;
+  country: string;
 }
 interface UserInfo {
   user: {
@@ -23,9 +22,7 @@ interface UserInfo {
     address: Address;
     email: string;
     dob: string;
-    profile_picture: string ;
-    
-   
+    profile_picture: string;
   };
 }
 
@@ -37,7 +34,6 @@ interface AuthContextType {
   setUserInfo: (userInfo: UserInfo) => void;
   isLoading: boolean;
 }
-
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -115,7 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   return (
     <AuthContext.Provider
-      value={{ userInfo, userToken, login, logout,setUserInfo, isLoading }}
+      value={{ userInfo, userToken, login, logout, setUserInfo, isLoading }}
     >
       {children}
     </AuthContext.Provider>
