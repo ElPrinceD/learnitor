@@ -118,7 +118,7 @@ const Timeline = () => {
   };
 
   const handleNavigateCreateTask = () => {
-    router.navigate("TimeTable");
+    router.navigate("createNewTime");
   };
 
   const memoizedPlans = useMemo(() => {

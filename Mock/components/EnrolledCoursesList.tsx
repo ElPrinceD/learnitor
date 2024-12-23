@@ -92,7 +92,7 @@ const EnrolledCoursesList: React.FC<Props> = ({
     ({ item }: { item: Course }) => (
       <TouchableOpacity
         onPress={() => {
-          router.push({
+          router.navigate({
             pathname: "EnrolledCourse",
             params: { course: JSON.stringify(item) },
           });

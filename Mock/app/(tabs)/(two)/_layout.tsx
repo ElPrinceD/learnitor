@@ -39,6 +39,7 @@ export default function Tab2Layout() {
           name="CourseDetails"
           options={{
             headerShown: true,
+            headerBackVisible: false, 
             title: "Course Details",
             headerTransparent: true,
             headerTitleStyle: {
@@ -59,6 +60,7 @@ export default function Tab2Layout() {
             },
             headerTitleAlign: "center",
             headerShadowVisible: false,
+            
           }}
         />
         <Stack.Screen

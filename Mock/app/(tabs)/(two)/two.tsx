@@ -76,6 +76,7 @@ const CoursesScreen: React.FC = () => {
 
   const handleCoursePress = useCallback(
     (course: Course) => {
+      console.log(course)
       router.navigate("CourseDetails");
       router.setParams({
         course: JSON.stringify(course),
