@@ -8,11 +8,8 @@ import React, {
 import {
   View,
   StyleSheet,
-  FlatList,
   Text,
-  Image,
   useColorScheme,
-  ActivityIndicator,
   TouchableOpacity,
 } from "react-native";
 import moment from "moment";
@@ -26,14 +23,11 @@ import { SIZES, rS, rV } from "../../../constants";
 import { Message, Community } from "../../../components/types";
 import {
   getCommunities,
-  getCommunityDetails,
   getCommunityMessages,
   getUserCommunities,
-  sendMessageToCommunity,
-  createCommunity,
-  joinCommunity,
-  leaveCommunity,
 } from "../../../CommunityApiCalls"; // Import the API calls
+import CommunityList from "../../../components/CommunityList";
+import { Skeleton } from "moti/skeleton"; // Import Skeleton
 
 const CommunityScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -46,6 +40,8 @@ const CommunityScreen: React.FC = () => {
   const { userToken } = useAuth();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+  const colorMode = colorScheme === "dark" ? "dark" : "light";
+
   const wsRefs = useRef<{ [key: string]: WebSocket | null }>({});
 
   // Fetch communities and messages
@@ -69,7 +65,6 @@ const CommunityScreen: React.FC = () => {
           )
         )
       );
-  
 
       const messagesMap = messagesResponse.reduce((acc, { id, messages }) => {
         acc[id] = messages;
@@ -132,8 +127,8 @@ const CommunityScreen: React.FC = () => {
   // Use focus effect to fetch data and connect WebSockets when screen is focused
   useFocusEffect(
     React.useCallback(() => {
-      fetchCommunities();
       connectWebSockets();
+      fetchCommunities();
 
       // Cleanup WebSocket connections when the component is unfocused
       return () => {
@@ -210,15 +205,51 @@ const CommunityScreen: React.FC = () => {
     });
   };
 
-  if (loading) {
-    return (
-      <View
-        style={[styles.container, { backgroundColor: themeColors.background }]}
-      >
-        <ActivityIndicator size="large" color={themeColors.tint} />
-      </View>
-    );
-  }
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      paddingHorizontal: 16,
+      backgroundColor: themeColors.background,
+    },
+    searchContainer: {
+      paddingVertical: 10,
+      flex: 0.05,
+    },
+    listContainer: {
+      flex: 1,
+      paddingTop: 10,
+    },
+    addButton: {
+      position: "absolute",
+      right: rS(20),
+      bottom: rV(20),
+      width: 60,
+      height: 60,
+      borderRadius: 20,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: themeColors.buttonBackground,
+    },
+    noResultsText: {
+      color: themeColors.textSecondary,
+      alignSelf: "center",
+    },
+    skeletonItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 14,
+      paddingLeft: rS(1),
+      paddingVertical: rV(10),
+    },
+    skeletonTextContainer: {
+      flex: 1,
+      gap: 10,
+    },
+  });
+  const noResultsFound =
+    searchQuery &&
+    filteredMyCommunities.length === 0 &&
+    filteredGlobalCommunities.length === 0;
 
   return (
     <View
@@ -228,189 +259,68 @@ const CommunityScreen: React.FC = () => {
         <SearchBar onSearch={handleSearch} />
       </View>
 
-      <View style={styles.listContainer}>
-        {searchQuery ? (
-          <>
-            <Text style={[styles.sectionHeader, { color: themeColors.text }]}>
-              My Communities
-            </Text>
-            <FlatList
-              data={filteredMyCommunities}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => {
-                const lastMessage = getLastMessage(item.id);
-                return (
-                  <TouchableOpacity onPress={() => handleCommunityPress(item)}>
-                    <View style={styles.communityItem}>
-                      <Image
-                        source={{ uri: item.image_url }}
-                        style={styles.communityImage}
-                      />
-                      <View style={styles.communityTextContainer}>
-                        <Text
-                          style={[
-                            styles.communityName,
-                            { color: themeColors.text },
-                          ]}
-                        >
-                          {item.name}
-                        </Text>
-                        {lastMessage && (
-                          <Text
-                            style={[
-                              styles.lastMessage,
-                              { color: themeColors.placeholder },
-                            ]}
-                          >
-                            {lastMessage.sender}: {lastMessage.message}
-                          </Text>
-                        )}
-                      </View>
-                      {lastMessage && (
-                        <Text
-                          style={[
-                            styles.lastMessageTime,
-                            { color: themeColors.placeholder },
-                          ]}
-                        >
-                          {moment(lastMessage.sent_at).format("HH:mm")}
-                        </Text>
-                      )}
-                    </View>
-                    <View
-                      style={[
-                        styles.separator,
-                        { borderBottomColor: themeColors.placeholder },
-                      ]}
-                    />
-                  </TouchableOpacity>
-                );
-              }}
-              ListEmptyComponent={
-                <Text
-                  style={[styles.emptyText, { color: themeColors.placeholder }]}
-                >
-                  No communities found.
-                </Text>
-              }
+      {loading ? (
+        Array.from({ length: 6 }).map((_, index) => (
+          <View key={index} style={styles.skeletonItem}>
+            <Skeleton
+              colorMode={colorMode}
+              width={50}
+              height={50}
+              radius={50}
             />
-            <Text style={[styles.sectionHeader, { color: themeColors.text }]}>
-              Global Communities
-            </Text>
-            <FlatList
-              data={filteredGlobalCommunities}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => {
-                return (
-                  <TouchableOpacity onPress={() => handleCommunityPress(item)}>
-                    <View style={styles.communityItem}>
-                      <Image
-                        source={{ uri: item.image_url }}
-                        style={styles.communityImage}
-                      />
-                      <View style={styles.communityTextContainer}>
-                        <Text
-                          style={[
-                            styles.communityName,
-                            { color: themeColors.text },
-                          ]}
-                        >
-                          {item.name}
-                        </Text>
-                      </View>
-                    </View>
-                    <View
-                      style={[
-                        styles.separator,
-                        { borderBottomColor: themeColors.placeholder },
-                      ]}
-                    />
-                  </TouchableOpacity>
-                );
-              }}
-              ListEmptyComponent={
-                <Text
-                  style={[styles.emptyText, { color: themeColors.placeholder }]}
-                >
-                  No communities found.
-                </Text>
-              }
+            <View style={styles.skeletonTextContainer}>
+              <Skeleton colorMode={colorMode} height={rV(20)} width={"60%"} />
+              <Skeleton colorMode={colorMode} height={rV(15)} width={"80%"} />
+            </View>
+          </View>
+        ))
+      ) : noResultsFound ? (
+        <View style={styles.listContainer}>
+          <Text
+            style={[styles.noResultsText, { color: themeColors.placeholder }]}
+          >
+            No results found
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.listContainer}>
+          {searchQuery ? (
+            <View>
+              <CommunityList
+                title="My Communities"
+                data={filteredMyCommunities}
+                onCommunityPress={handleCommunityPress}
+                showLastMessage
+                getLastMessage={getLastMessage}
+              />
+              <CommunityList
+                title="Global Communities"
+                data={filteredGlobalCommunities}
+                onCommunityPress={handleCommunityPress}
+              />
+            </View>
+          ) : (
+            <CommunityList
+              title=""
+              data={sortedMyCommunities}
+              onCommunityPress={handleCommunityPress}
+              showLastMessage
+              getLastMessage={getLastMessage}
             />
-          </>
-        ) : (
-          <FlatList
-            data={sortedMyCommunities}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => {
-              const lastMessage = getLastMessage(item.id);
-              return (
-                <TouchableOpacity onPress={() => handleCommunityPress(item)}>
-                  <View style={styles.communityItem}>
-                    <Image
-                      source={{ uri: item.image_url }}
-                      style={styles.communityImage}
-                    />
-                    <View style={styles.communityTextContainer}>
-                      <Text
-                        style={[
-                          styles.communityName,
-                          { color: themeColors.text },
-                        ]}
-                      >
-                        {item.name}
-                      </Text>
-                      {lastMessage && (
-                        <Text
-                          style={[
-                            styles.lastMessage,
-                            { color: themeColors.placeholder },
-                          ]}
-                        >
-                          {lastMessage.sender}: {lastMessage.message}
-                        </Text>
-                      )}
-                    </View>
-                    {lastMessage && (
-                      <Text
-                        style={[
-                          styles.lastMessageTime,
-                          { color: themeColors.placeholder },
-                        ]}
-                      >
-                        {moment(lastMessage.sent_at).format("HH:mm")}
-                      </Text>
-                    )}
-                  </View>
-                  <View
-                    style={[
-                      styles.separator,
-                      { borderBottomColor: themeColors.placeholder },
-                    ]}
-                  />
-                </TouchableOpacity>
-              );
-            }}
-            ListEmptyComponent={
-              <Text
-                style={[styles.emptyText, { color: themeColors.placeholder }]}
-              >
-                No communities found.
-              </Text>
-            }
-          />
-        )}
+          )}
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={handleNavigateCreateCommunity}
+          >
+            <FontAwesome6
+              name="add"
+              size={SIZES.xLarge}
+              color={themeColors.text}
+            />
+          </TouchableOpacity>
+        </View>
+      )}
 
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={handleNavigateCreateCommunity}
-        >
-          <FontAwesome6
-            name="add"
-            size={SIZES.xLarge}
-            color={themeColors.text}
-          />
-        </TouchableOpacity>
-      </View>
       {errorMessage && (
         <ErrorMessage
           message={errorMessage}
@@ -421,77 +331,5 @@ const CommunityScreen: React.FC = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: 16,
-    backgroundColor: Colors.light.background,
-  },
-  searchContainer: {
-    paddingVertical: 10,
-  },
-  listContainer: {
-    flex: 1,
-    paddingTop: 10,
-  },
-  communityItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-  },
-  communityImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 12,
-  },
-  communityTextContainer: {
-    flex: 1,
-  },
-  communityName: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 2,
-  },
-  lastMessage: {
-    fontSize: 14,
-    color: Colors.light.textSecondary,
-  },
-  addButton: {
-    position: "absolute",
-    right: rS(20),
-    bottom: rV(20),
-    width: 60,
-    height: 60,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: Colors.light.buttonBackground,
-  },
-  lastMessageTime: {
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-    textAlign: "right",
-  },
-  separator: {
-    height: 1,
-    backgroundColor: Colors.light.textSecondary,
-    opacity: 0.15,
-    marginVertical: 10,
-    marginLeft: 72,
-  },
-  emptyText: {
-    textAlign: "center",
-    paddingVertical: 20,
-    fontSize: 16,
-    color: Colors.light.textSecondary,
-  },
-  sectionHeader: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginVertical: 10,
-  },
-});
 
 export default CommunityScreen;

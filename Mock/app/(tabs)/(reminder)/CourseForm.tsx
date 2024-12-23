@@ -367,9 +367,9 @@ const CourseForm: React.FC<CourseFormProps> = ({ onSubmit }) => {
                 </Text>
               </View>
             ))}
-            {/* <View style={styles.buttonContainer}>
+            <View style={styles.buttonContainer}>
               <GameButton onPress={handleSubmit(addCourse)} style={{ flex: 1 }}>
-                Add Course
+                <Text>Add Course</Text>
               </GameButton>
             </View>
             <View style={styles.buttonContainer}>
@@ -377,12 +377,12 @@ const CourseForm: React.FC<CourseFormProps> = ({ onSubmit }) => {
                 onPress={handleSubmit(handleSave)}
                 style={{ flex: 1 }}
               >
-                Save Timetable
+                <Text>Save Timetable</Text>
               </GameButton>
               <GameButton onPress={previewTimetable} style={{ flex: 1 }}>
-                Preview Timetable
+                <Text>Preview Timetable</Text>
               </GameButton>
-            </View> */}
+            </View>
             {showDatePicker && (
               <DateTimePicker
                 value={selectedDate || new Date()}

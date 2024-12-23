@@ -38,6 +38,7 @@ const SearchBar2: React.FC<Props> = ({ onSearch }) => {
     () => ({
       searchBarContainer: {
         backgroundColor: themeColors.background,
+        borderColor: themeColors.border,
       },
       searchInput: {
         color: themeColors.text,
@@ -51,19 +52,19 @@ const SearchBar2: React.FC<Props> = ({ onSearch }) => {
   return (
     <View style={styles.container}>
       <View style={[styles.searchBarContainer, themeStyles.searchBarContainer]}>
+        <TextInput
+          style={[styles.searchInput, themeStyles.searchInput]}
+          placeholder="What are you looking for?"
+          placeholderTextColor={themeStyles.placeholderTextColor}
+          onChangeText={handleSearch}
+          value={searchQuery}
+        />
         <TouchableOpacity
           style={styles.searchIcon}
           onPress={() => handleSearch(searchQuery)}
         >
           <Ionicons name="search" size={24} color={themeStyles.iconColor} />
         </TouchableOpacity>
-        <TextInput
-          style={[styles.searchInput, themeStyles.searchInput]}
-          placeholder="Search For Community"
-          placeholderTextColor={themeStyles.placeholderTextColor}
-          onChangeText={handleSearch}
-          value={searchQuery}
-        />
       </View>
     </View>
   );
@@ -72,22 +73,19 @@ const SearchBar2: React.FC<Props> = ({ onSearch }) => {
 const styles = StyleSheet.create({
   searchBarContainer: {
     flexDirection: "row",
-    borderRadius: 30,
+    borderRadius: 10,
+    borderWidth: 1,
     paddingHorizontal: rS(12),
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 5,
-    height: rV(43), // Fixed height
-    width: rS(300), // Fixed width
+    width: "85%",
+    height: "140%",
   },
   container: {
+    flex: 1,
     alignItems: "center",
   },
   searchIcon: {
-    marginRight: rS(8),
+    marginLeft: rS(8),
     height: "100%",
     justifyContent: "center",
   },

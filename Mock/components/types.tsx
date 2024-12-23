@@ -140,3 +140,9 @@ export interface Plan {
   due_time: string;
   category: number;
 }
+
+export interface Community {
+  id: string;
+  name: string;
+  image_url: string;
+}
