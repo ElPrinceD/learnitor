@@ -11,7 +11,7 @@ const Intro = () => {
   const themeColors = Colors[colorScheme ?? "light"];
 
   const handleSignUp = () => {
-    router.navigate("SignUp");
+    router.navigate("ContinueWithEmail");
   };
 
   const handleLogIn = () => {

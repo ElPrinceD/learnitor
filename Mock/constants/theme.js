@@ -26,13 +26,13 @@ const FONT = {
 };
 
 const SIZES = {
-  xSmall: rMS(4),
-  small: rMS(8),
-  medium: rMS(16),
-  large: rMS(28),
-  xLarge: rMS(32),
-  xxLarge: rMS(40),
-  xxxLarge: rMS(48)
+  xSmall: rMS(5),
+  small: rMS(10),
+  medium: rMS(15),
+  large: rMS(17),
+  xLarge: rMS(25),
+  xxLarge: rMS(30),
+  xxxLarge: rMS(45)
 };
 
 const useShadows = () => {

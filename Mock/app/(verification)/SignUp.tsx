@@ -12,44 +12,42 @@ import Animated, {
 } from "react-native-reanimated";
 import { StatusBar } from "expo-status-bar";
 
-import { GoogleSignin, User } from "@react-native-google-signin/google-signin";
-import { ios, googleSignIn, web } from "../../OAuth";
-import { twitterSignIn, twitterClientId } from "../../OAuth";
+// import { GoogleSignin, User } from "@react-native-google-signin/google-signin";
+// import { ios, googleSignIn, web } from "../../OAuth";
+//import { twitterSignIn, twitterClientId } from "../../OAuth";
 import { Alert } from "react-native";
 
-GoogleSignin.configure({
-  scopes: [
-    "https://www.googleapis.com/auth/userinfo.email", // Access the user's email
-    "https://www.googleapis.com/auth/userinfo.profile", // Access the user's public profile information
-    "openid", // Use OpenID Connect to associate the user with their Google info
-  ],
-  offlineAccess: true,
-  forceCodeForRefreshToken: true,
-  webClientId: web,
-});
+// GoogleSignin.configure({
+//   scopes: [
+//     "https://www.googleapis.com/auth/userinfo.email", // Access the user's email
+//     "https://www.googleapis.com/auth/userinfo.profile", // Access the user's public profile information
+//     "openid", // Use OpenID Connect to associate the user with their Google info
+//   ],
+//   offlineAccess: true,
+//   forceCodeForRefreshToken: true,
+//   webClientId: web,
+// });
 
 const SignUp = () => {
-  const [userInfo, setUserInfo] = useState<User | null>(null); // Typing for user info
-  const clientId = twitterClientId;
-  const { status, signInWithTwitter, request } = twitterSignIn(clientId);
+  
 
-  const handleGoogleSignIn = async () => {
-    try {
-      const userI = await googleSignIn();
-      if (userI) {
-        // Display user data using an alert
-        Alert.alert(
-          "Google Sign-In Success",
-          `Name: ${userI.data?.user.givenName}\nEmail: ${userI.data?.user.email} \nToken: ${userI.data?.idToken}`
-        );
-        setUserInfo(userI.data); // Set the complete user object
-      } else {
-        Alert.alert("No user data returned");
-      }
-    } catch (error) {
-      Alert.alert("Google Sign-In Error", error.message);
-    }
-  };
+  // const handleGoogleSignIn = async () => {
+  //   try {
+  //     const userI = await googleSignIn();
+  //     if (userI) {
+  //       // Display user data using an alert
+  //       Alert.alert(
+  //         "Google Sign-In Success",
+  //         `Name: ${userI.data?.user.givenName}\nEmail: ${userI.data?.user.email} \nToken: ${userI.data?.idToken}`
+  //       );
+  //       setUserInfo(userI.data); // Set the complete user object
+  //     } else {
+  //       Alert.alert("No user data returned");
+  //     }
+  //   } catch (error) {
+  //     Alert.alert("Google Sign-In Error", error.message);
+  //   }
+  // };
 
   const handleSignUpWithApple = () => {
     // Handle sign up with Apple ID
@@ -142,50 +140,7 @@ const SignUp = () => {
         <Text style={styles.title}>
           Create a free account to discover your personalized learning path
         </Text>
-        <View style={styles.buttonRow}>
-          {/* Apple Sign Up */}
-          <VerificationButton
-            style={styles.threeButtons}
-            onPress={handleSignUpWithApple}
-          >
-            <Text>
-              <Ionicons
-                name="logo-apple"
-                size={SIZES.xLarge}
-                color={themeColors.text}
-              />
-            </Text>
-          </VerificationButton>
-
-          {/* Google Sign Up */}
-          <VerificationButton
-            style={styles.threeButtons}
-            onPress={handleGoogleSignIn}
-          >
-            <Text>
-              <Ionicons
-                name="logo-google"
-                size={SIZES.xLarge}
-                color={themeColors.text}
-              />
-            </Text>
-          </VerificationButton>
-
-          {/* Twitter Sign Up */}
-          <VerificationButton
-            style={styles.threeButtons}
-            onPress={signInWithTwitter}
-            disabled={!request}
-          >
-            <Text>
-              <FontAwesome6
-                name="x-twitter"
-                size={SIZES.xLarge}
-                color={themeColors.text}
-              />
-            </Text>
-          </VerificationButton>
-        </View>
+        
         {status ? <Text>{status}</Text> : null}
         <View style={styles.dividerRow}>
           <Text style={styles.dividerText}>

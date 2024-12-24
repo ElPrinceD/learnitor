@@ -144,6 +144,14 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
     },
   });
 
+  // Handle the Enter key to prevent multiline input
+  const handleSubmitEditing = () => {
+    // Prevent new line and blur on submit
+    if (onFocusChange) {
+      onFocusChange(false);
+    }
+  };
+
   return (
     <Animated.View
       style={[
@@ -178,6 +186,8 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
             secureTextEntry={!showPassword}
             editable={editable}
             keyboardType={keyboardType}
+            returnKeyType="done" // "Done" instead of "Enter"
+            onSubmitEditing={handleSubmitEditing} // Prevent new line and blur
           />
           <TouchableOpacity
             onPress={() => setShowPassword(!showPassword)}
@@ -202,7 +212,9 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
           secureTextEntry={secureTextEntry}
           editable={editable}
           keyboardType={keyboardType}
-          multiline
+          returnKeyType="done" // "Done" instead of "Enter"
+          multiline={false} // Disable multiline to prevent new line
+          onSubmitEditing={handleSubmitEditing} // Prevent new line and blur
         />
       )}
     </Animated.View>

@@ -94,6 +94,7 @@ export const getCourseTopics = async (courseId, token) => {
 
 
 export const getEnrollmentStatus = async (userId, courseId, token) => {
+    
     try {
         const response = await apiClient.get(`${LEARNER_API_BASE_URL}/${userId}/course/${courseId}/enrollment/`, {
             headers: {
