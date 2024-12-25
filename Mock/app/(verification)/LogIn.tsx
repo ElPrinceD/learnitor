@@ -182,15 +182,15 @@ const LogIn = () => {
       <View style={styles.container}>
         <StatusBar hidden={true} />
 
-        <Animated.View
-          entering={StretchInY.delay(200)
-            .randomDelay()
-            .reduceMotion(ReduceMotion.Never)
-            .withInitialValues({ transform: [{ scaleY: 0.5 }] })}
-          exiting={StretchOutY.delay(200)
-            .randomDelay()
-            .reduceMotion(ReduceMotion.Never)
-            .withInitialValues({ transform: [{ scaleY: 0.1 }] })}
+        <View
+          // entering={StretchInY.delay(200)
+          //   .randomDelay()
+          //   .reduceMotion(ReduceMotion.Never)
+          //   .withInitialValues({ transform: [{ scaleY: 0.1 }] })}
+          // exiting={StretchOutY.delay(200)
+          //   .randomDelay()
+          //   .reduceMotion(ReduceMotion.Never)
+          //   .withInitialValues({ transform: [{ scaleY: 0.1 }] })}
           style={styles.container}
         >
           <View style={styles.buttonRow}>
@@ -277,7 +277,7 @@ const LogIn = () => {
             title={loading ? <ActivityIndicator color="white" /> : "Login"}
             disabled={loading}
           />
-        </Animated.View>
+        </View>
 
         <View style={styles.bottomContainer}>
           <Text style={styles.existingText}>Don't have an account?</Text>

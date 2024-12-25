@@ -16,8 +16,16 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "../QueryClient";
-
+import {
+  configureReanimatedLogger,
+  ReanimatedLogLevel,
+} from "react-native-reanimated";
 export { ErrorBoundary } from "expo-router";
+// This is the default configuration
+configureReanimatedLogger({
+  level: ReanimatedLogLevel.warn,
+  strict: false, // Reanimated runs in strict mode by default
+});
 
 // export const unstable_settings = {
 //   initialRouteName: "",

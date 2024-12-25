@@ -29,21 +29,21 @@ const Profile = () => {
   };
 
   const handleLogout = async () => {
-    try {
-      await axios.post(
-        `${ApiUrl}/api/logout/`,
-        {},
-        {
-          headers: {
-            Authorization: `Token ${userToken?.token}`,
-          },
-        }
-      );
-      logout();
-      router.replace("Intro");
-    } catch (error) {
-      console.error("Error logging out:", error);
-    }
+    // try {
+    //   await axios.post(
+    //     `${ApiUrl}/api/logout/`,
+    //     {},
+    //     {
+    //       headers: {
+    //         Authorization: `Token ${userToken?.token}`,
+    //       },
+    //     }
+    //   );
+    //   logout();
+    router.replace("Intro");
+    // } catch (error) {
+    //   console.error("Error logging out:", error);
+    // }
   };
 
   const handleTerms = () => {
@@ -88,49 +88,48 @@ const Profile = () => {
         Alert.alert("Permission to access media library is required!");
         return;
       }
-  
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 1,
       });
-  
+
       if (!result.canceled) {
         const uri = result.assets[0].uri;
         const formData = new FormData();
-  
+
         const fileName = uri.split("/").pop();
         const fileType = uri.split(".").pop();
-  
+
         // Create form data for Imgur upload
         formData.append("image", {
           uri,
           name: fileName,
           type: `image/${fileType}`,
         });
-  
+
         const imgurConfig = {
           headers: {
-            Authorization: "5fa58c7d05ea125",  // Replace with your Imgur client ID
+            Authorization: "5fa58c7d05ea125", // Replace with your Imgur client ID
             "Content-Type": "multipart/form-data",
           },
         };
-  
+
         // Upload image to Imgur
         const imgurResponse = await axios.post(
           "https://api.imgur.com/3/upload",
           formData,
           imgurConfig
         );
-  
+
         const imgurLink = imgurResponse.data.data.link;
-  
+
         // Update user profile with Imgur image link
         const userUpdateData = new FormData();
         userUpdateData.append("profile_picture", imgurLink); // Send URL to the backend
-        
-  
+
         const userUpdateConfig = {
           headers: {
             Authorization: `Token ${userToken?.token}`,
@@ -138,14 +137,12 @@ const Profile = () => {
           },
         };
 
-        
-  
         const response = await axios.patch(
           `${ApiUrl}/api/update/user/${userInfo?.user.id}/`,
-          {profile_picture: imgurLink},
+          { profile_picture: imgurLink },
           userUpdateConfig
         );
-  
+
         // Update user info in frontend state
         if (userInfo) {
           setUserInfo({
@@ -161,8 +158,6 @@ const Profile = () => {
       console.error("Error updating profile picture:", error);
     }
   };
-  
-  
 
   const styles = StyleSheet.create({
     container: {
