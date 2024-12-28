@@ -6,10 +6,11 @@ import { Picker } from "@react-native-picker/picker"; // Import Picker for Andro
 import { ActionSheetIOS } from "react-native"; // Import ActionSheetIOS for iOS
 import axios from "axios";
 import ApiUrl from "../../config";
-import { SIZES, rMS, rS } from "../../constants";
+import { SIZES, rMS, rS, rV } from "../../constants";
 import Colors from "../../constants/Colors";
 import VerificationButton from "../../components/VerificationButton";
 import { StatusBar } from "expo-status-bar";
+import { Typewriter } from "../../components/TypewriterText";
 
 import AnimatedTextInput from "../../components/AnimatedTextInput";
 
@@ -30,6 +31,7 @@ const ContinueWithEmail = () => {
   const [allFieldsError, setAllFieldsError] = useState("");
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+  const [showSecondText, setShowSecondText] = useState(false); 
 
   useEffect(() => {
     // Fetch the lists from the backend
@@ -116,6 +118,7 @@ const ContinueWithEmail = () => {
     } else if (!email.includes("@")) {
       setEmailError("Enter a valid email address");
     } else {
+      console.log(institution)
       axios
         .post(`${ApiUrl}/api/register/`, {
           first_name: firstName,
@@ -139,6 +142,10 @@ const ContinueWithEmail = () => {
     }
   };
 
+  const handleSignIn = () => {
+    router.navigate("LogIn");
+  };
+
   const [showInstitutionPicker, setShowInstitutionPicker] = useState(false);
   const [showProgramPicker, setShowProgramPicker] = useState(false);
   const [show, setShow] = useState(false);
@@ -150,15 +157,28 @@ const ContinueWithEmail = () => {
       alignItems: "center",
       justifyContent: "center",
       padding: rMS(16),
-      backgroundColor: Colors.light.background,
+      backgroundColor: themeColors.background,
     },
+    headerText: {
+      fontSize: SIZES.xxLarge,
+      fontWeight: "bold",
+      color: themeColors.text, 
+    },
+    rowContainer: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+    },
+    halfInput: {
+      flex: 1,  
+    },
+    
     inputContainer: {
-      width: rS(300),
+      width: rS(270),
     },
     picker: {
       height: 50,
       width: rS(300),
-      backgroundColor: Colors.light.tint,
+      backgroundColor: themeColors.background,
     },
     errorMessage: {
       fontSize: SIZES.medium,
@@ -166,27 +186,36 @@ const ContinueWithEmail = () => {
       marginBottom: rMS(8),
       textAlign: "center",
     },
+    bottomContainer: {
+      bottom: rV(10),
+      justifyContent: "flex-end",
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    existingText: {
+      fontSize: SIZES.medium,
+      fontWeight: "bold",
+      color: themeColors.text,
+    },
+    loginText: {
+      fontSize: SIZES.medium,
+      fontWeight: "bold",      
+      color: themeColors.buttonBackground,
+      marginLeft: rMS(8),
+    },
   });
 
   return (
     <View style={styles.container}>
       <StatusBar hidden={true} />
       <View style={styles.container}>
-        <AnimatedTextInput
-          label="First Name"
-          value={firstName}
-          onChangeText={setFirstName}
-          placeholderTextColor={themeColors.textSecondary}
-          style={styles.inputContainer}
-        />
-        <AnimatedTextInput
-          label="Last Name"
-          value={surname}
-          onChangeText={setSurname}
-          placeholderTextColor={themeColors.textSecondary}
-          style={styles.inputContainer}
-        />
-        <AnimatedTextInput
+      <Typewriter
+            text="Create account"
+            delay={100}
+            style={[styles.headerText, { marginBottom: rS(70) }]}
+            onComplete={() => setShowSecondText(true)}
+          />
+          <AnimatedTextInput
           label="Email"
           value={email}
           onChangeText={setEmail}
@@ -202,6 +231,27 @@ const ContinueWithEmail = () => {
           showToggleIcon={true}
           style={styles.inputContainer}
         />
+          <View style={styles.rowContainer}>
+      <View  style={[styles.halfInput,{marginRight: rS(20)} ]}>
+        <AnimatedTextInput
+          label="First Name"
+          value={firstName}
+          onChangeText={setFirstName}
+          placeholderTextColor={themeColors.textSecondary}
+         
+        />
+        </View>
+
+        <View style={styles.halfInput}>
+        <AnimatedTextInput
+          label="Last Name"
+          value={surname}
+          onChangeText={setSurname}
+          placeholderTextColor={themeColors.textSecondary}
+        />
+        </View>
+        </View>
+        
         {show && (
           <DateTimePicker
             testID="dateTimePicker"
@@ -221,8 +271,9 @@ const ContinueWithEmail = () => {
           />
         </TouchableOpacity>
 
-        {/* Institution field */}
-        <TouchableOpacity onPress={handleInstitutionSelect}>
+        <View style={styles.rowContainer}>
+      <View  style={[styles.halfInput,{marginRight: rS(20)} ]}>
+      <TouchableOpacity onPress={handleInstitutionSelect}>
           <AnimatedTextInput
             label="Institution"
             value={institutionList.find(inst => inst.id === institution)?.name || ""}
@@ -231,17 +282,22 @@ const ContinueWithEmail = () => {
             style={styles.inputContainer}
           />
         </TouchableOpacity>
+        </View>
 
-        {/* Program of study field */}
+        <View style={styles.halfInput}>
         <TouchableOpacity onPress={handleProgramSelect}>
           <AnimatedTextInput
-            label="Program of Study"
+            label="Program"
             value={programList.find(program => program.id === program_of_study)?.name || ""}
             editable={false}
             placeholderTextColor={Colors.light.textSecondary}
             style={styles.inputContainer}
           />
         </TouchableOpacity>
+        </View>
+        </View>
+      
+        
 
         {/* Show Picker for Android */}
         {showInstitutionPicker && (
@@ -269,7 +325,15 @@ const ContinueWithEmail = () => {
         )}
 
         <VerificationButton onPress={handleSignUp} title="Register" />
+       
       </View>
+      <View style={styles.bottomContainer}>
+      
+          <Text style={styles.existingText}>Already have an account?</Text>
+          <Text style={styles.loginText} onPress={handleSignIn}>
+            Login
+          </Text>
+        </View>
     </View>
   );
 };

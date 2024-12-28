@@ -33,58 +33,54 @@ const EnrolledCoursesList: React.FC<Props> = ({
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      margin: rMS(5),
-      alignItems: "flex-start",
-      position: "relative",
+      width: '50%', // Half the width of the screen
+      backgroundColor: '#FFD600',
+      marginTop: rMS(20),
+      height: rV(200),
+      borderRadius: rMS(10),
     },
-    touchable: {
-      borderRadius: 10,
-      overflow: "hidden",
+    header: {
+      backgroundColor: 'black',
+      width: "100%",
+      alignItems: 'center',
+      paddingVertical: rV(10),
+      borderRadius: rMS(20),
+      marginTop: -rV(10)
     },
-    imageContainer: {
-      borderRadius: 10,
-      overflow: "hidden",
-    },
-    image: {
-      width: rS(150),
-      height: rV(155),
-    },
-    textContainer: {
-      position: "absolute",
-      bottom: rV(8),
-      left: rS(8),
-      right: rS(8),
-      padding: rMS(8),
-      borderRadius: 10,
-      backgroundColor: "transparent",
-    },
-    name: {
+    headerText: {
+      color: '#FFD600',
       fontSize: SIZES.large,
-      fontWeight: "900", // Very bold font weight
-      color: themeColors.background,
-      textAlign: "left",
-      marginVertical: rMS(10), // Adjust margin to move title higher
-      textShadowColor: themeColors.shadow,
-      textShadowOffset: { width: -1, height: 1 },
-      textShadowRadius: 1,
-      flexWrap: "wrap", // Allow text to wrap to the next line
+      fontWeight: 'bold',
     },
-    // description: {
-    //   fontSize: SIZES.medium,
-    //   color: "white",
-    //   textAlign: "left",
-    //   marginBottom: rMS(5),
-    //   textShadowOffset: { width: -1, height: 1 },
-    //   textShadowRadius: 10,
-    // },
+    itemContainer: {
+       // Assuming background color from theme
+      borderRadius: rMS(5),
+      marginVertical: rMS(5),
+      padding: rMS(10),
+     // Fixed height for each item
+     // Space between content for better visual
+    },
+    courseTitle: {
+      fontSize: SIZES.medium,
+      fontWeight: 'bold',
+      color: themeColors.text,
+    },
+    courseImage: {
+      width: rS(20),
+      height: rV(20),
+      borderRadius: rMS(5),
+      marginRight: rS(5),
+    },
+    progressBarContainer: {
+      marginTop: rV(5), 
+    },
     skeletonContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
+      padding: rMS(10),
     },
     skeletonItem: {
-      borderRadius: 10,
-      margin: rMS(5),
+      height: rV(100),
+      borderRadius: rMS(5),
+      marginVertical: rMS(5),
     },
   });
 
@@ -98,55 +94,57 @@ const EnrolledCoursesList: React.FC<Props> = ({
           });
         }}
         activeOpacity={0.5}
-        style={styles.touchable}
+        style={styles.itemContainer}
       >
-        <View style={styles.container}>
-          <View style={styles.imageContainer}>
-            <Image source={{ uri: item.url }} style={styles.image} />
-          </View>
-          <View style={styles.textContainer}>
-            <Text style={styles.name} numberOfLines={2}>
+        <View style={{ flexDirection: 'row' }}>
+          <Image source={{ uri: item.url }} style={styles.courseImage} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.courseTitle} numberOfLines={2}>
               {item.title}
             </Text>
-            <ProgressBar
-              progress={progressMap[item.id] || 0}
-              containerStyle={{
-                backgroundColor: themeColors.text,
-                height: 7,
-              }}
-              fillStyle={{ backgroundColor: themeColors.icon }}
-            />
+            <View style={styles.progressBarContainer}>
+          <ProgressBar
+            progress={progressMap[item.id] || 0}
+            containerStyle={{
+              backgroundColor: themeColors.text,
+              height: 7,
+            }}
+            fillStyle={{ backgroundColor: themeColors.icon }}
+          />
+        </View>
           </View>
         </View>
+       
       </TouchableOpacity>
     ),
     [progressMap, themeColors]
   );
 
   const keyExtractor = useCallback((item: Course) => item.id.toString(), []);
+
   if (loading) {
     return (
       <View style={styles.skeletonContainer}>
         {[...Array(5)].map((_, index) => (
-          <View key={index} style={styles.skeletonItem}>
-            <Skeleton colorMode={colorMode} height={rV(105)} width={rS(120)} />
-          </View>
+          <Skeleton key={index} colorMode={colorMode} style={styles.skeletonItem} />
         ))}
       </View>
     );
   }
+
   return (
-    <FlatList
-      horizontal
-      data={enrolledCoursesData}
-      renderItem={renderItem}
-      keyExtractor={keyExtractor}
-      initialNumToRender={5}
-      maxToRenderPerBatch={10}
-      windowSize={10}
-      removeClippedSubviews={true}
-      showsHorizontalScrollIndicator={false}
-    />
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerText}>Courses</Text>
+      </View>
+      <FlatList
+        data={enrolledCoursesData}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: rV(10) }} // Add some padding at the bottom
+      />
+    </View>
   );
 };
 

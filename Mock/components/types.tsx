@@ -137,7 +137,8 @@ export interface Plan {
   title: string;
   description: string;
   due_date: string;
-  due_time: string;
+  due_time_start: string;
+  due_time_end: string;
   category: number;
 }
 

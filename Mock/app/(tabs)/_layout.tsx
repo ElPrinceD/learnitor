@@ -29,11 +29,11 @@ export default function TabLayout() {
 
   // Determine the appropriate greeting based on the current hour
   if (currentHour >= 4 && currentHour < 12) {
-    greeting = "Good Morning";
+    greeting = "What's up";
   } else if (currentHour >= 12 && currentHour < 18) {
-    greeting = "Good Afternoon";
+    greeting = "Hey";
   } else {
-    greeting = "Good Evening";
+    greeting = "What's up";
   }
 
   const themeTextColor = useThemeColor(

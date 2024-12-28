@@ -121,13 +121,7 @@ const ReanimatedCarousel: React.FC<ReanimatedCarouselProps> = ({ data }) => {
                 <Text style={styles.title}>{item.title}</Text>
                 <Text style={styles.description}>{item.description}</Text>
               </View>
-              <TouchableOpacity
-                style={styles.button}
-                // onPress={() => navigation.navigate('CourseDetails')}
-              >
-                <Text style={styles.buttonText}>Go</Text>
-                <MaterialCommunityIcons name="arrow-right" size={20} color= {themeColors.tint} />
-              </TouchableOpacity>
+          
             </View>
           </View>
         )}

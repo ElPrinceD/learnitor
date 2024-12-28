@@ -1,171 +1,115 @@
-import React, { memo } from "react";
+import React, { memo, useMemo } from "react";
 import {
   View,
   Text,
   StyleSheet,
   useColorScheme,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { SIZES, rMS, rS, rV, useShadows } from "../constants";
 import Colors from "../constants/Colors";
-
 
 interface Task {
   id: number;
   title: string;
   description: string;
-  category: number; // Changed to number to match the categoryNames key
+  category: number;
 }
 
 interface Props {
   tasks: Task[];
-  categoryNames: { [key: number]: string }; // Category names should be indexed by number
-  getCategoryColor: (type: string) => string;
+  categoryNames: { [key: number]: string };
 }
 
-const TaskList: React.FC<Props> = ({ tasks, categoryNames}) => {
+const TaskList: React.FC<Props> = ({ tasks, categoryNames }) => {
   const shadow = useShadows();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
-  const colorMode = colorScheme === "dark" ? "dark" : "light";
 
-  // Determine theme colors
+  const today = new Date();
+  const dayOfWeek = today.toLocaleDateString('en-US', { weekday: 'short' });
+  const dayOfMonth = today.getDate();
+  const month = today.toLocaleDateString('en-US', { month: 'short' });
 
-
-  const getCategoryIcon = (type: string): keyof typeof Ionicons.glyphMap => {
-    switch (type) {
-      case "Exams TimeTable":
-        return "flame";
-      case "TimeTable":
-        return "briefcase";
-      case "Assignments & Projects":
-        return "people";
-      case "Study TimeTable":
-        return "book";
-      default:
-        return "help-circle"; // Default icon name
-    }
-  };
-
-  const getCategoryColor = (type) => {
-    switch (type) {
-      case "Assignments & Projects":
-        return themeColors.text;
-      case "TimeTable":
-        return "#ed892e";
-      case "Study TimeTable":
-        return "#6c77f4";
-      case "Exams TimeTable":
-        return "#a96ae3";
-      default:
-        return "#000";
-    }
-  };
-
+  // Randomly select a task from the list
+  const randomTask = useMemo(() => {
+    if (tasks.length === 0) return null;
+    const randomIndex = Math.floor(Math.random() * tasks.length);
+    return tasks[randomIndex];
+  }, [tasks]);
 
   const styles = StyleSheet.create({
-    taskWrapper: {
-      marginTop: rS(3),
-      marginBottom: rS(7), // Space between each task
-      padding: rS(2),
-      borderRadius: rS(10),
-      marginHorizontal: rS(3),
-      backgroundColor: themeColors.background, // Background color for each task
-      ...shadow.medium, // Optional: Add shadow if desired
+    container: {
+      flexDirection: 'row',
+   
+     
     },
-    planItemWrapper: {
-      flexDirection: "row",
-      alignItems: "center",
-      
-      marginVertical: rV(2), // Adjusted vertical margin for spacing
-    },
-    iconWrapper: {
-      width: rMS(40), // Size of the icon background
-      height: rMS(40), // Size of the icon background
-      borderRadius: rMS(20), // Round shape
-      backgroundColor: themeColors.background, // Background color for the icon
-      marginLeft: rMS(10),
-      justifyContent: "center",
-      alignItems: "center",
-      ...shadow.medium,
-    },
-    planItemContainer: {
-      flex: 1,
-      marginLeft: rS(8), // Reduced margin for less space
-      borderTopLeftRadius: rMS(15),
-      borderBottomLeftRadius: rMS(15),
+    dateView: {
+      backgroundColor: 'black',
+      justifyContent: 'center',
+      alignItems: 'center',
       padding: rS(10),
+      borderRadius: rS(5),
+      width: '30%', // Adjust width as necessary
     },
-    planContent: {
-      paddingTop: rV(1),
-    },
-    planTitle: {
-      fontSize: SIZES.large,
-      fontWeight: "bold",
-      marginBottom: rS(5),
-    },
-    planDescription: {
-      fontSize: SIZES.medium,
-    },
-    planCategory: {
+    dayOfWeek: {
+      position: 'absolute',
+      top: rV(2),
+      left: rS(2),
       fontSize: SIZES.small,
-      paddingBottom: rV(1),
+      color: '#FFD600', // Example color, adjust as per your theme
+    },
+    dayOfMonth: {
+      fontSize: SIZES.xxxlarge, // Make the number bigger
+      fontWeight: 'bold',
+      color: '#FFD600',
+    },
+    month: {
+      position: 'absolute',
+      bottom: rV(2),
+      right: rS(2),
+      fontSize: SIZES.small,
+      color: '#FFD600',
+    },
+    taskView: {
+      flex: 1,
+      backgroundColor: "#03c879",
+      justifyContent: 'flex-start',
+      alignItems: 'flex-start',
+      padding: rS(10),
+      borderTopRightRadius: rS(5),
+      borderBottomRightRadius: rS(5),
+      borderLeftWidth: 0, // Remove border between views
+    },
+    taskTitle: {
+      fontSize: SIZES.medium,
+      fontWeight: 'bold',
+      color: themeColors.text,
+      paddingBottom: rV(50)
+    },
+    taskCategory: {
+      fontSize: SIZES.small,
+      color: themeColors.textSecondary,
     },
   });
 
+  if (!randomTask) {
+    return <Text style={{color: themeColors.text}}>No tasks available</Text>;
+  }
+
+  const categoryName = categoryNames[randomTask.category] || "Unknown Category";
+
   return (
-    <>
-      {tasks.map((task) => {
-        const categoryName = categoryNames[task.category] || "Unknown Category"; // Use categoryNames with the task's category ID
-        const categoryColor = getCategoryColor(categoryName);
-        return (
-          <View key={task.id} style={styles.taskWrapper}>
-            <View style={styles.planItemWrapper}>
-              <View style={styles.iconWrapper}>
-                <Ionicons
-                  name={getCategoryIcon(categoryName)}
-                  size={rMS(24)}
-                  color={categoryColor}
-                />
-              </View>
-              <View
-                style={[
-                  styles.planItemContainer,
-                  ,
-                ]}
-              >
-                <View style={styles.planContent}>
-                  <Text
-                    style={[
-                      styles.planCategory,
-                      { color: themeColors.text },
-                    ]}
-                  >
-                    {categoryName}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.planTitle,
-                      { color: themeColors.text },
-                    ]}
-                  >
-                    {task.title}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.planDescription,
-                      { color: themeColors.text },
-                    ]}
-                  >
-                    {task.description}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </View>
-        );
-      })}
-    </>
+    <View style={{ flexDirection: 'row', marginVertical: rV(1) }}>
+      <View style={styles.dateView}>
+        <Text style={styles.dayOfWeek}>{dayOfWeek}</Text>
+        <Text style={styles.dayOfMonth}>{dayOfMonth}</Text>
+        <Text style={styles.month}>{month}</Text>
+      </View>
+      <View style={styles.taskView}>
+        <Text style={styles.taskTitle}>{randomTask.title}</Text>
+        <Text style={styles.taskCategory}>{categoryName}</Text>
+      </View>
+    </View>
   );
 };
 

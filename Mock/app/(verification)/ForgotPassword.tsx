@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import axios from "axios";
-import apiUrl from "../../config";
+import ApiUrl from "../../config";
 import Colors from "../../constants/Colors";
 import { SIZES, rMS, rS } from "../../constants";
 import VerificationButton from "../../components/VerificationButton";
@@ -36,10 +36,12 @@ const ForgotPassword = () => {
   const themeColors = Colors[colorScheme ?? "light"];
 
   const handleSendCode = () => {
+
+    const lowerCaseEmail = email.toLowerCase()
     setLoading(true);
 
     axios
-      .post(`${apiUrl}/api/forgetpassword`, { email })
+      .post(`${ApiUrl}/api/forgetpassword/`, { email: lowerCaseEmail })
       .then(() => {
         setLoading(false);
         setSent(true);
@@ -64,7 +66,7 @@ const ForgotPassword = () => {
     setLoading(true);
 
     axios
-      .post(`${apiUrl}/api/verify-code`, {
+      .post(`${ApiUrl}/api/verify-code/`, {
         email,
         verification_code: resetCode,
       })
@@ -86,7 +88,7 @@ const ForgotPassword = () => {
     setLoading(true);
 
     axios
-      .post(`${apiUrl}/api/reset-password`, {
+      .post(`${ApiUrl}/api/reset-password/`, {
         new_password: newPassword,
         verification_code: resetCode,
       })

@@ -97,15 +97,21 @@ const AnimatedRoundTextInput: React.FC<AnimatedRoundTextInputProps> = ({
     extrapolate: "clamp",
   });
 
+  const handleSubmitEditing = () => {
+    // Prevent new line and blur on submit
+    if (onFocusChange) {
+      onFocusChange(false);
+    }
+  };
   const borderColor = borderWidth.current.interpolate({
     inputRange: [rMS(0), rMS(2)],
-    outputRange: [themeColors.text, themeColors.border],
+    outputRange: [themeColors.text, themeColors.reverseText],
     extrapolate: "clamp",
   });
 
   const labelColorAnimation = borderWidth.current.interpolate({
     inputRange: [rMS(0), rMS(2)],
-    outputRange: [themeColors.textSecondary, themeColors.selectedText],
+    outputRange: [themeColors.text, themeColors.text],
     extrapolate: "clamp",
   });
 
@@ -120,8 +126,8 @@ const AnimatedRoundTextInput: React.FC<AnimatedRoundTextInputProps> = ({
       marginBottom: rMS(16),
       width: "100%",
       borderWidth: 1,
-      borderColor: themeColors.border,
-      borderRadius: 50,
+      borderColor: themeColors.reverseText,
+      borderRadius: rMS(10),
       padding: rMS(16),
       color: themeColors.text,
     },
@@ -132,6 +138,7 @@ const AnimatedRoundTextInput: React.FC<AnimatedRoundTextInputProps> = ({
     },
     label: {
       borderRadius: 70,
+      fontWeight: "bold",
       backgroundColor: themeColors.background,
       zIndex: 1,
     },
@@ -179,6 +186,7 @@ const AnimatedRoundTextInput: React.FC<AnimatedRoundTextInputProps> = ({
             secureTextEntry={!showPassword}
             editable={editable}
             keyboardType={keyboardType}
+            onSubmitEditing={handleSubmitEditing}
           />
           <TouchableOpacity
             onPress={() => setShowPassword(!showPassword)}
@@ -203,7 +211,7 @@ const AnimatedRoundTextInput: React.FC<AnimatedRoundTextInputProps> = ({
           secureTextEntry={secureTextEntry}
           editable={editable}
           keyboardType={keyboardType}
-          multiline
+          onSubmitEditing={handleSubmitEditing}
         />
       )}
     </Animated.View>

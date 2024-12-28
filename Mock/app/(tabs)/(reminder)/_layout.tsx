@@ -85,7 +85,7 @@ export default function Tab3Layout() {
             headerStyle: {
               backgroundColor: themeColors.background,
             },
-            headerTitle: "Create New Schedule",
+            headerTitle: "New",
             headerTitleAlign: "center",
             headerTitleStyle: {
               fontWeight: "bold",

@@ -207,10 +207,7 @@ const Timeline = () => {
                 (plan, index) =>
                   plan && (
                     <View key={index} style={styles.planItemWrapper}>
-                      <Text style={styles.planTime}>
-                        {plan.due_time?.slice(0, -3) || "No time specified"}
-                      </Text>
-                      <View style={styles.planItemLine} />
+                      
                       {categoryNames && (
                         <PlanItem
                           plan={plan}

@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   KeyboardTypeOptions,
 } from "react-native";
-import { SIZES, rMS } from "../constants";
+import { SIZES, rMS, rS, rV } from "../constants";
 import Colors from "../constants/Colors";
 import { useColorScheme } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -53,7 +53,7 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
   const borderWidth = useRef(new Animated.Value(1));
 
   const handleFocus = () => {
-    animateTransform(-30);
+    animateTransform(-27);
     animateBorderWidth(2);
     onFocusChange?.(true);
     onFocus?.();
@@ -119,28 +119,30 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
     inputWrapper: {
       marginBottom: rMS(16),
       width: "100%",
-      borderWidth: 1,
-      borderColor: themeColors.border,
       borderRadius: 10,
       padding: rMS(16),
-      color: themeColors.text,
+      backgroundColor: themeColors.text,
+      color: themeColors.background,
     },
     labelContainer: {
       position: "absolute",
-      padding: rMS(20),
+      marginHorizontal: rS(13),
+      marginVertical: rV(15),
     },
     label: {
       borderRadius: 70,
-      backgroundColor: themeColors.background,
+      paddingHorizontal: rS(5),
+      backgroundColor: themeColors.text,
       zIndex: 1,
     },
     input: {
-      color: themeColors.text,
+      color: themeColors.background,
     },
     toggleIcon: {
       position: "absolute",
       right: rMS(1),
       top: rMS(0),
+    
     },
   });
 
@@ -168,7 +170,7 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
         ]}
       >
         <Animated.Text
-          style={[styles.label, { color: labelColorAnimation, fontSize }]}
+          style={[styles.label, { color: themeColors.background, fontSize }]}
         >
           {label}
         </Animated.Text>
@@ -183,10 +185,10 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
             placeholderTextColor={placeholderTextColor}
             value={value}
             onChangeText={onChangeText}
-            secureTextEntry={!showPassword}
+            secureTextEntry={secureTextEntry && !showPassword}
             editable={editable}
             keyboardType={keyboardType}
-            returnKeyType="done" // "Done" instead of "Enter"
+            // "Done" instead of "Enter"
             onSubmitEditing={handleSubmitEditing} // Prevent new line and blur
           />
           <TouchableOpacity
@@ -196,7 +198,7 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
             <Ionicons
               name={showPassword ? "eye-off" : "eye"}
               size={24}
-              color={themeColors.icon}
+              color={themeColors.background}
             />
           </TouchableOpacity>
         </View>

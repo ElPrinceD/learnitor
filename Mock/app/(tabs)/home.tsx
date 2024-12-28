@@ -21,7 +21,7 @@ import {
 } from "../../CoursesApiCalls";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "../../QueryClient";
-import { FontAwesome6 } from "@expo/vector-icons"; // Importing the Icon component
+import { FontAwesome6 } from "@expo/vector-icons";
 
 import ErrorMessage from "../../components/ErrorMessage";
 import RecommendedCoursesList from "../../components/Recommended";
@@ -31,8 +31,6 @@ import ReanimatedCarousel from "../../components/ReanimatedCarousel";
 const Home: React.FC = () => {
   const { userToken, userInfo } = useAuth();
   const colorScheme = useColorScheme();
- 
-
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -172,8 +170,9 @@ const Home: React.FC = () => {
       marginTop: rMS(15),
     },
     sectionTitle: {
-      fontSize: SIZES.xLarge,
-      color: themeColors.text,
+      fontSize: SIZES.large,
+      color: '#FFD600',
+      backgroundColor: themeColors.text,
       fontWeight: "bold",
       alignSelf: "flex-start",
     },
@@ -185,6 +184,42 @@ const Home: React.FC = () => {
       fontSize: SIZES.medium,
       color: themeColors.tint,
       marginRight: rMS(1),
+    },
+    taskAndCoursesRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: rMS(10),
+    },
+    tasksContainer: {
+      width: "50%",
+      backgroundColor: themeColors.background,
+      borderRadius: rMS(5),
+      padding: rMS(10),
+      justifyContent: 'space-between',
+    },
+    taskCountContainer: {
+      flex: 2, // Takes 2/3 of the space
+      flexDirection: "row",
+      backgroundColor: "#EF643B",
+      padding: rMS(30),
+      
+      borderRadius: rMS(10),
+      alignItems: 'flex-end', // Align items to the bottom
+      justifyContent: 'center',
+    },
+    taskCountNumber: {
+      fontSize: SIZES.xxxLarge,
+      color: "white",
+      fontWeight: 'bold',
+    },
+    taskCountText: {
+      fontSize: SIZES.small,
+      fontWeight: 'bold',
+      color: "white", // Changed to white for better visibility against the background
+      marginLeft: rMS(40), // Add some space between number and text if they are next to each other
+    },
+    taskListContainer: {
+      flex: 1, // Takes 1/3 of the space
     },
   });
 
@@ -211,28 +246,28 @@ const Home: React.FC = () => {
 
   const carouselItems = [
     {
-      title: "Arranged Timeline",
-      description: "All your schedules and tasks in one place",
+      title: "",
+      description: "",
       image:
-        "https://images.pexels.com/photos/5412227/pexels-photo-5412227.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        "https://images.pexels.com/photos/2255441/pexels-photo-2255441.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
     },
     {
-      title: "Tailored Courses",
-      description: "Enroll to your courses and topics",
+      title: "",
+      description: "",
       image:
-        "https://images.pexels.com/photos/1340588/pexels-photo-1340588.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        "https://images.pexels.com/photos/636237/pexels-photo-636237.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
     },
     {
-      title: "Gaming Centre",
-      description: "Enjoy breathe-taking study games with your pals",
+      title: "",
+      description: "",
       image:
-        "https://images.pexels.com/photos/5477776/pexels-photo-5477776.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        "https://images.pexels.com/photos/6185656/pexels-photo-6185656.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
     },
     {
-      title: "Community Arena",
-      description: "Share a place with people with common interests",
+      title: "",
+      description: "",
       image:
-        "https://images.pexels.com/photos/27844392/pexels-photo-27844392/free-photo-of-people-riding-in-a-gondola-on-a-blue-sky-day.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+"https://images.pexels.com/photos/2740955/pexels-photo-2740955.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
     },
   ];
 
@@ -253,16 +288,32 @@ const Home: React.FC = () => {
         <ReanimatedCarousel data={carouselItems} />
         <View style={styles.coursesContainer}>
           {enrolledCoursesData?.length ? (
-            <>
-              <View style={styles.sectionTitleContainer}>
-                <Text style={styles.sectionTitle}>Enrolled Courses</Text>
-              </View>
+            <View style={styles.taskAndCoursesRow}>
               <EnrolledCoursesList
                 enrolledCoursesData={enrolledCoursesData}
                 progressMap={progressMap || {}}
                 loading={enrolledStatus === "pending"}
               />
-            </>
+              <View style={styles.tasksContainer}>
+                <View style={styles.taskCountContainer}>
+                 
+                  <Text style={styles.taskCountText}>
+                    Tasks Today
+                  </Text>
+                  <Text style={styles.taskCountNumber}>
+                    {tasksData.tasks.length}
+                  </Text>
+                </View>
+                {tasksData.tasks.length > 0 && (
+                  <View style={styles.taskListContainer}>
+                    <TaskList
+                      tasks={tasksData.tasks}
+                      categoryNames={tasksData.categories}
+                    />
+                  </View>
+                )}
+              </View>
+            </View>
           ) : (
             <>
               <View style={styles.sectionTitleContainer}>
@@ -281,26 +332,6 @@ const Home: React.FC = () => {
                 loading={recommendedStatus === "pending"}
               />
             </>
-          )}
-          {tasksData.tasks.length > 0 && (
-            <View style={styles.sectionTitleContainer}>
-              <Text style={styles.sectionTitle}>Today's Tasks</Text>
-              <TouchableOpacity style={styles.seeAllButton}>
-                <Text style={styles.seeAllText}>See All</Text>
-                <FontAwesome6
-                  name="arrow-right"
-                  size={SIZES.medium}
-                  color={themeColors.tint}
-                />
-              </TouchableOpacity>
-            </View>
-          )}
-          {tasksData.tasks.length > 0 && (
-            <TaskList
-              tasks={tasksData.tasks}
-              categoryNames={tasksData.categories}
-              getCategoryColor={(category) => themeColors[category]}
-            />
           )}
         </View>
       </ScrollView>

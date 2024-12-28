@@ -1,4 +1,4 @@
-import React, { memo, useState } from "react";
+import React, { memo } from "react";
 import {
   View,
   Text,
@@ -6,10 +6,15 @@ import {
   StyleSheet,
   useColorScheme,
 } from "react-native";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import { Swipeable } from "react-native-gesture-handler";
 import { Plan } from "./types";
 import { SIZES, rMS, rS, rV, useShadows } from "../constants";
+import Colors from "../constants/Colors";
+import MapleSVG from "./MapleSVG";
+import SunSVG from "./SunSVG";
+import StarSVG from "./StarSVG";
+import CrownSVG from "./CrownSVG";
 
 interface Props {
   plan: Plan;
@@ -27,20 +32,31 @@ const PlanItem: React.FC<Props> = ({
   const category = categoryNames[plan.category] || "Unknown Category";
   const categoryColor = getCategoryColor(category);
   const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
   const shadow = useShadows();
 
-  const getCategoryIcon = (type: string): keyof typeof Ionicons.glyphMap => {
-    switch (type) {
+  // Format time to HH:MM
+  const formattedTimeStart = plan.due_time_start
+    ? plan.due_time_start.split(":").slice(0, 2).join(":")
+    : "";
+
+  const formattedTimeEnd = plan.due_time_start
+    ? plan.due_time_start.split(":").slice(0, 2).join(":") // Corrected this line
+    : "";
+
+  // Function to select SVG based on category name
+  const renderSVGIcon = (categoryName: string) => {
+    switch (categoryName) {
       case "Exams TimeTable":
-        return "flame";
+        return <StarSVG width={rMS(50)} height={rMS(50)} />;
       case "TimeTable":
-        return "briefcase";
+        return <SunSVG width={rMS(50)} height={rMS(50)} />;
       case "Assignments & Projects":
-        return "people";
+        return <CrownSVG width={rMS(50)} height={rMS(50)} />;
       case "Study TimeTable":
-        return "book";
+        return <MapleSVG width={rMS(50)} height={rMS(50)} />;
       default:
-        return "help-circle"; // Default icon name
+        return <MapleSVG width={rMS(50)} height={rMS(50)} />;
     }
   };
 
@@ -51,30 +67,40 @@ const PlanItem: React.FC<Props> = ({
     planItemWrapper: {
       flexDirection: "row",
       alignItems: "center",
-      marginVertical: rV(10),
+      justifyContent: "space-between",
+      marginVertical: rV(1),
     },
     planItemContainer: {
       flex: 1,
-      marginLeft: rS(10),
-      borderTopLeftRadius: rMS(15),
-      borderBottomLeftRadius: rMS(15),
+      marginHorizontal: rS(10),
+      borderTopLeftRadius: rMS(10),
+      borderBottomLeftRadius: rMS(10),
       padding: rS(10),
-      ...shadow.medium,
+      ...shadow.small,
+      flexDirection: "row",
+      alignItems: "center", // Changed from 'center' to 'flex-start' for vertical alignment
     },
     planContent: {
-      paddingTop: rV(8),
+      flex: 1, // Allow the content to take up space
     },
     planTitle: {
-      fontSize: SIZES.large,
+      fontSize: SIZES.xlarge,
       fontWeight: "bold",
       marginBottom: rS(5),
+      textAlign: "left", // Align text to the left
     },
-    planDescription: {
-      fontSize: SIZES.medium,
+    svgWrapper: {
+      marginLeft: rS(-10),
+      overflow: "hidden",
     },
     planCategory: {
-      fontSize: SIZES.small,
-      paddingBottom: rV(8),
+      fontSize: SIZES.medium,
+      textAlign: "left", // Align text to the left
+    },
+    planTime: {
+      fontSize: SIZES.large,
+      color: themeColors.text,
+      fontWeight: "bold",
     },
     editButton: {
       backgroundColor: "green",
@@ -87,14 +113,7 @@ const PlanItem: React.FC<Props> = ({
   });
 
   return (
-    <TouchableOpacity
-      onPress={() => {
-        // Handle tap to close Swipeable
-        // You might need to implement a function to close the Swipeable component here
-      }}
-      activeOpacity={1} // Prevent visual feedback on tap
-      style={styles.wrapper} // Ensure the wrapper covers the entire screen
-    >
+    <TouchableOpacity onPress={() => {}} activeOpacity={1} style={styles.wrapper}>
       <Swipeable
         renderRightActions={() => (
           <TouchableOpacity
@@ -106,43 +125,21 @@ const PlanItem: React.FC<Props> = ({
         )}
       >
         <View style={styles.planItemWrapper}>
-          <Ionicons
-            name={getCategoryIcon(category)}
-            size={rMS(24)}
-            color={categoryColor}
-          />
           <View
             style={[
               styles.planItemContainer,
-              { backgroundColor: categoryColor },
+              { backgroundColor: themeColors.background },
             ]}
           >
+            <View style={styles.svgWrapper}>
+              {renderSVGIcon(category)} 
+            </View>
             <View style={styles.planContent}>
-              <Text
-                style={[
-                  styles.planCategory,
-                  {
-                    color:
-                      categoryNames[plan.category] === "Assignments & Projects"
-                        ? colorScheme === "dark"
-                          ? "#000"
-                          : "#fff"
-                        : "#fff",
-                  },
-                ]}
-              >
-                {category}
-              </Text>
               <Text
                 style={[
                   styles.planTitle,
                   {
-                    color:
-                      categoryNames[plan.category] === "Assignments & Projects"
-                        ? colorScheme === "dark"
-                          ? "#000"
-                          : "#fff"
-                        : "#fff",
+                    color: themeColors.text,
                   },
                 ]}
               >
@@ -150,20 +147,18 @@ const PlanItem: React.FC<Props> = ({
               </Text>
               <Text
                 style={[
-                  styles.planDescription,
+                  styles.planCategory,
                   {
-                    color:
-                      categoryNames[plan.category] === "Assignments & Projects"
-                        ? colorScheme === "dark"
-                          ? "#000"
-                          : "#fff"
-                        : "#fff",
+                    color: themeColors.text,
                   },
                 ]}
               >
-                {plan.description || ""}
+                {category}
               </Text>
             </View>
+            <Text style={[styles.planTime]}>
+              {formattedTimeStart}-{formattedTimeEnd} {/* Corrected to show end time */}
+            </Text>
           </View>
         </View>
       </Swipeable>

@@ -20,6 +20,8 @@ const darkTabIconDefaultColor = '#ccc';
 const darkButtonDisabledColor = '#003366'; // Dark blue disabled button
 const darkPlaceholderColor = '#aaa';
 const darkGradientBackgroundColor = '#000';
+const darkGrey = "#212121";
+const lightGrey = "#dedee0";
 
 const lightErrorBackground = '#f8d7da'; // Light red background
 const lightErrorText = '#721c24'; // Dark red text
@@ -30,7 +32,9 @@ const darkErrorText = '#f8d7da'; // Light red text
 export default {
   light: {
     text: lightTextColor,
-    reverseText: darkTextColor,
+    reverseText: lightGrey,
+    reverseGrey: darkGrey,
+    normalGrey: darkTextColor,
     textSecondary: lightTextSecondaryColor,
     background: lightBackgroundColor,
     card: lightCardColor,
@@ -52,7 +56,9 @@ export default {
   },
   dark: {
     text: darkTextColor,
-    reverseText: lightTextColor,
+    reverseText: darkGrey,
+    normalGrey: lightGrey,
+    reverseGrey: lightGrey,
     textSecondary: darkTextSecondaryColor,
     tintSecond: tintColorSecond,
     background: darkBackgroundColor,

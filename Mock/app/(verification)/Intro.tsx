@@ -57,6 +57,7 @@ const Intro = () => {
     loginLink: {
       marginTop: rV(2),
       backgroundColor: "transparent",
+      color: themeColors.text
     },
     loginText: {
       color: themeColors.text,
