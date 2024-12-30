@@ -29,21 +29,21 @@ const Profile = () => {
   };
 
   const handleLogout = async () => {
-    // try {
-    //   await axios.post(
-    //     `${ApiUrl}/api/logout/`,
-    //     {},
-    //     {
-    //       headers: {
-    //         Authorization: `Token ${userToken?.token}`,
-    //       },
-    //     }
-    //   );
-    //   logout();
+    try {
+      await axios.post(
+        `${ApiUrl}/api/logout/`,
+        {},
+        {
+          headers: {
+            Authorization: `Token ${userToken?.token}`,
+          },
+        }
+      );
+      logout();
     router.replace("Intro");
-    // } catch (error) {
-    //   console.error("Error logging out:", error);
-    // }
+    } catch (error) {
+      console.error("Error logging out:", error);
+    }
   };
 
   const handleTerms = () => {
