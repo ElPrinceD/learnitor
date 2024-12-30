@@ -9,18 +9,19 @@ import {
   TouchableOpacity,
   useColorScheme,
   Share,
-  Alert, // Import Alert from React Native
+  Alert,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { router } from "expo-router";
 import {
   getCommunityDetails,
   leaveCommunity,
-} from "../../../CommunityApiCalls"; // Import leaveCommunity API function
+} from "../../../CommunityApiCalls";
 import { useAuth } from "../../../components/AuthContext";
 import Colors from "../../../constants/Colors";
 import { Community } from "../../../components/types";
 import { FontAwesome6 } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Define the type for route params
 type RouteParams = {
@@ -44,9 +45,19 @@ const CommunityDetailScreen: React.FC = () => {
   useEffect(() => {
     const fetchCommunity = async () => {
       try {
+        // Check if community data is cached
+        const cachedCommunity = await AsyncStorage.getItem(`community_${id}`);
+        if (cachedCommunity) {
+          setCommunity(JSON.parse(cachedCommunity));
+          setLoading(false);
+          return; // Don't fetch from API if cached data is available
+        }
+
         if (userToken) {
           const data = await getCommunityDetails(id, userToken.token);
           setCommunity(data);
+          // Cache the community data
+          await AsyncStorage.setItem(`community_${id}`, JSON.stringify(data));
         } else {
           setError("User not authenticated.");
         }
@@ -102,10 +113,11 @@ const CommunityDetailScreen: React.FC = () => {
   const leaveCommunityHandler = async () => {
     try {
       if (userToken?.token) {
-        
         await leaveCommunity(id, userToken.token);
         Alert.alert("Success", "You have left the community.");
         router.dismiss(2);
+        // Clear cached data since the user is no longer a member
+        await AsyncStorage.removeItem(`community_${id}`);
       } else {
         Alert.alert("Error", "User not authenticated.");
       }
@@ -186,10 +198,10 @@ const CommunityDetailScreen: React.FC = () => {
               styles.iconContainer,
               { backgroundColor: themeColors.reverseText },
             ]}
-            onPress={confirmLeaveCommunity} // Replace search with leave confirmation
+            onPress={confirmLeaveCommunity}
           >
             <FontAwesome6
-              name="right-from-bracket" // Icon for leaving the group
+              name="right-from-bracket"
               size={24}
               color={themeColors.text}
             />

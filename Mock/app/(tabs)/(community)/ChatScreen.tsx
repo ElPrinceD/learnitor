@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -9,6 +9,7 @@ import {
   useColorScheme,
   TouchableOpacity,
   Modal,
+  ActivityIndicator,
 } from "react-native";
 import { useRoute } from "@react-navigation/native";
 import axios from "axios";
@@ -27,6 +28,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import Video from "react-native-video";
+import { useWebSocket } from "../../../webSocketProvider";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type RouteParams = {
   communityId: string;
@@ -37,16 +40,14 @@ const CommunityChatScreen: React.FC = () => {
   const { communityId } = route.params as RouteParams;
   const { userToken, userInfo } = useAuth();
   const user = userInfo?.user;
+  const { socket, isConnected, sendMessage } = useWebSocket();
 
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [messageInput, setMessageInput] = useState("");
-  const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isMember, setIsMember] = useState(false);
-  const [isCheckingMembership, setIsCheckingMembership] = useState(true);
+  const [loading, setLoading] = useState(true);
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
-  const ws = useRef<WebSocket | null>(null);
   const insets = useSafeAreaInsets();
   const [mediaUri, setMediaUri] = useState<string | null>(null);
   const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
@@ -57,126 +58,79 @@ const CommunityChatScreen: React.FC = () => {
       ? require("../../../assets/images/dark-bg.jpg")
       : require("../../../assets/images/light-bg.jpg");
 
-  const checkMembershipStatus = async () => {
+  const fetchMessageHistory = useCallback(async () => {
     try {
-      const response = await axios.get(
-        `https://learnitor.onrender.com/api/communities/${communityId}/is_member/`,
-        {
-          headers: {
-            Authorization: `Token ${userToken?.token}`,
-          },
-        }
-      );
-      setIsMember(response.data.is_member);
-
-      if (response.data.is_member) {
-        fetchMessageHistory();
-        connectWebSocket();
+      setLoading(true);
+      const cachedMessages = await AsyncStorage.getItem(`messages_${communityId}`);
+      
+      if (cachedMessages && JSON.parse(cachedMessages).length > 0) {
+        setMessages(JSON.parse(cachedMessages));
+      } else {
+        await sendMessage({ type: 'fetch_history', community_id: communityId });
       }
     } catch (error) {
-      console.error("Error checking membership status:", error);
-      setError("Failed to check membership status");
+      console.error("Error fetching message history:", error);
+      setError("Failed to load message history");
     } finally {
-      setIsCheckingMembership(false);
+      setLoading(false);
     }
-  };
-
-  const fetchMessageHistory = async () => {
-    if (!isMember) return;
-
-    try {
-      const response = await axios.get<Message[]>(
-        `https://learnitor.onrender.com/api/messages/${communityId}/get_messages/`,
-        {
-          headers: {
-            Authorization: `Token ${userToken?.token}`,
-          },
-        }
-      );
-
-      const transformedMessages = response.data.map((message) => ({
-        _id: message.id,
-        text: message.message,
-        createdAt: new Date(message.sent_at),
-        user: {
-          _id: message.sender === user?.first_name ? 2 : 1,
-          name: message.sender,
-        },
-      }));
-
-      setMessages(transformedMessages);
-    } catch (error) {
-      console.error("Error fetching messages:", error);
-      setError("Failed to load messages");
-    }
-  };
-
-  const connectWebSocket = useCallback(() => {
-    if (!isMember || !communityId || !userToken?.token) return;
-
-    if (ws.current) {
-      ws.current.close();
-    }
-
-    ws.current = new WebSocket(
-      `wss://learnitor.onrender.com/community/${communityId}/?token=${userToken.token}`
-    );
-
-    ws.current.onopen = () => {
-      setIsConnected(true);
-    };
-
-    ws.current.onerror = (error) => {
-      console.error("WebSocket error:", error);
-      setError("Connection error");
-      setIsConnected(false);
-      setTimeout(connectWebSocket, 5000);
-    };
-
-    ws.current.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (!Array.isArray(data)) {
-          const newMessage = {
-            ...data,
-            _id: data.id || Math.random().toString(),
-            text: data.message,
-            createdAt: new Date(data.sent_at),
-            user: {
-              _id: data.sender || "Bot",
-              name: data.sender ? "You" : "Bot",
-            },
-          };
-          setMessages((prevMessages) =>
-            GiftedChat.append(prevMessages, [newMessage])
-          );
-        }
-      } catch (error) {
-        console.error("Error parsing WebSocket message:", error);
-        setError("Error parsing message");
-      }
-    };
-
-    ws.current.onclose = () => {
-      setIsConnected(false);
-    };
-  }, [communityId, userToken, isMember]);
+  }, [communityId, sendMessage]);
 
   useEffect(() => {
-    checkMembershipStatus();
+    fetchMessageHistory();
+  }, [fetchMessageHistory, communityId]);
+
+  useEffect(() => {
+    if (socket) {
+      socket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'history') {
+          const transformedMessages = data.messages.map((message) => ({
+            _id: message.id,
+            text: message.message,
+            sent_at: new Date(message.sent_at),
+            user: {
+              _id: message.sender === user?.email ? 2 : 1,
+              name: message.sender,
+            },
+          }));
+          setMessages(transformedMessages);
+          AsyncStorage.setItem(`messages_${communityId}`, JSON.stringify(transformedMessages));
+        } else if (data.type === 'message') {
+          const newMessage = {
+            _id: data.id || Math.random().toString(),
+            text: data.message,
+            sent_at: new Date(data.sent_at),
+            user: {
+              _id: data.sender === user?.email ? 2 : 1,
+              name: data.sender,
+            },
+          };
+          setMessages((prevMessages) => {
+            const updatedMessages = GiftedChat.append(prevMessages, [newMessage]);
+            AsyncStorage.setItem(`messages_${communityId}`, JSON.stringify(updatedMessages));
+            return updatedMessages;
+          });
+        }
+      };
+    }
 
     return () => {
-      if (ws.current) {
-        ws.current.close();
+      if (socket) {
+        socket.onmessage = null; // Clean up event listener
       }
     };
-  }, [connectWebSocket]);
+  }, [socket, user, communityId]);
 
   const onSend = useCallback((newMessages: IMessage[] = []) => {
-    setMessages((previousMessages) =>
-      GiftedChat.append(previousMessages, newMessages)
-    );
-  }, []);
+    for (let message of newMessages) {
+      sendMessage({
+        type: 'send_message',
+        community_id: communityId,
+        message: message.text
+      });
+    }
+  }, [communityId, sendMessage]);
 
   const pickImage = async () => {
     const result: ImagePicker.ImagePickerResult =
@@ -193,7 +147,7 @@ const CommunityChatScreen: React.FC = () => {
         {
           _id: Math.random().toString(),
           text: "",
-          createdAt: new Date(),
+          sent_at: new Date(),
           user: { _id: user?.id || 1, name: user?.first_name || "User" },
           image: imageUri,
         },
@@ -202,17 +156,14 @@ const CommunityChatScreen: React.FC = () => {
   };
 
   const renderBubble = (props) => {
+    const { currentMessage, previousMessage } = props;
     const isFirstMessageOfBlock =
-      props.previousMessage?.user?._id !== props.currentMessage.user._id;
+      !previousMessage || 
+      (previousMessage.sent_at && currentMessage.sent_at && 
+       previousMessage.sent_at.toDateString() !== currentMessage.sent_at.toDateString()) ||
+      previousMessage.user?._id !== currentMessage.user._id;
 
-    const isOtherUser = props.currentMessage.user._id !== user?.id;
-
-    const isNewDay =
-      !props.previousMessage ||
-      (props.currentMessage?.createdAt &&
-        props.previousMessage?.createdAt &&
-        props.currentMessage.createdAt.toDateString() !==
-          props.previousMessage.createdAt.toDateString());
+    const isOtherUser = currentMessage.user._id !== user?.id;
 
     return (
       <Bubble
@@ -225,10 +176,9 @@ const CommunityChatScreen: React.FC = () => {
           marginVertical: isFirstMessageOfBlock ? 5 : 0,
         }}
         renderCustomView={() =>
-          (isOtherUser && isFirstMessageOfBlock) ||
-          (isOtherUser && isNewDay) ? (
+          isFirstMessageOfBlock && isOtherUser ? (
             <Text style={styles.username}>
-              {props.currentMessage.user.name}
+              {currentMessage.user.name}
             </Text>
           ) : null
         }
@@ -241,18 +191,9 @@ const CommunityChatScreen: React.FC = () => {
   };
 
   const renderDay = (props) => {
-    const { currentMessage, previousMessage } = props;
+    const { currentMessage } = props;
 
-    // Check if this is the first message of a new day
-    const isNewDay =
-      !previousMessage ||
-      (currentMessage?.createdAt &&
-        previousMessage?.createdAt &&
-        currentMessage.createdAt.toDateString() !==
-          previousMessage.createdAt.toDateString());
-
-    // Only render the day separator if it's a new day
-    if (!isNewDay) return null;
+    if (!currentMessage || !currentMessage.sent_at) return null;
 
     return (
       <View
@@ -262,11 +203,12 @@ const CommunityChatScreen: React.FC = () => {
         ]}
       >
         <Text style={styles.dateText}>
-          {currentMessage.createdAt.toDateString()}
+          {currentMessage.sent_at.toDateString()}
         </Text>
       </View>
     );
   };
+
   const onImagePress = (uri) => {
     setMediaUri(uri);
     setIsImageViewerVisible(true);
@@ -276,6 +218,7 @@ const CommunityChatScreen: React.FC = () => {
     setMediaUri(uri);
     setIsVideoViewerVisible(true);
   };
+
   const renderMessageImage = (props) => (
     <TouchableOpacity onPress={() => onImagePress(props.currentMessage.image)}>
       <Image
@@ -473,31 +416,33 @@ const CommunityChatScreen: React.FC = () => {
       source={backgroundImage}
       style={{ flex: 1, paddingTop: 10 }}
     >
-      <GiftedChat
-        messages={messages}
-        onSend={(messages) =>
-          setMessages((prevMessages) =>
-            GiftedChat.append(prevMessages, messages)
-          )
-        }
-        user={{ _id: user?.id || 1 }}
-        text={messageInput}
-        onInputTextChanged={(text) => setMessageInput(text)}
-        renderSystemMessage={(props) => (
-          <SystemMessage
-            {...props}
-            textStyle={{ color: themeColors.textSecondary }}
-          />
-        )}
-        renderAvatar={renderAvatar}
-        renderBubble={renderBubble}
-        renderSend={renderSend}
-        renderInputToolbar={renderInputToolbar}
-        renderMessageImage={renderMessageImage}
-        renderDay={renderDay}
-        isTyping={false}
-        inverted={false}
-      />
+      {loading ? (
+        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+          <ActivityIndicator size="large" color={themeColors.tint} />
+        </View>
+      ) : (
+        <GiftedChat
+          messages={messages}
+          onSend={onSend}
+          user={{ _id: user?.id || 1 }}
+          text={messageInput}
+          onInputTextChanged={(text) => setMessageInput(text)}
+          renderSystemMessage={(props) => (
+            <SystemMessage
+              {...props}
+              textStyle={{ color: themeColors.textSecondary }}
+            />
+          )}
+          renderAvatar={renderAvatar}
+          renderBubble={renderBubble}
+          renderSend={renderSend}
+          renderInputToolbar={renderInputToolbar}
+          renderMessageImage={renderMessageImage}
+          renderDay={renderDay}
+          isTyping={false}
+          inverted={true} // This will open to the newest message
+        />
+      )}
 
       {/* Image Viewer Modal */}
       <Modal

@@ -1,17 +1,5 @@
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-  useRef,
-  useCallback,
-} from "react";
-import {
-  View,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  TouchableOpacity,
-} from "react-native";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { View, StyleSheet, Text, useColorScheme, TouchableOpacity, ActivityIndicator } from "react-native";
 import moment from "moment";
 import SearchBar from "../../../components/SearchBar2";
 import Colors from "../../../constants/Colors";
@@ -21,13 +9,12 @@ import { router, useFocusEffect } from "expo-router";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { SIZES, rS, rV } from "../../../constants";
 import { Message, Community } from "../../../components/types";
-import {
-  getCommunities,
-  getCommunityMessages,
-  getUserCommunities,
-} from "../../../CommunityApiCalls"; // Import the API calls
 import CommunityList from "../../../components/CommunityList";
-import { Skeleton } from "moti/skeleton"; // Import Skeleton
+import GlobalCommunityList from "../../../components/GlobalCommunityList";
+import { Skeleton } from "moti/skeleton";
+import { useWebSocket } from "../../../webSocketProvider";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getCommunities, searchCommunities } from '../../../CommunityApiCalls';
 
 const CommunityScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -36,114 +23,77 @@ const CommunityScreen: React.FC = () => {
   const [globalCommunities, setGlobalCommunities] = useState<Community[]>([]);
   const [loading, setLoading] = useState(true);
   const [messages, setMessages] = useState<{ [key: string]: Message[] }>({});
-
+  const [isFetching, setIsFetching] = useState(false);
   const { userToken } = useAuth();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const colorMode = colorScheme === "dark" ? "dark" : "light";
 
-  const wsRefs = useRef<{ [key: string]: WebSocket | null }>({});
-
-  // Fetch communities and messages
-  const fetchCommunities = async () => {
-    try {
-      const [userCommunities, globalCommunitiesResponse] = await Promise.all([
-        getUserCommunities(userToken?.token || ""),
-        getCommunities(userToken?.token || ""),
-      ]);
-
-      setMyCommunities(userCommunities);
-      setGlobalCommunities(globalCommunitiesResponse);
-
-      const messagesResponse = await Promise.all(
-        userCommunities.map((community) =>
-          getCommunityMessages(community.id, userToken?.token || "").then(
-            (messages) => ({
-              id: community.id,
-              messages,
-            })
-          )
-        )
-      );
-
-      const messagesMap = messagesResponse.reduce((acc, { id, messages }) => {
-        acc[id] = messages;
-        return acc;
-      }, {} as { [key: string]: Message[] });
-
-      setMessages(messagesMap);
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching communities or messages:", error);
-      setErrorMessage("Failed to load communities");
-      setLoading(false);
-    }
+  const { isConnected, subscribeToUserCommunities, fetchAndCacheCommunities } = useWebSocket() || {
+    isConnected: false,
+    subscribeToUserCommunities: () => {},
+    fetchAndCacheCommunities: () => {},
   };
 
-  // Connect WebSocket connections
-  const connectWebSockets = useCallback(() => {
-    myCommunities.forEach((community) => {
-      const { id } = community;
-      if (userToken?.token) {
-        const ws = new WebSocket(
-          `wss://learnitor.onrender.com/community/${id}/?token=${userToken.token}`
-        );
-        wsRefs.current[id] = ws;
-
-        ws.onopen = () => {
-          console.log(`WebSocket connection opened for community ${id}`);
-        };
-
-        ws.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            if (data.message) {
-              setMessages((prevMessages) => {
-                const communityMessages = prevMessages[id] || [];
-                const updatedMessages = [...communityMessages, data.message];
-                return {
-                  ...prevMessages,
-                  [id]: updatedMessages,
-                };
-              });
-            }
-          } catch (error) {
-            console.error("Error parsing WebSocket message:", error);
-          }
-        };
-
-        ws.onerror = (error) => {
-          console.error(`WebSocket error for community ${id}:`, error);
-        };
-
-        ws.onclose = () => {
-          console.log(`WebSocket connection closed for community ${id}`);
-          // Reconnect logic if needed
-        };
+  // Load cached user communities when the screen mounts or when token changes
+  useEffect(() => {
+    const loadCachedData = async () => {
+      try {
+        const cachedCommunities = await AsyncStorage.getItem('communities');
+        if (cachedCommunities) {
+          setMyCommunities(JSON.parse(cachedCommunities));
+        }
+        setLoading(false);
+      } catch (error) {
+        console.error("Error loading cached communities:", error);
+        setErrorMessage("Failed to load communities");
+        setLoading(false);
       }
-    });
-  }, [myCommunities, userToken]);
+    };
+    loadCachedData();
+  }, [userToken]);
 
-  // Use focus effect to fetch data and connect WebSockets when screen is focused
+  // Fetch global communities only when search query has at least 3 characters
+  useEffect(() => {
+    const searchForCommunities = async () => {
+      if (searchQuery.length >= 3 && userToken?.token) {
+        setIsFetching(true);
+        try {
+          const fetchedCommunities = await searchCommunities(searchQuery, userToken.token);
+          console.log("Fetched Globals: ", fetchedCommunities);
+          setGlobalCommunities(fetchedCommunities);
+        } catch (error) {
+          console.error("Error searching for global communities:", error);
+          setErrorMessage("Failed to search global communities");
+        } finally {
+          setIsFetching(false);
+        }
+      } else {
+        // Clear global communities if search is too short
+        setGlobalCommunities([]);
+      }
+    };
+    
+    searchForCommunities();
+  }, [searchQuery, userToken]);
+
+  // Use WebSocket for real-time subscriptions
   useFocusEffect(
     React.useCallback(() => {
-      connectWebSockets();
-      fetchCommunities();
-
-      // Cleanup WebSocket connections when the component is unfocused
+      if (isConnected) {
+        subscribeToUserCommunities();
+        fetchAndCacheCommunities();
+      }
       return () => {
-        Object.values(wsRefs.current).forEach((ws) => {
-          if (ws) ws.close();
-        });
+        // Unsubscribe logic can still be here if needed
       };
-    }, [connectWebSockets])
+    }, [isConnected, subscribeToUserCommunities, fetchAndCacheCommunities])
   );
 
   const handleNavigateCreateCommunity = () => {
     router.navigate("CreateCommunity");
   };
 
-  // Get the last message for a given community ID
   const getLastMessage = (communityId: string) => {
     const communityMessages = messages[communityId] || [];
     return communityMessages.length > 0
@@ -151,7 +101,7 @@ const CommunityScreen: React.FC = () => {
       : null;
   };
 
-  // Sort communities by the time of the latest message
+  // Sorting logic for user communities
   const sortedMyCommunities = useMemo(() => {
     return myCommunities
       .map((community) => ({
@@ -164,46 +114,33 @@ const CommunityScreen: React.FC = () => {
       );
   }, [myCommunities, messages]);
 
-  const sortedGlobalCommunities = useMemo(() => {
-    return globalCommunities
-      .filter(
-        (community) =>
-          !myCommunities.some((myComm) => myComm.id === community.id)
-      ) // Filter out user's communities
-      .map((community) => ({
-        ...community,
-        lastMessageTime:
-          getLastMessage(community.id)?.sent_at || new Date(0).toISOString(),
-      }))
-      .sort((a, b) =>
-        moment(b.lastMessageTime).diff(moment(a.lastMessageTime))
-      );
-  }, [globalCommunities, myCommunities, messages]);
+  // Combine and filter communities for search
+  const filteredCommunities = useMemo(() => {
+    if (searchQuery.length < 3) return { user: sortedMyCommunities, global: [] }; // Default to user communities if query too short
 
-  const filteredMyCommunities = useMemo(() => {
-    if (!searchQuery) return sortedMyCommunities;
-    return sortedMyCommunities.filter((community) =>
+    // Filter user communities first
+    const filteredUserCommunities = myCommunities.filter(community =>
       community.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [searchQuery, sortedMyCommunities]);
 
-  const filteredGlobalCommunities = useMemo(() => {
-    if (!searchQuery) return sortedGlobalCommunities;
-    return sortedGlobalCommunities.filter((community) =>
+    // Filter global communities
+    const filteredGlobalCommunities = globalCommunities.filter(community =>
       community.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [searchQuery, sortedGlobalCommunities]);
 
-  const handleSearch = (query: string) => {
+    return { user: filteredUserCommunities, global: filteredGlobalCommunities };
+  }, [searchQuery, myCommunities, globalCommunities]);
+
+  const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
-  };
+  }, []);
 
-  const handleCommunityPress = (community: Community) => {
+  const handleCommunityPress = useCallback((community: Community) => {
     router.navigate({
       pathname: "ChatScreen",
       params: { communityId: community.id, name: community.name },
     });
-  };
+  }, []);
 
   const styles = StyleSheet.create({
     container: {
@@ -246,15 +183,11 @@ const CommunityScreen: React.FC = () => {
       gap: 10,
     },
   });
-  const noResultsFound =
-    searchQuery &&
-    filteredMyCommunities.length === 0 &&
-    filteredGlobalCommunities.length === 0;
+
+  const noResultsFound = searchQuery.length >= 3 && filteredCommunities.user.length === 0 && filteredCommunities.global.length === 0;
 
   return (
-    <View
-      style={[styles.container, { backgroundColor: themeColors.background }]}
-    >
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <View style={styles.searchContainer}>
         <SearchBar onSearch={handleSearch} />
       </View>
@@ -276,32 +209,37 @@ const CommunityScreen: React.FC = () => {
         ))
       ) : noResultsFound ? (
         <View style={styles.listContainer}>
-          <Text
-            style={[styles.noResultsText, { color: themeColors.placeholder }]}
-          >
-            No results found
-          </Text>
+          {isFetching ? 
+            <ActivityIndicator color="white" style={[styles.noResultsText]} /> : 
+            <Text style={[styles.noResultsText, { color: themeColors.placeholder }]}>No results found</Text>
+          }
         </View>
       ) : (
         <View style={styles.listContainer}>
-          {searchQuery ? (
-            <View>
+          {searchQuery.length >= 3 ? (
+            <React.Fragment>
+              {/* User Communities */}
               <CommunityList
                 title="My Communities"
-                data={filteredMyCommunities}
+                data={filteredCommunities.user}
                 onCommunityPress={handleCommunityPress}
                 showLastMessage
                 getLastMessage={getLastMessage}
               />
-              <CommunityList
-                title="Global Communities"
-                data={filteredGlobalCommunities}
-                onCommunityPress={handleCommunityPress}
-              />
-            </View>
+              {/* Global Communities */}
+              {filteredCommunities.global.length > 0 && (
+                <GlobalCommunityList
+                  title="Global Communities"
+                  data={filteredCommunities.global}
+                  onCommunityPress={handleCommunityPress}
+                  
+               
+                />
+              )}
+            </React.Fragment>
           ) : (
             <CommunityList
-              title=""
+              title="My Communities"
               data={sortedMyCommunities}
               onCommunityPress={handleCommunityPress}
               showLastMessage

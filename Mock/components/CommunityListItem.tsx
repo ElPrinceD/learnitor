@@ -6,6 +6,7 @@ import {
   Image,
   StyleSheet,
   useColorScheme,
+  TouchableOpacity,
 } from "react-native";
 import moment from "moment";
 import { Community } from "./types";
@@ -18,7 +19,7 @@ interface CommunityListItemProps {
   onPress: () => void;
   showLastMessage?: boolean;
   lastMessage?: { sender?: string; message?: string; sent_at: string } | null;
-  loading?: boolean;
+  isGlobal?: boolean;
 }
 
 const CommunityListItem: React.FC<CommunityListItemProps> = ({
@@ -26,6 +27,7 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
   onPress,
   showLastMessage,
   lastMessage,
+  isGlobal,
 }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -34,6 +36,7 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
   // Set max length for sender and message text
   const MAX_SENDER_LENGTH = 15;
   const MAX_MESSAGE_LENGTH = 40;
+  const MAX_DESCRIPTION_LENGTH = 80; // Assuming you want to limit description length
 
   // Determine the display name for the sender
   const displaySenderName =
@@ -86,11 +89,26 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
       fontSize: 14,
       color: themeColors.textSecondary,
     },
+    description: {
+      fontSize: SIZES.small,
+      color: themeColors.textSecondary,
+    },
     lastMessageTime: {
       fontSize: SIZES.small,
       color: themeColors.textSecondary,
       alignSelf: "flex-start",
       paddingRight: rS(10),
+    },
+    joinButton: {
+      backgroundColor: themeColors.buttonBackground,
+      paddingVertical: 5,
+      paddingHorizontal: 10,
+      borderRadius: 5,
+      marginLeft: 'auto', // This will push the button to the right
+    },
+    joinButtonText: {
+      color: themeColors.background,
+      fontSize: SIZES.medium,
     },
   });
 
@@ -104,7 +122,14 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
         <Image source={{ uri: item.image_url }} style={styles.communityImage} />
         <View style={styles.communityTextContainer}>
           <Text style={styles.communityName}>{item.name}</Text>
-          {showLastMessage &&
+          {isGlobal ? (
+            <Text style={styles.description}>
+              {item.description.length > MAX_DESCRIPTION_LENGTH
+                ? `${item.description.substring(0, MAX_DESCRIPTION_LENGTH)}...`
+                : item.description}
+            </Text>
+          ) : (
+            showLastMessage &&
             lastMessage &&
             lastMessage.message !== undefined && (
               <Text style={styles.lastMessage}>
@@ -113,12 +138,22 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
                   ? `${lastMessage.message.substring(0, MAX_MESSAGE_LENGTH)}...`
                   : lastMessage.message}
               </Text>
-            )}
+            )
+          )}
         </View>
-        {showLastMessage && lastMessage && (
-          <Text style={styles.lastMessageTime}>
-            {getLastMessageTimeDisplay(lastMessage.sent_at)}
-          </Text>
+        {isGlobal ? (
+          <TouchableOpacity 
+            style={styles.joinButton}
+            onPress={onPress}
+          >
+            <Text style={styles.joinButtonText}>Join</Text>
+          </TouchableOpacity>
+        ) : (
+          showLastMessage && lastMessage && (
+            <Text style={styles.lastMessageTime}>
+              {getLastMessageTimeDisplay(lastMessage.sent_at)}
+            </Text>
+          )
         )}
       </View>
     </TouchableHighlight>

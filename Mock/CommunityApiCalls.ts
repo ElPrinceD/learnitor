@@ -16,12 +16,29 @@ export const getCommunities = async (token: string) => {
     try {
         const response = await apiClient.get(`${COMMUNITY_API_BASE_URL}/`, {
             headers: {
+                "ngrok-skip-browser-warning": "69420",
                 Authorization: `Token ${token}`,
             },
         });
         return response.data;
     } catch (error) {
         console.error('Error fetching communities:', error);
+        throw error;
+    }
+};
+
+
+export const searchCommunities = async (searchQuery: string, token: string) => {
+    try {
+        const response = await apiClient.get(`${COMMUNITY_API_BASE_URL}/?search=${encodeURIComponent(searchQuery)}`, {
+            headers: {
+                "ngrok-skip-browser-warning": "69420",
+                Authorization: `Token ${token}`,
+            },
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error searching communities:', error);
         throw error;
     }
 };

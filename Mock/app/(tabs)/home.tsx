@@ -34,29 +34,7 @@ const Home: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchRecommendedCoursesWithDetails = async (token: string) => {
-    const courses = await getRecommendedCourses(token);
-    const coursesWithDetails = await Promise.all(
-      courses.map(async (course) => {
-        const topics = await getCourseTopics(course.id, token);
-        const questionsCount = (
-          await Promise.all(
-            topics.map(async (topic) => {
-              const questions = await getPracticeQuestions(topic.id, token);
-              return questions.length;
-            })
-          )
-        ).reduce((acc, count) => acc + count, 0);
-
-        return {
-          ...course,
-          topicsCount: topics.length,
-          questionsCount,
-        };
-      })
-    );
-    return coursesWithDetails;
-  };
+ 
 
   const {
     status: recommendedStatus,
@@ -64,7 +42,7 @@ const Home: React.FC = () => {
     error: recommendedError,
   } = useQuery({
     queryKey: ["coursesWithDetails", userToken?.token],
-    queryFn: () => fetchRecommendedCoursesWithDetails(userToken?.token!),
+    
     enabled: !!userToken?.token,
   });
 
@@ -327,10 +305,7 @@ const Home: React.FC = () => {
                   />
                 </TouchableOpacity>
               </View>
-              <RecommendedCoursesList
-                RecommendedCoursesData={coursesData}
-                loading={recommendedStatus === "pending"}
-              />
+             
             </>
           )}
         </View>
