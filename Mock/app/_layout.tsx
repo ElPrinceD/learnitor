@@ -76,7 +76,10 @@ const RootLayoutNav = () => {
                     options={{ headerShown: false, headerShadowVisible: false }}
                   />
 
-                  <Stack.Screen name="(game)" options={{ headerShown: false }} />
+                  <Stack.Screen
+                    name="(game)"
+                    options={{ headerShown: false }}
+                  />
                 </Stack>
               </ThemeProvider>
             </WebSocketProvider>
