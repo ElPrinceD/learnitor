@@ -33,7 +33,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     if (!token) return;
 
     // WebSocket connection
-    const ws = new WebSocket(`${ApiUrl}/ws/chat/?token=${token}`);
+    const ws = new WebSocket(`https://7139-92-40-186-240.ngrok-free.app/ws/chat/?token=${token}`);
 
     ws.onopen = () => {
       console.log("WebSocket connected");

@@ -90,7 +90,7 @@ const CommunityChatScreen: React.FC = () => {
             text: message.message,
             sent_at: new Date(message.sent_at),
             user: {
-              _id: message.sender === user?.email ? 2 : 1,
+              _id: message.sender_id,
               name: message.sender,
             },
           }));
@@ -102,7 +102,7 @@ const CommunityChatScreen: React.FC = () => {
             text: data.message,
             sent_at: new Date(data.sent_at),
             user: {
-              _id: data.sender === user?.email ? 2 : 1,
+              _id: data.sender_id,
               name: data.sender,
             },
           };
@@ -157,14 +157,22 @@ const CommunityChatScreen: React.FC = () => {
 
   const renderBubble = (props) => {
     const { currentMessage, previousMessage } = props;
+    
+    const safeDate = (date) => {
+      return date instanceof Date ? date : new Date(date);
+    };
+  
+    const currentDate = safeDate(currentMessage.sent_at);
+    const previousDate = previousMessage ? safeDate(previousMessage.sent_at) : null;
+  
     const isFirstMessageOfBlock =
       !previousMessage || 
-      (previousMessage.sent_at && currentMessage.sent_at && 
-       previousMessage.sent_at.toDateString() !== currentMessage.sent_at.toDateString()) ||
-      previousMessage.user?._id !== currentMessage.user._id;
-
+      (previousDate && currentDate && 
+       previousDate.toDateString() !== currentDate.toDateString()) ||
+      (previousMessage.user?._id !== currentMessage.user._id);
+  
     const isOtherUser = currentMessage.user._id !== user?.id;
-
+  
     return (
       <Bubble
         {...props}

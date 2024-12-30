@@ -1,3 +1,3 @@
-const ApiUrl = "https://learnitor.onrender.com";
+const ApiUrl = "https://7139-92-40-186-240.ngrok-free.app";
 export default ApiUrl;
 
