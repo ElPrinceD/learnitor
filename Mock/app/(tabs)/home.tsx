@@ -34,18 +34,6 @@ const Home: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
- 
-
-  const {
-    status: recommendedStatus,
-    data: coursesData = [],
-    error: recommendedError,
-  } = useQuery({
-    queryKey: ["coursesWithDetails", userToken?.token],
-    
-    enabled: !!userToken?.token,
-  });
-
   const {
     status: enrolledStatus,
     data: enrolledCoursesData,
@@ -109,14 +97,12 @@ const Home: React.FC = () => {
 
   useEffect(() => {
     if (
-      recommendedStatus === "error" ||
       enrolledStatus === "error" ||
       progressStatus === "error" ||
       tasksStatus === "error"
     ) {
       setErrorMessage(
-        recommendedError?.message ||
-          enrolledError?.message ||
+        enrolledError?.message ||
           progressError?.message ||
           tasksError?.message ||
           "An error occurred"
@@ -124,7 +110,7 @@ const Home: React.FC = () => {
     } else {
       setErrorMessage(null);
     }
-  }, [recommendedStatus, enrolledStatus, progressStatus, tasksStatus]);
+  }, [enrolledStatus, progressStatus, tasksStatus]);
 
   const themeColors = Colors[colorScheme ?? "light"];
 
@@ -149,7 +135,7 @@ const Home: React.FC = () => {
     },
     sectionTitle: {
       fontSize: SIZES.large,
-      color: '#FFD600',
+      color: "#FFD600",
       backgroundColor: themeColors.text,
       fontWeight: "bold",
       alignSelf: "flex-start",
@@ -164,8 +150,8 @@ const Home: React.FC = () => {
       marginRight: rMS(1),
     },
     taskAndCoursesRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
+      // flexDirection: "row",
+      justifyContent: "space-between",
       marginTop: rMS(10),
     },
     tasksContainer: {
@@ -173,26 +159,25 @@ const Home: React.FC = () => {
       backgroundColor: themeColors.background,
       borderRadius: rMS(5),
       padding: rMS(10),
-      justifyContent: 'space-between',
+      justifyContent: "space-between",
     },
     taskCountContainer: {
       flex: 2, // Takes 2/3 of the space
-      flexDirection: "row",
       backgroundColor: "#EF643B",
       padding: rMS(30),
-      
+
       borderRadius: rMS(10),
-      alignItems: 'flex-end', // Align items to the bottom
-      justifyContent: 'center',
+      alignItems: "flex-end", // Align items to the bottom
+      justifyContent: "center",
     },
     taskCountNumber: {
       fontSize: SIZES.xxxLarge,
       color: "white",
-      fontWeight: 'bold',
+      fontWeight: "bold",
     },
     taskCountText: {
       fontSize: SIZES.small,
-      fontWeight: 'bold',
+      fontWeight: "bold",
       color: "white", // Changed to white for better visibility against the background
       marginLeft: rMS(40), // Add some space between number and text if they are next to each other
     },
@@ -245,7 +230,7 @@ const Home: React.FC = () => {
       title: "",
       description: "",
       image:
-"https://images.pexels.com/photos/2740955/pexels-photo-2740955.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
+        "https://images.pexels.com/photos/2740955/pexels-photo-2740955.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
     },
   ];
 
@@ -274,10 +259,7 @@ const Home: React.FC = () => {
               />
               <View style={styles.tasksContainer}>
                 <View style={styles.taskCountContainer}>
-                 
-                  <Text style={styles.taskCountText}>
-                    Tasks Today
-                  </Text>
+                  <Text style={styles.taskCountText}>Tasks Today</Text>
                   <Text style={styles.taskCountNumber}>
                     {tasksData.tasks.length}
                   </Text>
@@ -305,7 +287,6 @@ const Home: React.FC = () => {
                   />
                 </TouchableOpacity>
               </View>
-             
             </>
           )}
         </View>

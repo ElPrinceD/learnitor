@@ -12,7 +12,7 @@ import { router, useGlobalSearchParams } from "expo-router";
 import axios from "axios";
 import ApiUrl from "../../config";
 
-import { useAuth } from "../../components/AuthContext"; 
+import { useAuth } from "../../components/AuthContext";
 import Colors from "../../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../../constants";
 import VerificationButton from "../../components/VerificationButton";
@@ -20,9 +20,8 @@ import AnimatedTextInput from "../../components/AnimatedTextInput";
 import { StatusBar } from "expo-status-bar";
 import { Typewriter } from "../../components/TypewriterText";
 
-
 const LogIn = () => {
-  const { login } = useAuth(); 
+  const { login } = useAuth();
   const params = useGlobalSearchParams();
   const registeredEmail = typeof params.email === "string" ? params.email : "";
   const [email, setEmail] = useState(registeredEmail);
@@ -32,7 +31,7 @@ const LogIn = () => {
   const colorScheme = useColorScheme();
   const [showPassword, setShowPassword] = useState(false);
   const themeColors = Colors[colorScheme ?? "light"];
-  const [showSecondText, setShowSecondText] = useState(false); 
+  const [showSecondText, setShowSecondText] = useState(false);
 
   const handleLogin = () => {
     if (!email || !password) {
@@ -48,7 +47,7 @@ const LogIn = () => {
       })
       .then((response) => {
         setLoading(false);
-        login(response.data, response.data.token); 
+        login(response.data, response.data.token);
         router.replace({ pathname: "/home" });
       })
       .catch(() => {
@@ -95,7 +94,7 @@ const LogIn = () => {
       fontWeight: "bold",
     },
     bottomContainer: {
-      bottom: rV(10),
+      bottom: rV(15),
       justifyContent: "flex-end",
       flexDirection: "row",
       alignItems: "center",
@@ -107,7 +106,7 @@ const LogIn = () => {
     },
     loginText: {
       fontSize: SIZES.medium,
-      fontWeight: "bold",      
+      fontWeight: "bold",
       color: themeColors.buttonBackground,
       marginLeft: rMS(8),
     },
@@ -130,7 +129,6 @@ const LogIn = () => {
             style={[styles.headerText, { marginBottom: rMS(150) }]}
             onComplete={() => setShowSecondText(true)}
           />
-          
 
           <AnimatedTextInput
             label="Email"

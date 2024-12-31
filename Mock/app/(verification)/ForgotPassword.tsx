@@ -13,7 +13,7 @@ import { router } from "expo-router";
 import axios from "axios";
 import ApiUrl from "../../config";
 import Colors from "../../constants/Colors";
-import { SIZES, rMS, rS } from "../../constants";
+import { SIZES, rMS, rS, rV } from "../../constants";
 import VerificationButton from "../../components/VerificationButton";
 import Animated, {
   ReduceMotion,
@@ -36,8 +36,7 @@ const ForgotPassword = () => {
   const themeColors = Colors[colorScheme ?? "light"];
 
   const handleSendCode = () => {
-
-    const lowerCaseEmail = email.toLowerCase()
+    const lowerCaseEmail = email.toLowerCase();
     setLoading(true);
 
     axios
@@ -154,8 +153,7 @@ const ForgotPassword = () => {
     },
     support: {
       fontSize: SIZES.medium,
-      position: "absolute",
-      bottom: rMS(10),
+      bottom: rV(10),
       textAlign: "center",
       color: themeColors.text,
     },
