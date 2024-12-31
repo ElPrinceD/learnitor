@@ -12,7 +12,6 @@ import {
   Alert,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
-import { router } from "expo-router";
 import {
   getCommunityDetails,
   leaveCommunity,
@@ -22,6 +21,8 @@ import Colors from "../../../constants/Colors";
 import { Community } from "../../../components/types";
 import { FontAwesome6 } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router } from "expo-router";
+import { useWebSocket } from "../../../webSocketProvider";
 
 // Define the type for route params
 type RouteParams = {
@@ -33,6 +34,7 @@ const CommunityDetailScreen: React.FC = () => {
   const { id } = route.params as RouteParams;
   const navigation = useNavigation();
   const { userToken } = useAuth();
+  const { unsubscribeFromCommunity } = useWebSocket() || { unsubscribeFromCommunity: () => {} };
   const [community, setCommunity] = useState<Community | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,11 +52,11 @@ const CommunityDetailScreen: React.FC = () => {
         if (cachedCommunity) {
           setCommunity(JSON.parse(cachedCommunity));
           setLoading(false);
-          return; // Don't fetch from API if cached data is available
+          return;
         }
 
-        if (userToken) {
-          const data = await getCommunityDetails(id, userToken.token);
+        if (userToken?.token) {
+          const data = await getCommunityDetails(id, userToken?.token);
           setCommunity(data);
           // Cache the community data
           await AsyncStorage.setItem(`community_${id}`, JSON.stringify(data));
@@ -70,13 +72,12 @@ const CommunityDetailScreen: React.FC = () => {
     };
 
     if (id) fetchCommunity(); // Ensure id is defined before fetching
-  }, [id, userToken]);
+  }, [id, userToken?.token]);
 
   const shareCommunity = async () => {
-    console.log(community?.shareable_link);
     try {
       const result = await Share.share({
-        message: `Check out this community: ${community?.name}\nJoin here: ${community?.shareable_link}`, // Replace with actual community link
+        message: `Check out this community: ${community?.name}\nJoin here: ${community?.shareable_link}`,
       });
       if (result.action === Share.sharedAction) {
         if (result.activityType) {
@@ -113,11 +114,23 @@ const CommunityDetailScreen: React.FC = () => {
   const leaveCommunityHandler = async () => {
     try {
       if (userToken?.token) {
-        await leaveCommunity(id, userToken.token);
+        await leaveCommunity(id, userToken?.token);
         Alert.alert("Success", "You have left the community.");
-        router.dismiss(2);
-        // Clear cached data since the user is no longer a member
+        
+        // Unsubscribe from WebSocket community group
+        if (unsubscribeFromCommunity) {
+          unsubscribeFromCommunity(id);
+        }
+
+        // Navigate back to community list or home screen
+        router.navigate("/"); // Adjust this path as per your app's navigation structure
+
+        // Clear cached data for this community
         await AsyncStorage.removeItem(`community_${id}`);
+
+        // Also remove this community from the cached list of user's communities
+        await removeCommunityFromCache(id);
+
       } else {
         Alert.alert("Error", "User not authenticated.");
       }
@@ -126,6 +139,21 @@ const CommunityDetailScreen: React.FC = () => {
       Alert.alert("Error", "Failed to leave the community.");
     }
   };
+
+  // Helper function to remove a community from the cached list of user's communities
+  const removeCommunityFromCache = async (communityId: string) => {
+    try {
+      const cachedCommunities = await AsyncStorage.getItem('communities');
+      if (cachedCommunities) {
+        const communities = JSON.parse(cachedCommunities);
+        const updatedCommunities = communities.filter((c: Community) => c.id !== communityId);
+        await AsyncStorage.setItem('communities', JSON.stringify(updatedCommunities));
+      }
+    } catch (error) {
+      console.error("Error removing community from cache:", error);
+    }
+  };
+
 
   if (loading) {
     return (

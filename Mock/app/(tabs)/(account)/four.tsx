@@ -18,6 +18,7 @@ import * as ImagePicker from "expo-image-picker";
 import ApiUrl from "../../../config";
 import Colors from "../../../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../../../constants";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const Profile = () => {
   const { logout, userToken, userInfo, setUserInfo } = useAuth();
@@ -27,23 +28,41 @@ const Profile = () => {
   const handleAccountSettings = () => {
     router.navigate("AccountSettings");
   };
+  const clearUserDataCache = async () => {
+    try {
+      await AsyncStorage.multiRemove([
+        "communities",
+        "courses",
+        "courseCategories",
+      ]);
+      // You might also need to clear individual community messages if stored per community:
+      const keys = await AsyncStorage.getAllKeys();
+      const communityMessageKeys = keys.filter((key) =>
+        key.startsWith("messages_")
+      );
+      await AsyncStorage.multiRemove(communityMessageKeys);
+    } catch (e) {
+      console.error("Error clearing user data cache:", e);
+    }
+  };
 
   const handleLogout = async () => {
-    // try {
-    //   await axios.post(
-    //     `${ApiUrl}/api/logout/`,
-    //     {},
-    //     {
-    //       headers: {
-    //         Authorization: `Token ${userToken?.token}`,
-    //       },
-    //     }
-    //   );
-    //   logout();
-    router.replace("Intro");
-    // } catch (error) {
-    //   console.error("Error logging out:", error);
-    // }
+    try {
+      await axios.post(
+        `${ApiUrl}/api/logout/`,
+        {},
+        {
+          headers: {
+            Authorization: `Token ${userToken?.token}`,
+          },
+        }
+      );
+      await clearUserDataCache();
+      logout();
+      router.replace("Intro");
+    } catch (error) {
+      console.error("Error logging out:", error);
+    }
   };
 
   const handleTerms = () => {

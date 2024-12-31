@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useMemo,
-  useRef,
-  useEffect,
-  useCallback,
-} from "react";
+import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -15,8 +9,6 @@ import {
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
-import { useQuery } from "@tanstack/react-query";
-import { getTodayPlans, getCategoryNames } from "../../../TimelineApiCalls";
 import { useAuth } from "../../../components/AuthContext";
 import PlanItem from "../../../components/PlanItem";
 import DaySelector from "../../../components/DaySelector";
@@ -25,13 +17,21 @@ import { SIZES, rMS, rS, rV, useShadows } from "../../../constants";
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { FontAwesome6 } from "@expo/vector-icons";
 import ErrorMessage from "../../../components/ErrorMessage";
+import { useWebSocket } from "../../../webSocketProvider";
 
 const Timeline = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const { userToken } = useAuth();
+  const { 
+    fetchAndCacheTodayPlans, 
+    fetchAndCacheCategoryNames, 
+    getCachedTodayPlans, 
+    getCachedCategoryNames 
+  } = useWebSocket();
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -55,54 +55,52 @@ const Timeline = () => {
     }
   };
 
-  const {
-    data: todayPlans,
-    status: plansStatus,
-    error: plansError,
-    refetch: refetchTodayPlans,
-  } = useQuery({
-    queryKey: ["todayPlans", userToken?.token],
-    queryFn: () =>
-      getTodayPlans(userToken?.token, selectedDate, selectedCategory),
-    enabled: !!userToken,
-  });
-
-  const {
-    data: categoryNames,
-    status: categoriesStatus,
-    error: categoriesError,
-    refetch: refetchCategoryNames,
-  } = useQuery({
-    queryKey: ["categoryNames", userToken],
-    queryFn: () => getCategoryNames(userToken?.token),
-    enabled: !!userToken,
-  });
+  const [todayPlans, setTodayPlans] = useState<any[]>([]);
+  const [categoryNames, setCategoryNames] = useState<any>({});
 
   useEffect(() => {
-    if (userToken && selectedDate) {
-      refetchTodayPlans();
-      refetchCategoryNames();
-    }
-  }, [userToken, selectedDate]);
+    const fetchData = async () => {
+      if (userToken) {
+        setIsLoading(true);
+        try {
+          const newPlans = await fetchAndCacheTodayPlans(userToken.token, selectedDate, selectedCategory);
+          const newCategoryNames = await fetchAndCacheCategoryNames(userToken.token);
+
+          setTodayPlans(newPlans);
+          setCategoryNames(newCategoryNames);
+          setErrorMessage(null);
+        } catch (error) {
+          setErrorMessage("Failed to fetch data");
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+    fetchData();
+  }, [userToken, selectedDate, selectedCategory]);
 
   useFocusEffect(
     useCallback(() => {
-      if (userToken) {
-        refetchTodayPlans();
-        refetchCategoryNames();
-      }
-    }, [userToken])
-  );
+      const fetchDataOnFocus = async () => {
+        if (userToken) {
+          setIsLoading(true);
+          try {
+            const newPlans = await getCachedTodayPlans(selectedDate, selectedCategory);
+            const newCategoryNames = await getCachedCategoryNames();
 
-  useEffect(() => {
-    if (plansStatus === "error" || categoriesStatus === "error") {
-      setErrorMessage(
-        plansError?.message || categoriesError?.message || "An error occurred"
-      );
-    } else {
-      setErrorMessage(null);
-    }
-  }, [plansStatus, categoriesStatus]);
+            setTodayPlans(newPlans);
+            setCategoryNames(newCategoryNames);
+            setErrorMessage(null);
+          } catch (error) {
+            setErrorMessage("Failed to fetch cached data");
+          } finally {
+            setIsLoading(false);
+          }
+        }
+      };
+      fetchDataOnFocus();
+    }, [userToken, selectedDate, selectedCategory])
+  );
 
   const handleEditPlan = (plan) => {
     router.navigate("EditPlan");
@@ -121,12 +119,7 @@ const Timeline = () => {
     router.navigate("createNewTime");
   };
 
-  const memoizedPlans = useMemo(() => {
-    if (plansStatus === "success") {
-      return todayPlans || [];
-    }
-    return [];
-  }, [todayPlans, plansStatus]);
+  const memoizedPlans = useMemo(() => todayPlans || [], [todayPlans]);
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: themeColors.background },
@@ -196,7 +189,7 @@ const Timeline = () => {
           contentContainerStyle={styles.scrollViewContent}
         >
           <View style={styles.plansContainer}>
-            {plansStatus === "pending" ? (
+            {isLoading ? (
               <View style={{ flex: 1, justifyContent: "center" }}>
                 <ActivityIndicator size="large" color="#0D47A1" />
               </View>
@@ -204,20 +197,16 @@ const Timeline = () => {
               <Text style={styles.noPlansText}>Hey, you have a free day!</Text>
             ) : (
               memoizedPlans.map(
-                (plan, index) =>
-                  plan && (
-                    <View key={index} style={styles.planItemWrapper}>
-                      
-                      {categoryNames && (
-                        <PlanItem
-                          plan={plan}
-                          categoryNames={categoryNames}
-                          getCategoryColor={getCategoryColor}
-                          handleEditPlan={handleEditPlan}
-                        />
-                      )}
-                    </View>
-                  )
+                (plan, index) => (
+                  <View key={index} style={styles.planItemWrapper}>
+                    <PlanItem
+                      plan={plan}
+                      categoryNames={categoryNames}
+                      getCategoryColor={getCategoryColor}
+                      handleEditPlan={handleEditPlan}
+                    />
+                  </View>
+                )
               )
             )}
           </View>

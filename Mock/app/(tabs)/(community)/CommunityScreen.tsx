@@ -29,9 +29,11 @@ const CommunityScreen: React.FC = () => {
   const themeColors = Colors[colorScheme ?? "light"];
   const colorMode = colorScheme === "dark" ? "dark" : "light";
 
-  const { isConnected, subscribeToUserCommunities, fetchAndCacheCommunities } = useWebSocket() || {
+  const { isConnected, joinAndSubscribeToCommunity, unsubscribeFromCommunity, subscribeToExistingUserCommunities, fetchAndCacheCommunities } = useWebSocket() || {
     isConnected: false,
-    subscribeToUserCommunities: () => {},
+    joinAndSubscribeToCommunity: () => {},
+    unsubscribeFromCommunity: () => {},
+    subscribeToExistingUserCommunities: () => {},
     fetchAndCacheCommunities: () => {},
   };
 
@@ -81,13 +83,13 @@ const CommunityScreen: React.FC = () => {
   useFocusEffect(
     React.useCallback(() => {
       if (isConnected) {
-        subscribeToUserCommunities();
+        subscribeToExistingUserCommunities();
         fetchAndCacheCommunities();
       }
       return () => {
         // Unsubscribe logic can still be here if needed
       };
-    }, [isConnected, subscribeToUserCommunities, fetchAndCacheCommunities])
+    }, [isConnected, subscribeToExistingUserCommunities, fetchAndCacheCommunities])
   );
 
   const handleNavigateCreateCommunity = () => {
@@ -135,12 +137,26 @@ const CommunityScreen: React.FC = () => {
     setSearchQuery(query);
   }, []);
 
-  const handleCommunityPress = useCallback((community: Community) => {
+  const handleCommunityPress = useCallback(async (community: Community) => {
+    const isUserCommunity = myCommunities.some(c => c.id === community.id);
+    
+    if (!isUserCommunity) {
+      // Join the community if it's not in myCommunities
+      if (isConnected) {
+        await joinAndSubscribeToCommunity(community.id); // Use new function for joining and subscribing
+        setMyCommunities(prev => [...prev, community]); // Add community to my communities immediately for UI feedback
+        fetchAndCacheCommunities(); // Update cache after join
+      } else {
+        console.error('WebSocket not connected, cannot join community');
+      }
+    }
+  
+    // Navigate to chat screen regardless of whether it was joined or not
     router.navigate({
       pathname: "ChatScreen",
       params: { communityId: community.id, name: community.name },
     });
-  }, []);
+  }, [myCommunities, isConnected, joinAndSubscribeToCommunity, fetchAndCacheCommunities]);
 
   const styles = StyleSheet.create({
     container: {
@@ -232,8 +248,6 @@ const CommunityScreen: React.FC = () => {
                   title="Global Communities"
                   data={filteredCommunities.global}
                   onCommunityPress={handleCommunityPress}
-                  
-               
                 />
               )}
             </React.Fragment>
