@@ -134,9 +134,8 @@ const Home: React.FC = () => {
       marginTop: rMS(15),
     },
     sectionTitle: {
-      fontSize: SIZES.large,
-      color: "#FFD600",
-      backgroundColor: themeColors.text,
+      fontSize: SIZES.xLarge,
+      color: themeColors.text,
       fontWeight: "bold",
       alignSelf: "flex-start",
     },
@@ -155,17 +154,15 @@ const Home: React.FC = () => {
       marginTop: rMS(10),
     },
     tasksContainer: {
-      width: "50%",
       backgroundColor: themeColors.background,
       borderRadius: rMS(5),
-      padding: rMS(10),
-      justifyContent: "space-between",
+      flexDirection: "row",
     },
     taskCountContainer: {
       flex: 2, // Takes 2/3 of the space
       backgroundColor: "#EF643B",
       padding: rMS(30),
-
+      margin: rMS(10),
       borderRadius: rMS(10),
       alignItems: "flex-end", // Align items to the bottom
       justifyContent: "center",
@@ -182,7 +179,8 @@ const Home: React.FC = () => {
       marginLeft: rMS(40), // Add some space between number and text if they are next to each other
     },
     taskListContainer: {
-      flex: 1, // Takes 1/3 of the space
+      flex: 2,
+      margin: rMS(10),
     },
   });
 

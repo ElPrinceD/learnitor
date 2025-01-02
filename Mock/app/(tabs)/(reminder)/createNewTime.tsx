@@ -8,8 +8,6 @@ import {
   ScrollView,
   ActivityIndicator,
   Platform,
-  ActionSheetIOS,
-  FlatList,
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { router } from "expo-router";
@@ -18,106 +16,54 @@ import Colors from "../../../constants/Colors";
 import { rMS, rS, rV } from "../../../constants/responsive";
 import { SIZES } from "../../../constants/theme.js";
 import AnimatedRoundTextInput from "../../../components/AnimatedRoundTextInput.tsx";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
-import { createTask, getCategories} from "../../../TimelineApiCalls.ts";
+import { createTask, getCategories } from "../../../TimelineApiCalls.ts";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import ErrorMessage from "../../../components/ErrorMessage.tsx";
 import GameButton from "../../../components/GameButton.tsx";
+import CustomPicker from "../../../components/CustomPicker"; // Custom picker component
+import DateSelector from "../../../components/DateSelector.tsx";
+import DatePicker from "react-native-modern-datepicker";
+import CustomDateTimeSelector from "../../../components/CustomDateTimeSelector.tsx";
 
-// Import for Android
-let ActionSheet;
-if (Platform.OS === 'android') {
-  ActionSheet = require('react-native-actionsheet').default;
+interface Category {
+  value: number;
+  label: string;
+}
+
+interface CreateTaskData {
+  title: string;
+  description: string;
+  due_date: string;
+  due_time_start: string;
+  due_time_end: string;
+  category?: number | null;
+  learner?: number;
+  is_recurring?: boolean;
+  recurrence_interval?: string | null;
+  recurrence_end_date?: string | null;
 }
 
 const CreateNewTime = () => {
-  const [activeTab, setActiveTab] = useState('Task');
-  const params = useLocalSearchParams();
-  const category_name = Array.isArray(params.name)
-    ? params.name[0]
-    : params.name || "Unknown Category";
-  const category_id = Array.isArray(params.category_id)
-    ? params.category_id[0]
-    : params.category_id || "Unknown ID";
+  const [activeTab, setActiveTab] = useState("Task");
   const { userToken, userInfo } = useAuth();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(new Date()); // For due_time_end
-  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
-  const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
-  const [isEndTimePickerVisible, setEndTimePickerVisibility] = useState(false); // For end time picker
+  const [endDate, setEndDate] = useState(new Date());
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
+    null
+  );
   const [recurrenceOption, setRecurrenceOption] = useState("Does not repeat");
   const [recurrenceEndDate, setRecurrenceEndDate] = useState(new Date());
-  const [
-    isRecurrenceEndDatePickerVisible,
-    setRecurrenceEndDatePickerVisibility,
-  ] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null); // State to manage error message
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
-  const colorMode = colorScheme === "dark" ? "DARK" : "LIGHT";
-
-  const showDatePicker = () => setDatePickerVisibility(true);
-  const hideDatePicker = () => setDatePickerVisibility(false);
-  const showTimePicker = () => setTimePickerVisibility(true);
-  const hideTimePicker = () => setTimePickerVisibility(false);
-  const showEndTimePicker = () => setEndTimePickerVisibility(true);
-  const hideEndTimePicker = () => setEndTimePickerVisibility(false);
-
-  const handleConfirmDate = (selectedDate) => {
-    hideDatePicker();
-    if (selectedDate) setDate(selectedDate);
-  };
-
-  const handleConfirmTime = (selectedTime) => {
-    hideTimePicker();
-    if (selectedTime) {
-      const newDate = new Date(date);
-      newDate.setHours(selectedTime.getHours());
-      newDate.setMinutes(selectedTime.getMinutes());
-      setDate(newDate);
-    }
-  };
-
-  const handleConfirmEndTime = (selectedTime) => {
-    hideEndTimePicker();
-    if (selectedTime) {
-      const newEndDate = new Date(endDate);
-      newEndDate.setHours(selectedTime.getHours());
-      newEndDate.setMinutes(selectedTime.getMinutes());
-      setEndDate(newEndDate);
-    }
-  };
-
-  const showRecurrenceEndDatePicker = () => setRecurrenceEndDatePickerVisibility(true);
-  const hideRecurrenceEndDatePicker = () => setRecurrenceEndDatePickerVisibility(false);
-  const handleConfirmRecurrenceEndDate = (selectedDate) => {
-    hideRecurrenceEndDatePicker();
-    if (selectedDate) setRecurrenceEndDate(selectedDate);
-  };
-
-  const {
-    status: categoriesStatus,
-    data: categoriesData,
-    error: categoriesError,
-  } = useQuery({
+  const { status: categoriesStatus, data: categoriesData } = useQuery({
     queryKey: ["taskCategories", userToken?.token],
     queryFn: () => getCategories(userToken?.token),
     enabled: !!userToken?.token,
-  });
-
-  const {
-    status: tasksStatus,
-    data: tasksData,
-    error: tasksError,
-  } = useQuery({
-    queryKey: ["tasks", userToken?.token],
-    
-    enabled: !!userToken?.token && activeTab === 'TimeTable',
   });
 
   const createTaskMutation = useMutation<any, any, any>({
@@ -126,53 +72,77 @@ const CreateNewTime = () => {
     },
     onSuccess: (taskData) => {
       router.navigate("three");
-      router.setParams({ newPlan: taskData });
-      setErrorMessage(null); // Clear error message on successful unenrollment
+      setErrorMessage(null);
     },
     onError: (error) => {
       setErrorMessage(error.message || "Error creating schedule");
     },
   });
 
-  
-
-  const formatDateString = (date) => {
-    const options = {
-      weekday: "short", day: "numeric", month: "short", year: "numeric",
+  const formatDateString = (date: Date) => {
+    const options: Intl.DateTimeFormatOptions = {
+      weekday: "short", // Must match allowed literal values
+      day: "numeric",
+      month: "short",
+      year: "numeric",
     };
     return date.toLocaleDateString(undefined, options);
   };
 
-  const showCategoryPicker = () => {
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ['Cancel', ...(categoriesData?.map(cat => cat.label) || [])],
-          cancelButtonIndex: 0,
-        },
-        buttonIndex => {
-          if (buttonIndex !== 0 && categoriesData) {
-            setSelectedCategory(categoriesData[buttonIndex - 1]);
-          }
-        }
-      );
-    } else {
-      ActionSheet.showActionSheetWithOptions({
-        options: ['Cancel', ...(categoriesData?.map(cat => cat.label) || [])],
-        cancelButtonIndex: 0,
-      }, buttonIndex => {
-        if (buttonIndex !== 0 && categoriesData) {
-          setSelectedCategory(categoriesData[buttonIndex - 1]);
-        }
-      });
+  const handleConfirmTime = (selectedTime) => {
+    if (selectedTime) {
+      const [hours, minutes] = selectedTime.split(":").map(Number); // Split string and convert to numbers
+      const newDate = new Date(date);
+      newDate.setHours(hours);
+      newDate.setMinutes(minutes);
+      setDate(newDate);
     }
   };
 
-  const renderTaskItem = ({ item }) => (
-    <View style={styles.taskItem}>
-      <Text style={styles.taskTitle}>{item.title}</Text>
-      <Text style={styles.taskDetails}>{item.due_date}</Text>
-    </View>
+  const handleConfirmEndTime = (selectedTime) => {
+    if (selectedTime) {
+      const [hours, minutes] = selectedTime.split(":").map(Number); // Split string and convert to numbers
+      const newEndDate = new Date(endDate);
+      newEndDate.setHours(hours);
+      newEndDate.setMinutes(minutes);
+      setEndDate(newEndDate);
+    }
+  };
+
+  const handleSaveTime = () => {
+    const data: CreateTaskData = {
+      title,
+      description,
+      due_date: date.toISOString().split("T")[0],
+      due_time_start: date.toTimeString().split(" ")[0].slice(0, 5),
+      due_time_end: endDate.toTimeString().split(" ")[0].slice(0, 5),
+      category: selectedCategory?.value,
+      learner: userInfo?.user.id,
+      is_recurring: recurrenceOption !== "Does not repeat",
+      recurrence_interval:
+        recurrenceOption !== "Does not repeat"
+          ? recurrenceOption.toLowerCase()
+          : null,
+      recurrence_end_date:
+        recurrenceOption !== "Does not repeat"
+          ? recurrenceEndDate.toISOString().split("T")[0]
+          : null,
+    };
+    console.log(selectedCategory);
+    createTaskMutation.mutate({
+      taskData: data,
+      token: userToken?.token!,
+    });
+  };
+
+  const recurrenceOptions = [
+    { label: "Does not repeat", value: "Does not repeat" },
+    { label: "Daily", value: "Daily" },
+    { label: "Weekly", value: "Weekly" },
+  ];
+
+  const simplifiedRecurrenceOptions = recurrenceOptions.map(
+    (option) => option.value
   );
 
   const styles = StyleSheet.create({
@@ -180,30 +150,28 @@ const CreateNewTime = () => {
       flex: 1,
       backgroundColor: themeColors.background,
       paddingHorizontal: rMS(20),
-      paddingBottom: rV(20),
+      paddingBottom: rV(50),
     },
     tabContainer: {
-      flexDirection: 'row',
+      flexDirection: "row",
       fontSize: SIZES.small,
       fontWeight: "bold",
       backgroundColor: themeColors.reverseText,
       borderRadius: rMS(10),
-      justifyContent: 'center',
-      
+      justifyContent: "center",
+
       paddingVertical: rV(1),
     },
     tab: {
       paddingHorizontal: rS(20),
       paddingVertical: rV(5),
       width: "50%",
-      
     },
     activeTab: {
-     
       backgroundColor: themeColors.normalGrey,
       borderRadius: rMS(10),
       color: themeColors.background,
-      width: "50%"
+      width: "50%",
     },
     tabText: {
       fontSize: SIZES.medium,
@@ -227,7 +195,7 @@ const CreateNewTime = () => {
     },
     input: {
       flex: 1,
-      height: rV(15),
+      height: rV(45),
       color: themeColors.textSecondary,
       overflow: "hidden",
       borderColor: "transparent",
@@ -251,7 +219,7 @@ const CreateNewTime = () => {
     },
     title: {
       fontSize: SIZES.large,
-      
+
       paddingRight: rS(10),
       color: themeColors.textSecondary,
     },
@@ -306,7 +274,7 @@ const CreateNewTime = () => {
       paddingTop: rV(7),
       paddingLeft: rS(10),
       backgroundColor: themeColors.reverseText,
-      borderRadius: rMS(10)
+      borderRadius: rMS(10),
     },
     button: {
       width: rS(150),
@@ -344,7 +312,7 @@ const CreateNewTime = () => {
     taskItem: {
       padding: rS(15),
       borderBottomWidth: 1,
-      borderBottomColor: '#e0e0e0',
+      borderBottomColor: "#e0e0e0",
     },
     taskTitle: {
       fontSize: SIZES.large,
@@ -356,171 +324,93 @@ const CreateNewTime = () => {
     },
     timetableList: {
       padding: rS(15),
-    }
+    },
   });
-
- 
-  const handleSaveTime = () => {
-    // Modify this function to handle both Task and TimeTable tab
-    const data = {
-      title,
-      description,
-      due_date: date.toISOString().split("T")[0],
-      due_time_start: date.toTimeString().split(" ")[0].slice(0, 5), // Only hours and minutes
-      due_time_end: endDate.toTimeString().split(" ")[0].slice(0, 5), // Only hours and minutes
-    };
-
-    if (activeTab === 'Task') {
-      data.category = selectedCategory || null;
-      data.learner = userInfo?.user.id;
-      data.is_recurring = recurrenceOption !== "Does not repeat";
-      data.recurrence_interval = recurrenceOption !== "Does not repeat" ? recurrenceOption.toLowerCase() : null;
-      data.recurrence_end_date = recurrenceOption !== "Does not repeat" ? recurrenceEndDate.toISOString().split("T")[0] : null;
-    }
-
-    createTaskMutation.mutate({
-      taskData: data,
-      token: userToken?.token,
-    });
-  };
-
-
 
   return (
     <View style={styles.container}>
       <View style={styles.tabContainer}>
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'Task' ? styles.activeTab : null]} 
-          onPress={() => setActiveTab('Task')}
+        <TouchableOpacity
+          style={[styles.tab, activeTab === "Task" ? styles.activeTab : null]}
+          onPress={() => setActiveTab("Task")}
         >
           <Text style={styles.tabText}>Task</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'TimeTable' ? styles.activeTab : null]} 
-          onPress={() => setActiveTab('TimeTable')}
+        <TouchableOpacity
+          style={[
+            styles.tab,
+            activeTab === "TimeTable" ? styles.activeTab : null,
+          ]}
+          onPress={() => setActiveTab("TimeTable")}
         >
           <Text style={styles.tabText}>TimeTable</Text>
         </TouchableOpacity>
       </View>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {activeTab === 'Task' || activeTab === 'TimeTable' ? (
+        {activeTab === "Task" && (
           <>
-            <View>
-              <View style={styles.inputContainer}>
-                <AnimatedRoundTextInput
-                  placeholderTextColor={themeColors.textSecondary}
-                  style={styles.input}
-                  label="Title"
-                  value={title}
-                  onChangeText={setTitle}
-                />
-                <AnimatedRoundTextInput
-                  placeholderTextColor={themeColors.textSecondary}
-                  style={styles.input}
-                  label="Description"
-                  value={description}
-                  onChangeText={setDescription}
-                />
-              </View>
+            <View style={styles.inputContainer}>
+              <AnimatedRoundTextInput
+                placeholderTextColor={themeColors.textSecondary}
+                style={styles.input}
+                label="Title"
+                value={title}
+                onChangeText={setTitle}
+              />
+              <AnimatedRoundTextInput
+                placeholderTextColor={themeColors.textSecondary}
+                style={styles.input}
+                label="Description"
+                value={description}
+                onChangeText={setDescription}
+              />
             </View>
             <View style={styles.section}>
-              {/* Date and Time Selection */}
-              <View style={styles.dateTime}>
-                <Text style={[styles.label, styles.dateTimeLabel]}>Select Date</Text>
-                <TouchableOpacity style={styles.dateTimeText} onPress={showDatePicker}>
-                  <Text style={styles.title}>{formatDateString(date)}</Text>
-                </TouchableOpacity>
-              </View>
-              <DateTimePickerModal
-                isVisible={isDatePickerVisible}
-                mode="date"
-                onConfirm={handleConfirmDate}
-                onCancel={hideDatePicker}
-                date={date}
-                minimumDate={new Date()}
+              <DateSelector
+                onDateChange={(selectedDate: string) =>
+                  setDate(new Date(selectedDate))
+                }
+                label="Start Date"
+                minDate={true}
+              />
+              <CustomDateTimeSelector
+                mode="time"
+                label="Choose Start Time"
+                onTimeChange={(time) => {
+                  handleConfirmTime(time);
+                }}
+                buttonTitle="Pick Time"
+              />
+              <CustomDateTimeSelector
+                mode="time"
+                label="Choose End Time"
+                onTimeChange={(time) => {
+                  handleConfirmEndTime(time);
+                }}
+                buttonTitle="Pick Time"
               />
 
-              <View style={styles.dateTime}>
-                <Text style={[styles.label, styles.dateTimeLabel]}>Select Time</Text>
-                <TouchableOpacity style={styles.dateTimeText} onPress={showTimePicker}>
-                  <Text style={styles.title}>{date.toTimeString().slice(0, 5)}</Text>
-                </TouchableOpacity>
-              </View>
-              <DateTimePickerModal
-                isVisible={isTimePickerVisible}
-                mode="time"
-                onConfirm={handleConfirmTime}
-                onCancel={hideTimePicker}
-                date={date}
+              <CustomPicker
+                label="Category"
+                options={categoriesData?.map((cat) => cat.label) || []} // Array of strings
+                selectedValue={selectedCategory?.label || undefined} // Use label as string or undefined
+                onValueChange={(value) =>
+                  setSelectedCategory(
+                    categoriesData?.find((cat) => cat.label === value) || null
+                  )
+                }
               />
-
-              <View style={styles.dateTimeLast}>
-                <Text style={[styles.label, styles.dateTimeLabel]}>Select End Time</Text>
-                <TouchableOpacity style={styles.dateTimeText} onPress={showEndTimePicker}>
-                  <Text style={styles.title}>{endDate.toTimeString().slice(0, 5)}</Text>
-                </TouchableOpacity>
-              </View>
-              <DateTimePickerModal
-                isVisible={isEndTimePickerVisible}
-                mode="time"
-                onConfirm={handleConfirmEndTime}
-                onCancel={hideEndTimePicker}
-                date={endDate}
+              <CustomPicker
+                label="Recurrence"
+                options={simplifiedRecurrenceOptions} // Simplify to strings
+                selectedValue={recurrenceOption}
+                onValueChange={setRecurrenceOption}
               />
             </View>
-
-            {activeTab === 'Task' && (
-              <View style={styles.section}>
-                {/* Category and Recurrence for Task Tab */}
-                <View style={styles.dateTime}>
-                  <Text style={[styles.label, styles.dateTimeLabel]}>Category</Text>
-                  <TouchableOpacity style={styles.dateTimeText} onPress={showCategoryPicker}>
-                    <Text style={styles.title}>{selectedCategory ? selectedCategory.label : "Select a category"}</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={recurrenceOption === "Does not repeat" ? styles.dateTimeNoBorder : styles.dateTime}>
-                  <Text style={[styles.label, styles.dateTimeLabel]}>Recurrence</Text>
-                  <TouchableOpacity style={styles.dateTimeText} onPress={() => {
-                    ActionSheetIOS.showActionSheetWithOptions(
-                      {
-                        options: ['Cancel', 'Does not repeat', 'Daily', 'Weekly'],
-                        cancelButtonIndex: 0,
-                      },
-                      buttonIndex => {
-                        if (buttonIndex !== 0) {
-                          setRecurrenceOption(['Does not repeat', 'Daily', 'Weekly'][buttonIndex - 1]);
-                        }
-                      }
-                    );
-                  }}>
-                    <Text style={styles.title}>{recurrenceOption}</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {recurrenceOption !== "Does not repeat" && (
-                  <View style={styles.dateTimeLast}>
-                    <Text style={[styles.label, styles.dateTimeLabel]}>End Date</Text>
-                    <TouchableOpacity style={styles.dateTimeText} onPress={showRecurrenceEndDatePicker}>
-                      <Text style={styles.title}>{formatDateString(recurrenceEndDate)}</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-                <DateTimePickerModal
-                  isVisible={isRecurrenceEndDatePickerVisible}
-                  mode="date"
-                  onConfirm={handleConfirmRecurrenceEndDate}
-                  onCancel={hideRecurrenceEndDatePicker}
-                  date={recurrenceEndDate}
-                  minimumDate={new Date()}
-                />
-              </View>
-            )}
-
             <View style={styles.buttonContainer}>
               <GameButton
                 onPress={handleSaveTime}
-                title={"Save"}
+                title="Save"
                 style={styles.button}
                 disabled={createTaskMutation.isPending}
               >
@@ -530,17 +420,6 @@ const CreateNewTime = () => {
               </GameButton>
             </View>
           </>
-        ) : (
-          tasksStatus === 'success' ? (
-            <FlatList
-              data={tasksData || []}
-              renderItem={renderTaskItem}
-              keyExtractor={(item) => item.id.toString()}
-              contentContainerStyle={styles.timetableList}
-            />
-          ) : (
-            <Text style={styles.title}>Loading tasks...</Text>
-          )
         )}
       </ScrollView>
       {errorMessage && (
@@ -553,6 +432,5 @@ const CreateNewTime = () => {
     </View>
   );
 };
-
 
 export default CreateNewTime;
