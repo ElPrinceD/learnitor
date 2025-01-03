@@ -11,7 +11,7 @@ import {
   Modal,
   ActivityIndicator,
 } from "react-native";
-import { useRoute } from "@react-navigation/native";
+import { useFocusEffect, useRoute } from "@react-navigation/native";
 import axios from "axios";
 import Colors from "../../../constants/Colors";
 import { useAuth } from "../../../components/AuthContext";
@@ -62,9 +62,13 @@ const CommunityChatScreen: React.FC = () => {
     try {
       setLoading(true);
       const cachedMessages = await AsyncStorage.getItem(`messages_${communityId}`);
-      
+     
       if (cachedMessages && JSON.parse(cachedMessages).length > 0) {
-        setMessages(JSON.parse(cachedMessages));
+        const parsedMessages = JSON.parse(cachedMessages).map((msg: any) => ({
+          ...msg,
+          createdAt: new Date(msg.createdAt)  // Changed from sent_at to createdAt for consistency
+        }));
+        setMessages(parsedMessages);
       } else {
         await sendMessage({ type: 'fetch_history', community_id: communityId });
       }
@@ -76,61 +80,83 @@ const CommunityChatScreen: React.FC = () => {
     }
   }, [communityId, sendMessage]);
 
-  useEffect(() => {
-    fetchMessageHistory();
-  }, [fetchMessageHistory, communityId]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchMessageHistory();
+      return () => {
+        // Optional cleanup if needed
+      };
+    }, [fetchMessageHistory])
+  );
 
   useEffect(() => {
+    let socketCleanup = () => {};
+  
     if (socket) {
-      socket.onmessage = (event) => {
+      console.log("Socket exists", socket);
+      const onMessage = (event) => {
+        console.log("WebSocket message event:", event);
+        console.log("WebSocket data:", event.data);
         const data = JSON.parse(event.data);
+        console.log("Received message:", data);
         if (data.type === 'history') {
           const transformedMessages = data.messages.map((message) => ({
             _id: message.id,
             text: message.message,
-            sent_at: new Date(message.sent_at),
+            createdAt: new Date(message.sent_at),
             user: {
               _id: message.sender_id,
               name: message.sender,
             },
           }));
+          console.log("Transform: ", transformedMessages);
           setMessages(transformedMessages);
           AsyncStorage.setItem(`messages_${communityId}`, JSON.stringify(transformedMessages));
         } else if (data.type === 'message') {
           const newMessage = {
             _id: data.id || Math.random().toString(),
             text: data.message,
-            sent_at: new Date(data.sent_at),
+            createdAt: new Date(),
             user: {
               _id: data.sender_id,
               name: data.sender,
             },
           };
-          setMessages((prevMessages) => {
-            const updatedMessages = GiftedChat.append(prevMessages, [newMessage]);
-            AsyncStorage.setItem(`messages_${communityId}`, JSON.stringify(updatedMessages));
-            return updatedMessages;
-          });
+  
+          // Check if this message is not already in the state to avoid duplicates
+          if (!messages.some(msg => msg._id === newMessage._id)) {
+            setMessages((prevMessages) => {
+              const updatedMessages = GiftedChat.append(prevMessages, [newMessage]);
+              AsyncStorage.setItem(`messages_${communityId}`, JSON.stringify(updatedMessages));
+              return updatedMessages;
+            });
+          }
         }
       };
+  
+      socket.addEventListener('message', onMessage);
+      socketCleanup = () => {
+        socket.removeEventListener('message', onMessage);
+      };
     }
-
-    return () => {
-      if (socket) {
-        socket.onmessage = null; // Clean up event listener
-      }
-    };
-  }, [socket, user, communityId]);
+  
+    return socketCleanup;
+  }, [socket, messages, user, communityId]);
 
   const onSend = useCallback((newMessages: IMessage[] = []) => {
+    // Update UI immediately
+    setMessages((previousMessages) => GiftedChat.append(previousMessages, newMessages));
+    
     for (let message of newMessages) {
       sendMessage({
         type: 'send_message',
         community_id: communityId,
-        message: message.text
+        message: message.text,
+        sender: user?.first_name + ' ' + user?.last_name || "Unknown User",
+        sender_id: user?.id || 1
       });
     }
-  }, [communityId, sendMessage]);
+  }, [communityId, sendMessage, user]);
 
   const pickImage = async () => {
     const result: ImagePicker.ImagePickerResult =
@@ -147,7 +173,7 @@ const CommunityChatScreen: React.FC = () => {
         {
           _id: Math.random().toString(),
           text: "",
-          sent_at: new Date(),
+          createdAt: new Date(), // Changed from sent_at to createdAt
           user: { _id: user?.id || 1, name: user?.first_name || "User" },
           image: imageUri,
         },
@@ -156,23 +182,17 @@ const CommunityChatScreen: React.FC = () => {
   };
 
   const renderBubble = (props) => {
-    const { currentMessage, previousMessage } = props;
-    
-    const safeDate = (date) => {
-      return date instanceof Date ? date : new Date(date);
-    };
+    const isFirstMessageOfBlock = props.previousMessage?.user?._id !== props.currentMessage.user._id;
+    const isOtherUser = props.currentMessage.user._id !== user?.id;
+    const isNewDay = 
+      !props.previousMessage ||
+      (props.currentMessage?.createdAt && 
+       props.previousMessage?.createdAt && 
+       props.currentMessage.createdAt.toDateString() !== 
+       props.previousMessage.createdAt.toDateString());
+
   
-    const currentDate = safeDate(currentMessage.sent_at);
-    const previousDate = previousMessage ? safeDate(previousMessage.sent_at) : null;
-  
-    const isFirstMessageOfBlock =
-      !previousMessage || 
-      (previousDate && currentDate && 
-       previousDate.toDateString() !== currentDate.toDateString()) ||
-      (previousMessage.user?._id !== currentMessage.user._id);
-  
-    const isOtherUser = currentMessage.user._id !== user?.id;
-  
+
     return (
       <Bubble
         {...props}
@@ -184,9 +204,9 @@ const CommunityChatScreen: React.FC = () => {
           marginVertical: isFirstMessageOfBlock ? 5 : 0,
         }}
         renderCustomView={() =>
-          isFirstMessageOfBlock && isOtherUser ? (
+          (isOtherUser && (isFirstMessageOfBlock || isNewDay)) ? (
             <Text style={styles.username}>
-              {currentMessage.user.name}
+              {props.currentMessage.user.name}
             </Text>
           ) : null
         }
@@ -199,10 +219,20 @@ const CommunityChatScreen: React.FC = () => {
   };
 
   const renderDay = (props) => {
-    const { currentMessage } = props;
+    const { currentMessage, previousMessage } = props;
+    const isNewDay = 
+      !previousMessage ||
+      (currentMessage?.createdAt && 
+       previousMessage?.createdAt && 
+       currentMessage.createdAt.toDateString() !== 
+       previousMessage.createdAt.toDateString());
 
-    if (!currentMessage || !currentMessage.sent_at) return null;
+   
 
+    if (!isNewDay) return null;
+    
+
+  
     return (
       <View
         style={[
@@ -211,12 +241,13 @@ const CommunityChatScreen: React.FC = () => {
         ]}
       >
         <Text style={styles.dateText}>
-          {currentMessage.sent_at.toDateString()}
+          {currentMessage.createdAt ? currentMessage.createdAt.toDateString() : "Unknown Date"}
         </Text>
       </View>
     );
   };
 
+  // ... (rest of the component remains unchanged)
   const onImagePress = (uri) => {
     setMediaUri(uri);
     setIsImageViewerVisible(true);
@@ -300,7 +331,6 @@ const CommunityChatScreen: React.FC = () => {
       );
     }
   };
-
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -419,6 +449,7 @@ const CommunityChatScreen: React.FC = () => {
     },
   });
 
+
   return (
     <ImageBackground
       source={backgroundImage}
@@ -448,7 +479,7 @@ const CommunityChatScreen: React.FC = () => {
           renderMessageImage={renderMessageImage}
           renderDay={renderDay}
           isTyping={false}
-          inverted={true} // This will open to the newest message
+          inverted={true}
         />
       )}
 

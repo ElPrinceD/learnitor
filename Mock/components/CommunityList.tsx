@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   FlatList,
@@ -17,9 +17,12 @@ interface CommunityListProps {
   data: Community[];
   onCommunityPress: (item: Community) => void;
   showLastMessage?: boolean;
-  getLastMessage?: (
-    communityId: string
-  ) => { sender: string; message: string; sent_at: string } | null;
+  getLastMessage?: (communityId: string) => Promise<{
+    id: string;
+    sender: string;
+    message: string;
+    sent_at: string;
+  } | null>;
 }
 
 const CommunityList: React.FC<CommunityListProps> = ({
@@ -31,6 +34,22 @@ const CommunityList: React.FC<CommunityListProps> = ({
 }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+  const [lastMessages, setLastMessages] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    if (showLastMessage && getLastMessage) {
+      const fetchLastMessages = async () => {
+        const messages = await Promise.all(
+          data.map(async (item) => {
+            const message = await getLastMessage(item.id);
+            return [item.id, message];
+          })
+        );
+        setLastMessages(Object.fromEntries(messages));
+      };
+      fetchLastMessages();
+    }
+  }, [data, showLastMessage, getLastMessage]);
 
   const styles = StyleSheet.create({
     sectionHeader: {
@@ -57,9 +76,7 @@ const CommunityList: React.FC<CommunityListProps> = ({
             item={item}
             onPress={() => onCommunityPress(item)}
             showLastMessage={showLastMessage}
-            lastMessage={
-              showLastMessage && getLastMessage ? getLastMessage(item.id) : null
-            }
+            lastMessage={lastMessages[item.id] || null}
           />
         )}
         // ItemSeparatorComponent={() => <View style={styles.separator} />}

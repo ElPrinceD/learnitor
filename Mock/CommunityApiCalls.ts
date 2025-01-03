@@ -71,7 +71,7 @@ export const updateCommunity = async (communityId: string, communityData: any, t
     }
 };
 
-export const getCommunityMessages = async (communityId: number, token: string) => {
+export const getCommunityMessages = async (communityId: string, token: string) => {
     try {
         const response = await apiClient.get(`${MESSAGE_API_BASE_URL}/${communityId}/get_messages/`, {
             headers: {
@@ -99,7 +99,9 @@ export const getUserCommunities = async (token: string) => {
     }
 };
 
-// {POST APIs}
+
+
+
 
 export const joinCommunity = async (communityId: number, token: string) => {
     try {

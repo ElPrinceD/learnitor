@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, FC } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getCommunities, getCommunityDetails, getUserCommunities } from './CommunityApiCalls';
+import { getCommunities, getCommunityDetails, getUserCommunities, getCommunityMessages } from './CommunityApiCalls';
 import { getCourseCategories, getCourses } from "./CoursesApiCalls";
 import ApiUrl from './config';
 import { getCategoryNames, getTodayPlans } from "./TimelineApiCalls";
@@ -37,32 +37,92 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   useEffect(() => {
     if (!token) return;
 
-    // WebSocket connection
-    const ws = new WebSocket(`wss://3a43-176-35-152-206.ngrok-free.app/ws/chat/?token=${token}`);
+    const fetchCommunityMessages = async () => {
+      try {
+        const communities = await getUserCommunities(token);
+        for (const community of communities) {
 
-    ws.onopen = () => {
-      setIsConnected(true);
-      console.log("WebSocket connected");
-      subscribeToExistingUserCommunities(); // Automatically subscribe to existing user communities
+          
+          const messages = await getCommunityMessages( community.id, token);
+          const transformedMessages = messages.map((message) => ({
+            _id: message.id,
+            text: message.message,
+            createdAt: new Date(message.sent_at),
+            user: {
+              _id: message.sender_id,
+              name: message.sender,
+            },
+          }));
+          await AsyncStorage.setItem(`messages_${community.id}`, JSON.stringify(transformedMessages));
+          
+          // Set the last message for this community
+          if (messages.length > 0) {
+            const lastMessage = messages[messages.length - 1];
+            await AsyncStorage.setItem(`last_message_${community.id}`, JSON.stringify(lastMessage));
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching community messages:", error);
+      }
     };
 
+    fetchCommunityMessages();
+
+    // WebSocket connection
+    const ws = new WebSocket(`${ApiUrl}/ws/chat/?token=${token}`);
+
+    ws.onopen = async () => {
+      setIsConnected(true);
+      console.log("WebSocket connected");
+    
+      if (isConnected && token) {
+        try {
+          await subscribeToExistingUserCommunities(); // Ensure this is awaited for sequential execution
+          fetchInitialLastMessages(); // Fetch the last messages
+        } catch (error) {
+          console.error("Error during WebSocket initialization:", error);
+        }
+      }
+    };
+    
     ws.onmessage = async (event) => {
       const data = JSON.parse(event.data);
+      console.log("WebSocket message received:", data);
 
       switch(data.type) {
         case 'message':
+          // Update full message history
           const cachedMessages = await AsyncStorage.getItem(`messages_${data.community_id}`);
           const updatedMessages = cachedMessages ? JSON.parse(cachedMessages) : [];
-          updatedMessages.unshift({
+          updatedMessages.push({
             id: data.id,
             sender: data.sender,
             message: data.message,
-            sent_at: new Date().toISOString()
+            sent_at: data.sent_at
           });
           await AsyncStorage.setItem(`messages_${data.community_id}`, JSON.stringify(updatedMessages));
+
+          // Update last message for list view
+          await AsyncStorage.setItem(`last_message_${data.community_id}`, JSON.stringify(data));
           break;
         case 'history':
-          await AsyncStorage.setItem(`messages_${data.community_id}`, JSON.stringify(data.messages));
+          // Store full history
+          const normalizedMessages = data.messages.map(msg => ({
+            ...msg,
+            sent_at: new Date(msg.sent_at).toISOString() // Ensure sent_at is ISO string
+          }));
+          
+          await AsyncStorage.setItem(`messages_${data.community_id}`, JSON.stringify(normalizedMessages));
+          console.log("Normalized: ", normalizedMessages);
+          
+          // Store only the last message for list view
+          if (data.messages.length > 0) {
+            const lastMessage = data.messages[data.messages.length - 1];
+            await AsyncStorage.setItem(`last_message_${data.community_id}`, JSON.stringify({
+              ...lastMessage,
+              sent_at: new Date(lastMessage.sent_at).toISOString()
+            }));
+          }
           break;
         case 'join_success':
           // Handle join success if needed, like updating UI or local state
@@ -89,64 +149,75 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     };
   }, [token]);
 
+  const messageQueue: any[] = []; // Queue to store messages
+
   const sendMessage = useCallback((message: any) => {
     if (socket && isConnected) {
       socket.send(JSON.stringify(message));
     } else {
-      console.error("WebSocket is not connected.");
+      console.warn("WebSocket is not connected. Queuing the message.");
+      messageQueue.push(message); // Queue the message
     }
   }, [socket, isConnected]);
+
+  useEffect(() => {
+    if (socket && isConnected && messageQueue.length > 0) {
+      console.log("Sending queued messages.");
+      messageQueue.forEach(msg => socket.send(JSON.stringify(msg)));
+      messageQueue.length = 0; // Clear the queue
+    }
+  }, [socket, isConnected]);
+
+  const fetchInitialLastMessages = useCallback(async () => {
+    try {
+      const communities = await getUserCommunities(token);
+
+      for (const community of communities) {
+        
+        const cachedLastMessage = await AsyncStorage.getItem(`last_message_${community.id}`);
+        console.log("LAst ",cachedLastMessage)
+        if (!cachedLastMessage) {
+          // If there's no cached last message, fetch history to get the last one
+          sendMessage({ type: 'history', community_id: community.id });
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching initial last messages:", error);
+    }
+  }, [token, sendMessage]);
 
   // Function for joining a new community
   const joinAndSubscribeToCommunity = useCallback(async (communityId: string | number) => {
     if (socket && isConnected) {
       try {
-        // Send the message to join the community
-        await new Promise((resolve, reject) => {
-          const message = { type: 'join_community', community_id: communityId };
-          socket.send(JSON.stringify(message));
-          
-          // Wait for acknowledgment from server that join was successful
-          const handleJoinSuccess = (event: MessageEvent) => {
-            const data = JSON.parse(event.data);
-            if (data.type === 'join_success' && data.community_id === communityId) {
-              socket.removeEventListener('message', handleJoinSuccess);
-              resolve(data);
-            }
-          };
-
-          socket.addEventListener('message', handleJoinSuccess);
-
-          // Set a timeout in case of no response
-          const timeout = setTimeout(() => {
+        const message = { type: 'join_community', community_id: communityId };
+        socket.send(JSON.stringify(message));
+  
+        // Wait for acknowledgment from the server that the join was successful
+        const handleJoinSuccess = (event: MessageEvent) => {
+          const data = JSON.parse(event.data);
+          if (data.type === 'join_success' && data.community_id === communityId) {
+            console.log(`Successfully joined community: ${communityId}`);
             socket.removeEventListener('message', handleJoinSuccess);
-            reject(new Error('Join community timeout'));
-          }, 10000); // Adjust timeout as needed
-
-          // Cleanup function to remove event listener if component unmounts or state changes
-          return () => {
-            clearTimeout(timeout);
-            socket.removeEventListener('message', handleJoinSuccess);
-          };
-        });
-
-        // If join was successful, update the cache
+          }
+        };
+  
+        socket.addEventListener('message', handleJoinSuccess);
+  
+        // Update the cached communities
         await updateCachedCommunities(communityId);
-        // Here you might want to update UI to reflect the new subscription or inform the user
-
       } catch (error) {
         console.error("Failed to join community:", error);
-        // Handle error, maybe show user feedback that joining failed
       }
     } else {
       console.error("WebSocket is not connected.");
     }
   }, [socket, isConnected, token]);
+  
 
   const unsubscribeFromCommunity = useCallback((communityId: string | number) => {
     if (socket && isConnected) {
       sendMessage({ type: 'leave_community', community_id: communityId });
-      // You might want to update the cache here as well
     } else {
       console.error("WebSocket is not connected.");
     }
