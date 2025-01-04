@@ -4,7 +4,7 @@ import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
 import ApiUrl from './config';
 import { useAuth } from "./components/AuthContext";
-import { router } from "expo-router"; // Assuming expo-router is used
+import { router } from "expo-router";
 import { Platform } from "react-native";
 import axios from "axios";
 
@@ -64,7 +64,7 @@ export const usePushNotifications = (): PushNotificationState => {
     try {
       const response = await axios.post(
         `${ApiUrl}/api/register-device/`,
-        { token: tokenData.data },
+        { token: tokenData },
         {
           headers: {
             Authorization: `Token ${authToken}`,
@@ -77,6 +77,53 @@ export const usePushNotifications = (): PushNotificationState => {
     }
   }
 
+ // Set up a notification handler once when the component mounts
+useEffect(() => {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  });
+}, []);
+
+// Update presentForegroundNotification to use scheduleNotificationAsync
+async function presentForegroundNotification(notification: Notifications.Notification) {
+  if (!notification) return;
+  
+  if (Platform.OS === 'ios') {
+    await Notifications.setNotificationCategoryAsync('default', [
+      {
+        identifier: 'default',
+        buttonTitle: 'Open',
+        options: { opensAppToForeground: true },
+      },
+    ]);
+  }
+
+  // Construct the notification content
+  const notificationContent = {
+    title: notification.request.content.title,
+    body: notification.request.content.body,
+    data: notification.request.content.data,
+    subtitle: notification.request.content.subtitle || null,
+    sound: notification.request.content.sound || "default",
+    launchImageName: notification.request.content.launchImageName || "",
+    badge: notification.request.content.badge || null,
+    categoryIdentifier: notification.request.content.categoryIdentifier || "",
+    threadIdentifier: notification.request.content.threadIdentifier || "",
+    targetContentIdentifier: notification.request.content.targetContentIdentifier || null,
+    interruptionLevel: notification.request.content.interruptionLevel || "active",
+  };
+
+  // Use scheduleNotificationAsync with null trigger to present immediately
+  await Notifications.scheduleNotificationAsync({
+    content: notificationContent,
+    trigger: null, // null trigger means the notification should be displayed immediately
+  });
+}
+
   useEffect(() => {
     if (!userToken?.token) {
       console.log("Waiting for user token...");
@@ -86,7 +133,7 @@ export const usePushNotifications = (): PushNotificationState => {
     registerForPushNotificationsAsync().then((token) => {
       if (token) {
         setExpoPushToken(token);
-        saveTokenToBackend(token, userToken.token); // Pass userToken directly here
+        saveTokenToBackend(token.data, userToken.token); 
       }
     });
 
@@ -94,6 +141,9 @@ export const usePushNotifications = (): PushNotificationState => {
       Notifications.addNotificationReceivedListener((notification) => {
         console.log("Notification received:", notification);
         setNotification(notification);
+        
+        // Present the notification when the app is in the foreground
+        presentForegroundNotification(notification);
       });
 
     responseListener.current =
@@ -101,7 +151,6 @@ export const usePushNotifications = (): PushNotificationState => {
         const { data } = response.notification.request.content;
         if (data && data.community_id && data.message_id) {
           console.log("Notification response data:", data);
-          // Navigate to the chat screen with community_id and message_id
           router.push({
             pathname: 'ChatScreen',
             params: { communityId: data.community_id, name: data.community_name },

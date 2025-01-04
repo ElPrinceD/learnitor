@@ -22,6 +22,7 @@ interface CommunityListProps {
     sender: string;
     message: string;
     sent_at: string;
+    status?: string; // Add status to the message object
   } | null>;
 }
 
@@ -77,6 +78,8 @@ const CommunityList: React.FC<CommunityListProps> = ({
             onPress={() => onCommunityPress(item)}
             showLastMessage={showLastMessage}
             lastMessage={lastMessages[item.id] || null}
+            // Assuming 'isGlobal' is available in the Community type or passed from parent if not
+            isGlobal={false} // Set this to true if this list represents global communities
           />
         )}
         // ItemSeparatorComponent={() => <View style={styles.separator} />}

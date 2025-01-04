@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Platform, useColorScheme, Keyboard } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+  useColorScheme,
+  Keyboard,
+} from "react-native";
 import { router } from "expo-router";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker"; // Import Picker for Android
@@ -31,25 +39,25 @@ const ContinueWithEmail = () => {
   const [allFieldsError, setAllFieldsError] = useState("");
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
-  const [showSecondText, setShowSecondText] = useState(false); 
+  const [showSecondText, setShowSecondText] = useState(false);
 
   useEffect(() => {
     // Fetch the lists from the backend
-    axios.get(`${ApiUrl}/institution/`)
-      .then(response => {
-        
+    axios
+      .get(`${ApiUrl}/institution/`)
+      .then((response) => {
         setInstitutionList(response.data);
       })
-      .catch(error => {
+      .catch((error) => {
         console.error("Error fetching institutions:", error);
       });
 
-    axios.get(`${ApiUrl}/program/`)
-      .then(response => {
-       
+    axios
+      .get(`${ApiUrl}/program/`)
+      .then((response) => {
         setProgramList(response.data);
       })
-      .catch(error => {
+      .catch((error) => {
         console.error("Error fetching programs:", error);
       });
   }, []);
@@ -73,8 +81,8 @@ const ContinueWithEmail = () => {
     if (Platform.OS === "ios") {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: [...institutionList.map(inst => inst.name), "Cancel"], 
-          cancelButtonIndex: institutionList.length, 
+          options: [...institutionList.map((inst) => inst.name), "Cancel"],
+          cancelButtonIndex: institutionList.length,
         },
         (buttonIndex) => {
           if (buttonIndex !== institutionList.length) {
@@ -84,7 +92,7 @@ const ContinueWithEmail = () => {
         }
       );
     } else {
-      setShowInstitutionPicker(true); 
+      setShowInstitutionPicker(true);
     }
   };
 
@@ -92,7 +100,7 @@ const ContinueWithEmail = () => {
     if (Platform.OS === "ios") {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: [...programList.map(program => program.name), "Cancel"],
+          options: [...programList.map((program) => program.name), "Cancel"],
           cancelButtonIndex: programList.length,
         },
         (buttonIndex) => {
@@ -111,14 +119,22 @@ const ContinueWithEmail = () => {
     setPasswordError("");
     setEmailError("");
     setAllFieldsError("");
-    if (!firstName || !surname || !email || !password || !dob || !institution || !program_of_study) {
+    if (
+      !firstName ||
+      !surname ||
+      !email ||
+      !password ||
+      !dob ||
+      !institution ||
+      !program_of_study
+    ) {
       setAllFieldsError("Please fill in all fields");
     } else if (password.length < 8) {
       setPasswordError("Password must be at least 8 characters long");
     } else if (!email.includes("@")) {
       setEmailError("Enter a valid email address");
     } else {
-      console.log(institution)
+      console.log(institution);
       axios
         .post(`${ApiUrl}/api/register/`, {
           first_name: firstName,
@@ -162,16 +178,16 @@ const ContinueWithEmail = () => {
     headerText: {
       fontSize: SIZES.xxLarge,
       fontWeight: "bold",
-      color: themeColors.text, 
+      color: themeColors.text,
     },
     rowContainer: {
       flexDirection: "row",
       alignItems: "flex-start",
     },
     halfInput: {
-      flex: 1,  
+      flex: 1,
     },
-    
+
     inputContainer: {
       width: rS(270),
     },
@@ -199,7 +215,7 @@ const ContinueWithEmail = () => {
     },
     loginText: {
       fontSize: SIZES.medium,
-      fontWeight: "bold",      
+      fontWeight: "bold",
       color: themeColors.buttonBackground,
       marginLeft: rMS(8),
     },
@@ -209,13 +225,13 @@ const ContinueWithEmail = () => {
     <View style={styles.container}>
       <StatusBar hidden={true} />
       <View style={styles.container}>
-      <Typewriter
-            text="Create account"
-            delay={100}
-            style={[styles.headerText, { marginBottom: rS(70) }]}
-            onComplete={() => setShowSecondText(true)}
-          />
-          <AnimatedTextInput
+        <Typewriter
+          text="Create an account"
+          delay={100}
+          style={[styles.headerText, { marginBottom: rS(70) }]}
+          onComplete={() => setShowSecondText(true)}
+        />
+        <AnimatedTextInput
           label="Email"
           value={email}
           onChangeText={setEmail}
@@ -231,27 +247,26 @@ const ContinueWithEmail = () => {
           showToggleIcon={true}
           style={styles.inputContainer}
         />
-          <View style={styles.rowContainer}>
-      <View  style={[styles.halfInput,{marginRight: rS(20)} ]}>
-        <AnimatedTextInput
-          label="First Name"
-          value={firstName}
-          onChangeText={setFirstName}
-          placeholderTextColor={themeColors.textSecondary}
-         
-        />
+        <View style={styles.rowContainer}>
+          <View style={[styles.halfInput, { marginRight: rS(20) }]}>
+            <AnimatedTextInput
+              label="First Name"
+              value={firstName}
+              onChangeText={setFirstName}
+              placeholderTextColor={themeColors.textSecondary}
+            />
+          </View>
+
+          <View style={styles.halfInput}>
+            <AnimatedTextInput
+              label="Last Name"
+              value={surname}
+              onChangeText={setSurname}
+              placeholderTextColor={themeColors.textSecondary}
+            />
+          </View>
         </View>
 
-        <View style={styles.halfInput}>
-        <AnimatedTextInput
-          label="Last Name"
-          value={surname}
-          onChangeText={setSurname}
-          placeholderTextColor={themeColors.textSecondary}
-        />
-        </View>
-        </View>
-        
         {show && (
           <DateTimePicker
             testID="dateTimePicker"
@@ -272,32 +287,36 @@ const ContinueWithEmail = () => {
         </TouchableOpacity>
 
         <View style={styles.rowContainer}>
-      <View  style={[styles.halfInput,{marginRight: rS(20)} ]}>
-      <TouchableOpacity onPress={handleInstitutionSelect}>
-          <AnimatedTextInput
-            label="Institution"
-            value={institutionList.find(inst => inst.id === institution)?.name || ""}
-            editable={false}
-            placeholderTextColor={Colors.light.textSecondary}
-            style={styles.inputContainer}
-          />
-        </TouchableOpacity>
-        </View>
+          <View style={[styles.halfInput, { marginRight: rS(20) }]}>
+            <TouchableOpacity onPress={handleInstitutionSelect}>
+              <AnimatedTextInput
+                label="Institution"
+                value={
+                  institutionList.find((inst) => inst.id === institution)
+                    ?.name || ""
+                }
+                editable={false}
+                placeholderTextColor={Colors.light.textSecondary}
+                style={styles.inputContainer}
+              />
+            </TouchableOpacity>
+          </View>
 
-        <View style={styles.halfInput}>
-        <TouchableOpacity onPress={handleProgramSelect}>
-          <AnimatedTextInput
-            label="Program"
-            value={programList.find(program => program.id === program_of_study)?.name || ""}
-            editable={false}
-            placeholderTextColor={Colors.light.textSecondary}
-            style={styles.inputContainer}
-          />
-        </TouchableOpacity>
+          <View style={styles.halfInput}>
+            <TouchableOpacity onPress={handleProgramSelect}>
+              <AnimatedTextInput
+                label="Program"
+                value={
+                  programList.find((program) => program.id === program_of_study)
+                    ?.name || ""
+                }
+                editable={false}
+                placeholderTextColor={Colors.light.textSecondary}
+                style={styles.inputContainer}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
-        </View>
-      
-        
 
         {/* Show Picker for Android */}
         {showInstitutionPicker && (
@@ -319,21 +338,23 @@ const ContinueWithEmail = () => {
             style={styles.picker}
           >
             {programList.map((program, index) => (
-              <Picker.Item key={index} label={program.name} value={program.id} />
+              <Picker.Item
+                key={index}
+                label={program.name}
+                value={program.id}
+              />
             ))}
           </Picker>
         )}
 
         <VerificationButton onPress={handleSignUp} title="Register" />
-       
       </View>
       <View style={styles.bottomContainer}>
-      
-          <Text style={styles.existingText}>Already have an account?</Text>
-          <Text style={styles.loginText} onPress={handleSignIn}>
-            Login
-          </Text>
-        </View>
+        <Text style={styles.existingText}>Already have an account?</Text>
+        <Text style={styles.loginText} onPress={handleSignIn}>
+          Login
+        </Text>
+      </View>
     </View>
   );
 };

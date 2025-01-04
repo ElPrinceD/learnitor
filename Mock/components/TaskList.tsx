@@ -1,10 +1,5 @@
 import React, { memo, useMemo } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  useColorScheme,
-} from "react-native";
+import { View, Text, StyleSheet, useColorScheme } from "react-native";
 import { SIZES, rMS, rS, rV, useShadows } from "../constants";
 import Colors from "../constants/Colors";
 
@@ -26,9 +21,9 @@ const TaskList: React.FC<Props> = ({ tasks, categoryNames }) => {
   const themeColors = Colors[colorScheme ?? "light"];
 
   const today = new Date();
-  const dayOfWeek = today.toLocaleDateString('en-US', { weekday: 'short' });
+  const dayOfWeek = today.toLocaleDateString("en-US", { weekday: "short" });
   const dayOfMonth = today.getDate();
-  const month = today.toLocaleDateString('en-US', { month: 'short' });
+  const month = today.toLocaleDateString("en-US", { month: "short" });
 
   // Randomly select a task from the list
   const randomTask = useMemo(() => {
@@ -39,42 +34,40 @@ const TaskList: React.FC<Props> = ({ tasks, categoryNames }) => {
 
   const styles = StyleSheet.create({
     container: {
-      flexDirection: 'row',
-   
-     
+      flexDirection: "row",
     },
     dateView: {
-      backgroundColor: 'black',
-      justifyContent: 'center',
-      alignItems: 'center',
+      backgroundColor: "black",
+      justifyContent: "center",
+      alignItems: "center",
       padding: rS(10),
       borderRadius: rS(5),
-      width: '30%', // Adjust width as necessary
+      width: "30%", // Adjust width as necessary
     },
     dayOfWeek: {
-      position: 'absolute',
+      position: "absolute",
       top: rV(2),
       left: rS(2),
       fontSize: SIZES.small,
-      color: '#FFD600', // Example color, adjust as per your theme
+      color: "#FFD600", // Example color, adjust as per your theme
     },
     dayOfMonth: {
       fontSize: SIZES.xxxlarge, // Make the number bigger
-      fontWeight: 'bold',
-      color: '#FFD600',
+      fontWeight: "bold",
+      color: "#FFD600",
     },
     month: {
-      position: 'absolute',
+      position: "absolute",
       bottom: rV(2),
       right: rS(2),
       fontSize: SIZES.small,
-      color: '#FFD600',
+      color: "#FFD600",
     },
     taskView: {
       flex: 1,
       backgroundColor: "#03c879",
-      justifyContent: 'flex-start',
-      alignItems: 'flex-start',
+      justifyContent: "flex-start",
+      alignItems: "flex-start",
       padding: rS(10),
       borderTopRightRadius: rS(5),
       borderBottomRightRadius: rS(5),
@@ -82,9 +75,9 @@ const TaskList: React.FC<Props> = ({ tasks, categoryNames }) => {
     },
     taskTitle: {
       fontSize: SIZES.medium,
-      fontWeight: 'bold',
+      fontWeight: "bold",
       color: themeColors.text,
-      paddingBottom: rV(50)
+      paddingBottom: rV(50),
     },
     taskCategory: {
       fontSize: SIZES.small,
@@ -93,13 +86,13 @@ const TaskList: React.FC<Props> = ({ tasks, categoryNames }) => {
   });
 
   if (!randomTask) {
-    return <Text style={{color: themeColors.text}}>No tasks available</Text>;
+    return <Text style={{ color: themeColors.text }}>No tasks available</Text>;
   }
 
   const categoryName = categoryNames[randomTask.category] || "Unknown Category";
 
   return (
-    <View style={{ flexDirection: 'row', marginVertical: rV(1) }}>
+    <View style={{ flexDirection: "row", marginVertical: rV(1) }}>
       <View style={styles.dateView}>
         <Text style={styles.dayOfWeek}>{dayOfWeek}</Text>
         <Text style={styles.dayOfMonth}>{dayOfMonth}</Text>

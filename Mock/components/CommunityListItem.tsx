@@ -18,7 +18,7 @@ interface CommunityListItemProps {
   item: Community;
   onPress: () => void;
   showLastMessage?: boolean;
-  lastMessage?: { sender?: string; message?: string; sent_at: string } | null;
+  lastMessage?: { sender?: string; message?: string; sent_at: string; status?: string } | null;
   isGlobal?: boolean;
 }
 
@@ -36,7 +36,7 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
   // Set max length for sender and message text
   const MAX_SENDER_LENGTH = 15;
   const MAX_MESSAGE_LENGTH = 40;
-  const MAX_DESCRIPTION_LENGTH = 80; // Assuming you want to limit description length
+  const MAX_DESCRIPTION_LENGTH = 80;
 
   // Determine the display name for the sender
   const displaySenderName =
@@ -76,6 +76,16 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
       width: 50,
       height: 50,
       borderRadius: 50,
+      position: 'relative',
+    },
+    unreadIndicator: {
+      position: 'absolute',
+      bottom: 0,
+      right: 0,
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: 'green',
     },
     communityTextContainer: {
       flex: 1,
@@ -104,7 +114,7 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
       paddingVertical: 5,
       paddingHorizontal: 10,
       borderRadius: 5,
-      marginLeft: 'auto', // This will push the button to the right
+      marginLeft: 'auto',
     },
     joinButtonText: {
       color: themeColors.background,
@@ -119,7 +129,12 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
       onPress={onPress}
     >
       <View style={styles.communityItem}>
-        <Image source={{ uri: item.image_url }} style={styles.communityImage} />
+        <View style={styles.communityImage}>
+          <Image source={{ uri: item.image_url }} style={{width: '100%', height: '100%', borderRadius: 50}} />
+          {!isGlobal && lastMessage && lastMessage.status !== 'read' && (
+            <View style={styles.unreadIndicator} />
+          )}
+        </View>
         <View style={styles.communityTextContainer}>
           <Text style={styles.communityName}>{item.name}</Text>
           {isGlobal ? (

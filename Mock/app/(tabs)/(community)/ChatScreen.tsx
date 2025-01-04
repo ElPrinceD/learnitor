@@ -53,32 +53,60 @@ const CommunityChatScreen: React.FC = () => {
   const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
   const [isVideoViewerVisible, setIsVideoViewerVisible] = useState(false);
 
+  const normalizeMessage = (data) => {
+    if ('message' in data && 'sent_at' in data) {
+      // Format 1: {id, message, sender, sender_id, sent_at}
+      return {
+        _id: data.id,
+        text: data.message,
+        createdAt: new Date(data.sent_at),
+        user: {
+          _id: data.sender_id,
+          name: data.sender,
+        },
+      };
+    } else if ('_id' in data && 'createdAt' in data) {
+      // Format 2: {_id, text, createdAt, user: {_id, name}}
+      return {
+        _id: data._id,
+        text: data.text,
+        createdAt: new Date(data.createdAt),
+        user: data.user,
+      };
+    } else {
+      console.warn("Unknown message format received:", data);
+      return null; // Skip processing if the format is unrecognized
+    }
+  };
   const backgroundImage =
     colorScheme === "dark"
       ? require("../../../assets/images/dark-bg.jpg")
       : require("../../../assets/images/light-bg.jpg");
 
-  const fetchMessageHistory = useCallback(async () => {
-    try {
-      setLoading(true);
-      const cachedMessages = await AsyncStorage.getItem(`messages_${communityId}`);
-     
-      if (cachedMessages && JSON.parse(cachedMessages).length > 0) {
-        const parsedMessages = JSON.parse(cachedMessages).map((msg: any) => ({
-          ...msg,
-          createdAt: new Date(msg.createdAt)  // Changed from sent_at to createdAt for consistency
-        }));
-        setMessages(parsedMessages);
-      } else {
-        await sendMessage({ type: 'fetch_history', community_id: communityId });
-      }
-    } catch (error) {
-      console.error("Error fetching message history:", error);
-      setError("Failed to load message history");
-    } finally {
-      setLoading(false);
-    }
-  }, [communityId, sendMessage]);
+      const fetchMessageHistory = useCallback(async () => {
+        try {
+          setLoading(true);
+          const cachedMessages = await AsyncStorage.getItem(`messages_${communityId}`);
+          
+          if (cachedMessages) {
+            let parsedMessages = JSON.parse(cachedMessages).map(normalizeMessage);
+            
+            // Filter out null values and sort messages from newest to oldest
+            const validMessages = parsedMessages
+              .filter((msg): msg is IMessage => msg !== null)
+              .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()); // Sort by date descending
+      
+            setMessages(validMessages);
+          } else {
+            await sendMessage({ type: 'fetch_history', community_id: communityId });
+          }
+        } catch (error) {
+          console.error("Error fetching message history:", error);
+          setError("Failed to load message history");
+        } finally {
+          setLoading(false);
+        }
+      }, [communityId, sendMessage]);
 
   useFocusEffect(
     useCallback(() => {
@@ -89,71 +117,100 @@ const CommunityChatScreen: React.FC = () => {
     }, [fetchMessageHistory])
   );
 
-  useEffect(() => {
-    let socketCleanup = () => {};
+
   
-    if (socket) {
-      console.log("Socket exists", socket);
-      const onMessage = (event) => {
-        console.log("WebSocket message event:", event);
-        console.log("WebSocket data:", event.data);
+  useEffect(() => {
+  let socketCleanup = () => {};
+  
+  if (socket) {
+    const onMessage = (event) => {
+      try {
         const data = JSON.parse(event.data);
         console.log("Received message:", data);
         if (data.type === 'history') {
-          const transformedMessages = data.messages.map((message) => ({
-            _id: message.id,
-            text: message.message,
-            createdAt: new Date(message.sent_at),
-            user: {
-              _id: message.sender_id,
-              name: message.sender,
-            },
-          }));
-          console.log("Transform: ", transformedMessages);
+          // Sort messages before setting, newest first
+          const transformedMessages = data.messages
+            .map((message) => ({
+              _id: message.id.toString(),
+              text: message.message,
+              createdAt: new Date(message.sent_at),
+              user: {
+                _id: message.sender_id,
+                name: message.sender,
+              },
+            }))
+            .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()); // Sort by date descending
+
           setMessages(transformedMessages);
           AsyncStorage.setItem(`messages_${communityId}`, JSON.stringify(transformedMessages));
         } else if (data.type === 'message') {
           const newMessage = {
-            _id: data.id || Math.random().toString(),
+            _id: data.id.toString(),
             text: data.message,
-            createdAt: new Date(),
+            createdAt: new Date(data.sent_at),
             user: {
               _id: data.sender_id,
               name: data.sender,
             },
           };
-  
-          // Check if this message is not already in the state to avoid duplicates
-          if (!messages.some(msg => msg._id === newMessage._id)) {
-            setMessages((prevMessages) => {
-              const updatedMessages = GiftedChat.append(prevMessages, [newMessage]);
-              AsyncStorage.setItem(`messages_${communityId}`, JSON.stringify(updatedMessages));
-              return updatedMessages;
-            });
-          }
+
+          setMessages((prevMessages) => {
+            const index = prevMessages.findIndex(msg => msg._id === data.temp_id);
+            if (index !== -1) {
+              // Update the temp message with the real ID
+              return [
+                { ...prevMessages[index], _id: newMessage._id },
+                ...prevMessages.slice(0, index),
+                ...prevMessages.slice(index + 1)
+              ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()); // Re-sort after update
+            } else {
+              // Add new message at the beginning for inverted chat
+              return [newMessage, ...prevMessages].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+            }
+          });
+
+          // Update cache
+          AsyncStorage.setItem(`messages_${communityId}`, JSON.stringify([newMessage, ...messages].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())));
         }
-      };
+      } catch (error) {
+        console.error("Error processing WebSocket message:", error);
+      }
+    };
+
+    socket.addEventListener('message', onMessage);
+    socketCleanup = () => {
+      socket.removeEventListener('message', onMessage);
+    };
+  }
   
-      socket.addEventListener('message', onMessage);
-      socketCleanup = () => {
-        socket.removeEventListener('message', onMessage);
-      };
-    }
-  
-    return socketCleanup;
-  }, [socket, messages, user, communityId]);
+  return socketCleanup;
+}, [socket, communityId, messages]);
 
   const onSend = useCallback((newMessages: IMessage[] = []) => {
-    // Update UI immediately
-    setMessages((previousMessages) => GiftedChat.append(previousMessages, newMessages));
-    
     for (let message of newMessages) {
+      const tempId = Math.random().toString(); // Generate a temporary ID for immediate UI update
+      const tempMessage = {
+        _id: tempId,
+        text: message.text,
+        createdAt: new Date(),
+        user: {
+          _id: user?.id || 1,
+          name: user?.first_name + ' ' + user?.last_name || "Unknown User",
+        },
+        ...(message.image && { image: message.image }),
+      };
+  
+      // Update UI with temporary message
+      setMessages((previousMessages) => GiftedChat.append(previousMessages, [tempMessage]));
+  
+      // Send message to server
       sendMessage({
         type: 'send_message',
         community_id: communityId,
         message: message.text,
         sender: user?.first_name + ' ' + user?.last_name || "Unknown User",
-        sender_id: user?.id || 1
+        sender_id: user?.id || 1,
+        temp_id: tempId
       });
     }
   }, [communityId, sendMessage, user]);
@@ -173,7 +230,7 @@ const CommunityChatScreen: React.FC = () => {
         {
           _id: Math.random().toString(),
           text: "",
-          createdAt: new Date(), // Changed from sent_at to createdAt
+          createdAt: new Date(),
           user: { _id: user?.id || 1, name: user?.first_name || "User" },
           image: imageUri,
         },
@@ -190,8 +247,6 @@ const CommunityChatScreen: React.FC = () => {
        props.previousMessage?.createdAt && 
        props.currentMessage.createdAt.toDateString() !== 
        props.previousMessage.createdAt.toDateString());
-
-  
 
     return (
       <Bubble
@@ -227,12 +282,8 @@ const CommunityChatScreen: React.FC = () => {
        currentMessage.createdAt.toDateString() !== 
        previousMessage.createdAt.toDateString());
 
-   
-
     if (!isNewDay) return null;
-    
 
-  
     return (
       <View
         style={[
@@ -247,13 +298,12 @@ const CommunityChatScreen: React.FC = () => {
     );
   };
 
-  // ... (rest of the component remains unchanged)
-  const onImagePress = (uri) => {
+  const onImagePress = (uri: string) => {
     setMediaUri(uri);
     setIsImageViewerVisible(true);
   };
 
-  const onVideoPress = (uri) => {
+  const onVideoPress = (uri: string) => {
     setMediaUri(uri);
     setIsVideoViewerVisible(true);
   };
@@ -331,6 +381,7 @@ const CommunityChatScreen: React.FC = () => {
       );
     }
   };
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -448,7 +499,6 @@ const CommunityChatScreen: React.FC = () => {
       height: "100%",
     },
   });
-
 
   return (
     <ImageBackground

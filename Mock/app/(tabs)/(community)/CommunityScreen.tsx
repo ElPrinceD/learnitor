@@ -24,13 +24,15 @@ const CommunityScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isFetching, setIsFetching] = useState(false);
   const [lastMessages, setLastMessages] = useState<Record<string, any>>({});
+  const [initialLoad, setInitialLoad] = useState(true);
   const { userToken } = useAuth();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const colorMode = colorScheme === "dark" ? "dark" : "light";
 
-  const { isConnected, joinAndSubscribeToCommunity, unsubscribeFromCommunity, subscribeToExistingUserCommunities, fetchAndCacheCommunities } = useWebSocket() || {
+  const { isConnected, socket, joinAndSubscribeToCommunity, unsubscribeFromCommunity, subscribeToExistingUserCommunities, fetchAndCacheCommunities } = useWebSocket() || {
     isConnected: false,
+    socket: null,
     joinAndSubscribeToCommunity: () => {},
     unsubscribeFromCommunity: () => {},
     subscribeToExistingUserCommunities: () => {},
@@ -54,10 +56,12 @@ const CommunityScreen: React.FC = () => {
           setLastMessages(Object.fromEntries(messages));
         }
         setLoading(false);
+        setInitialLoad(false); // Set initialLoad to false after fetching data
       } catch (error) {
         console.error("Error loading cached communities:", error);
         setErrorMessage("Failed to load communities");
         setLoading(false);
+        setInitialLoad(false);
       }
     };
     loadCachedData();
@@ -86,7 +90,7 @@ const CommunityScreen: React.FC = () => {
 
   // Use WebSocket for real-time subscriptions
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       if (isConnected) {
         subscribeToExistingUserCommunities();
         fetchAndCacheCommunities();
@@ -97,6 +101,59 @@ const CommunityScreen: React.FC = () => {
     }, [isConnected, subscribeToExistingUserCommunities, fetchAndCacheCommunities])
   );
 
+  // Listen to WebSocket messages for updating last messages
+  useEffect(() => {
+    const onMessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log('WebSocket message received:', data);
+
+        if (data.type === 'message') {
+          // New message comes with 'sent' status by default
+          const newMessage = {
+            ...data,
+            status: 'sent',
+            sent_at: new Date(data.sent_at).toISOString(),
+          };
+          setLastMessages(prevMessages => ({
+            ...prevMessages,
+            [data.community_id]: newMessage,
+          }));
+          // Cache the new message status
+          AsyncStorage.setItem(`last_message_${data.community_id}`, JSON.stringify(newMessage));
+        } else if (data.type === 'message_status') {
+          setLastMessages(prevMessages => ({
+            ...prevMessages,
+            [data.message_id]: {
+              ...(prevMessages[data.message_id] || {}),
+              status: data.status,
+            }
+          }));
+          // Update cache with new status
+          if (prevMessages[data.message_id]) {
+            AsyncStorage.setItem(`last_message_${prevMessages[data.message_id].community_id}`, JSON.stringify({
+              ...prevMessages[data.message_id],
+              status: data.status
+            }));
+          }
+        }
+      } catch (error) {
+        console.error("Error processing WebSocket message:", error);
+      }
+    };
+
+    if (isConnected && socket) {
+      socket.addEventListener('message', onMessage);
+    }
+
+    return () => {
+      if (isConnected && socket) {
+        socket.removeEventListener('message', onMessage);
+      }
+    };
+  }, [isConnected, socket]);
+
+
   const handleNavigateCreateCommunity = () => {
     router.navigate("CreateCommunity");
   };
@@ -105,11 +162,7 @@ const CommunityScreen: React.FC = () => {
     return lastMessages[communityId] || null;
   }, [lastMessages]);
 
-
-
-
-
-  // Sorting logic for user communities
+  // Sorting logic for user communities based on the last message's timestamp
   const sortedMyCommunities = useMemo(() => {
     return myCommunities.map(community => ({
       ...community,
@@ -125,6 +178,11 @@ const CommunityScreen: React.FC = () => {
 
     const filteredUserCommunities = myCommunities.filter(community =>
       community.name.toLowerCase().includes(searchQuery.toLowerCase())
+    ).map(community => ({
+      ...community,
+      lastMessageTime: lastMessages[community.id]?.sent_at || new Date(0).toISOString(),
+    })).sort((a, b) => 
+      moment(b.lastMessageTime).diff(moment(a.lastMessageTime))
     );
 
     const filteredGlobalCommunities = globalCommunities.filter(community =>
@@ -132,7 +190,7 @@ const CommunityScreen: React.FC = () => {
     );
 
     return { user: filteredUserCommunities, global: filteredGlobalCommunities };
-  }, [searchQuery, myCommunities, globalCommunities, sortedMyCommunities]);
+  }, [searchQuery, myCommunities, globalCommunities, lastMessages]);
 
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
@@ -141,21 +199,29 @@ const CommunityScreen: React.FC = () => {
   const handleCommunityPress = useCallback(async (community: Community) => {
     const isUserCommunity = myCommunities.some(c => c.id === community.id);
     
-    if (!isUserCommunity) {
-      if (isConnected) {
-        await joinAndSubscribeToCommunity(community.id);
-        setMyCommunities(prev => [...prev, community]);
-        fetchAndCacheCommunities();
-      } else {
-        console.error('WebSocket not connected, cannot join community');
-      }
+    if (!isUserCommunity && isConnected) {
+      await joinAndSubscribeToCommunity(community.id);
+      setMyCommunities(prev => [...prev, community]);
+      fetchAndCacheCommunities();
     }
   
+    // Update message status to 'read' for the last message in this community
+    const lastMessage = getLastMessage(community.id);
+    if (lastMessage && lastMessage.status !== 'read') {
+      if (socket) {
+        socket.send(JSON.stringify({
+          type: 'message_status_update',
+          message_id: lastMessage.id,
+          status: 'read'
+        }));
+      }
+    }
+
     router.navigate({
       pathname: "ChatScreen",
       params: { communityId: community.id, name: community.name },
     });
-  }, [myCommunities, isConnected, joinAndSubscribeToCommunity, fetchAndCacheCommunities]);
+  }, [myCommunities, isConnected, joinAndSubscribeToCommunity, fetchAndCacheCommunities, getLastMessage, socket]);
 
   const styles = StyleSheet.create({
     container: {
@@ -207,7 +273,7 @@ const CommunityScreen: React.FC = () => {
         <SearchBar onSearch={handleSearch} />
       </View>
 
-      {loading ? (
+      {initialLoad || loading ? (
         Array.from({ length: 6 }).map((_, index) => (
           <View key={index} style={styles.skeletonItem}>
             <Skeleton colorMode={colorMode} width={50} height={50} radius={50} />

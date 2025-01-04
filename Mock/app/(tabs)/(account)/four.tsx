@@ -30,13 +30,10 @@ const Profile = () => {
   };
   const clearUserDataCache = async () => {
     try {
-      await AsyncStorage.multiRemove(['communities', 'courses', 'courseCategories']);
-      // You might also need to clear individual community messages if stored per community:
-      const keys = await AsyncStorage.getAllKeys();
-      const communityMessageKeys = keys.filter(key => key.startsWith('messages_'));
-      await AsyncStorage.multiRemove(communityMessageKeys);
+      await AsyncStorage.clear();
+      console.log('All AsyncStorage data cleared.');
     } catch (e) {
-      console.error('Error clearing user data cache:', e);
+      console.error('Error clearing AsyncStorage:', e);
     }
   };
 
@@ -51,9 +48,9 @@ const Profile = () => {
           },
         }
       );
-      await clearUserDataCache();
+      clearUserDataCache();
       logout();
-    router.replace("Intro");
+      router.replace("Intro");
     } catch (error) {
       console.error("Error logging out:", error);
     }

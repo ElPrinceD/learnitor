@@ -80,7 +80,7 @@ export default function Tab3Layout() {
           name="createNewTime"
           options={{
             headerShown: true,
-            presentation: "modal",
+           
             animation: "fade_from_bottom",
             headerStyle: {
               backgroundColor: themeColors.background,

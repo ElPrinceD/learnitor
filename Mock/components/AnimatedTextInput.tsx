@@ -120,7 +120,7 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
       marginBottom: rMS(16),
       width: "100%",
       borderRadius: 10,
-      padding: rMS(16),
+      padding: rMS(10),
       backgroundColor: themeColors.text,
       color: themeColors.background,
     },
@@ -130,7 +130,7 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
       marginVertical: rV(15),
     },
     label: {
-      borderRadius: 70,
+      borderRadius: 5,
       paddingHorizontal: rS(5),
       backgroundColor: themeColors.text,
       zIndex: 1,
@@ -141,8 +141,7 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
     toggleIcon: {
       position: "absolute",
       right: rMS(1),
-      top: rMS(0),
-    
+      top: rMS(5),
     },
   });
 

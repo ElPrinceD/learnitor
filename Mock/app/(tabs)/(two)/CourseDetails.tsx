@@ -12,6 +12,7 @@ import {
   useColorScheme,
   Dimensions,
   RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
@@ -59,7 +60,7 @@ const CourseDetails: React.FC = () => {
   } = useQuery({
     queryKey: ["courseTopics", parsedCourse?.id],
     queryFn: () => getCourseTopics(parsedCourse?.id, userToken?.token),
-    enabled: !!parsedCourse?.id,
+    enabled: !!parsedCourse?.id && !!userInfo?.user?.id && !!userToken?.token,
   });
 
   const {
@@ -75,7 +76,7 @@ const CourseDetails: React.FC = () => {
         parsedCourse?.id,
         userToken?.token
       ),
-    enabled: !!parsedCourse?.id,
+    enabled: !!parsedCourse?.id && !!userInfo?.user?.id && !!userToken?.token,
   });
 
   const {
@@ -103,7 +104,7 @@ const CourseDetails: React.FC = () => {
         return Promise.resolve(null); // or any other suitable placeholder
       }
     },
-    enabled: !!parsedCourse?.id, // Enable query only if enrolled and course ID exists
+    enabled: !!parsedCourse?.id && !!userInfo?.user?.id && !!userToken?.token,
   });
 
   const userAlreadyEnrolled = enrollmentData?.enrolled;
@@ -130,6 +131,8 @@ const CourseDetails: React.FC = () => {
     },
   });
 
+  console.log(enrollmentData);
+
   const unenrollMutation = useMutation<any, any, any, any>({
     mutationFn: async ({ userId, courseId, token }) => {
       await unenrollFromCourse(userId, courseId, token);
@@ -147,6 +150,11 @@ const CourseDetails: React.FC = () => {
       setErrorMessage(error.message || "Error unenrolling from course");
     },
   });
+  useEffect(() => {
+    if (courseProgress) {
+      setProgress(courseProgress);
+    }
+  }, [courseProgress]);
 
   useEffect(() => {
     if (progressError) {

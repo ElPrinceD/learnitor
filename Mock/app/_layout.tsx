@@ -10,6 +10,7 @@ import {
 import { Stack, router, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { AuthProvider, useAuth } from "../components/AuthContext"; // Update the path
+import { usePushNotifications } from "../usePushNotifications";
 import { useColorScheme } from "../components/useColorScheme";
 import { RootSiblingParent } from "react-native-root-siblings";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -22,6 +23,9 @@ import {
   configureReanimatedLogger,
   ReanimatedLogLevel,
 } from "react-native-reanimated";
+import { TamaguiProvider } from "@tamagui/core";
+import { PortalProvider } from "@tamagui/portal";
+import config from "../tamagui.config";
 export { ErrorBoundary } from "expo-router";
 
 // This is the default configuration
@@ -36,6 +40,7 @@ const RootLayoutNav = () => {
   const colorScheme = useColorScheme();
   const segments = useSegments();
   const { userToken, isLoading } = useAuth();
+  const { expoPushToken, notification } = usePushNotifications();
   const [navigationCompleted, setNavigationCompleted] = useState(false);
 
   useEffect(() => {
@@ -57,33 +62,46 @@ const RootLayoutNav = () => {
   }, [navigationCompleted]);
 
   return (
-    <BottomSheetModalProvider>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <SafeAreaProvider>
-          <QueryClientProvider client={queryClient}>
-            <WebSocketProvider token={userToken?.token}>
-              <ThemeProvider
-                value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-              >
-                <Stack>
-                  <Stack.Screen name="index" options={{ headerShown: false }} />
-                  <Stack.Screen
-                    name="(verification)"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="(tabs)"
-                    options={{ headerShown: false, headerShadowVisible: false }}
-                  />
+    <TamaguiProvider config={config}>
+      <PortalProvider>
+        <BottomSheetModalProvider>
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <SafeAreaProvider>
+              <QueryClientProvider client={queryClient}>
+                <WebSocketProvider token={userToken?.token}>
+                  <ThemeProvider
+                    value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+                  >
+                    <Stack>
+                      <Stack.Screen
+                        name="index"
+                        options={{ headerShown: false }}
+                      />
+                      <Stack.Screen
+                        name="(verification)"
+                        options={{ headerShown: false }}
+                      />
+                      <Stack.Screen
+                        name="(tabs)"
+                        options={{
+                          headerShown: false,
+                          headerShadowVisible: false,
+                        }}
+                      />
 
-                  <Stack.Screen name="(game)" options={{ headerShown: false }} />
-                </Stack>
-              </ThemeProvider>
-            </WebSocketProvider>
-          </QueryClientProvider>
-        </SafeAreaProvider>
-      </GestureHandlerRootView>
-    </BottomSheetModalProvider>
+                      <Stack.Screen
+                        name="(game)"
+                        options={{ headerShown: false }}
+                      />
+                    </Stack>
+                  </ThemeProvider>
+                </WebSocketProvider>
+              </QueryClientProvider>
+            </SafeAreaProvider>
+          </GestureHandlerRootView>
+        </BottomSheetModalProvider>
+      </PortalProvider>
+    </TamaguiProvider>
   );
 };
 
