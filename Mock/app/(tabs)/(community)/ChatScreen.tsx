@@ -63,6 +63,7 @@ const CommunityChatScreen: React.FC = () => {
         user: {
           _id: data.sender_id,
           name: data.sender,
+          avatar: data.sender_image, // Include the profile picture here
         },
       };
     } else if ('_id' in data && 'createdAt' in data) {
@@ -78,35 +79,36 @@ const CommunityChatScreen: React.FC = () => {
       return null; // Skip processing if the format is unrecognized
     }
   };
+
   const backgroundImage =
     colorScheme === "dark"
       ? require("../../../assets/images/dark-bg.jpg")
       : require("../../../assets/images/light-bg.jpg");
 
-      const fetchMessageHistory = useCallback(async () => {
-        try {
-          setLoading(true);
-          const cachedMessages = await AsyncStorage.getItem(`messages_${communityId}`);
-          
-          if (cachedMessages) {
-            let parsedMessages = JSON.parse(cachedMessages).map(normalizeMessage);
-            
-            // Filter out null values and sort messages from newest to oldest
-            const validMessages = parsedMessages
-              .filter((msg): msg is IMessage => msg !== null)
-              .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()); // Sort by date descending
+  const fetchMessageHistory = useCallback(async () => {
+    try {
+      setLoading(true);
+      const cachedMessages = await AsyncStorage.getItem(`messages_${communityId}`);
       
-            setMessages(validMessages);
-          } else {
-            await sendMessage({ type: 'fetch_history', community_id: communityId });
-          }
-        } catch (error) {
-          console.error("Error fetching message history:", error);
-          setError("Failed to load message history");
-        } finally {
-          setLoading(false);
-        }
-      }, [communityId, sendMessage]);
+      if (cachedMessages) {
+        let parsedMessages = JSON.parse(cachedMessages).map(normalizeMessage);
+        
+        // Filter out null values and sort messages from newest to oldest
+        const validMessages = parsedMessages
+          .filter((msg): msg is IMessage => msg !== null)
+          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()); // Sort by date descending
+  
+        setMessages(validMessages);
+      } else {
+        await sendMessage({ type: 'fetch_history', community_id: communityId });
+      }
+    } catch (error) {
+      console.error("Error fetching message history:", error);
+      setError("Failed to load message history");
+    } finally {
+      setLoading(false);
+    }
+  }, [communityId, sendMessage]);
 
   useFocusEffect(
     useCallback(() => {
@@ -117,74 +119,74 @@ const CommunityChatScreen: React.FC = () => {
     }, [fetchMessageHistory])
   );
 
-
-  
   useEffect(() => {
-  let socketCleanup = () => {};
-  
-  if (socket) {
-    const onMessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        console.log("Received message:", data);
-        if (data.type === 'history') {
-          // Sort messages before setting, newest first
-          const transformedMessages = data.messages
-            .map((message) => ({
-              _id: message.id.toString(),
-              text: message.message,
-              createdAt: new Date(message.sent_at),
+    let socketCleanup = () => {};
+    
+    if (socket) {
+      const onMessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log("Received message:", data);
+          if (data.type === 'history') {
+            // Sort messages before setting, newest first
+            const transformedMessages = data.messages
+              .map((message) => ({
+                _id: message.id.toString(),
+                text: message.message,
+                createdAt: new Date(message.sent_at),
+                user: {
+                  _id: message.sender_id,
+                  name: message.sender,
+                  avatar: message.sender_image, // Include the profile picture here
+                },
+              }))
+              .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()); // Sort by date descending
+
+            setMessages(transformedMessages);
+            AsyncStorage.setItem(`messages_${communityId}`, JSON.stringify(transformedMessages));
+          } else if (data.type === 'message') {
+            const newMessage = {
+              _id: data.id.toString(),
+              text: data.message,
+              createdAt: new Date(data.sent_at),
               user: {
-                _id: message.sender_id,
-                name: message.sender,
+                _id: data.sender_id,
+                name: data.sender,
+                avatar: data.sender_image, // Include the profile picture here
               },
-            }))
-            .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()); // Sort by date descending
+            };
 
-          setMessages(transformedMessages);
-          AsyncStorage.setItem(`messages_${communityId}`, JSON.stringify(transformedMessages));
-        } else if (data.type === 'message') {
-          const newMessage = {
-            _id: data.id.toString(),
-            text: data.message,
-            createdAt: new Date(data.sent_at),
-            user: {
-              _id: data.sender_id,
-              name: data.sender,
-            },
-          };
+            setMessages((prevMessages) => {
+              const index = prevMessages.findIndex(msg => msg._id === data.temp_id);
+              if (index !== -1) {
+                // Update the temp message with the real ID
+                return [
+                  { ...prevMessages[index], _id: newMessage._id, user: newMessage.user },
+                  ...prevMessages.slice(0, index),
+                  ...prevMessages.slice(index + 1)
+                ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()); // Re-sort after update
+              } else {
+                // Add new message at the beginning for inverted chat
+                return [newMessage, ...prevMessages].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+              }
+            });
 
-          setMessages((prevMessages) => {
-            const index = prevMessages.findIndex(msg => msg._id === data.temp_id);
-            if (index !== -1) {
-              // Update the temp message with the real ID
-              return [
-                { ...prevMessages[index], _id: newMessage._id },
-                ...prevMessages.slice(0, index),
-                ...prevMessages.slice(index + 1)
-              ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()); // Re-sort after update
-            } else {
-              // Add new message at the beginning for inverted chat
-              return [newMessage, ...prevMessages].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-            }
-          });
-
-          // Update cache
-          AsyncStorage.setItem(`messages_${communityId}`, JSON.stringify([newMessage, ...messages].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())));
+            // Update cache
+            AsyncStorage.setItem(`messages_${communityId}`, JSON.stringify([newMessage, ...messages].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())));
+          }
+        } catch (error) {
+          console.error("Error processing WebSocket message:", error);
         }
-      } catch (error) {
-        console.error("Error processing WebSocket message:", error);
-      }
-    };
+      };
 
-    socket.addEventListener('message', onMessage);
-    socketCleanup = () => {
-      socket.removeEventListener('message', onMessage);
-    };
-  }
-  
-  return socketCleanup;
-}, [socket, communityId, messages]);
+      socket.addEventListener('message', onMessage);
+      socketCleanup = () => {
+        socket.removeEventListener('message', onMessage);
+      };
+    }
+    
+    return socketCleanup;
+  }, [socket, communityId, messages]);
 
   const onSend = useCallback((newMessages: IMessage[] = []) => {
     for (let message of newMessages) {

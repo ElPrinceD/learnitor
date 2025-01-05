@@ -140,7 +140,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
       }
       
       // Trigger reconnection
-      reconnectWebSocket();
+      ///reconnectWebSocket();
     };
 
     ws.onerror = (error) => {
@@ -149,7 +149,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
       if (error.type === 'error' && error.code === 1006) {
         console.warn("Network error detected. Attempting to reconnect...");
       }
-      reconnectWebSocket();
+     // reconnectWebSocket();
     };
 
     return () => {
