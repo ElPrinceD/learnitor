@@ -1,20 +1,22 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
+import { Select } from "@tamagui/select";
+import { Adapt } from "@tamagui/adapt";
+import type { SelectProps } from "@tamagui/select";
 import { Sheet } from "@tamagui/sheet";
-import Button from "./GameButton";
 import { useColorScheme } from "./useColorScheme";
 import Colors from "../constants/Colors";
-import { rMS, rV, SIZES } from "../constants";
+import { rMS, rS, rV, SIZES } from "../constants";
 import DatePicker from "react-native-modern-datepicker";
 
-interface CustomDateTimeSelectorProps {
-  onDateChange?: (date: string) => void; // Callback for date change
-  onTimeChange?: (time: string) => void; // Callback for time change
-  label: string; // Label for the component
-  buttonTitle?: string; // Default button title
-  mode: "date" | "time"; // Mode to select date or time
-  minDate?: string; // Minimum selectable date (ISO format)
-  maxDate?: string; // Maximum selectable date (ISO format)
+interface CustomDateTimeSelectorProps extends SelectProps {
+  onDateChange?: (date: string) => void;
+  onTimeChange?: (time: string) => void;
+  label: string;
+  buttonTitle?: string;
+  mode: "date" | "time";
+  minDate?: string;
+  maxDate?: string;
 }
 
 const CustomDateTimeSelector: React.FC<CustomDateTimeSelectorProps> = ({
@@ -25,10 +27,11 @@ const CustomDateTimeSelector: React.FC<CustomDateTimeSelectorProps> = ({
   mode,
   minDate,
   maxDate,
+  ...selectProps
 }) => {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [showPicker, setShowPicker] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -47,7 +50,7 @@ const CustomDateTimeSelector: React.FC<CustomDateTimeSelectorProps> = ({
     if (onDateChange) {
       onDateChange(date);
     }
-    setShowPicker(false); // Close picker after selection
+    setIsOpen(false);
   };
 
   const handleTimeChange = (time: string) => {
@@ -55,87 +58,116 @@ const CustomDateTimeSelector: React.FC<CustomDateTimeSelectorProps> = ({
     if (onTimeChange) {
       onTimeChange(time);
     }
-    setShowPicker(false); // Close picker after selection
+    setIsOpen(false);
   };
 
   const styles = StyleSheet.create({
     container: {
-      flex: 1,
-      paddingVertical: rV(10),
+      flexDirection: "row", // Change to row
+      alignItems: "center",
+      // paddingVertical: rV(10),
+      justifyContent: "space-between",
+      borderBottomWidth: rMS(1),
+      borderBottomColor: themeColors.textSecondary,
     },
     label: {
       fontSize: SIZES.large,
-      marginBottom: rV(8),
       color: themeColors.text,
       fontWeight: "bold",
+      marginRight: rS(10),
     },
-    button: {
-      backgroundColor: colorScheme === "light" ? "#EEEEEE" : "#3A3B3C",
-      padding: rMS(15),
-      alignItems: "flex-start",
-      borderRadius: 8,
+    selectContainer: {
+      flex: 1,
     },
   });
 
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
-      <Button
-        title={formatDateTime()} // Display selected date or time or fallback title
-        onPress={() => setShowPicker(true)} // Open the bottom sheet
-        style={styles.button}
-      />
-
-      <Sheet
-        modal
-        open={showPicker}
-        onOpenChange={setShowPicker} // Control the sheet visibility
-        dismissOnSnapToBottom
-        snapPoints={[45]} // Adjust the sheet size
-        animationConfig={{
-          type: "spring",
-          damping: 22,
-          mass: 1,
-          stiffness: 200,
-        }}
-      >
-        <Sheet.Frame
-          style={{
-            backgroundColor: themeColors.background,
-            padding: 10,
-          }}
+      <View style={styles.selectContainer}>
+        <Select
+          value={
+            (mode === "date" ? selectedDate : selectedTime) as
+              | string
+              | undefined
+          }
+          onValueChange={() => {}}
+          open={isOpen}
+          onOpenChange={setIsOpen}
+          {...selectProps}
         >
-          <Sheet.ScrollView>
-            {mode === "date" ? (
-              <DatePicker
-                selected={selectedDate || undefined}
-                onSelectedChange={handleDateChange}
-                options={{
-                  backgroundColor: themeColors.background,
-                  mainColor: themeColors.tint,
-                }}
-                minimumDate={minDate} // Disable past dates if provided
-                maximumDate={maxDate}
+          <Select.Trigger
+            style={{
+              backgroundColor: "transparent",
+              borderColor: "transparent",
+              borderRadius: rMS(6),
+              paddingVertical: rV(12),
+              paddingHorizontal: rS(16),
+              zIndex: 10,
+              flex: 1,
+              justifyContent: "flex-end",
+            }}
+          >
+            <Select.Value
+              style={{
+                color: themeColors.text,
+                fontWeight: "bold",
+                fontSize: SIZES.medium,
+              }}
+            >
+              {formatDateTime()}
+            </Select.Value>
+          </Select.Trigger>
+
+          <Adapt when={true} platform="touch">
+            <Sheet
+              modal
+              open={isOpen}
+              onOpenChange={setIsOpen}
+              animationConfig={{
+                type: "spring",
+                damping: 22,
+                mass: 1.2,
+                stiffness: 220,
+              }}
+              snapPoints={[40]}
+            >
+              <Sheet.Frame style={{ backgroundColor: themeColors.background }}>
+                <Sheet.ScrollView>
+                  <Adapt.Contents />
+                  {mode === "date" ? (
+                    <DatePicker
+                      selected={selectedDate || undefined}
+                      onSelectedChange={handleDateChange}
+                      options={{
+                        backgroundColor: themeColors.background,
+                        mainColor: themeColors.tint,
+                      }}
+                      minimumDate={minDate}
+                      maximumDate={maxDate}
+                    />
+                  ) : (
+                    <DatePicker
+                      mode="time"
+                      selected={selectedTime || undefined}
+                      onTimeChange={handleTimeChange}
+                      options={{
+                        backgroundColor: themeColors.background,
+                        mainColor: themeColors.tint,
+                      }}
+                    />
+                  )}
+                </Sheet.ScrollView>
+              </Sheet.Frame>
+              <Sheet.Overlay
+                animation="lazy"
+                enterStyle={{ opacity: 0 }}
+                exitStyle={{ opacity: 0 }}
               />
-            ) : (
-              <DatePicker
-                mode="time"
-                selected={selectedTime || undefined}
-                onTimeChange={handleTimeChange}
-                options={{
-                  backgroundColor: themeColors.background,
-                  mainColor: themeColors.tint,
-                }}
-              />
-            )}
-          </Sheet.ScrollView>
-        </Sheet.Frame>
-        <Sheet.Overlay
-          animation="quick"
-          enterStyle={{ opacity: 0 }}
-          exitStyle={{ opacity: 0 }}
-        />
-      </Sheet>
+            </Sheet>
+          </Adapt>
+        </Select>
+      </View>
     </View>
   );
 };

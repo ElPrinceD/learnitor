@@ -31,9 +31,9 @@ const Profile = () => {
   const clearUserDataCache = async () => {
     try {
       await AsyncStorage.clear();
-      console.log('All AsyncStorage data cleared.');
+      console.log("All AsyncStorage data cleared.");
     } catch (e) {
-      console.error('Error clearing AsyncStorage:', e);
+      console.error("Error clearing AsyncStorage:", e);
     }
   };
 

@@ -187,7 +187,6 @@ const AnimatedRoundTextInput: React.FC<AnimatedRoundTextInputProps> = ({
             editable={editable}
             keyboardType={keyboardType}
             onSubmitEditing={handleSubmitEditing}
-            multiline
           />
           <TouchableOpacity
             onPress={() => setShowPassword(!showPassword)}
@@ -213,6 +212,7 @@ const AnimatedRoundTextInput: React.FC<AnimatedRoundTextInputProps> = ({
           editable={editable}
           keyboardType={keyboardType}
           onSubmitEditing={handleSubmitEditing}
+          multiline={true}
         />
       )}
     </Animated.View>

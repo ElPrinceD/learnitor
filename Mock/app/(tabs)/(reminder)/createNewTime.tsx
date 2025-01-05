@@ -25,6 +25,7 @@ import CustomPicker from "../../../components/CustomPicker"; // Custom picker co
 import DateSelector from "../../../components/DateSelector.tsx";
 import DatePicker from "react-native-modern-datepicker";
 import CustomDateTimeSelector from "../../../components/CustomDateTimeSelector.tsx";
+import Animated, { FadeInLeft, ReduceMotion } from "react-native-reanimated";
 
 interface Category {
   value: number;
@@ -159,7 +160,6 @@ const CreateNewTime = () => {
       backgroundColor: themeColors.reverseText,
       borderRadius: rMS(10),
       justifyContent: "center",
-
       paddingVertical: rV(1),
     },
     tab: {
@@ -270,16 +270,16 @@ const CreateNewTime = () => {
       marginVertical: rV(20),
     },
     section: {
-      marginVertical: rV(20),
-      paddingTop: rV(7),
+      marginVertical: rV(5),
+      paddingVertical: rV(7),
       paddingLeft: rS(10),
-      backgroundColor: themeColors.reverseText,
+      backgroundColor: themeColors.buttonBackground,
       borderRadius: rMS(10),
     },
     button: {
       width: rS(150),
       paddingVertical: rV(10),
-      borderRadius: 20,
+      borderRadius: 10,
       backgroundColor: themeColors.tint,
       alignItems: "center",
     },
@@ -346,7 +346,10 @@ const CreateNewTime = () => {
           <Text style={styles.tabText}>TimeTable</Text>
         </TouchableOpacity>
       </View>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         {activeTab === "Task" && (
           <>
             <View style={styles.inputContainer}>
@@ -356,13 +359,6 @@ const CreateNewTime = () => {
                 label="Title"
                 value={title}
                 onChangeText={setTitle}
-              />
-              <AnimatedRoundTextInput
-                placeholderTextColor={themeColors.textSecondary}
-                style={styles.input}
-                label="Description"
-                value={description}
-                onChangeText={setDescription}
               />
             </View>
             <View style={styles.section}>
@@ -389,7 +385,8 @@ const CreateNewTime = () => {
                 }}
                 buttonTitle="Pick Time"
               />
-
+            </View>
+            <View style={styles.section}>
               <CustomPicker
                 label="Category"
                 options={categoriesData?.map((cat) => cat.label) || []} // Array of strings
@@ -405,6 +402,31 @@ const CreateNewTime = () => {
                 options={simplifiedRecurrenceOptions} // Simplify to strings
                 selectedValue={recurrenceOption}
                 onValueChange={setRecurrenceOption}
+              />
+              {recurrenceOption !== "Does not repeat" && (
+                <Animated.View
+                  entering={FadeInLeft.delay(200)
+                    .randomDelay()
+                    .reduceMotion(ReduceMotion.Never)}
+                  style={{ flexDirection: "row", alignItems: "center" }}
+                >
+                  <DateSelector
+                    onDateChange={(selectedDate: string) =>
+                      setRecurrenceEndDate(new Date(selectedDate))
+                    }
+                    label="End Date for Recurrence"
+                    minDate={true}
+                  />
+                </Animated.View>
+              )}
+            </View>
+            <View style={styles.inputContainer}>
+              <AnimatedRoundTextInput
+                placeholderTextColor={themeColors.textSecondary}
+                style={[styles.input, { height: rV(130) }]}
+                label="Description"
+                value={description}
+                onChangeText={setDescription}
               />
             </View>
             <View style={styles.buttonContainer}>
