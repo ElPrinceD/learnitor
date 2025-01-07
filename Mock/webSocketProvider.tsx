@@ -19,6 +19,7 @@ interface WebSocketContextType {
   fetchAndCacheCategoryNames: (token: string) => Promise<void>;
   getCachedTodayPlans: (date: Date, category?: string) => Promise<any[]>;
   getCachedCategoryNames: () => Promise<any>;
+  unreadCommunitiesCount: number;
 }
 
 const WebSocketContext = createContext<WebSocketContextType | null>(null);
@@ -32,13 +33,14 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const [unreadCommunityMessages, setUnreadCommunityMessages] = useState<Record<string, any>>({});
 
   const connectWebSocket = useCallback(() => {
     if (!token) return;
 
     if (socket) {
-  socket.close();
-}
+      socket.close();
+    }
     const ws = new WebSocket(`${ApiUrl}/ws/chat/?token=${token}`);
     setSocket(ws);
 
@@ -73,10 +75,15 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
           await AsyncStorage.setItem(`messages_${data.community_id}`, JSON.stringify(updatedMessages));
 
           // Update last message for list view with status
-          await AsyncStorage.setItem(`last_message_${data.community_id}`, JSON.stringify({
+          const newLastMessage = {
             ...data,
             status: data.status || 'sent',
             sent_at: new Date(data.sent_at).toISOString(),
+          };
+          await AsyncStorage.setItem(`last_message_${data.community_id}`, JSON.stringify(newLastMessage));
+          setUnreadCommunityMessages(prev => ({
+            ...prev,
+            [data.community_id]: newLastMessage
           }));
           break;
         case 'history':
@@ -96,6 +103,14 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
               ...lastMessage,
               sent_at: new Date(lastMessage.sent_at).toISOString(),
               status: lastMessage.status || 'sent'
+            }));
+            setUnreadCommunityMessages(prev => ({
+              ...prev,
+              [data.community_id]: {
+                ...lastMessage,
+                status: lastMessage.status || 'sent',
+                sent_at: new Date(lastMessage.sent_at).toISOString(),
+              }
             }));
           }
           break;
@@ -119,6 +134,10 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
               if (parsedLastMessage.id === messageId) {
                 parsedLastMessage.status = data.status;
                 await AsyncStorage.setItem(`last_message_${communityId}`, JSON.stringify(parsedLastMessage));
+                setUnreadCommunityMessages(prev => ({
+                  ...prev,
+                  [communityId]: parsedLastMessage
+                }));
               }
             }
           }
@@ -135,21 +154,22 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
       
       // Notify user if this is after several reconnection attempts
       if (reconnectAttempts > 3) {
-        // Here you might want to show a notification or alert to the user
         console.warn("Connection lost. Trying to reconnect...");
       }
       
-      // Trigger reconnection
-      ///reconnectWebSocket();
+      if (token) {
+        reconnectWebSocket();
+      }
     };
 
     ws.onerror = (error) => {
       console.error("WebSocket error:", error);
-      // Handle specific errors if possible, like network issues vs. server issues
       if (error.type === 'error' && error.code === 1006) {
         console.warn("Network error detected. Attempting to reconnect...");
       }
-     // reconnectWebSocket();
+      if (token) {
+        reconnectWebSocket();
+      }
     };
 
     return () => {
@@ -164,18 +184,14 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   }, [token, connectWebSocket]);
 
   const reconnectWebSocket = useCallback(() => {
-    // Initial backoff multiplier
     const initialBackoffMs = 1000; // 1 second
     const maxBackoffMs = 60000; // 1 minute
     const backoffMultiplier = 2;
     
     const attempt = reconnectAttempts;
     
-    // Calculate backoff time with exponential growth
     let backoff = Math.min(maxBackoffMs, initialBackoffMs * Math.pow(backoffMultiplier, attempt));
-    
-    // Add some randomness to prevent thundering herd problem
-    backoff += Math.random() * 1000; // Randomize by up to 1 second
+    backoff += Math.random() * 1000; // Add randomness
     
     console.log(`Attempting to reconnect in ${backoff / 1000} seconds...`);
     
@@ -212,6 +228,11 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
         const cachedLastMessage = await AsyncStorage.getItem(`last_message_${community.id}`);
         if (!cachedLastMessage) {
           sendMessage({ type: 'history', community_id: community.id });
+        } else {
+          setUnreadCommunityMessages(prev => ({
+            ...prev,
+            [community.id]: JSON.parse(cachedLastMessage)
+          }));
         }
       }
     } catch (error) {
@@ -232,14 +253,16 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     return null;
   };
 
-  // Function for joining a new community
+  // Rest of your existing functions...
+
+  const unreadCommunitiesCount = Object.values(unreadCommunityMessages).filter(message => message?.status !== 'read').length;
+
   const joinAndSubscribeToCommunity = useCallback(async (communityId: string | number) => {
     if (socket && isConnected) {
       try {
         const message = { type: 'join_community', community_id: communityId };
         socket.send(JSON.stringify(message));
   
-        // Wait for acknowledgment from the server that the join was successful
         const handleJoinSuccess = (event: MessageEvent) => {
           const data = JSON.parse(event.data);
           if (data.type === 'join_success' && data.community_id === communityId) {
@@ -250,7 +273,6 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   
         socket.addEventListener('message', handleJoinSuccess);
   
-        // Update the cached communities
         await updateCachedCommunities(communityId);
       } catch (error) {
         console.error("Failed to join community:", error);
@@ -258,8 +280,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     } else {
       console.error("WebSocket is not connected.");
     }
-  }, [socket, isConnected, token]);
-  
+  }, [socket, isConnected]);
 
   const unsubscribeFromCommunity = useCallback((communityId: string | number) => {
     if (socket && isConnected) {
@@ -271,7 +292,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
 
   const fetchAndCacheTodayPlans = useCallback(async (token: string, date: Date, category?: string) => {
     try {
-      const dateString = date.toISOString().split('T')[0]; // Simplified for caching key
+      const dateString = date.toISOString().split('T')[0];
       const cacheKey = `todayPlans_${dateString}_${category || 'all'}`;
       const cachedPlans = await AsyncStorage.getItem(cacheKey);
       if (cachedPlans) {
@@ -293,6 +314,8 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
         return JSON.parse(cachedCategories);
       }
       const categories = await getCategoryNames(token);
+
+      console.log(categories)
       await AsyncStorage.setItem('categoryNames', JSON.stringify(categories));
       return categories;
     } catch (error) {
@@ -326,15 +349,10 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     }
   }, [socket, isConnected, token]);
 
-  // Helper function to subscribe to an existing community without trying to join
   const subscribeToExistingCommunity = useCallback(async (communityId: string | number) => {
     if (socket && isConnected) {
       try {
-        // Directly subscribe to the community's group without attempting to join
-        const community_group_name = `community_${communityId}`;
-        // Simulate adding to a group layer since we don't have direct access in the frontend
         sendMessage({ type: 'subscribe_existing', community_id: communityId });
-        
         await updateCachedCommunities(communityId);
       } catch (error) {
         console.error("Failed to subscribe to existing community:", error);
@@ -348,7 +366,6 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
       let cachedCommunities = await AsyncStorage.getItem('communities');
       let communities = cachedCommunities ? JSON.parse(cachedCommunities) : [];
 
-      // Add to cache only if not already there
       if (!communities.some(c => c.id === communityId)) {
         communities.push(newCommunity);
         await AsyncStorage.setItem('communities', JSON.stringify(communities));
@@ -375,7 +392,6 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     }
   }, [token]);
 
-  // Fetch and cache courses independently of WebSocket connection
   const fetchAndCacheCourses = useCallback(async () => {
     if (token) {
       try {
@@ -393,7 +409,6 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     }
   }, [token]);
 
-  // Fetch and cache course categories independently of WebSocket connection
   const fetchAndCacheCourseCategories = useCallback(async () => {
     if (token) {
       try {
@@ -411,7 +426,6 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     }
   }, [token]);
 
-  // Explicitly define the value for the context
   const contextValue: WebSocketContextType = {
     socket,
     isConnected,
@@ -425,7 +439,8 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     fetchAndCacheTodayPlans,
     fetchAndCacheCategoryNames,
     getCachedTodayPlans,
-    getCachedCategoryNames
+    getCachedCategoryNames,
+    unreadCommunitiesCount,
   };
 
   return (

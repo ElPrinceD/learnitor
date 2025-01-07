@@ -1,13 +1,13 @@
-import React from "react";
+import React, { useState, useCallback } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import CommunityScreen from "../../(tabs)/(community)/CommunityScreen";
 import CreateCommunity from "./CreateCommunity";
 import CommunityDetailScreen from "./CommunityDetailScreen";
-import EditCommunityScreen from "./EditCommunityScreen"; // Import the Edit screen
+import EditCommunityScreen from "./EditCommunityScreen";
 import Colors from "../../../constants/Colors";
 import { useColorScheme, TouchableOpacity, Text, View } from "react-native";
 import { rMS } from "../../../constants";
-import ChatScreen from "./ChatScreen";
+import CommunityChatScreen from "./ChatScreen"; // Make sure this is the correct path
 
 const Stack = createNativeStackNavigator();
 
@@ -38,12 +38,12 @@ export default function CommunityLayout() {
       />
       <Stack.Screen
         name="ChatScreen"
-        component={ChatScreen}
+        component={CommunityChatScreen} // Changed to CommunityChatScreen
         options={({ route, navigation }) => ({
           title: route.params?.name || "Chat",
           headerBackTitle: "Back",
           headerStyle: {
-            backgroundColor: themeColors.reverseText, // Set the header background to red
+            backgroundColor: themeColors.reverseText,
           },
           headerTitle: () => (
             <TouchableOpacity
@@ -70,6 +70,7 @@ export default function CommunityLayout() {
           animation: "fade_from_bottom",
           headerTitleAlign: "center",
           headerBackTitle: "Cancel",
+          
         }}
       />
       <Stack.Screen

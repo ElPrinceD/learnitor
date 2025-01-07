@@ -1,147 +1,168 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { Calendar } from "react-native-calendars";
+import { Select } from "@tamagui/select";
+import { Adapt } from "@tamagui/adapt";
 import { Sheet } from "@tamagui/sheet";
-import Button from "./GameButton";
+import type { SelectProps } from "@tamagui/select";
 import { useColorScheme } from "./useColorScheme";
 import Colors from "../constants/Colors";
-import { rMS, rV, SIZES } from "../constants";
+import { rMS, rS, rV, SIZES } from "../constants";
+import { Calendar } from "react-native-calendars";
 
-interface DateSelectorProps {
-  onDateChange: (date: string) => void; // Callback to pass selected date
-  label: string; // Label for the component
-  buttonTitle?: string; // Custom title for the button (optional)
-  minDate?: boolean; // If true, disables past dates
+interface DateSelectorProps extends SelectProps {
+  onDateChange: (date: string) => void;
+  label: string;
+  buttonTitle?: string;
+  minDate?: boolean;
 }
 
 const DateSelector: React.FC<DateSelectorProps> = ({
   onDateChange,
   label,
-  buttonTitle = "Select a date", // Default button title
-  minDate = false, // Default to false (no restrictions)
+  buttonTitle = "Select a date",
+  minDate = false,
+  ...selectProps
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [showCalendar, setShowCalendar] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [selected, setSelected] = useState("");
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
   const formatDate = (date: Date | null) => {
-    if (!date) return buttonTitle; // Return the button title if date is null
-    try {
-      return date.toLocaleDateString("en-US", {
-        weekday: "short",
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
-    } catch (error) {
-      console.warn("Error formatting date:", error);
-      return buttonTitle;
-    }
+    if (!date) return buttonTitle;
+    return date.toLocaleDateString("en-US", {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
   };
 
   const handleDateChange = (day: any) => {
-    if (!day?.timestamp) {
-      console.warn("Invalid date object:", day);
-      return;
-    }
+    if (!day?.timestamp) return;
     const date = new Date(day.timestamp);
     setSelectedDate(date);
     setSelected(day.dateString);
-    onDateChange(day.dateString); // Pass selected date to parent
-    setShowCalendar(false); // Close bottom sheet
+    onDateChange(day.dateString);
+    setIsOpen(false);
   };
 
   const getTodayDate = () => {
     const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, "0");
-    const dd = String(today.getDate()).padStart(2, "0");
-    return `${yyyy}-${mm}-${dd}`;
+    return `${today.getFullYear()}-${(today.getMonth() + 1)
+      .toString()
+      .padStart(2, "0")}-${today.getDate().toString().padStart(2, "0")}`;
   };
 
   const styles = StyleSheet.create({
     container: {
-      flex: 1,
-      paddingVertical: rV(10),
+      flexDirection: "row",
+      alignItems: "center",
+      // paddingVertical: rV(10),
+      justifyContent: "space-between",
+      borderBottomWidth: rMS(1),
+      borderBottomColor: themeColors.textSecondary,
     },
     label: {
       fontSize: SIZES.large,
-      marginBottom: rV(8),
       color: themeColors.text,
       fontWeight: "bold",
+      marginRight: rS(10),
+    },
+    selectContainer: {
+      flex: 1,
     },
   });
 
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
-      <Button
-        title={formatDate(selectedDate)} // Display formatted date or fallback title
-        onPress={() => setShowCalendar(true)} // Open the bottom sheet
-        style={{
-          backgroundColor: colorScheme === "light" ? "#EEEEEE" : "#3A3B3C",
-          padding: rMS(15),
-          alignItems: "flex-start",
-          borderRadius: 8,
-        }}
-      />
-
-      <Sheet
-        modal
-        open={showCalendar}
-        onOpenChange={setShowCalendar} // Control the sheet visibility
-        dismissOnSnapToBottom
-        snapPoints={[40]} // Adjust the size of the sheet
-        animationConfig={{
-          type: "spring",
-          damping: 22,
-          mass: 1,
-          stiffness: 200,
-        }}
-      >
-        <Sheet.Frame
-          style={{
-            backgroundColor: themeColors.background,
-            padding: 10,
-          }}
+      <View style={styles.selectContainer}>
+        <Select
+          value={selected}
+          onValueChange={() => {}}
+          open={isOpen}
+          onOpenChange={setIsOpen}
+          disablePreventBodyScroll
+          {...selectProps}
         >
-          <Sheet.ScrollView>
-            <Calendar
-              onDayPress={handleDateChange}
-              enableSwipeMonths={true}
-              markedDates={{
-                [selected]: {
-                  selected: true,
-                  selectedColor: themeColors.background,
-                },
+          <Select.Trigger
+            style={{
+              backgroundColor: "transparent",
+              borderColor: "transparent",
+              borderRadius: rMS(6),
+              paddingVertical: rV(12),
+              paddingHorizontal: rS(16),
+              zIndex: 10,
+              flex: 1,
+              justifyContent: "flex-end",
+            }}
+          >
+            <Select.Value
+              style={{
+                color: themeColors.text,
+                fontWeight: "bold",
+                fontSize: SIZES.medium,
               }}
-              minDate={minDate ? getTodayDate() : undefined} // Disable past dates if minDate is true
-              theme={{
-                backgroundColor: themeColors.tint,
-                calendarBackground: themeColors.background,
-                textSectionTitleColor: themeColors.text,
-                selectedDayTextColor: "#1434A4",
-                todayTextColor: "#FF6347",
-                dayTextColor: themeColors.text,
-                textDisabledColor: themeColors.textSecondary,
-                monthTextColor: themeColors.text,
-                arrowColor: themeColors.text,
-                textMonthFontWeight: "bold",
-                textMonthFontSize: SIZES.large,
-                textDayHeaderFontWeight: "bold",
+            >
+              {formatDate(selectedDate)}
+            </Select.Value>
+          </Select.Trigger>
+
+          <Adapt when={true} platform="touch">
+            <Sheet
+              modal
+              open={isOpen}
+              onOpenChange={setIsOpen}
+              animationConfig={{
+                type: "spring",
+                damping: 22,
+                mass: 1.2,
+                stiffness: 220,
               }}
-            />
-          </Sheet.ScrollView>
-        </Sheet.Frame>
-        <Sheet.Overlay
-          animation="quick"
-          enterStyle={{ opacity: 0 }}
-          exitStyle={{ opacity: 0 }}
-        />
-      </Sheet>
+              snapPoints={[40]}
+            >
+              <Sheet.Frame style={{ backgroundColor: themeColors.background }}>
+                <Sheet.ScrollView>
+                  <Adapt.Contents />
+                  <Calendar
+                    onDayPress={handleDateChange}
+                    enableSwipeMonths={true}
+                    markedDates={{
+                      [selected]: {
+                        selected: true,
+                        selectedColor: themeColors.background,
+                      },
+                    }}
+                    minDate={minDate ? getTodayDate() : undefined}
+                    theme={{
+                      backgroundColor: themeColors.tint,
+                      calendarBackground: themeColors.background,
+                      textSectionTitleColor: themeColors.text,
+                      selectedDayTextColor: "#1434A4",
+                      todayTextColor: "#FF6347",
+                      dayTextColor: themeColors.text,
+                      textDisabledColor: themeColors.textSecondary,
+                      monthTextColor: themeColors.text,
+                      arrowColor: themeColors.text,
+                      textMonthFontWeight: "bold",
+                      textMonthFontSize: SIZES.large,
+                      textDayHeaderFontWeight: "bold",
+                    }}
+                  />
+                </Sheet.ScrollView>
+              </Sheet.Frame>
+              <Sheet.Overlay
+                animation="lazy"
+                enterStyle={{ opacity: 0 }}
+                exitStyle={{ opacity: 0 }}
+              />
+            </Sheet>
+          </Adapt>
+        </Select>
+      </View>
     </View>
   );
 };
