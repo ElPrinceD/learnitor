@@ -54,7 +54,7 @@ export default function CommunityLayout() {
               }
               style={{ flexDirection: 'row', alignItems: 'center' }}
             >
-              <Text style={{ color: themeColors.tint, fontSize: rMS(19) }}>
+              <Text style={{ color: themeColors.text, fontSize: rMS(19) }}>
                 {route.params?.name ?? "Chat"}
               </Text>
             </TouchableOpacity>
@@ -90,7 +90,7 @@ export default function CommunityLayout() {
                   })
                 }
               >
-                <Text style={{ color: themeColors.tint, marginRight: 10, fontSize: rMS(19) }}>
+                <Text style={{ color: themeColors.text, marginRight: 10, fontSize: rMS(19) }}>
                   Edit
                 </Text>
               </TouchableOpacity>
@@ -106,7 +106,7 @@ export default function CommunityLayout() {
           presentation: "modal",
           headerLeft: () => (
             <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Text style={{ color: themeColors.tint, marginLeft: 5, fontSize: rMS(19) }}>
+              <Text style={{ color: themeColors.text, marginLeft: 5, fontSize: rMS(19) }}>
                 Cancel
               </Text>
             </TouchableOpacity>

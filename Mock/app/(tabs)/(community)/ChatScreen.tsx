@@ -267,14 +267,12 @@ const CommunityChatScreen: React.FC = ({ navigation }) => {
       
       headerRight: () => (
         <View style={{ flexDirection: 'row' }}>
-            <TouchableOpacity onPress={() => setSelectedMessages([])}>
-            <Text style={{ color: themeColors.tint, fontSize: rMS(19) }}> Deselect ({selectedMessages.length})</Text>
-          </TouchableOpacity>
+           
           <TouchableOpacity onPress={() => console.log("Delete Selected")}>
           <MaterialCommunityIcons
       name="delete"
       size={25}
-      color={themeColors.tint}
+      color={themeColors.text}
       style={{   marginRight: 10, fontSize: rMS(25)}}
     />
 
@@ -283,7 +281,7 @@ const CommunityChatScreen: React.FC = ({ navigation }) => {
           <MaterialCommunityIcons
       name="share-circle"
       size={25}
-      color={themeColors.tint}
+      color={themeColors.text}
       style={{   marginRight: 10, fontSize: rMS(25)}}
       />
       </TouchableOpacity>
@@ -291,7 +289,7 @@ const CommunityChatScreen: React.FC = ({ navigation }) => {
           <MaterialCommunityIcons
       name="reply"
       size={25}
-      color={themeColors.tint}
+      color={themeColors.text}
       style={{   marginRight: 10, fontSize: rMS(25)}}
       />
           </TouchableOpacity>
@@ -300,15 +298,19 @@ const CommunityChatScreen: React.FC = ({ navigation }) => {
           <MaterialCommunityIcons
       name="content-copy"
       size={25}
-      color={themeColors.tint}
+      color={themeColors.text}
       style={{   marginRight: 10, fontSize: rMS(25)}}
       />
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => setSelectedMessages([])}>
+            <Text style={{ color: themeColors.text, fontSize: rMS(19) }}> Deselect ({selectedMessages.length})</Text>
           </TouchableOpacity>
         
         </View>
       ),
       headerTitle: () => (
-        <Text style={{ color: themeColors.tint, fontSize: rMS(19) }}>
+        <Text style={{ color: themeColors.text, fontSize: rMS(19) }}>
          
         </Text>
       )
