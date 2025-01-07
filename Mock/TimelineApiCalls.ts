@@ -28,8 +28,11 @@ export const getCategoryNames = async (token) => {
         const response = await apiClient.get('/api/task/categories/', {
             headers: { Authorization: `Token ${token}` },
         });
+
+        console.table(response.data)
         return response.data.reduce((acc, category) => {
             acc[category.id] = category.name;
+            console.table(acc)
             return acc;
         })
     

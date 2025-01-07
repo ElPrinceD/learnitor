@@ -24,6 +24,7 @@ interface CommunityListProps {
     sent_at: string;
     status?: string; // Add status to the message object
   } | null>;
+  showUnreadIndicator?: Record<string, boolean>; // New prop for controlling unread indicator
 }
 
 const CommunityList: React.FC<CommunityListProps> = ({
@@ -32,6 +33,7 @@ const CommunityList: React.FC<CommunityListProps> = ({
   onCommunityPress,
   showLastMessage = false,
   getLastMessage,
+  showUnreadIndicator = {}, // Default to true if not provided
 }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -78,8 +80,8 @@ const CommunityList: React.FC<CommunityListProps> = ({
             onPress={() => onCommunityPress(item)}
             showLastMessage={showLastMessage}
             lastMessage={lastMessages[item.id] || null}
-            // Assuming 'isGlobal' is available in the Community type or passed from parent if not
-            isGlobal={false} // Set this to true if this list represents global communities
+            isGlobal={false}
+            showUnreadIndicator={showUnreadIndicator[item.id] || false}
           />
         )}
         // ItemSeparatorComponent={() => <View style={styles.separator} />}

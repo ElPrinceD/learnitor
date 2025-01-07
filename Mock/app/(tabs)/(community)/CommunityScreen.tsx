@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { View, StyleSheet, Text, useColorScheme, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, StyleSheet, Text, useColorScheme, TouchableOpacity, ActivityIndicator, Platform } from "react-native";
 import moment from "moment";
 import SearchBar from "../../../components/SearchBar2";
 import Colors from "../../../constants/Colors";
@@ -39,6 +39,16 @@ const CommunityScreen: React.FC = () => {
     fetchAndCacheCommunities: () => {},
   };
 
+  // Utility function for mapping communities
+  const mapCommunities = (communities, lastMessages) => {
+    return communities.map(community => ({
+      ...community,
+      lastMessageTime: lastMessages[community.id]?.sent_at || new Date(0).toISOString(),
+    })).sort((a, b) => 
+      moment(b.lastMessageTime).diff(moment(a.lastMessageTime))
+    );
+  };
+
   // Load cached user communities when the screen mounts or when token changes
   useEffect(() => {
     const loadCachedData = async () => {
@@ -46,17 +56,24 @@ const CommunityScreen: React.FC = () => {
         const cachedCommunities = await AsyncStorage.getItem('communities');
         if (cachedCommunities) {
           setMyCommunities(JSON.parse(cachedCommunities));
-          // Fetch last messages for all communities
           const messages = await Promise.all(
             JSON.parse(cachedCommunities).map(async (community: Community) => {
               const message = await AsyncStorage.getItem(`last_message_${community.id}`);
-              return [community.id, message ? JSON.parse(message) : null];
+              const parsedMessage = message ? JSON.parse(message) : null;
+              console.log(`Status of last message in community ${community.id}: ${parsedMessage?.status || 'no message'}`);
+              return [community.id, parsedMessage];
             })
           );
           setLastMessages(Object.fromEntries(messages));
+  
+          // Here we ensure that only messages with status other than 'read' show the indicator
+          const unreadIndicatorStatus = Object.fromEntries(
+            messages.map(([id, message]) => [id, message?.status !== 'read'])
+          );
+          console.log('Unread status:', unreadIndicatorStatus);
         }
         setLoading(false);
-        setInitialLoad(false); // Set initialLoad to false after fetching data
+        setInitialLoad(false);
       } catch (error) {
         console.error("Error loading cached communities:", error);
         setErrorMessage("Failed to load communities");
@@ -109,30 +126,36 @@ const CommunityScreen: React.FC = () => {
         console.log('WebSocket message received:', data);
 
         if (data.type === 'message') {
-          // New message comes with 'sent' status by default
           const newMessage = {
             ...data,
             status: 'sent',
             sent_at: new Date(data.sent_at).toISOString(),
           };
-          setLastMessages(prevMessages => ({
-            ...prevMessages,
+          setLastMessages((prevState) => ({
+            ...prevState,
             [data.community_id]: newMessage,
           }));
+
+
+          console.log(`Status of last message in community ${data.community_id}: ${newMessage.status}`);
           // Cache the new message status
           AsyncStorage.setItem(`last_message_${data.community_id}`, JSON.stringify(newMessage));
         } else if (data.type === 'message_status') {
-          setLastMessages(prevMessages => ({
-            ...prevMessages,
+          setLastMessages((prevState) => ({
+            ...prevState,
             [data.message_id]: {
-              ...(prevMessages[data.message_id] || {}),
+              ...(prevState[data.message_id] || {}),
               status: data.status,
             }
           }));
+
+          
+          console.log(`Status of message ${data.message_id}: ${data.status}`);
           // Update cache with new status
-          if (prevMessages[data.message_id]) {
-            AsyncStorage.setItem(`last_message_${prevMessages[data.message_id].community_id}`, JSON.stringify({
-              ...prevMessages[data.message_id],
+          const cachedMessage = lastMessages[data.message_id];
+          if (cachedMessage) {
+            AsyncStorage.setItem(`last_message_${cachedMessage.community_id}`, JSON.stringify({
+              ...cachedMessage,
               status: data.status
             }));
           }
@@ -151,12 +174,11 @@ const CommunityScreen: React.FC = () => {
         socket.removeEventListener('message', onMessage);
       }
     };
-  }, [isConnected, socket]);
+  }, [isConnected, socket, lastMessages]);
 
-
-  const handleNavigateCreateCommunity = () => {
+  const handleNavigateCreateCommunity = useCallback(() => {
     router.navigate("CreateCommunity");
-  };
+  }, []);
 
   const getLastMessage = useCallback((communityId: string) => {
     return lastMessages[communityId] || null;
@@ -164,25 +186,18 @@ const CommunityScreen: React.FC = () => {
 
   // Sorting logic for user communities based on the last message's timestamp
   const sortedMyCommunities = useMemo(() => {
-    return myCommunities.map(community => ({
-      ...community,
-      lastMessageTime: lastMessages[community.id]?.sent_at || new Date(0).toISOString(),
-    })).sort((a, b) => 
-      moment(b.lastMessageTime).diff(moment(a.lastMessageTime))
-    );
+    return mapCommunities(myCommunities, lastMessages);
   }, [myCommunities, lastMessages]);
 
   // Combine and filter communities for search
   const filteredCommunities = useMemo(() => {
     if (searchQuery.length < 3) return { user: sortedMyCommunities, global: [] };
 
-    const filteredUserCommunities = myCommunities.filter(community =>
-      community.name.toLowerCase().includes(searchQuery.toLowerCase())
-    ).map(community => ({
-      ...community,
-      lastMessageTime: lastMessages[community.id]?.sent_at || new Date(0).toISOString(),
-    })).sort((a, b) => 
-      moment(b.lastMessageTime).diff(moment(a.lastMessageTime))
+    const filteredUserCommunities = mapCommunities(
+      myCommunities.filter(community =>
+        community.name.toLowerCase().includes(searchQuery.toLowerCase())
+      ),
+      lastMessages
     );
 
     const filteredGlobalCommunities = globalCommunities.filter(community =>
@@ -196,9 +211,10 @@ const CommunityScreen: React.FC = () => {
     setSearchQuery(query);
   }, []);
 
+
   const handleCommunityPress = useCallback(async (community: Community) => {
     const isUserCommunity = myCommunities.some(c => c.id === community.id);
-    
+  
     if (!isUserCommunity && isConnected) {
       await joinAndSubscribeToCommunity(community.id);
       setMyCommunities(prev => [...prev, community]);
@@ -214,12 +230,27 @@ const CommunityScreen: React.FC = () => {
           message_id: lastMessage.id,
           status: 'read'
         }));
+        
+        // Optimistically update the state to remove the unread indicator
+        setLastMessages(prevState => ({
+          ...prevState,
+          [community.id]: {
+            ...prevState[community.id],
+            status: 'read'
+          }
+        }));
+  
+        // Update the cache immediately for persistence
+        AsyncStorage.setItem(`last_message_${community.id}`, JSON.stringify({
+          ...lastMessage,
+          status: 'read'
+        }));
       }
     }
-
+  
     router.navigate({
       pathname: "ChatScreen",
-      params: { communityId: community.id, name: community.name },
+      params: { communityId: community.id, name: community.name, image: community.image_url },
     });
   }, [myCommunities, isConnected, joinAndSubscribeToCommunity, fetchAndCacheCommunities, getLastMessage, socket]);
 
@@ -275,7 +306,7 @@ const CommunityScreen: React.FC = () => {
 
       {initialLoad || loading ? (
         Array.from({ length: 6 }).map((_, index) => (
-          <View key={index} style={styles.skeletonItem}>
+          <View key={`skeleton-${index}`} style={styles.skeletonItem}>
             <Skeleton colorMode={colorMode} width={50} height={50} radius={50} />
             <View style={styles.skeletonTextContainer}>
               <Skeleton colorMode={colorMode} height={rV(20)} width={"60%"} />
@@ -300,12 +331,16 @@ const CommunityScreen: React.FC = () => {
                 onCommunityPress={handleCommunityPress}
                 showLastMessage
                 getLastMessage={getLastMessage}
+                showUnreadIndicator={Object.fromEntries(
+                  Object.entries(lastMessages).map(([id, message]) => [id, message?.status !== 'read'])
+                )}
               />
               {filteredCommunities.global.length > 0 && (
                 <GlobalCommunityList
                   title="Global Communities"
                   data={filteredCommunities.global}
                   onCommunityPress={handleCommunityPress}
+                 
                 />
               )}
             </React.Fragment>
@@ -316,9 +351,12 @@ const CommunityScreen: React.FC = () => {
               onCommunityPress={handleCommunityPress}
               showLastMessage
               getLastMessage={getLastMessage}
+              showUnreadIndicator={Object.fromEntries(
+                Object.entries(lastMessages).map(([id, message]) => [id, message?.status !== 'read'])
+              )}
             />
           )}
-          <TouchableOpacity style={styles.addButton} onPress={handleNavigateCreateCommunity}>
+          <TouchableOpacity style={[styles.addButton, { backgroundColor: themeColors.buttonBackground }]} onPress={handleNavigateCreateCommunity}>
             <FontAwesome6 name="add" size={SIZES.xLarge} color={themeColors.text} />
           </TouchableOpacity>
         </View>

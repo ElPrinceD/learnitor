@@ -40,7 +40,7 @@ const RootLayoutNav = () => {
   const colorScheme = useColorScheme();
   const segments = useSegments();
   const { userToken, isLoading } = useAuth();
-  const { expoPushToken, notification } = usePushNotifications();
+
   const [navigationCompleted, setNavigationCompleted] = useState(false);
 
   useEffect(() => {

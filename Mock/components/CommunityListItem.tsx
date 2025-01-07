@@ -20,6 +20,7 @@ interface CommunityListItemProps {
   showLastMessage?: boolean;
   lastMessage?: { sender?: string; message?: string; sent_at: string; status?: string } | null;
   isGlobal?: boolean;
+  showUnreadIndicator?: boolean; // New prop for controlling unread indicator visibility
 }
 
 const CommunityListItem: React.FC<CommunityListItemProps> = ({
@@ -28,6 +29,7 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
   showLastMessage,
   lastMessage,
   isGlobal,
+  showUnreadIndicator = false, // Default to true if not provided
 }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -82,9 +84,9 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
       position: 'absolute',
       bottom: 0,
       right: 0,
-      width: 10,
-      height: 10,
-      borderRadius: 5,
+      width: 15,
+      height: 15,
+      borderRadius: 7.5,
       backgroundColor: 'green',
     },
     communityTextContainer: {
@@ -131,7 +133,7 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
       <View style={styles.communityItem}>
         <View style={styles.communityImage}>
           <Image source={{ uri: item.image_url }} style={{width: '100%', height: '100%', borderRadius: 50}} />
-          {!isGlobal && lastMessage && lastMessage.status !== 'read' && (
+          {!isGlobal && lastMessage && showUnreadIndicator && (
             <View style={styles.unreadIndicator} />
           )}
         </View>

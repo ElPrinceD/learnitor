@@ -8,6 +8,7 @@ import { useClientOnlyValue } from "../../components/useClientOnlyValue";
 import { View, useThemeColor } from "../../components/Themed";
 import { useAuth } from "../../components/AuthContext";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { useWebSocket } from "../../webSocketProvider";
 
 // Define TabBarIcon component to handle filled and outlined icons
 function TabBarIcon(props: { name: string; color: string; focused: boolean }) {
@@ -23,6 +24,7 @@ function TabBarIcon(props: { name: string; color: string; focused: boolean }) {
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const { unreadCommunitiesCount } = useWebSocket();
 
   const currentHour = new Date().getHours();
   let greeting = "";
@@ -79,7 +81,6 @@ export default function TabLayout() {
             headerShadowVisible: false,
             headerRight: () => (
               <View style={styles.container}>
-                
                 <View style={styles.container}>
                   <Link href="/GameIntro" asChild>
                     <Pressable>
@@ -125,19 +126,24 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-  name="(community)"
-  options={{
-    title: "Community",
-    tabBarIcon: ({ color, focused }) => (
-      <TabBarIcon name="account-group" color={color} focused={focused} />
-    ),
-    headerShown: false,
-    headerTitle: "Community",
-    headerShadowVisible: false,
-  }}
-/>
-
-
+          name="(community)"
+          options={{
+            title: "Community",
+            tabBarIcon: ({ color, focused }) => (
+              <View>
+                <TabBarIcon name="account-group" color={color} focused={focused} />
+                {unreadCommunitiesCount > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{unreadCommunitiesCount}</Text>
+                  </View>
+                )}
+              </View>
+            ),
+            headerShown: false,
+            headerTitle: "Community",
+            headerShadowVisible: false,
+          }}
+        />
         <Tabs.Screen
           name="(reminder)"
           options={{
@@ -175,5 +181,21 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row-reverse",
     backgroundColor: "transparent",
+  },
+  badge: {
+    position: 'absolute',
+    left: 15,
+    top: -3,
+    backgroundColor: 'red',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
 });

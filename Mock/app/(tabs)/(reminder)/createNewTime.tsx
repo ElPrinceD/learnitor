@@ -195,7 +195,7 @@ const CreateNewTime = () => {
     },
     input: {
       flex: 1,
-      height: rV(45),
+      height: rV(15),
       color: themeColors.textSecondary,
       overflow: "hidden",
       borderColor: "transparent",
@@ -273,7 +273,7 @@ const CreateNewTime = () => {
       marginVertical: rV(5),
       paddingVertical: rV(7),
       paddingLeft: rS(10),
-      backgroundColor: themeColors.buttonBackground,
+      backgroundColor: themeColors.reverseText,
       borderRadius: rMS(10),
     },
     button: {
@@ -354,13 +354,20 @@ const CreateNewTime = () => {
         {activeTab === "Task" && (
           <>
             <View style={styles.inputContainer}>
-              <AnimatedRoundTextInput
-                placeholderTextColor={themeColors.textSecondary}
-                style={styles.input}
-                label="Title"
-                value={title}
-                onChangeText={setTitle}
-              />
+            <AnimatedRoundTextInput
+                  placeholderTextColor={themeColors.textSecondary}
+                  style={styles.input}
+                  label="Title"
+                  value={title}
+                  onChangeText={setTitle}
+                />
+                <AnimatedRoundTextInput
+                  placeholderTextColor={themeColors.textSecondary}
+                  style={styles.input}
+                  label="Description"
+                  value={description}
+                  onChangeText={setDescription}
+                />
             </View>
             <View style={styles.section}>
               <DateSelector
@@ -421,15 +428,7 @@ const CreateNewTime = () => {
                 </Animated.View>
               )}
             </View>
-            <View style={styles.inputContainer}>
-              <AnimatedRoundTextInput
-                placeholderTextColor={themeColors.textSecondary}
-                style={[styles.input, { height: rV(130) }]}
-                label="Description"
-                value={description}
-                onChangeText={setDescription}
-              />
-            </View>
+            
             <View style={styles.buttonContainer}>
               <GameButton
                 onPress={handleSaveTime}
