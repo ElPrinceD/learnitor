@@ -1,4 +1,10 @@
-import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useMemo,
+  useRef,
+  useEffect,
+  useCallback,
+} from "react";
 import {
   View,
   StyleSheet,
@@ -21,16 +27,16 @@ import { useWebSocket } from "../../../webSocketProvider";
 
 const Timeline = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const { userToken } = useAuth();
-  const { 
-    fetchAndCacheTodayPlans, 
-    fetchAndCacheCategoryNames, 
-    getCachedTodayPlans, 
-    getCachedCategoryNames 
+  const {
+    fetchAndCacheTodayPlans,
+    fetchAndCacheCategoryNames,
+    getCachedTodayPlans,
+    getCachedCategoryNames,
   } = useWebSocket();
 
   const colorScheme = useColorScheme();
@@ -56,15 +62,23 @@ const Timeline = () => {
   };
 
   const [todayPlans, setTodayPlans] = useState<any[]>([]);
-  const [categoryNames, setCategoryNames] = useState<any>({});
+  const [categoryNames, setCategoryNames] = useState<Record<number, string>>(
+    {}
+  );
 
   useEffect(() => {
     const fetchData = async () => {
       if (userToken) {
         setIsLoading(true);
         try {
-          const newPlans = await fetchAndCacheTodayPlans(userToken.token, selectedDate, selectedCategory);
-          const newCategoryNames = await fetchAndCacheCategoryNames(userToken.token);
+          const newPlans = await fetchAndCacheTodayPlans(
+            userToken.token,
+            selectedDate,
+            selectedCategory
+          );
+          const newCategoryNames = await fetchAndCacheCategoryNames(
+            userToken.token
+          );
 
           setTodayPlans(newPlans);
           setCategoryNames(newCategoryNames);
@@ -85,7 +99,10 @@ const Timeline = () => {
         if (userToken) {
           setIsLoading(true);
           try {
-            const newPlans = await getCachedTodayPlans(selectedDate, selectedCategory);
+            const newPlans = await getCachedTodayPlans(
+              selectedDate,
+              selectedCategory
+            );
             const newCategoryNames = await getCachedCategoryNames();
 
             setTodayPlans(newPlans);
@@ -102,7 +119,7 @@ const Timeline = () => {
     }, [userToken, selectedDate, selectedCategory])
   );
 
-  const handleEditPlan = (plan) => {
+  const handleEditPlan = (plan: any) => {
     router.navigate("EditPlan");
     router.setParams({
       taskId: String(plan.id),
@@ -110,8 +127,8 @@ const Timeline = () => {
       description: plan.description,
       duedate: plan.due_date,
       category_id: String(plan.category),
-      duetime: plan.due_time,
-      category_name: categoryNames[plan.category],
+      duetime: plan.due_time_start,
+      category_name: categoryNames[plan.category], // Now this directly uses the label
     });
   };
 
@@ -196,18 +213,16 @@ const Timeline = () => {
             ) : memoizedPlans.length === 0 ? (
               <Text style={styles.noPlansText}>Hey, you have a free day!</Text>
             ) : (
-              memoizedPlans.map(
-                (plan, index) => (
-                  <View key={index} style={styles.planItemWrapper}>
-                    <PlanItem
-                      plan={plan}
-                      categoryNames={categoryNames}
-                      getCategoryColor={getCategoryColor}
-                      handleEditPlan={handleEditPlan}
-                    />
-                  </View>
-                )
-              )
+              memoizedPlans.map((plan, index) => (
+                <View key={index} style={styles.planItemWrapper}>
+                  <PlanItem
+                    plan={plan}
+                    categoryNames={categoryNames}
+                    getCategoryColor={getCategoryColor}
+                    handleEditPlan={handleEditPlan}
+                  />
+                </View>
+              ))
             )}
           </View>
         </BottomSheetScrollView>

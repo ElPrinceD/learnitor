@@ -28,20 +28,22 @@ interface WebSocketContextType {
   fetchAndCacheCourses: () => Promise<void>;
   fetchAndCacheCourseCategories: () => Promise<void>;
   fetchAndCacheTodayPlans: (
-    token: string,
-    date: Date,
+    token: string | null,
+    date: Date | null,
     category?: string
-  ) => Promise<void>;
-  fetchAndCacheCategoryNames: (token: string) => Promise<void>;
+  ) => Promise<any[]>;
+  fetchAndCacheCategoryNames: (
+    token: string | null
+  ) => Promise<Record<number, string>>;
   getCachedTodayPlans: (date: Date, category?: string) => Promise<any[]>;
-  getCachedCategoryNames: () => Promise<any>;
+  getCachedCategoryNames: () => Promise<Record<number, string>>;
 }
 
 const WebSocketContext = createContext<WebSocketContextType | null>(null);
 
 interface WebSocketProviderProps {
   children: React.ReactNode;
-  token?: string;
+  token?: string | null;
 }
 
 export const WebSocketProvider: FC<WebSocketProviderProps> = ({
@@ -193,7 +195,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
     ws.onerror = (error) => {
       console.error("WebSocket error:", error);
       // Handle specific errors if possible, like network issues vs. server issues
-      if (error.type === "error" && error.code === 1006) {
+      if (error.type === "error" && error.eventPhase === 1006) {
         console.warn("Network error detected. Attempting to reconnect...");
       }
       // reconnectWebSocket();
@@ -337,9 +339,13 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
   );
 
   const fetchAndCacheTodayPlans = useCallback(
-    async (token: string, date: Date, category?: string) => {
+    async (
+      token: string | null,
+      date: Date | null,
+      category?: string | null
+    ) => {
       try {
-        const dateString = date.toISOString().split("T")[0]; // Simplified for caching key
+        const dateString = date?.toISOString().split("T")[0]; // Simplified for caching key
         const cacheKey = `todayPlans_${dateString}_${category || "all"}`;
         const cachedPlans = await AsyncStorage.getItem(cacheKey);
         if (cachedPlans) {
@@ -356,20 +362,26 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
     []
   );
 
-  const fetchAndCacheCategoryNames = useCallback(async (token: string) => {
+  const fetchAndCacheCategoryNames = async (
+    token: string | null
+  ): Promise<Record<number, string>> => {
     try {
       const cachedCategories = await AsyncStorage.getItem("categoryNames");
       if (cachedCategories) {
         return JSON.parse(cachedCategories);
       }
-      const categories = await getCategoryNames(token);
-      await AsyncStorage.setItem("categoryNames", JSON.stringify(categories));
-      return categories;
+      const categories = await getCategoryNames(token); // Assuming this function exists
+      const categoryMap = categories.reduce((acc, { value, label }) => {
+        acc[value] = label;
+        return acc;
+      }, {} as Record<number, string>);
+      await AsyncStorage.setItem("categoryNames", JSON.stringify(categoryMap));
+      return categoryMap;
     } catch (error) {
       console.error("Failed to fetch or cache category names:", error);
-      throw error;
+      throw error; // Propagate the error or handle it as needed
     }
-  }, []);
+  };
 
   const getCachedTodayPlans = useCallback(
     async (date: Date, category?: string) => {
@@ -381,10 +393,10 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
     []
   );
 
-  const getCachedCategoryNames = useCallback(async () => {
+  const getCachedCategoryNames = async (): Promise<Record<number, string>> => {
     const cachedData = await AsyncStorage.getItem("categoryNames");
     return cachedData ? JSON.parse(cachedData) : {};
-  }, []);
+  };
 
   const subscribeToExistingUserCommunities = useCallback(async () => {
     if (socket && isConnected && token) {

@@ -129,7 +129,7 @@ const CreateNewTime = () => {
           ? recurrenceEndDate.toISOString().split("T")[0]
           : null,
     };
-    console.log(selectedCategory);
+
     createTaskMutation.mutate({
       taskData: data,
       token: userToken?.token!,
@@ -326,6 +326,7 @@ const CreateNewTime = () => {
       padding: rS(15),
     },
   });
+  console.log(categoriesData);
 
   return (
     <View style={styles.container}>
