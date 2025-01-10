@@ -4,6 +4,7 @@ import { getCommunities, getCommunityDetails, getUserCommunities, getCommunityMe
 import { getCourseCategories, getCourses } from "./CoursesApiCalls";
 import ApiUrl from './config';
 import { getCategoryNames, getTodayPlans } from "./TimelineApiCalls";
+import { useAuth } from "./components/AuthContext";
 
 interface WebSocketContextType {
   socket: WebSocket | null;
@@ -34,6 +35,8 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [unreadCommunityMessages, setUnreadCommunityMessages] = useState<Record<string, any>>({});
+  const { userToken, userInfo } = useAuth();
+  const userId = userInfo?.user?.id;
 
   const connectWebSocket = useCallback(() => {
     if (!token) return;
@@ -54,67 +57,107 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
 
     ws.onmessage = async (event) => {
       const data = JSON.parse(event.data);
-      console.log("WebSocket message received:", data);
 
-      switch(data.type) {
-        case 'message':
-          // Update full message history
-          const cachedMessages = await AsyncStorage.getItem(`messages_${data.community_id}`);
-          const updatedMessages = cachedMessages ? JSON.parse(cachedMessages) : [];
-          updatedMessages.push({
-            _id: data.id.toString(),
-            text: data.message,
-            createdAt: new Date(data.sent_at),
-            user: {
-              _id: data.sender_id,
-              name: data.sender,
-            },
-            status: data.status || 'sent' // Default to 'sent' if status isn't provided
-          });
-
-          await AsyncStorage.setItem(`messages_${data.community_id}`, JSON.stringify(updatedMessages));
-
-          // Update last message for list view with status
-          const newLastMessage = {
-            ...data,
-            status: data.status || 'sent',
-            sent_at: new Date(data.sent_at).toISOString(),
-          };
-          await AsyncStorage.setItem(`last_message_${data.community_id}`, JSON.stringify(newLastMessage));
-          setUnreadCommunityMessages(prev => ({
-            ...prev,
-            [data.community_id]: newLastMessage
-          }));
-          break;
-        case 'history':
-          // Store full history
-          const normalizedMessages = data.messages.map(msg => ({
-            ...msg,
-            sent_at: new Date(msg.sent_at).toISOString(),
-            status: msg.status || 'sent'
-          }));
-          
-          await AsyncStorage.setItem(`messages_${data.community_id}`, JSON.stringify(normalizedMessages));
-          
-          // Store only the last message for list view
-          if (data.messages.length > 0) {
-            const lastMessage = data.messages[data.messages.length - 1];
-            await AsyncStorage.setItem(`last_message_${data.community_id}`, JSON.stringify({
-              ...lastMessage,
-              sent_at: new Date(lastMessage.sent_at).toISOString(),
-              status: lastMessage.status || 'sent'
+    
+        switch(data.type) {
+          case 'message':
+            // Update full message history with reply information
+            const cachedMessages = await AsyncStorage.getItem(`messages_${data.community_id}`);
+            const updatedMessages = cachedMessages ? JSON.parse(cachedMessages) : [];
+            updatedMessages.push({
+              _id: data.id.toString(),
+              text: data.message,
+              createdAt: new Date(data.sent_at),
+              user: {
+                _id: data.sender_id,
+                name: data.sender,
+                avatar: data.sender_image || null, 
+              },
+              status: data.status || 'sent',
+              replyTo: data.reply_to ? {
+                _id: data.reply_to.id ? data.reply_to.id.toString() : null,
+                text: data.reply_to.snippet || null, 
+                user: {
+                  _id: data.reply_to.sender_id || null,
+                  name: data.reply_to.sender_name || null
+                }
+              } : null
+            });
+      
+            await AsyncStorage.setItem(`messages_${data.community_id}`, JSON.stringify(updatedMessages));
+      
+            // Update last message for list view with status
+            const newLastMessage = {
+              ...data,
+              status: data.status || 'sent',
+              sent_at: new Date(data.sent_at).toISOString(),
+              replyTo: data.reply_to ? {
+                id: data.reply_to.id ? data.reply_to.id.toString() : null,
+                snippet: data.reply_to.snippet || null,
+                sender_name: data.reply_to.sender_name || null
+              } : null
+            };
+            await AsyncStorage.setItem(`last_message_${data.community_id}`, JSON.stringify(newLastMessage));
+            if (userId && data.sender_id !== userId) {
+              setUnreadCommunityMessages(prev => ({
+                ...prev,
+                [data.community_id]: newLastMessage
+              }));
+            }
+            break;
+          case 'history':
+            // Store full history including replies
+            const normalizedMessages = data.messages.map(msg => ({
+              _id: msg.id.toString(),
+              text: msg.message,
+              createdAt: new Date(msg.sent_at),
+              user: {
+                _id: msg.sender_id,
+                name: msg.sender,
+                avatar: msg.sender_image || null
+              },
+              status: msg.status || 'sent',
+              replyTo: msg.reply_to ? {
+                _id: msg.reply_to.id ? msg.reply_to.id.toString() : null,
+                text: msg.reply_to.snippet || null,
+                user: {
+                  _id: msg.reply_to.sender_id || null,
+                  name: msg.reply_to.sender_name || null
+                }
+              } : null
             }));
-            setUnreadCommunityMessages(prev => ({
-              ...prev,
-              [data.community_id]: {
+            
+            await AsyncStorage.setItem(`messages_${data.community_id}`, JSON.stringify(normalizedMessages));
+            
+            // Store only the last message for list view
+            if (data.messages.length > 0) {
+              const lastMessage = data.messages[data.messages.length - 1];
+              await AsyncStorage.setItem(`last_message_${data.community_id}`, JSON.stringify({
                 ...lastMessage,
-                status: lastMessage.status || 'sent',
                 sent_at: new Date(lastMessage.sent_at).toISOString(),
+                status: lastMessage.status || 'sent',
+                replyTo: lastMessage.reply_to ? {
+                  id: lastMessage.reply_to.id ? lastMessage.reply_to.id.toString() : null,
+                  snippet: lastMessage.reply_to.snippet || null,
+                  sender_name: lastMessage.reply_to.sender_name || null
+                } : null
+              }));
+              if (userId && lastMessage.sender_id !== userId) {
+                setUnreadCommunityMessages(prev => ({
+                  ...prev,
+                  [data.community_id]: {
+                    ...lastMessage,
+                    status: lastMessage.status || 'sent',
+                    sent_at: new Date(lastMessage.sent_at).toISOString(),
+                    replyTo: lastMessage.reply_to ? {
+                      id: lastMessage.reply_to.id ? lastMessage.reply_to.id.toString() : null,
+                      snippet: lastMessage.reply_to.snippet || null,
+                      sender_name: lastMessage.reply_to.sender_name || null
+                    } : null
+                  }
+                }));
               }
-            }));
-          }
-          break;
-        case 'message_status':
+            }       case 'message_status':
           // Update message status in both full history and last message cache
           const messageId = data.message_id;
           const communityId = await getCommunityIdFromMessage(messageId);
@@ -134,16 +177,17 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
               if (parsedLastMessage.id === messageId) {
                 parsedLastMessage.status = data.status;
                 await AsyncStorage.setItem(`last_message_${communityId}`, JSON.stringify(parsedLastMessage));
-                setUnreadCommunityMessages(prev => ({
-                  ...prev,
-                  [communityId]: parsedLastMessage
-                }));
+                if (userId && data.sender_id !== userId) {
+                  setUnreadCommunityMessages(prev => ({
+                    ...prev,
+                    [communityId]: parsedLastMessage
+                  }));
+                }
               }
             }
           }
           break;
         case 'join_success':
-          console.log(`Successfully joined community: ${data.community_id}`);
           break;
       }
     };
@@ -157,7 +201,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
         console.warn("Connection lost. Trying to reconnect...");
       }
       
-      if (token) {
+      if (reconnectAttempts > 0 || token) {
         reconnectWebSocket();
       }
     };
@@ -168,7 +212,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
         console.warn("Network error detected. Attempting to reconnect...");
       }
       if (token) {
-        reconnectWebSocket();
+       // reconnectWebSocket();
       }
     };
 
@@ -253,8 +297,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     return null;
   };
 
-  // Rest of your existing functions...
-
+  // Calculate unread communities count
   const unreadCommunitiesCount = Object.values(unreadCommunityMessages).filter(message => message?.status !== 'read').length;
 
   const joinAndSubscribeToCommunity = useCallback(async (communityId: string | number) => {
@@ -291,36 +334,40 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   }, [socket, isConnected, sendMessage]);
 
   const fetchAndCacheTodayPlans = useCallback(async (token: string, date: Date, category?: string) => {
-    try {
-      const dateString = date.toISOString().split('T')[0];
-      const cacheKey = `todayPlans_${dateString}_${category || 'all'}`;
-      const cachedPlans = await AsyncStorage.getItem(cacheKey);
-      if (cachedPlans) {
-        return JSON.parse(cachedPlans);
+    if(token){ 
+      try {
+        const dateString = date.toISOString().split('T')[0];
+        const cacheKey = `todayPlans_${dateString}_${category || 'all'}`;
+        const cachedPlans = await AsyncStorage.getItem(cacheKey);
+        if (cachedPlans) {
+          return JSON.parse(cachedPlans);
+        }
+        const plans = await getTodayPlans(token, date, category);
+        await AsyncStorage.setItem(cacheKey, JSON.stringify(plans));
+        return plans;
+      } catch (error) {
+        console.error("Failed to fetch or cache today's plans:", error);
+        throw error;
       }
-      const plans = await getTodayPlans(token, date, category);
-      await AsyncStorage.setItem(cacheKey, JSON.stringify(plans));
-      return plans;
-    } catch (error) {
-      console.error("Failed to fetch or cache today's plans:", error);
-      throw error;
     }
   }, []);
 
   const fetchAndCacheCategoryNames = useCallback(async (token: string) => {
-    try {
-      const cachedCategories = await AsyncStorage.getItem('categoryNames');
-      if (cachedCategories) {
-        return JSON.parse(cachedCategories);
-      }
-      const categories = await getCategoryNames(token);
+    if(token){ 
+      try {
+        const cachedCategories = await AsyncStorage.getItem('categoryNames');
+        if (cachedCategories) {
+          return JSON.parse(cachedCategories);
+        }
+        const categories = await getCategoryNames(token);
 
-      console.log(categories)
-      await AsyncStorage.setItem('categoryNames', JSON.stringify(categories));
-      return categories;
-    } catch (error) {
-      console.error("Failed to fetch or cache category names:", error);
-      throw error;
+        console.log(categories)
+        await AsyncStorage.setItem('categoryNames', JSON.stringify(categories));
+        return categories;
+      } catch (error) {
+        console.error("Failed to fetch or cache category names:", error);
+        throw error;
+      }
     }
   }, []);
 
@@ -361,17 +408,19 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   }, [socket, isConnected]);
 
   const updateCachedCommunities = async (communityId: string | number) => {
-    try {
-      const newCommunity = await getCommunityDetails(communityId, token);
-      let cachedCommunities = await AsyncStorage.getItem('communities');
-      let communities = cachedCommunities ? JSON.parse(cachedCommunities) : [];
+    if(token){ 
+      try {
+        const newCommunity = await getCommunityDetails(communityId, token);
+        let cachedCommunities = await AsyncStorage.getItem('communities');
+        let communities = cachedCommunities ? JSON.parse(cachedCommunities) : [];
 
-      if (!communities.some(c => c.id === communityId)) {
-        communities.push(newCommunity);
-        await AsyncStorage.setItem('communities', JSON.stringify(communities));
+        if (!communities.some(c => c.id === communityId)) {
+          communities.push(newCommunity);
+          await AsyncStorage.setItem('communities', JSON.stringify(communities));
+        }
+      } catch (error) {
+        console.error("Error updating cached communities:", error);
       }
-    } catch (error) {
-      console.error("Error updating cached communities:", error);
     }
   };
 
@@ -382,7 +431,6 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
         if (!cachedCommunities || JSON.parse(cachedCommunities).length === 0) {
           const communities = await getUserCommunities(token);
           await AsyncStorage.setItem('communities', JSON.stringify(communities));
-          console.log("Communities fetched and cached.");
         } else {
           console.log("Communities already cached.");
         }
@@ -425,6 +473,44 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
       }
     }
   }, [token]);
+
+  useEffect(() => {
+    // This effect will run once when the component mounts or when token changes
+    const loadAndCacheData = async () => {
+      if (token) {
+        try {
+          // Fetch and cache communities
+          await fetchAndCacheCommunities();
+          
+          // Fetch and cache courses
+          await fetchAndCacheCourses();
+          
+          // Fetch and cache course categories
+          await fetchAndCacheCourseCategories();
+          
+          // Fetch and cache today's plans for the current date
+          await fetchAndCacheTodayPlans(token, new Date());
+          
+          // Fetch and cache category names
+          await fetchAndCacheCategoryNames(token);
+
+          // Fetch messages for communities (assuming this is what you mean by caching messages)
+          const communities = await getUserCommunities(token);
+          for (const community of communities) {
+            // This might not be necessary if 'history' messages are already handled in 'fetchInitialLastMessages'
+            sendMessage({ type: 'fetch_history', community_id: community.id });
+          }
+
+          // Fetch initial last messages for unread count and notification purposes
+          await fetchInitialLastMessages();
+        } catch (error) {
+          console.error("Error during initial data load:", error);
+        }
+      }
+    };
+
+    loadAndCacheData();
+  }, [token, fetchAndCacheCommunities, fetchAndCacheCourses, fetchAndCacheCourseCategories, fetchAndCacheTodayPlans, fetchAndCacheCategoryNames, sendMessage]);
 
   const contextValue: WebSocketContextType = {
     socket,

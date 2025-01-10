@@ -93,6 +93,10 @@ const RootLayoutNav = () => {
                         name="(game)"
                         options={{ headerShown: false }}
                       />
+                       <Stack.Screen
+                        name="(fullscreens)"
+                        options={{ headerShown: false }}
+                      />
                     </Stack>
                   </ThemeProvider>
                 </WebSocketProvider>

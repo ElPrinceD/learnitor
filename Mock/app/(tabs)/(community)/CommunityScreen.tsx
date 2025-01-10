@@ -123,7 +123,7 @@ const CommunityScreen: React.FC = () => {
     const onMessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('WebSocket message received:', data);
+     
 
         if (data.type === 'message') {
           const newMessage = {

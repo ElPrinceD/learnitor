@@ -102,7 +102,7 @@ export const updateTask = async (taskId, taskData, token) => {
 };
   export const deleteTask = async (taskId, token) => {
   try{
-    const response = await apiClient.delete(`/api/tasks/${taskId}/`,
+    const response = await apiClient.delete(`/api/tasks/${taskId}/delete/`,
       {
         headers: {
           Authorization: `Token ${token}`,

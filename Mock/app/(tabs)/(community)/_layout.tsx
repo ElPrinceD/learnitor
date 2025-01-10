@@ -1,13 +1,13 @@
 import React, { useState, useCallback } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import CommunityScreen from "../../(tabs)/(community)/CommunityScreen";
+import CommunityScreen from "./CommunityScreen";
 import CreateCommunity from "./CreateCommunity";
 import CommunityDetailScreen from "./CommunityDetailScreen";
 import EditCommunityScreen from "./EditCommunityScreen";
 import Colors from "../../../constants/Colors";
 import { useColorScheme, TouchableOpacity, Text, View } from "react-native";
 import { rMS } from "../../../constants";
-import CommunityChatScreen from "./ChatScreen"; // Make sure this is the correct path
+// Make sure this is the correct path
 
 const Stack = createNativeStackNavigator();
 
@@ -36,31 +36,7 @@ export default function CommunityLayout() {
           title: "My Communities",
         }}
       />
-      <Stack.Screen
-        name="ChatScreen"
-        component={CommunityChatScreen} // Changed to CommunityChatScreen
-        options={({ route, navigation }) => ({
-          title: route.params?.name || "Chat",
-          headerBackTitle: "Back",
-          headerStyle: {
-            backgroundColor: themeColors.reverseText,
-          },
-          headerTitle: () => (
-            <TouchableOpacity
-              onPress={() =>
-                navigation.navigate("CommunityDetailScreen", {
-                  id: route.params?.communityId,
-                })
-              }
-              style={{ flexDirection: 'row', alignItems: 'center' }}
-            >
-              <Text style={{ color: themeColors.text, fontSize: rMS(19) }}>
-                {route.params?.name ?? "Chat"}
-              </Text>
-            </TouchableOpacity>
-          ),
-        })}
-      />
+
       <Stack.Screen
         name="CreateCommunity"
         component={CreateCommunity}

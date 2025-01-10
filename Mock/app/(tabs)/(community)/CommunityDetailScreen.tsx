@@ -32,6 +32,7 @@ type RouteParams = {
 const CommunityDetailScreen: React.FC = () => {
   const route = useRoute();
   const { id } = route.params as RouteParams;
+  console.log("I: ",route.params)
   const navigation = useNavigation();
   const { userToken } = useAuth();
   const { unsubscribeFromCommunity } = useWebSocket() || { unsubscribeFromCommunity: () => {} };
