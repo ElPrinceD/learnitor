@@ -39,15 +39,15 @@ const Profile = () => {
 
   const handleLogout = async () => {
     try {
-      await axios.post(
-        `${ApiUrl}/api/logout/`,
-        {},
-        {
-          headers: {
-            Authorization: `Token ${userToken?.token}`,
-          },
-        }
-      );
+      // await axios.post(
+      //   `${ApiUrl}/api/logout/`,
+      //   {},
+      //   {
+      //     headers: {
+      //       Authorization: `Token ${userToken?.token}`,
+      //     },
+      //   }
+      // );
       clearUserDataCache();
       logout();
       router.replace("Intro");
