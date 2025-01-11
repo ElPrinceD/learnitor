@@ -1,4 +1,4 @@
-import React, { memo, useCallback } from "react";
+import React, { memo, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -128,7 +128,15 @@ const CoursesList: React.FC<Props> = ({
     ),
     [themeColors, onCoursePress]
   );
+  const sortCourses = useCallback((list: Course[]) => {
+    return [...list].sort((a, b) => a.title.localeCompare(b.title));
+  }, []);
 
+  // Sort the courses using useMemo for optimization
+  const sortedCourses = useMemo(
+    () => sortCourses(courses),
+    [courses, sortCourses]
+  );
   const keyExtractor = useCallback((item: Course) => item.id.toString(), []);
 
   if (loading) {
@@ -147,7 +155,7 @@ const CoursesList: React.FC<Props> = ({
   return (
     <View style={styles.container}>
       <FlatList
-        data={courses}
+        data={sortedCourses}
         numColumns={2}
         initialNumToRender={5}
         maxToRenderPerBatch={10}

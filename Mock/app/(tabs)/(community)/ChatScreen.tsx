@@ -55,11 +55,11 @@ const CommunityChatScreen: React.FC = ({ navigation }) => {
   const [mediaUri, setMediaUri] = useState<string | null>(null);
   const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
   const [isVideoViewerVisible, setIsVideoViewerVisible] = useState(false);
-  
+
   const chatRef = useRef<GiftedChat>(null);
 
   const normalizeMessage = (data) => {
-    if ('message' in data && 'sent_at' in data) {
+    if ("message" in data && "sent_at" in data) {
       // Format 1: {id, message, sender, sender_id, sent_at}
       return {
         _id: data.id,
@@ -70,16 +70,16 @@ const CommunityChatScreen: React.FC = ({ navigation }) => {
           name: data.sender,
           avatar: data.sender_image,
         },
-        status: data.status || 'sent', // Default to 'sent' if status isn't provided
+        status: data.status || "sent", // Default to 'sent' if status isn't provided
       };
-    } else if ('_id' in data && 'createdAt' in data) {
+    } else if ("_id" in data && "createdAt" in data) {
       // Format 2: {_id, text, createdAt, user: {_id, name}}
       return {
         _id: data._id,
         text: data.text,
         createdAt: new Date(data.createdAt),
         user: data.user,
-        status: data.user.status || 'sent', // Default to 'sent' if status isn't provided
+        status: data.user.status || "sent", // Default to 'sent' if status isn't provided
       };
     } else {
       console.warn("Unknown message format received:", data);
@@ -95,19 +95,21 @@ const CommunityChatScreen: React.FC = ({ navigation }) => {
   const fetchMessageHistory = useCallback(async () => {
     try {
       setLoading(true);
-      const cachedMessages = await AsyncStorage.getItem(`messages_${communityId}`);
-      
+      const cachedMessages = await AsyncStorage.getItem(
+        `messages_${communityId}`
+      );
+
       if (cachedMessages) {
         let parsedMessages = JSON.parse(cachedMessages).map(normalizeMessage);
-        
+
         // Filter out null values and sort messages from newest to oldest
         const validMessages = parsedMessages
           .filter((msg): msg is IMessage => msg !== null)
           .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()); // Sort by date descending
-  
+
         setMessages(validMessages);
       } else {
-        await sendMessage({ type: 'fetch_history', community_id: communityId });
+        await sendMessage({ type: "fetch_history", community_id: communityId });
       }
     } catch (error) {
       console.error("Error fetching message history:", error);
@@ -128,14 +130,15 @@ const CommunityChatScreen: React.FC = ({ navigation }) => {
 
   useEffect(() => {
     let socketCleanup = () => {};
-    
+
     if (socket) {
       const onMessage = (event) => {
         try {
           const data = JSON.parse(event.data);
           console.log("Received message:", data);
-          if (data.type === 'history') {
-            if (data.community_id === communityId) { // Only update if it's the current community
+          if (data.type === "history") {
+            if (data.community_id === communityId) {
+              // Only update if it's the current community
               const transformedMessages = data.messages
                 .map((message) => ({
                   _id: message.id.toString(),
@@ -146,15 +149,19 @@ const CommunityChatScreen: React.FC = ({ navigation }) => {
                     name: message.sender,
                     avatar: message.sender_image,
                   },
-                  status: message.status || 'sent', // Default to 'sent' if status isn't provided
+                  status: message.status || "sent", // Default to 'sent' if status isn't provided
                 }))
                 .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
               setMessages(transformedMessages);
-              AsyncStorage.setItem(`messages_${communityId}`, JSON.stringify(transformedMessages));
+              AsyncStorage.setItem(
+                `messages_${communityId}`,
+                JSON.stringify(transformedMessages)
+              );
             }
-          } else if (data.type === 'message') {
-            if (data.community_id === communityId) { // Only update if it's the current community
+          } else if (data.type === "message") {
+            if (data.community_id === communityId) {
+              // Only update if it's the current community
               const newMessage = {
                 _id: data.id.toString(),
                 text: data.message,
@@ -164,23 +171,28 @@ const CommunityChatScreen: React.FC = ({ navigation }) => {
                   name: data.sender,
                   avatar: data.sender_image,
                 },
-                status: 'sent', // New messages are 'sent' by default
+                status: "sent", // New messages are 'sent' by default
               };
 
               setMessages((prevMessages) => {
-                const updatedMessages = [newMessage, ...prevMessages].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-                
+                const updatedMessages = [newMessage, ...prevMessages].sort(
+                  (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+                );
+
                 // If the user is viewing this community, mark the message as read
-                if (user?.id !== newMessage.user._id) { // Ensure it's not the user's own message
-                  socket.send(JSON.stringify({
-                    type: 'message_status_update',
-                    message_id: newMessage._id,
-                    status: 'read',
-                  }));
-                  
-                  updatedMessages[0].status = 'read'; // Optimistically update status
+                if (user?.id !== newMessage.user._id) {
+                  // Ensure it's not the user's own message
+                  socket.send(
+                    JSON.stringify({
+                      type: "message_status_update",
+                      message_id: newMessage._id,
+                      status: "read",
+                    })
+                  );
+
+                  updatedMessages[0].status = "read"; // Optimistically update status
                 }
-                
+
                 setTimeout(() => {
                   chatRef.current?.scrollToBottom(); // Scroll to top due to inversion
                 }, 100); // Small delay for state update
@@ -188,13 +200,23 @@ const CommunityChatScreen: React.FC = ({ navigation }) => {
               });
 
               // Update cache
-              AsyncStorage.setItem(`messages_${communityId}`, JSON.stringify([newMessage, ...messages].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())));
-              
+              AsyncStorage.setItem(
+                `messages_${communityId}`,
+                JSON.stringify(
+                  [newMessage, ...messages].sort(
+                    (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+                  )
+                )
+              );
+
               // Update last message status in the community list
-              AsyncStorage.setItem(`last_message_${communityId}`, JSON.stringify({
-                ...newMessage,
-                status: 'read',
-              }));
+              AsyncStorage.setItem(
+                `last_message_${communityId}`,
+                JSON.stringify({
+                  ...newMessage,
+                  status: "read",
+                })
+              );
             }
           }
         } catch (error) {
@@ -202,42 +224,45 @@ const CommunityChatScreen: React.FC = ({ navigation }) => {
         }
       };
 
-      socket.addEventListener('message', onMessage);
+      socket.addEventListener("message", onMessage);
       socketCleanup = () => {
-        socket.removeEventListener('message', onMessage);
+        socket.removeEventListener("message", onMessage);
       };
     }
-    
+
     return socketCleanup;
   }, [socket, communityId, messages, user]);
 
-  const onSend = useCallback((newMessages: IMessage[] = []) => {
-    for (let message of newMessages) {
-      const tempId = Math.random().toString(); // Generate a temporary ID for immediate UI update
-      const tempMessage = {
-        _id: tempId,
-        text: message.text,
-        createdAt: new Date(),
-        user: {
-          _id: user?.id || 1,
-          name: user?.first_name + ' ' + user?.last_name || "Unknown User",
-        },
-        ...(message.image && { image: message.image }),
-      };
-  
-      // Update UI with temporary message
-      
-      // Send message to server
-      sendMessage({
-        type: 'send_message',
-        community_id: communityId,
-        message: message.text,
-        sender: user?.first_name + ' ' + user?.last_name || "Unknown User",
-        sender_id: user?.id || 1,
-        temp_id: tempId
-      });
-    }
-  }, [communityId, sendMessage, user]);
+  const onSend = useCallback(
+    (newMessages: IMessage[] = []) => {
+      for (let message of newMessages) {
+        const tempId = Math.random().toString(); // Generate a temporary ID for immediate UI update
+        const tempMessage = {
+          _id: tempId,
+          text: message.text,
+          createdAt: new Date(),
+          user: {
+            _id: user?.id || 1,
+            name: user?.first_name + " " + user?.last_name || "Unknown User",
+          },
+          ...(message.image && { image: message.image }),
+        };
+
+        // Update UI with temporary message
+
+        // Send message to server
+        sendMessage({
+          type: "send_message",
+          community_id: communityId,
+          message: message.text,
+          sender: user?.first_name + " " + user?.last_name || "Unknown User",
+          sender_id: user?.id || 1,
+          temp_id: tempId,
+        });
+      }
+    },
+    [communityId, sendMessage, user]
+  );
 
   const pickImage = async () => {
     const result: ImagePicker.ImagePickerResult =
@@ -264,78 +289,84 @@ const CommunityChatScreen: React.FC = ({ navigation }) => {
 
   const updateHeader = useCallback(() => {
     navigation.setOptions({
-      
       headerRight: () => (
-        <View style={{ flexDirection: 'row' }}>
-            <TouchableOpacity onPress={() => setSelectedMessages([])}>
-            <Text style={{ color: themeColors.tint, fontSize: rMS(19) }}> Deselect ({selectedMessages.length})</Text>
+        <View style={{ flexDirection: "row" }}>
+          <TouchableOpacity onPress={() => setSelectedMessages([])}>
+            <Text style={{ color: themeColors.tint, fontSize: rMS(19) }}>
+              {" "}
+              Deselect ({selectedMessages.length})
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => console.log("Delete Selected")}>
-          <MaterialCommunityIcons
-      name="delete"
-      size={25}
-      color={themeColors.tint}
-      style={{   marginRight: 10, fontSize: rMS(25)}}
-    />
-
+            <MaterialCommunityIcons
+              name="delete"
+              size={25}
+              color={themeColors.tint}
+              style={{ marginRight: 10, fontSize: rMS(25) }}
+            />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => console.log("Forward Selected")}>
-          <MaterialCommunityIcons
-      name="share-circle"
-      size={25}
-      color={themeColors.tint}
-      style={{   marginRight: 10, fontSize: rMS(25)}}
-      />
-      </TouchableOpacity>
+            <MaterialCommunityIcons
+              name="share-circle"
+              size={25}
+              color={themeColors.tint}
+              style={{ marginRight: 10, fontSize: rMS(25) }}
+            />
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => console.log("Reply Selected")}>
-          <MaterialCommunityIcons
-      name="reply"
-      size={25}
-      color={themeColors.tint}
-      style={{   marginRight: 10, fontSize: rMS(25)}}
-      />
+            <MaterialCommunityIcons
+              name="reply"
+              size={25}
+              color={themeColors.tint}
+              style={{ marginRight: 10, fontSize: rMS(25) }}
+            />
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => console.log("Reply Selected")}>
-          <MaterialCommunityIcons
-      name="content-copy"
-      size={25}
-      color={themeColors.tint}
-      style={{   marginRight: 10, fontSize: rMS(25)}}
-      />
+            <MaterialCommunityIcons
+              name="content-copy"
+              size={25}
+              color={themeColors.tint}
+              style={{ marginRight: 10, fontSize: rMS(25) }}
+            />
           </TouchableOpacity>
-        
         </View>
       ),
       headerTitle: () => (
-        <Text style={{ color: themeColors.tint, fontSize: rMS(19) }}>
-         
-        </Text>
-      )
-      
+        <Text style={{ color: themeColors.tint, fontSize: rMS(19) }}></Text>
+      ),
     });
   }, [selectedMessages, navigation, themeColors, route.params?.name]);
 
-  const handleLongPress = useCallback((message: IMessage) => {
-    const isSelected = selectedMessages.some((m) => m._id === message._id);
-  
-    const updatedSelectedMessages = isSelected
-      ? selectedMessages.filter((m) => m._id !== message._id)
-      : [...selectedMessages, message];
-  
-    setSelectedMessages(updatedSelectedMessages);
-  
-    const updatedMessages = messages.map((m) =>
-      m._id === message._id ? { ...m, isChecked: !isSelected } : m
-    );
-  
-    setMessages(updatedMessages);
-    updateHeader();
-  }, [selectedMessages, messages, updateHeader]);
-  
-  
- 
-  
+  const handleLongPress = useCallback(
+    (message: IMessage) => {
+      setSelectedMessages((prevSelectedMessages) => {
+        const isMessageSelected = prevSelectedMessages.some(
+          (selectedMessage) => selectedMessage._id === message._id
+        );
+
+        if (isMessageSelected) {
+          // Remove the message from the selected messages
+          return prevSelectedMessages.filter(
+            (selectedMessage) => selectedMessage._id !== message._id
+          );
+        } else {
+          // Add the message to the selected messages
+          return [...prevSelectedMessages, message];
+        }
+      });
+
+      // Update the messages state to reflect selection visually
+      setMessages((prevMessages) => {
+        return prevMessages.map((m) =>
+          m._id === message._id ? { ...m, isSelected: !m.isSelected } : m
+        );
+      });
+
+      updateHeader(); // Update the header if necessary
+    },
+    [updateHeader]
+  );
   // In your useEffect for updating the header when no messages are selected
   useEffect(() => {
     if (selectedMessages.length === 0) {
@@ -348,80 +379,106 @@ const CommunityChatScreen: React.FC = ({ navigation }) => {
                 id: communityId,
               })
             }
-            style={{ flexDirection: 'row', alignItems: 'center' }}
+            style={{ flexDirection: "row", alignItems: "center" }}
           >
             <Text style={{ color: themeColors.tint, fontSize: rMS(19) }}>
               {route.params?.name ?? "Chat"}
             </Text>
           </TouchableOpacity>
-        )
+        ),
       });
     } else {
       updateHeader();
     }
-  }, [selectedMessages, navigation, communityId, route.params?.name, themeColors, updateHeader]);
-  
-  // Update your renderBubble function to use the isChecked property for visual feedback
-const renderBubble = (props) => {
-  const isSelected = selectedMessages.some(m => m._id === props.currentMessage._id);
-  const isFirstMessageOfBlock = props.previousMessage?.user?._id !== props.currentMessage.user._id;
-  const isOtherUser = props.currentMessage.user._id !== user?.id;
-  const isNewDay = 
-    !props.previousMessage ||
-    (props.currentMessage?.createdAt && 
-     props.previousMessage?.createdAt && 
-     props.currentMessage.createdAt.toDateString() !== 
-     props.previousMessage.createdAt.toDateString());
+  }, [
+    selectedMessages,
+    navigation,
+    communityId,
+    route.params?.name,
+    themeColors,
+  ]);
 
-  return (
-    <TouchableOpacity 
-    onPress={() => {
-      if (selectedMessages.length > 0) {
-        handleLongPress(props.currentMessage);
-      }
-    }
-  }
-  onLongPress={() => handleLongPress(props.currentMessage)}  
-  style={isSelected ? styles.blurBackground : {}}
-  >
-    <Bubble
-      {...props}
-      wrapperStyle={{
-        ...props.wrapperStyle,
-        ...(isSelected && {
+  const renderBubble = (props) => {
+    const isSelected = selectedMessages.some(
+      (m) => m._id === props.currentMessage._id
+    );
+
+    const isFirstMessageOfBlock =
+      props.previousMessage?.user?._id !== props.currentMessage.user._id;
+    const isOtherUser = props.currentMessage.user._id !== user?.id;
+    const isNewDay =
+      !props.previousMessage ||
+      (props.currentMessage?.createdAt &&
+        props.previousMessage?.createdAt &&
+        props.currentMessage.createdAt.toDateString() !==
+          props.previousMessage.createdAt.toDateString());
+
+    const selectedStyle = isSelected
+      ? {
           padding: 2,
-          borderWidth: 1,
-          borderColor: 'rgba(0, 123, 255, 0.5)',
-          backgroundColor: 'rgba(0, 123, 255, 0.2)',
-          borderRadius: 5 
-        })
-      }}
-      renderCustomView={() =>
-        (isOtherUser && (isFirstMessageOfBlock || isNewDay)) ? (
-          <Text style={styles.username}>
-            {props.currentMessage.user.name}
-          </Text>
-        ) : null
-      }
-      onPress={() => {
-        if (selectedMessages.length > 0) {
-          handleLongPress(props.currentMessage);
+          backgroundColor: "rgba(0, 123, 255, 0.2)",
+          borderRadius: 5,
+          zIndex: 100,
         }
-      }}
-      onLongPress={() => handleLongPress(props.currentMessage)}
-    />
-    </TouchableOpacity>
-  );
-};
+      : {};
+
+    return (
+      <Bubble
+        {...props}
+        wrapperStyle={{
+          left: {
+            backgroundColor: themeColors.background,
+          },
+          right: {
+            backgroundColor: themeColors.tint,
+          },
+        }}
+        containerStyle={{
+          left: {
+            ...selectedStyle,
+            // backgroundColor: themeColors.tint,
+          },
+          right: {
+            ...selectedStyle,
+            // backgroundColor: themeColors.tint,
+          },
+          marginVertical: isFirstMessageOfBlock ? 5 : 0,
+        }}
+        renderCustomView={() =>
+          isOtherUser && (isFirstMessageOfBlock || isNewDay) ? (
+            <Text style={styles.username}>
+              {props.currentMessage.user.name}
+            </Text>
+          ) : null
+        }
+        textStyle={{
+          right: { color: "#ffff" },
+          left: { color: themeColors.text },
+        }}
+        onPress={() => {
+          if (selectedMessages.length > 0) {
+            handleLongPress(props.currentMessage);
+          }
+          console.log("Press");
+          console.log(props.currentMessage);
+        }}
+        onLongPress={() => {
+          handleLongPress(props.currentMessage);
+          console.log("LongPress");
+          console.log(props.currentMessage);
+        }}
+      />
+    );
+  };
 
   const renderDay = (props) => {
     const { currentMessage, previousMessage } = props;
-    const isNewDay = 
+    const isNewDay =
       !previousMessage ||
-      (currentMessage?.createdAt && 
-       previousMessage?.createdAt && 
-       currentMessage.createdAt.toDateString() !== 
-       previousMessage.createdAt.toDateString());
+      (currentMessage?.createdAt &&
+        previousMessage?.createdAt &&
+        currentMessage.createdAt.toDateString() !==
+          previousMessage.createdAt.toDateString());
 
     if (!isNewDay) return null;
 
@@ -433,7 +490,9 @@ const renderBubble = (props) => {
         ]}
       >
         <Text style={styles.dateText}>
-          {currentMessage.createdAt ? currentMessage.createdAt.toDateString() : "Unknown Date"}
+          {currentMessage.createdAt
+            ? currentMessage.createdAt.toDateString()
+            : "Unknown Date"}
         </Text>
       </View>
     );
@@ -532,7 +591,7 @@ const renderBubble = (props) => {
       // Simulates blur by reducing opacity
       opacity: 0.7,
       backgroundColor: themeColors.tint,
-      width: "100%"
+      width: "100%",
     },
     username: {
       fontSize: 12,
@@ -653,7 +712,12 @@ const renderBubble = (props) => {
       style={{ flex: 1, paddingTop: 10 }}
     >
       {loading ? (
-        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <View
+          style={[
+            styles.container,
+            { justifyContent: "center", alignItems: "center" },
+          ]}
+        >
           <ActivityIndicator size="large" color={themeColors.tint} />
         </View>
       ) : (

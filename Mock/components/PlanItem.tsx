@@ -40,7 +40,7 @@ const PlanItem: React.FC<Props> = ({
     ? plan.due_time_start.split(":").slice(0, 2).join(":")
     : "";
 
-  const formattedTimeEnd = plan.due_time_start
+  const formattedTimeEnd = plan.due_time_end
     ? plan.due_time_end.split(":").slice(0, 2).join(":") // Corrected this line
     : "";
 

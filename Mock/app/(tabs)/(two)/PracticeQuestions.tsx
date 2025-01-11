@@ -36,19 +36,17 @@ const PracticeQuestions: React.FC = () => {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const parsedLevel: string = typeof level === "string" ? level : "";
   const parsedTopic: Topic =
     typeof topic === "string" ? JSON.parse(topic) : topic;
 
   const {
     status: questionsStatus,
-    data: practiceQuestions,
+    data: allPracticeQuestions,
     error: questionsError,
     refetch: refetchPracticeQuestions,
   } = useQuery({
-    queryKey: ["topicQuestions", course, parsedTopic.id, level],
-    queryFn: () =>
-      getPracticeQuestions(parsedTopic.id, userToken?.token, parsedLevel),
+    queryKey: ["topicQuestions", course, parsedTopic.id],
+    queryFn: () => getPracticeQuestions(parsedTopic.id, userToken?.token),
     enabled: !!parsedTopic.id,
     staleTime: 0,
   });
@@ -70,12 +68,38 @@ const PracticeQuestions: React.FC = () => {
       }
       return [];
     },
-    enabled: !!practiceQuestions?.length,
+    enabled: !!allPracticeQuestions?.length,
     staleTime: 0,
   });
 
   // console.log("Yes:", practiceAnswers);
   // console.log("NO:", practiceQuestions);
+  // Shuffle and slice to 20 questions
+  const practiceQuestions = useMemo(() => {
+    if (!allPracticeQuestions) return undefined;
+
+    // Fisher-Yates shuffle algorithm
+    const shuffledQuestions = [...allPracticeQuestions];
+    for (let i = shuffledQuestions.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffledQuestions[i], shuffledQuestions[j]] = [
+        shuffledQuestions[j],
+        shuffledQuestions[i],
+      ];
+    }
+
+    // Return just the first 20 items
+    return shuffledQuestions.slice(0, 20);
+  }, [allPracticeQuestions]);
+
+  // ... rest of the useQuery for answers (no change needed here since it depends on questions)
+
+  useEffect(() => {
+    if (userToken) {
+      refetchPracticeQuestions();
+      refetchPracticeAnswers();
+    }
+  }, [userToken]);
 
   useEffect(() => {
     if (userToken) {
@@ -318,7 +342,7 @@ const PracticeQuestions: React.FC = () => {
     >
       {questionsStatus === "pending" || answersStatus === "pending" ? (
         <View style={{ flex: 1, justifyContent: "center" }}>
-          <ActivityIndicator size="large" color="#0D47A1" />
+          <ActivityIndicator size="large" color={themeColors.tint} />
         </View>
       ) : (
         <View style={styles.container}>

@@ -7,26 +7,32 @@ import {
   useColorScheme,
   ScrollView,
   ActivityIndicator,
-  Platform,
 } from "react-native";
-import { useLocalSearchParams } from "expo-router";
 import { router } from "expo-router";
 import { useAuth } from "../../../components/AuthContext";
 import Colors from "../../../constants/Colors";
 import { rMS, rS, rV } from "../../../constants/responsive";
 import { SIZES } from "../../../constants/theme.js";
 import AnimatedRoundTextInput from "../../../components/AnimatedRoundTextInput.tsx";
-import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { createTask, getCategories } from "../../../TimelineApiCalls.ts";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import ErrorMessage from "../../../components/ErrorMessage.tsx";
 import GameButton from "../../../components/GameButton.tsx";
 import CustomPicker from "../../../components/CustomPicker"; // Custom picker component
 import DateSelector from "../../../components/DateSelector.tsx";
-import DatePicker from "react-native-modern-datepicker";
 import CustomDateTimeSelector from "../../../components/CustomDateTimeSelector.tsx";
 import Animated, { FadeInLeft, ReduceMotion } from "react-native-reanimated";
+import TimetableCreator from "../../../components/TimeTableCreator.tsx";
+import AnimatedTextInput from "../../../components/AnimatedTextInput.tsx";
 
+interface Course {
+  subject: string;
+  teacher: string;
+  days: string[];
+  time: string;
+  duration: string;
+  endTime: string;
+}
 interface Category {
   value: number;
   label: string;
@@ -58,6 +64,7 @@ const CreateNewTime = () => {
   const [recurrenceOption, setRecurrenceOption] = useState("Does not repeat");
   const [recurrenceEndDate, setRecurrenceEndDate] = useState(new Date());
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [timetableCourses, setTimetableCourses] = useState<Course[]>([]); // Add this state for timetable courses
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -164,7 +171,7 @@ const CreateNewTime = () => {
     },
     tab: {
       paddingHorizontal: rS(20),
-      paddingVertical: rV(5),
+      paddingVertical: rV(15),
       width: "50%",
     },
     activeTab: {
@@ -322,11 +329,7 @@ const CreateNewTime = () => {
       fontSize: SIZES.small,
       color: themeColors.textSecondary,
     },
-    timetableList: {
-      padding: rS(15),
-    },
   });
-  console.log(categoriesData);
 
   return (
     <View style={styles.container}>
@@ -354,20 +357,18 @@ const CreateNewTime = () => {
         {activeTab === "Task" && (
           <>
             <View style={styles.inputContainer}>
-            <AnimatedRoundTextInput
-                  placeholderTextColor={themeColors.textSecondary}
-                  style={styles.input}
-                  label="Title"
-                  value={title}
-                  onChangeText={setTitle}
-                />
-                <AnimatedRoundTextInput
-                  placeholderTextColor={themeColors.textSecondary}
-                  style={styles.input}
-                  label="Description"
-                  value={description}
-                  onChangeText={setDescription}
-                />
+              <AnimatedTextInput
+                placeholderTextColor={themeColors.textSecondary}
+                label="Title"
+                value={title}
+                onChangeText={setTitle}
+              />
+              <AnimatedTextInput
+                placeholderTextColor={themeColors.textSecondary}
+                label="Description"
+                value={description}
+                onChangeText={setDescription}
+              />
             </View>
             <View style={styles.section}>
               <DateSelector
@@ -428,7 +429,7 @@ const CreateNewTime = () => {
                 </Animated.View>
               )}
             </View>
-            
+
             <View style={styles.buttonContainer}>
               <GameButton
                 onPress={handleSaveTime}
@@ -442,6 +443,14 @@ const CreateNewTime = () => {
               </GameButton>
             </View>
           </>
+        )}
+        {activeTab === "TimeTable" && (
+          <View>
+            <TimetableCreator
+              courses={timetableCourses}
+              setCourses={setTimetableCourses} // Pass a setter to update courses
+            />
+          </View>
         )}
       </ScrollView>
       {errorMessage && (
