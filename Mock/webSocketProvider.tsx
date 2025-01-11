@@ -58,9 +58,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
   const [unreadCommunityMessages, setUnreadCommunityMessages] = useState<
     Record<string, any>
   >({});
-  const [unreadCommunityMessages, setUnreadCommunityMessages] = useState<
-    Record<string, any>
-  >({});
+
   const { userToken, userInfo } = useAuth();
   const userId = userInfo?.user?.id;
 
