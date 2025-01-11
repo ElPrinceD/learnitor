@@ -14,6 +14,7 @@ import {
   Keyboard,
   ToastAndroid,
   Platform,
+  Alert,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { useFocusEffect, useRoute } from "@react-navigation/native";
@@ -62,6 +63,7 @@ const CommunityChatScreen: React.FC = () => {
   const [mediaUri, setMediaUri] = useState<string | null>(null);
   const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
   const [isVideoViewerVisible, setIsVideoViewerVisible] = useState(false);
+  const [editingMessage, setEditingMessage] = useState<IMessage | null>(null);
 
   const chatRef = useRef<GiftedChat>(null);
 
@@ -149,12 +151,12 @@ const CommunityChatScreen: React.FC = () => {
 
   useEffect(() => {
     let socketCleanup = () => {};
-
+  
     if (socket) {
       const onMessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-
+  
           if (data.type === "history" && data.community_id === communityId) {
             const transformedMessages = data.messages
               .map((message) => ({
@@ -177,9 +179,11 @@ const CommunityChatScreen: React.FC = () => {
                       },
                     }
                   : null,
+                // Here we assume messages are not edited when first fetched
+                isEdited: false, 
               }))
               .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
+  
             setMessages(transformedMessages);
             AsyncStorage.setItem(
               `messages_${communityId}`,
@@ -209,13 +213,14 @@ const CommunityChatScreen: React.FC = () => {
                     },
                   }
                 : null,
+              isEdited: false, // New messages are not edited
             };
-
+  
             setMessages((prevMessages) => {
               const updatedMessages = [newMessage, ...prevMessages].sort(
                 (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
               );
-
+  
               if (user?.id !== newMessage.user._id) {
                 socket.send(
                   JSON.stringify({
@@ -226,40 +231,75 @@ const CommunityChatScreen: React.FC = () => {
                 );
                 updatedMessages[0].status = "read";
               }
-
+  
+              // Update cache with the new message
+              AsyncStorage.setItem(
+                `messages_${communityId}`,
+                JSON.stringify(updatedMessages)
+              );
+              // Update last message if this is the latest one
+              AsyncStorage.setItem(
+                `last_message_${communityId}`,
+                JSON.stringify({
+                  ...newMessage,
+                  status: "read",
+                })
+              );
               setTimeout(() => {
                 chatRef.current?.scrollToBottom();
               }, 100);
               return updatedMessages;
             });
-
-            AsyncStorage.setItem(
-              `messages_${communityId}`,
-              JSON.stringify(
-                [newMessage, ...messages].sort(
-                  (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
-                )
-              )
-            );
-            AsyncStorage.setItem(
-              `last_message_${communityId}`,
-              JSON.stringify({
-                ...newMessage,
-                status: "read",
-              })
-            );
+          } else if (data.type === "message_delete") {
+            setMessages((prevMessages) => {
+              const updatedMessages = prevMessages.filter((m) => m._id !== data.message_id);
+              // Update cache when a message is deleted
+              AsyncStorage.setItem(
+                `messages_${communityId}`,
+                JSON.stringify(updatedMessages)
+              );
+              // Check if the deleted message was the last one
+              if (prevMessages[0]?._id === data.message_id) {
+                AsyncStorage.setItem(
+                  `last_message_${communityId}`,
+                  JSON.stringify(updatedMessages[0] || {})
+                );
+              }
+              return updatedMessages;
+            });
+          } else if (data.type === "message_edit") {
+            setMessages((prevMessages) => {
+              const updatedMessages = prevMessages.map((m) =>
+                m._id === data.message_id
+                  ? { ...m, text: data.new_content, isEdited: true }
+                  : m
+              );
+              // Update cache when a message is edited
+              AsyncStorage.setItem(
+                `messages_${communityId}`,
+                JSON.stringify(updatedMessages)
+              );
+              // Check if the edited message was the last one
+              if (prevMessages[0]?._id === data.message_id) {
+                AsyncStorage.setItem(
+                  `last_message_${communityId}`,
+                  JSON.stringify({ ...updatedMessages[0], status: "read" })
+                );
+              }
+              return updatedMessages;
+            });
           }
         } catch (error) {
           console.error("Error processing WebSocket message:", error);
         }
       };
-
+  
       socket.addEventListener("message", onMessage);
       socketCleanup = () => {
         socket.removeEventListener("message", onMessage);
       };
     }
-
+  
     return socketCleanup;
   }, [socket, communityId, messages, user]);
 
@@ -350,38 +390,107 @@ const CommunityChatScreen: React.FC = () => {
     setSelectedMessages([]);
   }, []);
 
+  const canEditDeleteOrReply = useCallback(() => {
+    const userMessages = selectedMessages.filter(
+      (msg) => msg.user._id === user?.id
+    );
+    return {
+      canEdit: selectedMessages.length === 1 && userMessages.length === 1,
+      canDelete: userMessages.length === selectedMessages.length && userMessages.length > 0,
+      canReply: selectedMessages.length === 1,
+    };
+  }, [selectedMessages, user]);
+
+  const handleEditMessage = useCallback(() => {
+    if (canEditDeleteOrReply().canEdit) {
+      setEditingMessage(selectedMessages[0]);
+      setMessageInput(selectedMessages[0].text || "");
+    }
+  }, [canEditDeleteOrReply, selectedMessages]);
+
+  const onEditMessage = useCallback(() => {
+    if (editingMessage) {
+      sendMessage({
+        type: "edit_message",
+        message_id: editingMessage._id,
+        new_content: messageInput,
+      });
+      setEditingMessage(null);
+      setMessageInput("");
+    }
+  }, [editingMessage, messageInput, sendMessage]);
+
+  const handleDeleteMessage = useCallback(() => {
+    const { canDelete } = canEditDeleteOrReply();
+    if (canDelete) {
+      Alert.alert(
+        "Confirm Delete",
+        "Are you sure you want to delete these messages?",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "OK",
+            onPress: () => {
+              selectedMessages.forEach((message) => {
+                sendMessage({
+                  type: "delete_message",
+                  message_id: message._id,
+                });
+              });
+              setMessages((prevMessages) =>
+                prevMessages.filter(
+                  (m) => !selectedMessages.some((selMsg) => selMsg._id === m._id)
+                )
+              );
+              setSelectedMessages([]);
+            },
+          },
+        ]
+      );
+    }
+  }, [selectedMessages, sendMessage, canEditDeleteOrReply]);
+
   const updateHeader = useCallback(() => {
+    const { canDelete, canEdit, canReply } = canEditDeleteOrReply();
+
     navigation.setOptions({
       headerRight: () => (
         <View style={{ flexDirection: "row" }}>
           {selectedMessages.length > 0 && (
             <>
-              <TouchableOpacity onPress={() => console.log("Delete Selected")}>
-                <MaterialCommunityIcons
-                  name="delete"
-                  size={25}
-                  color={themeColors.text}
-                  style={{ marginRight: 10, fontSize: rMS(25) }}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => console.log("Forward Selected")}>
-                <MaterialCommunityIcons
-                  name="share-circle"
-                  size={25}
-                  color={themeColors.text}
-                  style={{ marginRight: 10, fontSize: rMS(25) }}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setReplyToMessage(selectedMessages[0])}
-              >
-                <MaterialCommunityIcons
-                  name="reply"
-                  size={25}
-                  color={themeColors.text}
-                  style={{ marginRight: 10, fontSize: rMS(25) }}
-                />
-              </TouchableOpacity>
+              {canDelete && (
+                <TouchableOpacity onPress={handleDeleteMessage}>
+                  <MaterialCommunityIcons
+                    name="delete"
+                    size={25}
+                    color={themeColors.text}
+                    style={{ marginRight: 10, fontSize: rMS(25) }}
+                  />
+                </TouchableOpacity>
+              )}
+              {canEdit && (
+                <TouchableOpacity onPress={handleEditMessage}>
+                  <MaterialCommunityIcons
+                    name="pencil"
+                    size={25}
+                    color={themeColors.text}
+                    style={{ marginRight: 10, fontSize: rMS(25) }}
+                  />
+                </TouchableOpacity>
+              )}
+              {canReply && (
+                <TouchableOpacity onPress={() => setReplyToMessage(selectedMessages[0])}>
+                  <MaterialCommunityIcons
+                    name="reply"
+                    size={25}
+                    color={themeColors.text}
+                    style={{ marginRight: 10, fontSize: rMS(25) }}
+                  />
+                </TouchableOpacity>
+              )}
               <TouchableOpacity onPress={handleCopySelected}>
                 <MaterialCommunityIcons
                   name="content-copy"
@@ -400,7 +509,6 @@ const CommunityChatScreen: React.FC = () => {
           )}
         </View>
       ),
-
       headerTitle: () => (
         <TouchableOpacity
           onPress={() =>
@@ -418,6 +526,9 @@ const CommunityChatScreen: React.FC = () => {
     communityId,
     themeColors,
     handleCopySelected,
+    handleDeleteMessage,
+    handleEditMessage,
+    canEditDeleteOrReply,
   ]);
 
   const handlePress = useCallback(
@@ -551,10 +662,14 @@ const CommunityChatScreen: React.FC = () => {
               return null;
             }}
           />
+         {props.currentMessage.isEdited  && (
+            <Text  style={[styles.editedText, { alignSelf: props.position === 'left' ? 'flex-start' : 'flex-end' }]}>Edited</Text>
+          )}
         </TouchableOpacity>
       );
     },
     [selectedMessages, user?.id, handlePress, handleLongPress, messages]
+
   );
 
   const renderDay = (props) => {
@@ -625,6 +740,19 @@ const CommunityChatScreen: React.FC = () => {
   const renderInputToolbar = (props) => {
     return (
       <View>
+        {editingMessage && (
+          <View style={styles.replyContainer}>
+            <Text style={styles.replyName}>
+              Editing Message by {editingMessage.user.name}
+              </Text>
+            <TouchableOpacity
+              onPress={() => setEditingMessage(null)}
+              style={styles.closeReplyButton}
+            >
+              <Ionicons name="close" color={themeColors.text} size={20} />
+            </TouchableOpacity>
+          </View>
+        )}
         {replyToMessage && (
           <View style={styles.replyContainer}>
             <Text style={styles.replyName}>
@@ -643,25 +771,42 @@ const CommunityChatScreen: React.FC = () => {
           {...props}
           containerStyle={[
             styles.inputToolbar,
-            replyToMessage && { marginTop: 0 },
+            (editingMessage || replyToMessage) && { marginTop: 0 },
           ]}
           primaryStyle={{ alignItems: "center", flexDirection: "row" }}
           renderComposer={() => (
             <View style={styles.inputField}>
               <TextInput
                 style={styles.textInput}
-                placeholder="Message"
+                placeholder={
+                  editingMessage
+                    ? "Edit message"
+                    : replyToMessage
+                    ? "Reply to message"
+                    : "Message"
+                }
                 placeholderTextColor={themeColors.textSecondary}
                 value={props.text}
                 onChangeText={props.onTextChanged}
               />
-              <Ionicons
-                name="attach-outline"
-                color={themeColors.text}
-                size={24}
-                onPress={pickImage}
-                style={styles.attachIcon}
-              />
+              {editingMessage ? (
+                <TouchableOpacity onPress={onEditMessage}>
+                  <Ionicons
+                    name="checkmark"
+                    color={themeColors.text}
+                    size={24}
+                    style={styles.attachIcon}
+                  />
+                </TouchableOpacity>
+              ) : (
+                <Ionicons
+                  name="attach-outline"
+                  color={themeColors.text}
+                  size={24}
+                  onPress={pickImage}
+                  style={styles.attachIcon}
+                />
+              )}
             </View>
           )}
         />
@@ -747,7 +892,6 @@ const CommunityChatScreen: React.FC = () => {
       width: 55,
       flexDirection: "row",
       alignItems: "center",
-
       justifyContent: "center",
       gap: 14,
       paddingHorizontal: 4,
@@ -785,6 +929,12 @@ const CommunityChatScreen: React.FC = () => {
       paddingVertical: rV(6),
       paddingHorizontal: 12,
       marginRight: 10,
+    },
+    editedText: {
+      fontSize: 10,
+      color: themeColors.textSecondary,
+      
+      padding: 2,
     },
     attachIcon: {
       marginLeft: 8,
@@ -824,7 +974,6 @@ const CommunityChatScreen: React.FC = () => {
       borderRadius: 5,
       borderLeftWidth: 4,
       borderLeftColor: "#007AFF",
-
       marginRight: 5,
       width: "100%",
     },
@@ -861,6 +1010,7 @@ const CommunityChatScreen: React.FC = () => {
         </View>
       ) : (
         <GiftedChat
+          ref={chatRef}
           messages={messages}
           onSend={onSend}
           user={{ _id: user?.id || 1 }}

@@ -33,6 +33,7 @@ export default {
     },
     android: {
       usesCleartextTraffic: true,
+      windowSoftInputMode: "adjustResize",
       permissions: [
         "INTERNET",
         "OTHER_PERMISSION_IF_NEEDED"
@@ -41,7 +42,7 @@ export default {
         foregroundImage: "./assets/images/adaptive-icon.png",
         backgroundColor: "#ffffff"
       },
-      softwareKeyboardLayoutMode: "pan",
+      softwareKeyboardLayoutMode: "resize",
       package: "com.cradle.learnitor",
       // googleServicesFile: process.env.GOOGLE_SERVICES_JSON
     },
