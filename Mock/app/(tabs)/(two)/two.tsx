@@ -12,13 +12,16 @@ import { useWebSocket } from "../../../webSocketProvider";
 
 const CoursesScreen: React.FC = () => {
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
+    null
+  );
   const { userToken, userInfo } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { fetchAndCacheCourses, fetchAndCacheCourseCategories } = useWebSocket();
+  const { fetchAndCacheCourses, fetchAndCacheCourseCategories } =
+    useWebSocket();
 
   useEffect(() => {
     const loadData = async () => {
@@ -26,10 +29,10 @@ const CoursesScreen: React.FC = () => {
         setIsLoading(true);
         await fetchAndCacheCourses();
         await fetchAndCacheCourseCategories();
-        
-        const cachedCourses = await AsyncStorage.getItem('courses');
-        const cachedCategories = await AsyncStorage.getItem('courseCategories');
-        
+
+        const cachedCourses = await AsyncStorage.getItem("courses");
+        const cachedCategories = await AsyncStorage.getItem("courseCategories");
+
         if (cachedCourses) {
           setCourses(JSON.parse(cachedCourses));
           setFilteredCourses(JSON.parse(cachedCourses));
@@ -50,6 +53,7 @@ const CoursesScreen: React.FC = () => {
       const filtered = courses.filter((course: Course) =>
         course.title.toLowerCase().includes(query.toLowerCase())
       );
+
       setFilteredCourses(filtered);
     },
     [courses]
@@ -57,12 +61,16 @@ const CoursesScreen: React.FC = () => {
 
   const handleCategoryPress = useCallback(
     (categoryId: number | null) => {
-      const newCategoryId = selectedCategoryId === categoryId ? null : categoryId;
+      const newCategoryId =
+        selectedCategoryId === categoryId ? null : categoryId;
       setSelectedCategoryId(newCategoryId);
 
-      const filtered = newCategoryId !== null
-        ? courses.filter((course: Course) => course.category.includes(newCategoryId))
-        : courses;
+      const filtered =
+        newCategoryId !== null
+          ? courses.filter((course: Course) =>
+              course.category.includes(newCategoryId)
+            )
+          : courses;
 
       setFilteredCourses(filtered);
     },
@@ -73,7 +81,7 @@ const CoursesScreen: React.FC = () => {
     (course: Course) => {
       // Use push instead of navigate for sending params
       router.push({
-        pathname: 'CourseDetails',
+        pathname: "CourseDetails",
         params: { course: JSON.stringify(course) },
       });
     },
@@ -84,8 +92,8 @@ const CoursesScreen: React.FC = () => {
     try {
       await fetchAndCacheCourses();
       await fetchAndCacheCourseCategories();
-      const cachedCourses = await AsyncStorage.getItem('courses');
-      const cachedCategories = await AsyncStorage.getItem('courseCategories');
+      const cachedCourses = await AsyncStorage.getItem("courses");
+      const cachedCategories = await AsyncStorage.getItem("courseCategories");
       if (cachedCourses) {
         setCourses(JSON.parse(cachedCourses));
         setFilteredCourses(JSON.parse(cachedCourses));

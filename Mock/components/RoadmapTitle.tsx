@@ -34,12 +34,13 @@ const RoadmapTitle = ({ course, progress }) => {
     subtext: {
       fontSize: SIZES.medium,
       textAlign: "left",
-      width: rS(270),
+      width: rS(250),
       color: themeColors.textSecondary,
     },
     image: {
-      width: rV(70),
-      height: rS(70),
+      width: rS(80),
+      height: rV(80),
+      borderRadius: 10,
     },
     progressContainer: {
       marginTop: rV(18),

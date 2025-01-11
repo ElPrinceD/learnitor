@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, useColorScheme, Switch } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  useColorScheme,
+  Switch,
+  ScrollView,
+} from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { router, useLocalSearchParams } from "expo-router";
 import Colors from "../../../constants/Colors";
@@ -99,7 +106,7 @@ const PracticeInstructions = () => {
   });
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.card}>
         <Text style={styles.title}>Instructions</Text>
         <Text style={styles.instructions}>
@@ -108,7 +115,7 @@ const PracticeInstructions = () => {
         </Text>
         <View style={styles.instructionContainer}>
           <Text style={styles.instruction}>
-            1. This quiz consists of 30 questions.
+            1. This quiz consists of 20 questions.
           </Text>
           <Text style={styles.instruction}>
             2. Each question has multiple-choice options.
@@ -166,7 +173,7 @@ const PracticeInstructions = () => {
           textStyle={styles.startButtonText}
         />
       </View>
-    </View>
+    </ScrollView>
   );
 };
 

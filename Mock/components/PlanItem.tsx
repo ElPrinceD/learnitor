@@ -7,7 +7,7 @@ import {
   useColorScheme,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { Swipeable } from "react-native-gesture-handler";
+import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import { Plan } from "./types";
 import { SIZES, rMS, rS, rV, useShadows } from "../constants";
 import Colors from "../constants/Colors";
@@ -18,7 +18,7 @@ import CrownSVG from "./CrownSVG";
 
 interface Props {
   plan: Plan;
-  categoryNames: { [key: number]: string };
+  categoryNames: Record<number, string>;
   getCategoryColor: (type: string) => string;
   handleEditPlan: (plan: Plan) => void;
 }
@@ -40,8 +40,8 @@ const PlanItem: React.FC<Props> = ({
     ? plan.due_time_start.split(":").slice(0, 2).join(":")
     : "";
 
-  const formattedTimeEnd = plan.due_time_start
-    ? plan.due_time_start.split(":").slice(0, 2).join(":") // Corrected this line
+  const formattedTimeEnd = plan.due_time_end
+    ? plan.due_time_end.split(":").slice(0, 2).join(":") // Corrected this line
     : "";
 
   // Function to select SVG based on category name
@@ -72,7 +72,7 @@ const PlanItem: React.FC<Props> = ({
     },
     planItemContainer: {
       flex: 1,
-      marginHorizontal: rS(10),
+      // marginHorizontal: rS(10),
       borderTopLeftRadius: rMS(10),
       borderBottomLeftRadius: rMS(10),
       padding: rS(10),
@@ -103,17 +103,34 @@ const PlanItem: React.FC<Props> = ({
       fontWeight: "bold",
     },
     editButton: {
-      backgroundColor: "green",
+      backgroundColor: themeColors.tint,
       alignSelf: "center",
-      height: "80%",
+      height: "95%",
       justifyContent: "center",
       alignItems: "center",
       width: rS(100),
     },
+    editActionContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      width: rS(100),
+      paddingHorizontal: rS(10),
+      backgroundColor: "green", // Edit action color
+    },
+    editActionText: {
+      color: "white",
+      fontSize: SIZES.medium,
+      fontWeight: "bold",
+    },
   });
 
   return (
-    <TouchableOpacity onPress={() => {}} activeOpacity={1} style={styles.wrapper}>
+    <TouchableOpacity
+      onPress={() => {}}
+      activeOpacity={1}
+      style={styles.wrapper}
+    >
       <Swipeable
         renderRightActions={() => (
           <TouchableOpacity
@@ -123,6 +140,8 @@ const PlanItem: React.FC<Props> = ({
             <Feather name="edit" size={rMS(24)} color="white" />
           </TouchableOpacity>
         )}
+        friction={2}
+        rightThreshold={60}
       >
         <View style={styles.planItemWrapper}>
           <View
@@ -131,9 +150,7 @@ const PlanItem: React.FC<Props> = ({
               { backgroundColor: themeColors.background },
             ]}
           >
-            <View style={styles.svgWrapper}>
-              {renderSVGIcon(category)} 
-            </View>
+            <View style={styles.svgWrapper}>{renderSVGIcon(category)}</View>
             <View style={styles.planContent}>
               <Text
                 style={[
@@ -157,7 +174,8 @@ const PlanItem: React.FC<Props> = ({
               </Text>
             </View>
             <Text style={[styles.planTime]}>
-              {formattedTimeStart}-{formattedTimeEnd} {/* Corrected to show end time */}
+              {formattedTimeStart}-{formattedTimeEnd}{" "}
+              {/* Corrected to show end time */}
             </Text>
           </View>
         </View>

@@ -22,14 +22,14 @@ const SearchBar: React.FC<Props> = ({ onSearch }) => {
 
   // Debounced search handler
   const debouncedSearch = useCallback(
-    debounce((text: string) => onSearch(text), 300),
+    debounce((query: string) => onSearch(query), 300),
     []
   );
 
   const handleSearch = useCallback(
-    (text: string) => {
-      setSearchQuery(text);
-      debouncedSearch(text);
+    (query: string) => {
+      setSearchQuery(query);
+      debouncedSearch(query);
     },
     [debouncedSearch]
   );

@@ -181,6 +181,7 @@ const EditPlan = () => {
             }
             label="Select Date"
             minDate={true}
+            buttonTitle={oldDate}
           />
           <CustomDateTimeSelector
             mode="time"

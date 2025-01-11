@@ -119,7 +119,7 @@ const EnrolledCourse: React.FC = () => {
 
   const handleQuestionPress = (topic: Topic) => {
     router.push({
-      pathname: "Practice",
+      pathname: "PracticeInstructions",
       params: {
         topic: JSON.stringify(topic),
         course: course,

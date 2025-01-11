@@ -1,8 +1,20 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, FC } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  FC,
+} from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getCommunities, getCommunityDetails, getUserCommunities, getCommunityMessages } from './CommunityApiCalls';
+import {
+  getCommunities,
+  getCommunityDetails,
+  getUserCommunities,
+  getCommunityMessages,
+} from "./CommunityApiCalls";
 import { getCourseCategories, getCourses } from "./CoursesApiCalls";
-import ApiUrl from './config';
+import ApiUrl from "./config";
 import { getCategoryNames, getTodayPlans } from "./TimelineApiCalls";
 import { useAuth } from "./components/AuthContext";
 
@@ -16,10 +28,16 @@ interface WebSocketContextType {
   fetchAndCacheCommunities: () => Promise<void>;
   fetchAndCacheCourses: () => Promise<void>;
   fetchAndCacheCourseCategories: () => Promise<void>;
-  fetchAndCacheTodayPlans: (token: string, date: Date, category?: string) => Promise<void>;
-  fetchAndCacheCategoryNames: (token: string) => Promise<void>;
+  fetchAndCacheTodayPlans: (
+    token: string | null,
+    date: Date | null,
+    category?: string
+  ) => Promise<any[]>;
+  fetchAndCacheCategoryNames: (
+    token: string | null
+  ) => Promise<Record<number, string>>;
   getCachedTodayPlans: (date: Date, category?: string) => Promise<any[]>;
-  getCachedCategoryNames: () => Promise<any>;
+  getCachedCategoryNames: () => Promise<Record<number, string>>;
   unreadCommunitiesCount: number;
 }
 
@@ -27,14 +45,22 @@ const WebSocketContext = createContext<WebSocketContextType | null>(null);
 
 interface WebSocketProviderProps {
   children: React.ReactNode;
-  token?: string;
+  token?: string | null;
 }
 
-export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token }) => {
+export const WebSocketProvider: FC<WebSocketProviderProps> = ({
+  children,
+  token,
+}) => {
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
-  const [unreadCommunityMessages, setUnreadCommunityMessages] = useState<Record<string, any>>({});
+  const [unreadCommunityMessages, setUnreadCommunityMessages] = useState<
+    Record<string, any>
+  >({});
+  const [unreadCommunityMessages, setUnreadCommunityMessages] = useState<
+    Record<string, any>
+  >({});
   const { userToken, userInfo } = useAuth();
   const userId = userInfo?.user?.id;
 
@@ -58,136 +84,178 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     ws.onmessage = async (event) => {
       const data = JSON.parse(event.data);
 
-    
-        switch(data.type) {
-          case 'message':
-            // Update full message history with reply information
-            const cachedMessages = await AsyncStorage.getItem(`messages_${data.community_id}`);
-            const updatedMessages = cachedMessages ? JSON.parse(cachedMessages) : [];
-            updatedMessages.push({
-              _id: data.id.toString(),
-              text: data.message,
-              createdAt: new Date(data.sent_at),
-              user: {
-                _id: data.sender_id,
-                name: data.sender,
-                avatar: data.sender_image || null, 
-              },
-              status: data.status || 'sent',
-              replyTo: data.reply_to ? {
-                _id: data.reply_to.id ? data.reply_to.id.toString() : null,
-                text: data.reply_to.snippet || null, 
-                user: {
-                  _id: data.reply_to.sender_id || null,
-                  name: data.reply_to.sender_name || null
+      switch (data.type) {
+        case "message":
+          // Update full message history with reply information
+          const cachedMessages = await AsyncStorage.getItem(
+            `messages_${data.community_id}`
+          );
+          const updatedMessages = cachedMessages
+            ? JSON.parse(cachedMessages)
+            : [];
+          updatedMessages.push({
+            _id: data.id.toString(),
+            text: data.message,
+            createdAt: new Date(data.sent_at),
+            user: {
+              _id: data.sender_id,
+              name: data.sender,
+              avatar: data.sender_image || null,
+            },
+            status: data.status || "sent",
+            replyTo: data.reply_to
+              ? {
+                  _id: data.reply_to.id ? data.reply_to.id.toString() : null,
+                  text: data.reply_to.snippet || null,
+                  user: {
+                    _id: data.reply_to.sender_id || null,
+                    name: data.reply_to.sender_name || null,
+                  },
                 }
-              } : null
-            });
-      
-            await AsyncStorage.setItem(`messages_${data.community_id}`, JSON.stringify(updatedMessages));
-      
-            // Update last message for list view with status
-            const newLastMessage = {
-              ...data,
-              status: data.status || 'sent',
-              sent_at: new Date(data.sent_at).toISOString(),
-              replyTo: data.reply_to ? {
-                id: data.reply_to.id ? data.reply_to.id.toString() : null,
-                snippet: data.reply_to.snippet || null,
-                sender_name: data.reply_to.sender_name || null
-              } : null
-            };
-            await AsyncStorage.setItem(`last_message_${data.community_id}`, JSON.stringify(newLastMessage));
-            if (userId && data.sender_id !== userId) {
-              setUnreadCommunityMessages(prev => ({
-                ...prev,
-                [data.community_id]: newLastMessage
-              }));
-            }
-            break;
-          case 'history':
-            // Store full history including replies
-            const normalizedMessages = data.messages.map(msg => ({
-              _id: msg.id.toString(),
-              text: msg.message,
-              createdAt: new Date(msg.sent_at),
-              user: {
-                _id: msg.sender_id,
-                name: msg.sender,
-                avatar: msg.sender_image || null
-              },
-              status: msg.status || 'sent',
-              replyTo: msg.reply_to ? {
-                _id: msg.reply_to.id ? msg.reply_to.id.toString() : null,
-                text: msg.reply_to.snippet || null,
-                user: {
-                  _id: msg.reply_to.sender_id || null,
-                  name: msg.reply_to.sender_name || null
+              : null,
+          });
+
+          await AsyncStorage.setItem(
+            `messages_${data.community_id}`,
+            JSON.stringify(updatedMessages)
+          );
+
+          // Update last message for list view with status
+          const newLastMessage = {
+            ...data,
+            status: data.status || "sent",
+            sent_at: new Date(data.sent_at).toISOString(),
+            replyTo: data.reply_to
+              ? {
+                  id: data.reply_to.id ? data.reply_to.id.toString() : null,
+                  snippet: data.reply_to.snippet || null,
+                  sender_name: data.reply_to.sender_name || null,
                 }
-              } : null
+              : null,
+          };
+          await AsyncStorage.setItem(
+            `last_message_${data.community_id}`,
+            JSON.stringify(newLastMessage)
+          );
+          if (userId && data.sender_id !== userId) {
+            setUnreadCommunityMessages((prev) => ({
+              ...prev,
+              [data.community_id]: newLastMessage,
             }));
-            
-            await AsyncStorage.setItem(`messages_${data.community_id}`, JSON.stringify(normalizedMessages));
-            
-            // Store only the last message for list view
-            if (data.messages.length > 0) {
-              const lastMessage = data.messages[data.messages.length - 1];
-              await AsyncStorage.setItem(`last_message_${data.community_id}`, JSON.stringify({
+          }
+          break;
+        case "history":
+          // Store full history including replies
+          const normalizedMessages = data.messages.map((msg) => ({
+            _id: msg.id.toString(),
+            text: msg.message,
+            createdAt: new Date(msg.sent_at),
+            user: {
+              _id: msg.sender_id,
+              name: msg.sender,
+              avatar: msg.sender_image || null,
+            },
+            status: msg.status || "sent",
+            replyTo: msg.reply_to
+              ? {
+                  _id: msg.reply_to.id ? msg.reply_to.id.toString() : null,
+                  text: msg.reply_to.snippet || null,
+                  user: {
+                    _id: msg.reply_to.sender_id || null,
+                    name: msg.reply_to.sender_name || null,
+                  },
+                }
+              : null,
+          }));
+
+          await AsyncStorage.setItem(
+            `messages_${data.community_id}`,
+            JSON.stringify(normalizedMessages)
+          );
+
+          // Store only the last message for list view
+          if (data.messages.length > 0) {
+            const lastMessage = data.messages[data.messages.length - 1];
+            await AsyncStorage.setItem(
+              `last_message_${data.community_id}`,
+              JSON.stringify({
                 ...lastMessage,
                 sent_at: new Date(lastMessage.sent_at).toISOString(),
-                status: lastMessage.status || 'sent',
-                replyTo: lastMessage.reply_to ? {
-                  id: lastMessage.reply_to.id ? lastMessage.reply_to.id.toString() : null,
-                  snippet: lastMessage.reply_to.snippet || null,
-                  sender_name: lastMessage.reply_to.sender_name || null
-                } : null
-              }));
-              if (userId && lastMessage.sender_id !== userId) {
-                setUnreadCommunityMessages(prev => ({
-                  ...prev,
-                  [data.community_id]: {
-                    ...lastMessage,
-                    status: lastMessage.status || 'sent',
-                    sent_at: new Date(lastMessage.sent_at).toISOString(),
-                    replyTo: lastMessage.reply_to ? {
-                      id: lastMessage.reply_to.id ? lastMessage.reply_to.id.toString() : null,
+                status: lastMessage.status || "sent",
+                replyTo: lastMessage.reply_to
+                  ? {
+                      id: lastMessage.reply_to.id
+                        ? lastMessage.reply_to.id.toString()
+                        : null,
                       snippet: lastMessage.reply_to.snippet || null,
-                      sender_name: lastMessage.reply_to.sender_name || null
-                    } : null
-                  }
-                }));
-              }
-            }       case 'message_status':
+                      sender_name: lastMessage.reply_to.sender_name || null,
+                    }
+                  : null,
+              })
+            );
+            if (userId && lastMessage.sender_id !== userId) {
+              setUnreadCommunityMessages((prev) => ({
+                ...prev,
+                [data.community_id]: {
+                  ...lastMessage,
+                  status: lastMessage.status || "sent",
+                  sent_at: new Date(lastMessage.sent_at).toISOString(),
+                  replyTo: lastMessage.reply_to
+                    ? {
+                        id: lastMessage.reply_to.id
+                          ? lastMessage.reply_to.id.toString()
+                          : null,
+                        snippet: lastMessage.reply_to.snippet || null,
+                        sender_name: lastMessage.reply_to.sender_name || null,
+                      }
+                    : null,
+                },
+              }));
+            }
+          }
+        case "message_status":
           // Update message status in both full history and last message cache
           const messageId = data.message_id;
           const communityId = await getCommunityIdFromMessage(messageId);
           if (communityId) {
-            const messages = await AsyncStorage.getItem(`messages_${communityId}`);
+            const messages = await AsyncStorage.getItem(
+              `messages_${communityId}`
+            );
             if (messages) {
               let parsedMessages = JSON.parse(messages);
-              const messageIndex = parsedMessages.findIndex(msg => msg._id === messageId.toString());
+              const messageIndex = parsedMessages.findIndex(
+                (msg) => msg._id === messageId.toString()
+              );
               if (messageIndex !== -1) {
                 parsedMessages[messageIndex].status = data.status;
-                await AsyncStorage.setItem(`messages_${communityId}`, JSON.stringify(parsedMessages));
+                await AsyncStorage.setItem(
+                  `messages_${communityId}`,
+                  JSON.stringify(parsedMessages)
+                );
               }
             }
-            const lastMessage = await AsyncStorage.getItem(`last_message_${communityId}`);
+            const lastMessage = await AsyncStorage.getItem(
+              `last_message_${communityId}`
+            );
             if (lastMessage) {
               let parsedLastMessage = JSON.parse(lastMessage);
               if (parsedLastMessage.id === messageId) {
                 parsedLastMessage.status = data.status;
-                await AsyncStorage.setItem(`last_message_${communityId}`, JSON.stringify(parsedLastMessage));
+                await AsyncStorage.setItem(
+                  `last_message_${communityId}`,
+                  JSON.stringify(parsedLastMessage)
+                );
                 if (userId && data.sender_id !== userId) {
-                  setUnreadCommunityMessages(prev => ({
+                  setUnreadCommunityMessages((prev) => ({
                     ...prev,
-                    [communityId]: parsedLastMessage
+                    [communityId]: parsedLastMessage,
                   }));
                 }
               }
             }
           }
           break;
-        case 'join_success':
+        case "join_success":
           break;
       }
     };
@@ -195,24 +263,24 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     ws.onclose = () => {
       console.log("WebSocket disconnected");
       setIsConnected(false);
-      
+
       // Notify user if this is after several reconnection attempts
       if (reconnectAttempts > 3) {
         console.warn("Connection lost. Trying to reconnect...");
       }
-      
+
       if (reconnectAttempts > 0 || token) {
-        reconnectWebSocket();
+        // reconnectWebSocket();
       }
     };
 
     ws.onerror = (error) => {
       console.error("WebSocket error:", error);
-      if (error.type === 'error' && error.code === 1006) {
+      if (error.type === "error" && error.eventPhase === 1006) {
         console.warn("Network error detected. Attempting to reconnect...");
       }
       if (token) {
-       // reconnectWebSocket();
+        // reconnectWebSocket();
       }
     };
 
@@ -231,14 +299,17 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     const initialBackoffMs = 1000; // 1 second
     const maxBackoffMs = 60000; // 1 minute
     const backoffMultiplier = 2;
-    
+
     const attempt = reconnectAttempts;
-    
-    let backoff = Math.min(maxBackoffMs, initialBackoffMs * Math.pow(backoffMultiplier, attempt));
+
+    let backoff = Math.min(
+      maxBackoffMs,
+      initialBackoffMs * Math.pow(backoffMultiplier, attempt)
+    );
     backoff += Math.random() * 1000; // Add randomness
-    
+
     console.log(`Attempting to reconnect in ${backoff / 1000} seconds...`);
-    
+
     setTimeout(() => {
       setReconnectAttempts(attempt + 1);
       connectWebSocket();
@@ -247,19 +318,22 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
 
   const messageQueue: any[] = [];
 
-  const sendMessage = useCallback((message: any) => {
-    if (socket && isConnected) {
-      socket.send(JSON.stringify(message));
-    } else {
-      console.warn("WebSocket is not connected. Queuing the message.");
-      messageQueue.push(message);
-    }
-  }, [socket, isConnected]);
+  const sendMessage = useCallback(
+    (message: any) => {
+      if (socket && isConnected) {
+        socket.send(JSON.stringify(message));
+      } else {
+        console.warn("WebSocket is not connected. Queuing the message.");
+        messageQueue.push(message);
+      }
+    },
+    [socket, isConnected]
+  );
 
   useEffect(() => {
     if (socket && isConnected && messageQueue.length > 0) {
       console.log("Sending queued messages.");
-      messageQueue.forEach(msg => socket.send(JSON.stringify(msg)));
+      messageQueue.forEach((msg) => socket.send(JSON.stringify(msg)));
       messageQueue.length = 0;
     }
   }, [socket, isConnected]);
@@ -269,13 +343,15 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     try {
       const communities = await getUserCommunities(token);
       for (const community of communities) {
-        const cachedLastMessage = await AsyncStorage.getItem(`last_message_${community.id}`);
+        const cachedLastMessage = await AsyncStorage.getItem(
+          `last_message_${community.id}`
+        );
         if (!cachedLastMessage) {
-          sendMessage({ type: 'history', community_id: community.id });
+          sendMessage({ type: "history", community_id: community.id });
         } else {
-          setUnreadCommunityMessages(prev => ({
+          setUnreadCommunityMessages((prev) => ({
             ...prev,
-            [community.id]: JSON.parse(cachedLastMessage)
+            [community.id]: JSON.parse(cachedLastMessage),
           }));
         }
       }
@@ -285,12 +361,16 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   }, [token, sendMessage]);
 
   const getCommunityIdFromMessage = async (messageId: string) => {
-    const allCachedMessages = await AsyncStorage.multiGet((await AsyncStorage.getAllKeys()).filter(key => key.startsWith('messages_')));
+    const allCachedMessages = await AsyncStorage.multiGet(
+      (
+        await AsyncStorage.getAllKeys()
+      ).filter((key) => key.startsWith("messages_"))
+    );
     for (const [key, messages] of allCachedMessages) {
       if (messages) {
         const parsedMessages = JSON.parse(messages);
-        if (parsedMessages.some(msg => msg._id === messageId)) {
-          return key.split('_')[1]; // Extract community_id from the key
+        if (parsedMessages.some((msg) => msg._id === messageId)) {
+          return key.split("_")[1]; // Extract community_id from the key
         }
       }
     }
@@ -298,46 +378,61 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   };
 
   // Calculate unread communities count
-  const unreadCommunitiesCount = Object.values(unreadCommunityMessages).filter(message => message?.status !== 'read').length;
+  const unreadCommunitiesCount = Object.values(unreadCommunityMessages).filter(
+    (message) => message?.status !== "read"
+  ).length;
 
-  const joinAndSubscribeToCommunity = useCallback(async (communityId: string | number) => {
-    if (socket && isConnected) {
-      try {
-        const message = { type: 'join_community', community_id: communityId };
-        socket.send(JSON.stringify(message));
-  
-        const handleJoinSuccess = (event: MessageEvent) => {
-          const data = JSON.parse(event.data);
-          if (data.type === 'join_success' && data.community_id === communityId) {
-            console.log(`Successfully joined community: ${communityId}`);
-            socket.removeEventListener('message', handleJoinSuccess);
-          }
-        };
-  
-        socket.addEventListener('message', handleJoinSuccess);
-  
-        await updateCachedCommunities(communityId);
-      } catch (error) {
-        console.error("Failed to join community:", error);
+  const joinAndSubscribeToCommunity = useCallback(
+    async (communityId: string | number) => {
+      if (socket && isConnected) {
+        try {
+          const message = { type: "join_community", community_id: communityId };
+          socket.send(JSON.stringify(message));
+
+          const handleJoinSuccess = (event: MessageEvent) => {
+            const data = JSON.parse(event.data);
+            if (
+              data.type === "join_success" &&
+              data.community_id === communityId
+            ) {
+              console.log(`Successfully joined community: ${communityId}`);
+              socket.removeEventListener("message", handleJoinSuccess);
+            }
+          };
+
+          socket.addEventListener("message", handleJoinSuccess);
+
+          await updateCachedCommunities(communityId);
+        } catch (error) {
+          console.error("Failed to join community:", error);
+        }
+      } else {
+        console.error("WebSocket is not connected.");
       }
-    } else {
-      console.error("WebSocket is not connected.");
-    }
-  }, [socket, isConnected]);
+    },
+    [socket, isConnected]
+  );
 
-  const unsubscribeFromCommunity = useCallback((communityId: string | number) => {
-    if (socket && isConnected) {
-      sendMessage({ type: 'leave_community', community_id: communityId });
-    } else {
-      console.error("WebSocket is not connected.");
-    }
-  }, [socket, isConnected, sendMessage]);
+  const unsubscribeFromCommunity = useCallback(
+    (communityId: string | number) => {
+      if (socket && isConnected) {
+        sendMessage({ type: "leave_community", community_id: communityId });
+      } else {
+        console.error("WebSocket is not connected.");
+      }
+    },
+    [socket, isConnected, sendMessage]
+  );
 
-  const fetchAndCacheTodayPlans = useCallback(async (token: string, date: Date, category?: string) => {
-    if(token){ 
+  const fetchAndCacheTodayPlans = useCallback(
+    async (
+      token: string | null,
+      date: Date | null,
+      category?: string | null
+    ) => {
       try {
-        const dateString = date.toISOString().split('T')[0];
-        const cacheKey = `todayPlans_${dateString}_${category || 'all'}`;
+        const dateString = date?.toISOString().split("T")[0];
+        const cacheKey = `todayPlans_${dateString}_${category || "all"}`;
         const cachedPlans = await AsyncStorage.getItem(cacheKey);
         if (cachedPlans) {
           return JSON.parse(cachedPlans);
@@ -349,39 +444,45 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
         console.error("Failed to fetch or cache today's plans:", error);
         throw error;
       }
-    }
-  }, []);
+    },
+    []
+  );
 
-  const fetchAndCacheCategoryNames = useCallback(async (token: string) => {
-    if(token){ 
-      try {
-        const cachedCategories = await AsyncStorage.getItem('categoryNames');
-        if (cachedCategories) {
-          return JSON.parse(cachedCategories);
-        }
-        const categories = await getCategoryNames(token);
-
-        console.log(categories)
-        await AsyncStorage.setItem('categoryNames', JSON.stringify(categories));
-        return categories;
-      } catch (error) {
-        console.error("Failed to fetch or cache category names:", error);
-        throw error;
+  const fetchAndCacheCategoryNames = async (
+    token: string | null
+  ): Promise<Record<number, string>> => {
+    try {
+      const cachedCategories = await AsyncStorage.getItem("categoryNames");
+      if (cachedCategories) {
+        return JSON.parse(cachedCategories);
       }
+      const categories = await getCategoryNames(token); // Assuming this function exists
+      const categoryMap = categories.reduce((acc, { value, label }) => {
+        acc[value] = label;
+        return acc;
+      }, {} as Record<number, string>);
+      await AsyncStorage.setItem("categoryNames", JSON.stringify(categoryMap));
+      return categoryMap;
+    } catch (error) {
+      console.error("Failed to fetch or cache category names:", error);
+      throw error;
     }
-  }, []);
+  };
 
-  const getCachedTodayPlans = useCallback(async (date: Date, category?: string) => {
-    const dateString = date.toISOString().split('T')[0];
-    const cacheKey = `todayPlans_${dateString}_${category || 'all'}`;
-    const cachedData = await AsyncStorage.getItem(cacheKey);
-    return cachedData ? JSON.parse(cachedData) : [];
-  }, []);
+  const getCachedTodayPlans = useCallback(
+    async (date: Date, category?: string) => {
+      const dateString = date.toISOString().split("T")[0];
+      const cacheKey = `todayPlans_${dateString}_${category || "all"}`;
+      const cachedData = await AsyncStorage.getItem(cacheKey);
+      return cachedData ? JSON.parse(cachedData) : [];
+    },
+    []
+  );
 
-  const getCachedCategoryNames = useCallback(async () => {
-    const cachedData = await AsyncStorage.getItem('categoryNames');
+  const getCachedCategoryNames = async (): Promise<Record<number, string>> => {
+    const cachedData = await AsyncStorage.getItem("categoryNames");
     return cachedData ? JSON.parse(cachedData) : {};
-  }, []);
+  };
 
   const subscribeToExistingUserCommunities = useCallback(async () => {
     if (socket && isConnected && token) {
@@ -396,27 +497,38 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     }
   }, [socket, isConnected, token]);
 
-  const subscribeToExistingCommunity = useCallback(async (communityId: string | number) => {
-    if (socket && isConnected) {
-      try {
-        sendMessage({ type: 'subscribe_existing', community_id: communityId });
-        await updateCachedCommunities(communityId);
-      } catch (error) {
-        console.error("Failed to subscribe to existing community:", error);
+  const subscribeToExistingCommunity = useCallback(
+    async (communityId: string | number) => {
+      if (socket && isConnected) {
+        try {
+          sendMessage({
+            type: "subscribe_existing",
+            community_id: communityId,
+          });
+          await updateCachedCommunities(communityId);
+        } catch (error) {
+          console.error("Failed to subscribe to existing community:", error);
+        }
       }
-    }
-  }, [socket, isConnected]);
+    },
+    [socket, isConnected]
+  );
 
   const updateCachedCommunities = async (communityId: string | number) => {
-    if(token){ 
+    if (token) {
       try {
         const newCommunity = await getCommunityDetails(communityId, token);
-        let cachedCommunities = await AsyncStorage.getItem('communities');
-        let communities = cachedCommunities ? JSON.parse(cachedCommunities) : [];
+        let cachedCommunities = await AsyncStorage.getItem("communities");
+        let communities = cachedCommunities
+          ? JSON.parse(cachedCommunities)
+          : [];
 
-        if (!communities.some(c => c.id === communityId)) {
+        if (!communities.some((c) => c.id === communityId)) {
           communities.push(newCommunity);
-          await AsyncStorage.setItem('communities', JSON.stringify(communities));
+          await AsyncStorage.setItem(
+            "communities",
+            JSON.stringify(communities)
+          );
         }
       } catch (error) {
         console.error("Error updating cached communities:", error);
@@ -427,10 +539,18 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   const fetchAndCacheCommunities = useCallback(async () => {
     if (token) {
       try {
-        let cachedCommunities = await AsyncStorage.getItem('communities');
+        let cachedCommunities = await AsyncStorage.getItem("communities");
         if (!cachedCommunities || JSON.parse(cachedCommunities).length === 0) {
           const communities = await getUserCommunities(token);
-          await AsyncStorage.setItem('communities', JSON.stringify(communities));
+          await AsyncStorage.setItem(
+            "communities",
+            JSON.stringify(communities)
+          );
+          await AsyncStorage.setItem(
+            "communities",
+            JSON.stringify(communities)
+          );
+          console.log("Communities fetched and cached.");
         } else {
           console.log("Communities already cached.");
         }
@@ -443,10 +563,10 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   const fetchAndCacheCourses = useCallback(async () => {
     if (token) {
       try {
-        let cachedCourses = await AsyncStorage.getItem('courses');
+        let cachedCourses = await AsyncStorage.getItem("courses");
         if (!cachedCourses || JSON.parse(cachedCourses).length === 0) {
           const courses = await getCourses(token);
-          await AsyncStorage.setItem('courses', JSON.stringify(courses));
+          await AsyncStorage.setItem("courses", JSON.stringify(courses));
           console.log("Courses fetched and cached.");
         } else {
           console.log("Courses already cached.");
@@ -460,10 +580,13 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   const fetchAndCacheCourseCategories = useCallback(async () => {
     if (token) {
       try {
-        let cachedCategories = await AsyncStorage.getItem('courseCategories');
+        let cachedCategories = await AsyncStorage.getItem("courseCategories");
         if (!cachedCategories || JSON.parse(cachedCategories).length === 0) {
           const categories = await getCourseCategories(token);
-          await AsyncStorage.setItem('courseCategories', JSON.stringify(categories));
+          await AsyncStorage.setItem(
+            "courseCategories",
+            JSON.stringify(categories)
+          );
           console.log("Course categories fetched and cached.");
         } else {
           console.log("Course categories already cached.");
@@ -481,16 +604,16 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
         try {
           // Fetch and cache communities
           await fetchAndCacheCommunities();
-          
+
           // Fetch and cache courses
           await fetchAndCacheCourses();
-          
+
           // Fetch and cache course categories
           await fetchAndCacheCourseCategories();
-          
+
           // Fetch and cache today's plans for the current date
           await fetchAndCacheTodayPlans(token, new Date());
-          
+
           // Fetch and cache category names
           await fetchAndCacheCategoryNames(token);
 
@@ -498,7 +621,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
           const communities = await getUserCommunities(token);
           for (const community of communities) {
             // This might not be necessary if 'history' messages are already handled in 'fetchInitialLastMessages'
-            sendMessage({ type: 'fetch_history', community_id: community.id });
+            sendMessage({ type: "fetch_history", community_id: community.id });
           }
 
           // Fetch initial last messages for unread count and notification purposes
@@ -510,7 +633,15 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     };
 
     loadAndCacheData();
-  }, [token, fetchAndCacheCommunities, fetchAndCacheCourses, fetchAndCacheCourseCategories, fetchAndCacheTodayPlans, fetchAndCacheCategoryNames, sendMessage]);
+  }, [
+    token,
+    fetchAndCacheCommunities,
+    fetchAndCacheCourses,
+    fetchAndCacheCourseCategories,
+    fetchAndCacheTodayPlans,
+    fetchAndCacheCategoryNames,
+    sendMessage,
+  ]);
 
   const contextValue: WebSocketContextType = {
     socket,
@@ -539,7 +670,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
 export const useWebSocket = () => {
   const context = useContext(WebSocketContext);
   if (context === null) {
-    throw new Error('useWebSocket must be used within a WebSocketProvider');
+    throw new Error("useWebSocket must be used within a WebSocketProvider");
   }
   return context;
 };

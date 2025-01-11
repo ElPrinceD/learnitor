@@ -339,6 +339,12 @@ const CourseDetails: React.FC = () => {
           fontSize: SIZES.xxxLarge,
           fontWeight: "bold",
         },
+        activityIndicator: {
+          position: "absolute",
+          top: rV(20),
+          alignSelf: "center",
+          zIndex: 1,
+        },
       }),
     [themeColors.icon, rV, rS, SIZES, MAX_HEADER_HEIGHT]
   );
@@ -437,6 +443,15 @@ const CourseDetails: React.FC = () => {
               {parsedCourse.title}
             </RNAnimated.Text>
           </View>
+        </View>
+        <View>
+          {topicsStatus === "pending" || enrollmentStatus === "pending" ? (
+            <ActivityIndicator
+              style={styles.activityIndicator}
+              size="large"
+              color={themeColors.tint}
+            />
+          ) : null}
         </View>
         <Animated.View
           entering={FadeInDown.delay(400)

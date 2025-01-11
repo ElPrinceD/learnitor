@@ -224,7 +224,7 @@ const ScorePage: React.FC = () => {
   useEffect(() => {
     navigation.setOptions({
       headerTitle: () => (
-        <View style={{ alignItems: "center" }}>
+        <View style={{ alignItems: "center", paddingVertical: rV(10) }}>
           <AnimatedText
             style={[
               styles.headerTitle,
