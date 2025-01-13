@@ -34,7 +34,14 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
+<<<<<<< HEAD
   const [unreadCommunityMessages, setUnreadCommunityMessages] = useState<Record<string, any>>({});
+=======
+  const [unreadCommunityMessages, setUnreadCommunityMessages] = useState<
+    Record<string, any>
+  >({});
+
+>>>>>>> 571f5b14b95513c3ca35b174913040af939a3fb0
   const { userToken, userInfo } = useAuth();
   const userId = userInfo?.user?.id;
 
