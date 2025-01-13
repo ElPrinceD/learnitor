@@ -462,7 +462,7 @@ const CommunityChatScreen: React.FC = () => {
           {selectedMessages.length > 0 && (
             <>
               {canDelete && (
-                <TouchableOpacity onPress={handleDeleteMessage}>
+                <TouchableOpacity onPressIn={handleDeleteMessage}>
                   <MaterialCommunityIcons
                     name="delete"
                     size={25}
@@ -472,7 +472,7 @@ const CommunityChatScreen: React.FC = () => {
                 </TouchableOpacity>
               )}
               {canEdit && (
-                <TouchableOpacity onPress={handleEditMessage}>
+                <TouchableOpacity onPressIn={handleEditMessage}>
                   <MaterialCommunityIcons
                     name="pencil"
                     size={25}
@@ -482,16 +482,22 @@ const CommunityChatScreen: React.FC = () => {
                 </TouchableOpacity>
               )}
               {canReply && (
-                <TouchableOpacity onPress={() => setReplyToMessage(selectedMessages[0])}>
-                  <MaterialCommunityIcons
-                    name="reply"
-                    size={25}
-                    color={themeColors.text}
-                    style={{ marginRight: 10, fontSize: rMS(25) }}
-                  />
-                </TouchableOpacity>
+                <TouchableOpacity
+                onPressIn={() => {
+                  console.log('Reply button pressed');
+                  setReplyToMessage(selectedMessages[0]);
+                }}
+              >
+                <MaterialCommunityIcons
+                  name="reply"
+                  size={25}
+                  color={themeColors.text}
+                  style={{ marginRight: 10, fontSize: rMS(25) }}
+                />
+              </TouchableOpacity>
+              
               )}
-              <TouchableOpacity onPress={handleCopySelected}>
+              <TouchableOpacity onPressIn={handleCopySelected}>
                 <MaterialCommunityIcons
                   name="content-copy"
                   size={25}
@@ -499,7 +505,7 @@ const CommunityChatScreen: React.FC = () => {
                   style={{ marginRight: 10, fontSize: rMS(25) }}
                 />
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleDeselectAll}>
+              <TouchableOpacity onPressIn={handleDeselectAll}>
                 <Text style={{ color: themeColors.text, fontSize: rMS(19) }}>
                   {" "}
                   Deselect ({selectedMessages.length})
@@ -511,7 +517,7 @@ const CommunityChatScreen: React.FC = () => {
       ),
       headerTitle: () => (
         <TouchableOpacity
-          onPress={() =>
+          onPressIn={() =>
             navigation.navigate("CommunityDetailScreen", { id: communityId })
           }
           style={{ flexDirection: "row", alignItems: "center" }}
@@ -558,7 +564,7 @@ const CommunityChatScreen: React.FC = () => {
         headerRight: () => null,
         headerLeft: () => (
           <TouchableOpacity
-            onPress={() => navigation.goBack()}
+            onPressIn={() => navigation.goBack()}
             style={{ marginLeft: 0 }}
           >
             <MaterialCommunityIcons
@@ -613,7 +619,7 @@ const CommunityChatScreen: React.FC = () => {
 
       return (
         <TouchableOpacity
-          onPress={() => handlePress(props.currentMessage)}
+          onPressIn={() => handlePress(props.currentMessage)}
           onLongPress={() => handleLongPress(props.currentMessage)}
           style={
             isSelected
@@ -627,7 +633,7 @@ const CommunityChatScreen: React.FC = () => {
               ...props.wrapperStyle,
               ...(isSelected && styles.blurBackground),
             }}
-            onPress={() => handlePress(props.currentMessage)}
+            onPressIn={() => handlePress(props.currentMessage)}
             onLongPress={() => handleLongPress(props.currentMessage)}
             renderCustomView={() => {
               if (
@@ -1010,7 +1016,7 @@ const CommunityChatScreen: React.FC = () => {
         </View>
       ) : (
         <GiftedChat
-          ref={chatRef}
+       
           messages={messages}
           onSend={onSend}
           user={{ _id: user?.id || 1 }}
