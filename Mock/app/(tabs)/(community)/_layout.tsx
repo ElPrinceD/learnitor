@@ -56,7 +56,7 @@ export default function CommunityLayout() {
           const communityName = route.params?.name ?? "Community";
 
           return {
-            title: "",
+            title: "Community Info",
             headerBackTitle: "Back",
             headerRight: () => (
               <TouchableOpacity

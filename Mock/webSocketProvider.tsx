@@ -39,6 +39,7 @@ interface WebSocketContextType {
   getCachedTodayPlans: (date: Date, category?: string) => Promise<any[]>;
   getCachedCategoryNames: () => Promise<Record<number, string>>;
   unreadCommunitiesCount: number;
+  markMessageAsRead: (communityId: string) => void;
 }
 
 const WebSocketContext = createContext<WebSocketContextType | null>(null);
@@ -60,7 +61,10 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
   >({});
 
   const { userToken, userInfo } = useAuth();
+  const [lastMessages, setLastMessages] = useState<Record<string, any>>({});
   const userId = userInfo?.user?.id;
+
+  const messageQueue: any[] = [];
 
   const connectWebSocket = useCallback(() => {
     if (!token) return;
@@ -211,6 +215,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
               }));
             }
           }
+          break;
         case "message_status":
           // Update message status in both full history and last message cache
           const messageId = data.message_id;
@@ -261,12 +266,9 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
     ws.onclose = () => {
       console.log("WebSocket disconnected");
       setIsConnected(false);
-
-      // Notify user if this is after several reconnection attempts
       if (reconnectAttempts > 3) {
         console.warn("Connection lost. Trying to reconnect...");
       }
-
       if (reconnectAttempts > 0 || token) {
         // reconnectWebSocket();
       }
@@ -278,7 +280,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
         console.warn("Network error detected. Attempting to reconnect...");
       }
       if (token) {
-        // reconnectWebSocket();
+        reconnectWebSocket();
       }
     };
 
@@ -295,11 +297,10 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
 
   const reconnectWebSocket = useCallback(() => {
     const initialBackoffMs = 1000; // 1 second
-    const maxBackoffMs = 60000; // 1 minute
-    const backoffMultiplier = 2;
+    const maxBackoffMs = 300000; // 5 minutes
+    const backoffMultiplier = 1.5;
 
     const attempt = reconnectAttempts;
-
     let backoff = Math.min(
       maxBackoffMs,
       initialBackoffMs * Math.pow(backoffMultiplier, attempt)
@@ -313,8 +314,6 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
       connectWebSocket();
     }, backoff);
   }, [reconnectAttempts, connectWebSocket]);
-
-  const messageQueue: any[] = [];
 
   const sendMessage = useCallback(
     (message: any) => {
@@ -331,22 +330,25 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
   useEffect(() => {
     if (socket && isConnected && messageQueue.length > 0) {
       console.log("Sending queued messages.");
-      messageQueue.forEach((msg) => socket.send(JSON.stringify(msg)));
-      messageQueue.length = 0;
+      while (messageQueue.length > 0) {
+        const msg = messageQueue.shift();
+        socket.send(JSON.stringify(msg));
+      }
     }
   }, [socket, isConnected]);
 
   const fetchInitialLastMessages = useCallback(async () => {
-    if (!token) return;
+    if (!token || !isConnected) return;
     try {
       const communities = await getUserCommunities(token);
       for (const community of communities) {
         const cachedLastMessage = await AsyncStorage.getItem(
           `last_message_${community.id}`
         );
+
         if (!cachedLastMessage) {
           sendMessage({ type: "history", community_id: community.id });
-        } else {
+        } else if (userId && cachedLastMessage.sender_id !== userId) {
           setUnreadCommunityMessages((prev) => ({
             ...prev,
             [community.id]: JSON.parse(cachedLastMessage),
@@ -356,7 +358,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
     } catch (error) {
       console.error("Error fetching initial last messages:", error);
     }
-  }, [token, sendMessage]);
+  }, [token, isConnected, sendMessage]);
 
   const getCommunityIdFromMessage = async (messageId: string) => {
     const allCachedMessages = await AsyncStorage.multiGet(
@@ -379,6 +381,42 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
   const unreadCommunitiesCount = Object.values(unreadCommunityMessages).filter(
     (message) => message?.status !== "read"
   ).length;
+
+  const markMessageAsRead = useCallback(
+    async (communityId: string) => {
+      setUnreadCommunityMessages((prev) => ({
+        ...prev,
+        [communityId]: {
+          ...prev[communityId],
+          status: "read",
+        },
+      }));
+
+      // Update AsyncStorage to persist this status
+      const lastMessageStr = await AsyncStorage.getItem(
+        `last_message_${communityId}`
+      );
+      if (lastMessageStr) {
+        const lastMessage = JSON.parse(lastMessageStr);
+        await AsyncStorage.setItem(
+          `last_message_${communityId}`,
+          JSON.stringify({
+            ...lastMessage,
+            status: "read",
+          })
+        );
+
+        socket?.send(
+          JSON.stringify({
+            type: "message_status_update",
+            message_id: lastMessage.id,
+            status: "read",
+          })
+        );
+      }
+    },
+    [lastMessages, socket]
+  );
 
   const joinAndSubscribeToCommunity = useCallback(
     async (communityId: string | number) => {
@@ -423,49 +461,49 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
   );
 
   const fetchAndCacheTodayPlans = useCallback(
-    async (
-      token: string | null,
-      date: Date | null,
-      category?: string | null
-    ) => {
-      try {
-        const dateString = date?.toISOString().split("T")[0];
-        const cacheKey = `todayPlans_${dateString}_${category || "all"}`;
-        const cachedPlans = await AsyncStorage.getItem(cacheKey);
-        if (cachedPlans) {
-          return JSON.parse(cachedPlans);
+    async (token: string, date: Date, category?: string) => {
+      if (token && isConnected) {
+        try {
+          const dateString = date?.toISOString().split("T")[0];
+          const cacheKey = `todayPlans_${dateString}_${category || "all"}`;
+          const cachedPlans = await AsyncStorage.getItem(cacheKey);
+          if (cachedPlans) {
+            return JSON.parse(cachedPlans);
+          }
+          const plans = await getTodayPlans(token, date, category);
+          await AsyncStorage.setItem(cacheKey, JSON.stringify(plans));
+          return plans;
+        } catch (error) {
+          console.error("Failed to fetch or cache today's plans:", error);
+          throw error;
         }
-        const plans = await getTodayPlans(token, date, category);
-        await AsyncStorage.setItem(cacheKey, JSON.stringify(plans));
-        return plans;
-      } catch (error) {
-        console.error("Failed to fetch or cache today's plans:", error);
-        throw error;
       }
     },
-    []
+    [isConnected]
   );
 
-  const fetchAndCacheCategoryNames = async (
-    token: string | null
-  ): Promise<Record<number, string>> => {
-    try {
-      const cachedCategories = await AsyncStorage.getItem("categoryNames");
-      if (cachedCategories) {
-        return JSON.parse(cachedCategories);
+  const fetchAndCacheCategoryNames = useCallback(
+    async (token: string) => {
+      if (token && isConnected) {
+        try {
+          const cachedCategories = await AsyncStorage.getItem("categoryNames");
+          if (cachedCategories) {
+            return JSON.parse(cachedCategories);
+          }
+          const categories = await getCategoryNames(token);
+          await AsyncStorage.setItem(
+            "categoryNames",
+            JSON.stringify(categories)
+          );
+          return categories;
+        } catch (error) {
+          console.error("Failed to fetch or cache category names:", error);
+          throw error;
+        }
       }
-      const categories = await getCategoryNames(token); // Assuming this function exists
-      const categoryMap = categories.reduce((acc, { value, label }) => {
-        acc[value] = label;
-        return acc;
-      }, {} as Record<number, string>);
-      await AsyncStorage.setItem("categoryNames", JSON.stringify(categoryMap));
-      return categoryMap;
-    } catch (error) {
-      console.error("Failed to fetch or cache category names:", error);
-      throw error;
-    }
-  };
+    },
+    [isConnected]
+  );
 
   const getCachedTodayPlans = useCallback(
     async (date: Date, category?: string) => {
@@ -513,7 +551,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
   );
 
   const updateCachedCommunities = async (communityId: string | number) => {
-    if (token) {
+    if (token && isConnected) {
       try {
         const newCommunity = await getCommunityDetails(communityId, token);
         let cachedCommunities = await AsyncStorage.getItem("communities");
@@ -535,7 +573,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
   };
 
   const fetchAndCacheCommunities = useCallback(async () => {
-    if (token) {
+    if (token && isConnected) {
       try {
         let cachedCommunities = await AsyncStorage.getItem("communities");
         if (!cachedCommunities || JSON.parse(cachedCommunities).length === 0) {
@@ -555,11 +593,13 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
       } catch (error) {
         console.error("Failed to fetch or cache communities:", error);
       }
+    } else {
+      console.warn("WebSocket not connected, skipping community fetch.");
     }
-  }, [token]);
+  }, [token, isConnected]);
 
   const fetchAndCacheCourses = useCallback(async () => {
-    if (token) {
+    if (token && isConnected) {
       try {
         let cachedCourses = await AsyncStorage.getItem("courses");
         if (!cachedCourses || JSON.parse(cachedCourses).length === 0) {
@@ -572,11 +612,13 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
       } catch (error) {
         console.error("Failed to fetch or cache courses:", error);
       }
+    } else {
+      console.warn("WebSocket not connected, skipping course fetch.");
     }
-  }, [token]);
+  }, [token, isConnected]);
 
   const fetchAndCacheCourseCategories = useCallback(async () => {
-    if (token) {
+    if (token && isConnected) {
       try {
         let cachedCategories = await AsyncStorage.getItem("courseCategories");
         if (!cachedCategories || JSON.parse(cachedCategories).length === 0) {
@@ -592,13 +634,17 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
       } catch (error) {
         console.error("Failed to fetch or cache course categories:", error);
       }
+    } else {
+      console.warn(
+        "WebSocket not connected, skipping course categories fetch."
+      );
     }
-  }, [token]);
+  }, [token, isConnected]);
 
   useEffect(() => {
     // This effect will run once when the component mounts or when token changes
     const loadAndCacheData = async () => {
-      if (token) {
+      if (token && isConnected) {
         try {
           // Fetch and cache communities
           await fetchAndCacheCommunities();
@@ -615,10 +661,9 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
           // Fetch and cache category names
           await fetchAndCacheCategoryNames(token);
 
-          // Fetch messages for communities (assuming this is what you mean by caching messages)
+          // Fetch messages for communities
           const communities = await getUserCommunities(token);
           for (const community of communities) {
-            // This might not be necessary if 'history' messages are already handled in 'fetchInitialLastMessages'
             sendMessage({ type: "fetch_history", community_id: community.id });
           }
 
@@ -633,6 +678,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
     loadAndCacheData();
   }, [
     token,
+    isConnected,
     fetchAndCacheCommunities,
     fetchAndCacheCourses,
     fetchAndCacheCourseCategories,
@@ -656,6 +702,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
     getCachedTodayPlans,
     getCachedCategoryNames,
     unreadCommunitiesCount,
+    markMessageAsRead,
   };
 
   return (

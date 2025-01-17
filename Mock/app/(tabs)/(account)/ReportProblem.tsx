@@ -69,10 +69,10 @@ const ReportProblem: React.FC = () => {
     },
     input: {
       borderWidth: 1,
-      borderColor: themeColors.border,
+      borderColor: themeColors.text,
       borderRadius: rMS(10),
       padding: rS(20),
-      backgroundColor: themeColors.card,
+      backgroundColor: themeColors.reverseText,
       color: themeColors.text,
       justifyContent: "center",
     },

@@ -58,6 +58,7 @@ const CommunityDetailScreen: React.FC = () => {
 
         if (userToken?.token) {
           const data = await getCommunityDetails(id, userToken?.token);
+          console.log("Community data: ", data)
           setCommunity(data);
           // Cache the community data
           await AsyncStorage.setItem(`community_${id}`, JSON.stringify(data));

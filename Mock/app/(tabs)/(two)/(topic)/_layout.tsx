@@ -26,6 +26,7 @@ const TopicLayout = () => {
     <MaterialTopTabs
       screenOptions={{
         tabBarActiveTintColor: themeColors.tint,
+        
         tabBarLabelStyle: {
           fontSize: 14,
           fontWeight: "bold",
