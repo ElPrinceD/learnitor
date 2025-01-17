@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   TextInput,
   Image,
+  Alert,
 } from "react-native";
 import { useAuth } from "../../../components/AuthContext";
 import Colors from "../../../constants/Colors";
@@ -19,6 +20,9 @@ import { createCommunity } from "../../../CommunityApiCalls";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const CreateCommunity = () => {
   const { userToken, userInfo } = useAuth();
@@ -26,17 +30,21 @@ const CreateCommunity = () => {
   const [description, setDescription] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
-
+  const navigation = useNavigation()
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
   const createCommunityMutation = useMutation({
     mutationFn: async ({ communityData, token }) => {
       console.log('Submitting Community Data:', communityData); // Debugging statement
-      await createCommunity(communityData, token);
+      const community = await createCommunity(communityData, token);
+      return community;
     },
-    onSuccess: (communityData) => {
-      router.navigate("CommunityScreen");
+    onSuccess: async (communityData) => {
+
+
+      await updateCommunityCache(communityData);
+      navigation.goBack()
       router.setParams({ newCommunity: communityData });
       setErrorMessage(null);
     },
@@ -62,20 +70,67 @@ const CreateCommunity = () => {
   };
 
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 1,
-    });
-
-    console.log('Image Picker Result:', result); // Log the result to verify
-
-    if (!result.canceled && result.assets) {
-      setProfilePicture(result.assets[0].uri); // Set the selected image URI
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission to access media library is required!");
+        return;
+      }
+  
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+      });
+  
+      if (!result.canceled) {
+        const uri = result.assets[0].uri;
+        const formData = new FormData();
+        const fileName = uri.split("/").pop();
+        const fileType = uri.split(".").pop();
+  
+        formData.append("image", {
+          uri,
+          name: fileName,
+          type: `image/${fileType}`,
+        });
+  
+        const imgurConfig = {
+          headers: {
+            Authorization: "5fa58c7d05ea125", // Replace with your Imgur client ID
+            "Content-Type": "multipart/form-data",
+          },
+        };
+  
+        const imgurResponse = await axios.post(
+          "https://api.imgur.com/3/upload",
+          formData,
+          imgurConfig
+        );
+  
+        const imgurLink = imgurResponse.data.data.link;
+        setProfilePicture(imgurLink); // Update the state with the Imgur link
+      }
+    } catch (error) {
+      console.error("Error picking image:", error);
     }
   };
 
   const isButtonDisabled = !name.trim(); // Disable button if name is empty
 
+  const updateCommunityCache = async (newCommunity) => {
+    try {
+      let communities = await AsyncStorage.getItem('communities');
+      communities = communities ? JSON.parse(communities) : [];
+      if (!communities.some(c => c.id === newCommunity.id)) {
+        communities.push(newCommunity);
+        await AsyncStorage.setItem('communities', JSON.stringify(communities));
+      }
+    } catch (error) {
+      console.error("Error updating community cache:", error);
+    }
+  };
   const styles = StyleSheet.create({
     container: {
       flex: 1,

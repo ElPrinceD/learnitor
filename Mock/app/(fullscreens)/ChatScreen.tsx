@@ -49,7 +49,7 @@ const CommunityChatScreen: React.FC = () => {
 
   const { userToken, userInfo } = useAuth();
   const user = userInfo?.user;
-  const { socket, isConnected, sendMessage } = useWebSocket();
+  const { socket, isConnected, sendMessage, markMessageAsRead } = useWebSocket();
   const navigation = useNavigation();
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [messageInput, setMessageInput] = useState("");
@@ -202,7 +202,7 @@ const CommunityChatScreen: React.FC = () => {
                 name: data.sender,
                 avatar: data.sender_image,
               },
-              status: "sent",
+              status: "read",
               replyTo: data.reply_to
                 ? {
                     _id: data.reply_to.id.toString(),
@@ -222,6 +222,7 @@ const CommunityChatScreen: React.FC = () => {
               );
   
               if (user?.id !== newMessage.user._id) {
+                
                 socket.send(
                   JSON.stringify({
                     type: "message_status_update",
@@ -245,6 +246,8 @@ const CommunityChatScreen: React.FC = () => {
                   status: "read",
                 })
               );
+              
+                markMessageAsRead(communityId);
               setTimeout(() => {
                 chatRef.current?.scrollToBottom();
               }, 100);

@@ -70,6 +70,7 @@ const CourseDetails: React.FC = () => {
     refetch: refetchEnrollmentStatus,
   } = useQuery({
     queryKey: ["enrollmentStatus", userInfo?.user?.id, parsedCourse?.id],
+  
     queryFn: () =>
       getEnrollmentStatus(
         userInfo?.user?.id,
@@ -131,7 +132,7 @@ const CourseDetails: React.FC = () => {
     },
   });
 
-  console.log(enrollmentData);
+  console.log("This: ",enrollmentData);
 
   const unenrollMutation = useMutation<any, any, any, any>({
     mutationFn: async ({ userId, courseId, token }) => {

@@ -30,7 +30,7 @@ const CommunityScreen: React.FC = () => {
   const themeColors = Colors[colorScheme ?? "light"];
   const colorMode = colorScheme === "dark" ? "dark" : "light";
 
-  const { isConnected, socket, joinAndSubscribeToCommunity, unsubscribeFromCommunity, subscribeToExistingUserCommunities, fetchAndCacheCommunities } = useWebSocket() || {
+  const { isConnected, socket, joinAndSubscribeToCommunity, unsubscribeFromCommunity, subscribeToExistingUserCommunities, fetchAndCacheCommunities, markMessageAsRead } = useWebSocket() || {
     isConnected: false,
     socket: null,
     joinAndSubscribeToCommunity: () => {},
@@ -212,48 +212,41 @@ const CommunityScreen: React.FC = () => {
   }, []);
 
 
+  
   const handleCommunityPress = useCallback(async (community: Community) => {
-    const isUserCommunity = myCommunities.some(c => c.id === community.id);
+    console.log('Community pressed 1:', community.id);
   
-    if (!isUserCommunity && isConnected) {
-      await joinAndSubscribeToCommunity(community.id);
-      setMyCommunities(prev => [...prev, community]);
-      fetchAndCacheCommunities();
-    }
+    try {
+      const isUserCommunity = myCommunities.some(c => c.id === community.id);
   
-    // Update message status to 'read' for the last message in this community
-    const lastMessage = getLastMessage(community.id);
-    if (lastMessage && lastMessage.status !== 'read') {
-      if (socket) {
-        socket.send(JSON.stringify({
-          type: 'message_status_update',
-          message_id: lastMessage.id,
-          status: 'read'
-        }));
-        
-        // Optimistically update the state to remove the unread indicator
-        setLastMessages(prevState => ({
+      if (!isUserCommunity && isConnected) {
+        await joinAndSubscribeToCommunity(community.id);
+        setMyCommunities(prev => [...prev, community]);
+        await fetchAndCacheCommunities(); // Await this if it's asynchronous
+      }
+  
+      const lastMessage = getLastMessage(community.id);
+      
+      if (lastMessage && lastMessage.status !== 'read') {
+        markMessageAsRead(community.id);
+        setLastMessages((prevState) => ({
           ...prevState,
           [community.id]: {
             ...prevState[community.id],
-            status: 'read'
-          }
-        }));
-  
-        // Update the cache immediately for persistence
-        AsyncStorage.setItem(`last_message_${community.id}`, JSON.stringify({
-          ...lastMessage,
-          status: 'read'
+            status: "read",
+          },
         }));
       }
-    }
   
-    router.navigate({
-      pathname: "ChatScreen",
-      params: { communityId: community.id, name: community.name, image: community.image_url },
-    });
+      console.log('Community pressed:', community.id);
+      router.navigate({
+        pathname: "ChatScreen",
+        params: { communityId: community.id, name: community.name, image: community.image_url },
+      });
+    } catch (error) {
+      console.error('Error in handleCommunityPress:', error);
+    }
   }, [myCommunities, isConnected, joinAndSubscribeToCommunity, fetchAndCacheCommunities, getLastMessage, socket]);
-
   const styles = StyleSheet.create({
     container: {
       flex: 1,

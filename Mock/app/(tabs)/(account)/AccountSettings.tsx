@@ -126,8 +126,13 @@ const AccountSettings = () => {
       borderRadius: rMS(10),
       paddingHorizontal: rS(10),
       marginBottom: rV(15),
-      borderColor: themeColors.border,
-      backgroundColor: themeColors.card,
+
+      borderColor: themeColors.text,
+
+     
+      backgroundColor: themeColors.reverseText,
+      color: themeColors.text,
+      justifyContent: "center",
       flex: 1,
     },
     icon: {

@@ -21,13 +21,14 @@ interface WebSocketContextType {
   getCachedTodayPlans: (date: Date, category?: string) => Promise<any[]>;
   getCachedCategoryNames: () => Promise<any>;
   unreadCommunitiesCount: number;
+  markMessageAsRead: (communityId: string) => void;
 }
 
 const WebSocketContext = createContext<WebSocketContextType | null>(null);
 
 interface WebSocketProviderProps {
   children: React.ReactNode;
-  token?: string;
+  token?: string | null;
 }
 
 export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token }) => {
@@ -36,7 +37,10 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [unreadCommunityMessages, setUnreadCommunityMessages] = useState<Record<string, any>>({});
   const { userToken, userInfo } = useAuth();
+  const [lastMessages, setLastMessages] = useState<Record<string, any>>({});
   const userId = userInfo?.user?.id;
+
+  const messageQueue: any[] = [];
 
   const connectWebSocket = useCallback(() => {
     if (!token) return;
@@ -58,106 +62,107 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     ws.onmessage = async (event) => {
       const data = JSON.parse(event.data);
 
-    
-        switch(data.type) {
-          case 'message':
-            // Update full message history with reply information
-            const cachedMessages = await AsyncStorage.getItem(`messages_${data.community_id}`);
-            const updatedMessages = cachedMessages ? JSON.parse(cachedMessages) : [];
-            updatedMessages.push({
-              _id: data.id.toString(),
-              text: data.message,
-              createdAt: new Date(data.sent_at),
+      switch(data.type) {
+        case 'message':
+          // Update full message history with reply information
+          const cachedMessages = await AsyncStorage.getItem(`messages_${data.community_id}`);
+          const updatedMessages = cachedMessages ? JSON.parse(cachedMessages) : [];
+          updatedMessages.push({
+            _id: data.id.toString(),
+            text: data.message,
+            createdAt: new Date(data.sent_at),
+            user: {
+              _id: data.sender_id,
+              name: data.sender,
+              avatar: data.sender_image || null, 
+            },
+            status: data.status || 'sent',
+            replyTo: data.reply_to ? {
+              _id: data.reply_to.id ? data.reply_to.id.toString() : null,
+              text: data.reply_to.snippet || null, 
               user: {
-                _id: data.sender_id,
-                name: data.sender,
-                avatar: data.sender_image || null, 
-              },
-              status: data.status || 'sent',
-              replyTo: data.reply_to ? {
-                _id: data.reply_to.id ? data.reply_to.id.toString() : null,
-                text: data.reply_to.snippet || null, 
-                user: {
-                  _id: data.reply_to.sender_id || null,
-                  name: data.reply_to.sender_name || null
-                }
-              } : null
-            });
+                _id: data.reply_to.sender_id || null,
+                name: data.reply_to.sender_name || null
+              }
+            } : null
+          });
       
-            await AsyncStorage.setItem(`messages_${data.community_id}`, JSON.stringify(updatedMessages));
+          await AsyncStorage.setItem(`messages_${data.community_id}`, JSON.stringify(updatedMessages));
       
-            // Update last message for list view with status
-            const newLastMessage = {
-              ...data,
-              status: data.status || 'sent',
-              sent_at: new Date(data.sent_at).toISOString(),
-              replyTo: data.reply_to ? {
-                id: data.reply_to.id ? data.reply_to.id.toString() : null,
-                snippet: data.reply_to.snippet || null,
-                sender_name: data.reply_to.sender_name || null
-              } : null
-            };
-            await AsyncStorage.setItem(`last_message_${data.community_id}`, JSON.stringify(newLastMessage));
-            if (userId && data.sender_id !== userId) {
-              setUnreadCommunityMessages(prev => ({
-                ...prev,
-                [data.community_id]: newLastMessage
-              }));
-            }
-            break;
-          case 'history':
-            // Store full history including replies
-            const normalizedMessages = data.messages.map(msg => ({
-              _id: msg.id.toString(),
-              text: msg.message,
-              createdAt: new Date(msg.sent_at),
+          // Update last message for list view with status
+          const newLastMessage = {
+            ...data,
+            status: data.status || 'sent',
+            sent_at: new Date(data.sent_at).toISOString(),
+            replyTo: data.reply_to ? {
+              id: data.reply_to.id ? data.reply_to.id.toString() : null,
+              snippet: data.reply_to.snippet || null,
+              sender_name: data.reply_to.sender_name || null
+            } : null
+          };
+          await AsyncStorage.setItem(`last_message_${data.community_id}`, JSON.stringify(newLastMessage));
+          if (userId && data.sender_id !== userId) {
+            setUnreadCommunityMessages(prev => ({
+              ...prev,
+              [data.community_id]: newLastMessage
+            }));
+          }
+          break;
+        case 'history':
+          // Store full history including replies
+          const normalizedMessages = data.messages.map(msg => ({
+            _id: msg.id.toString(),
+            text: msg.message,
+            createdAt: new Date(msg.sent_at),
+            user: {
+              _id: msg.sender_id,
+              name: msg.sender,
+              avatar: msg.sender_image || null
+            },
+            status: msg.status || 'sent',
+            replyTo: msg.reply_to ? {
+              _id: msg.reply_to.id ? msg.reply_to.id.toString() : null,
+              text: msg.reply_to.snippet || null,
               user: {
-                _id: msg.sender_id,
-                name: msg.sender,
-                avatar: msg.sender_image || null
-              },
-              status: msg.status || 'sent',
-              replyTo: msg.reply_to ? {
-                _id: msg.reply_to.id ? msg.reply_to.id.toString() : null,
-                text: msg.reply_to.snippet || null,
-                user: {
-                  _id: msg.reply_to.sender_id || null,
-                  name: msg.reply_to.sender_name || null
-                }
+                _id: msg.reply_to.sender_id || null,
+                name: msg.reply_to.sender_name || null
+              }
+            } : null
+          }));
+          
+          await AsyncStorage.setItem(`messages_${data.community_id}`, JSON.stringify(normalizedMessages));
+          
+          // Store only the last message for list view
+          if (data.messages.length > 0) {
+            const lastMessage = data.messages[data.messages.length - 1];
+            await AsyncStorage.setItem(`last_message_${data.community_id}`, JSON.stringify({
+              ...lastMessage,
+              sent_at: new Date(lastMessage.sent_at).toISOString(),
+              status: lastMessage.status || 'sent',
+              replyTo: lastMessage.reply_to ? {
+                id: lastMessage.reply_to.id ? lastMessage.reply_to.id.toString() : null,
+                snippet: lastMessage.reply_to.snippet || null,
+                sender_name: lastMessage.reply_to.sender_name || null
               } : null
             }));
-            
-            await AsyncStorage.setItem(`messages_${data.community_id}`, JSON.stringify(normalizedMessages));
-            
-            // Store only the last message for list view
-            if (data.messages.length > 0) {
-              const lastMessage = data.messages[data.messages.length - 1];
-              await AsyncStorage.setItem(`last_message_${data.community_id}`, JSON.stringify({
-                ...lastMessage,
-                sent_at: new Date(lastMessage.sent_at).toISOString(),
-                status: lastMessage.status || 'sent',
-                replyTo: lastMessage.reply_to ? {
-                  id: lastMessage.reply_to.id ? lastMessage.reply_to.id.toString() : null,
-                  snippet: lastMessage.reply_to.snippet || null,
-                  sender_name: lastMessage.reply_to.sender_name || null
-                } : null
+            if (userId && lastMessage.sender_id !== userId) {
+              setUnreadCommunityMessages(prev => ({
+                ...prev,
+                [data.community_id]: {
+                  ...lastMessage,
+                  status: lastMessage.status || 'sent',
+                  sent_at: new Date(lastMessage.sent_at).toISOString(),
+                  replyTo: lastMessage.reply_to ? {
+                    id: lastMessage.reply_to.id ? lastMessage.reply_to.id.toString() : null,
+                    snippet: lastMessage.reply_to.snippet || null,
+                    sender_name: lastMessage.reply_to.sender_name || null
+                  } : null
+                }
               }));
-              if (userId && lastMessage.sender_id !== userId) {
-                setUnreadCommunityMessages(prev => ({
-                  ...prev,
-                  [data.community_id]: {
-                    ...lastMessage,
-                    status: lastMessage.status || 'sent',
-                    sent_at: new Date(lastMessage.sent_at).toISOString(),
-                    replyTo: lastMessage.reply_to ? {
-                      id: lastMessage.reply_to.id ? lastMessage.reply_to.id.toString() : null,
-                      snippet: lastMessage.reply_to.snippet || null,
-                      sender_name: lastMessage.reply_to.sender_name || null
-                    } : null
-                  }
-                }));
-              }
-            }       case 'message_status':
+            }
+          }
+          break;
+        case 'message_status':
           // Update message status in both full history and last message cache
           const messageId = data.message_id;
           const communityId = await getCommunityIdFromMessage(messageId);
@@ -195,12 +200,9 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     ws.onclose = () => {
       console.log("WebSocket disconnected");
       setIsConnected(false);
-      
-      // Notify user if this is after several reconnection attempts
       if (reconnectAttempts > 3) {
         console.warn("Connection lost. Trying to reconnect...");
       }
-      
       if (reconnectAttempts > 0 || token) {
         reconnectWebSocket();
       }
@@ -212,7 +214,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
         console.warn("Network error detected. Attempting to reconnect...");
       }
       if (token) {
-       // reconnectWebSocket();
+        reconnectWebSocket();
       }
     };
 
@@ -229,11 +231,10 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
 
   const reconnectWebSocket = useCallback(() => {
     const initialBackoffMs = 1000; // 1 second
-    const maxBackoffMs = 60000; // 1 minute
-    const backoffMultiplier = 2;
+    const maxBackoffMs = 300000; // 5 minutes
+    const backoffMultiplier = 1.5;
     
     const attempt = reconnectAttempts;
-    
     let backoff = Math.min(maxBackoffMs, initialBackoffMs * Math.pow(backoffMultiplier, attempt));
     backoff += Math.random() * 1000; // Add randomness
     
@@ -244,8 +245,6 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
       connectWebSocket();
     }, backoff);
   }, [reconnectAttempts, connectWebSocket]);
-
-  const messageQueue: any[] = [];
 
   const sendMessage = useCallback((message: any) => {
     if (socket && isConnected) {
@@ -259,20 +258,23 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   useEffect(() => {
     if (socket && isConnected && messageQueue.length > 0) {
       console.log("Sending queued messages.");
-      messageQueue.forEach(msg => socket.send(JSON.stringify(msg)));
-      messageQueue.length = 0;
+      while (messageQueue.length > 0) {
+        const msg = messageQueue.shift();
+        socket.send(JSON.stringify(msg));
+      }
     }
   }, [socket, isConnected]);
 
   const fetchInitialLastMessages = useCallback(async () => {
-    if (!token) return;
+    if (!token || !isConnected) return;
     try {
       const communities = await getUserCommunities(token);
       for (const community of communities) {
         const cachedLastMessage = await AsyncStorage.getItem(`last_message_${community.id}`);
+       
         if (!cachedLastMessage) {
           sendMessage({ type: 'history', community_id: community.id });
-        } else {
+        } else if (userId && cachedLastMessage.sender_id !== userId){
           setUnreadCommunityMessages(prev => ({
             ...prev,
             [community.id]: JSON.parse(cachedLastMessage)
@@ -282,7 +284,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     } catch (error) {
       console.error("Error fetching initial last messages:", error);
     }
-  }, [token, sendMessage]);
+  }, [token, isConnected, sendMessage]);
 
   const getCommunityIdFromMessage = async (messageId: string) => {
     const allCachedMessages = await AsyncStorage.multiGet((await AsyncStorage.getAllKeys()).filter(key => key.startsWith('messages_')));
@@ -299,6 +301,32 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
 
   // Calculate unread communities count
   const unreadCommunitiesCount = Object.values(unreadCommunityMessages).filter(message => message?.status !== 'read').length;
+
+  const markMessageAsRead = useCallback(async (communityId: string) => {
+    setUnreadCommunityMessages(prev => ({
+      ...prev,
+      [communityId]: {
+        ...prev[communityId],
+        status: 'read'
+      }
+    }));
+    
+    // Update AsyncStorage to persist this status
+    const lastMessageStr = await AsyncStorage.getItem(`last_message_${communityId}`);
+    if (lastMessageStr) {
+      const lastMessage = JSON.parse(lastMessageStr);
+      await AsyncStorage.setItem(`last_message_${communityId}`, JSON.stringify({
+        ...lastMessage,
+        status: 'read'
+      }));
+      
+      socket?.send(JSON.stringify({
+        type: 'message_status_update',
+        message_id: lastMessage.id,
+        status: 'read'
+      }));
+    }
+  }, [lastMessages, socket]);
 
   const joinAndSubscribeToCommunity = useCallback(async (communityId: string | number) => {
     if (socket && isConnected) {
@@ -334,7 +362,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   }, [socket, isConnected, sendMessage]);
 
   const fetchAndCacheTodayPlans = useCallback(async (token: string, date: Date, category?: string) => {
-    if(token){ 
+    if(token && isConnected){ 
       try {
         const dateString = date.toISOString().split('T')[0];
         const cacheKey = `todayPlans_${dateString}_${category || 'all'}`;
@@ -350,18 +378,16 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
         throw error;
       }
     }
-  }, []);
+  }, [isConnected]);
 
   const fetchAndCacheCategoryNames = useCallback(async (token: string) => {
-    if(token){ 
+    if(token && isConnected){ 
       try {
         const cachedCategories = await AsyncStorage.getItem('categoryNames');
         if (cachedCategories) {
           return JSON.parse(cachedCategories);
         }
         const categories = await getCategoryNames(token);
-
-        console.log(categories)
         await AsyncStorage.setItem('categoryNames', JSON.stringify(categories));
         return categories;
       } catch (error) {
@@ -369,7 +395,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
         throw error;
       }
     }
-  }, []);
+  }, [isConnected]);
 
   const getCachedTodayPlans = useCallback(async (date: Date, category?: string) => {
     const dateString = date.toISOString().split('T')[0];
@@ -408,7 +434,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   }, [socket, isConnected]);
 
   const updateCachedCommunities = async (communityId: string | number) => {
-    if(token){ 
+    if(token && isConnected){ 
       try {
         const newCommunity = await getCommunityDetails(communityId, token);
         let cachedCommunities = await AsyncStorage.getItem('communities');
@@ -425,7 +451,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   };
 
   const fetchAndCacheCommunities = useCallback(async () => {
-    if (token) {
+    if (token && isConnected) {
       try {
         let cachedCommunities = await AsyncStorage.getItem('communities');
         if (!cachedCommunities || JSON.parse(cachedCommunities).length === 0) {
@@ -437,11 +463,13 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
       } catch (error) {
         console.error("Failed to fetch or cache communities:", error);
       }
+    } else {
+      console.warn("WebSocket not connected, skipping community fetch.");
     }
-  }, [token]);
+  }, [token, isConnected]);
 
   const fetchAndCacheCourses = useCallback(async () => {
-    if (token) {
+    if (token && isConnected) {
       try {
         let cachedCourses = await AsyncStorage.getItem('courses');
         if (!cachedCourses || JSON.parse(cachedCourses).length === 0) {
@@ -454,11 +482,13 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
       } catch (error) {
         console.error("Failed to fetch or cache courses:", error);
       }
+    } else {
+      console.warn("WebSocket not connected, skipping course fetch.");
     }
-  }, [token]);
+  }, [token, isConnected]);
 
   const fetchAndCacheCourseCategories = useCallback(async () => {
-    if (token) {
+    if (token && isConnected) {
       try {
         let cachedCategories = await AsyncStorage.getItem('courseCategories');
         if (!cachedCategories || JSON.parse(cachedCategories).length === 0) {
@@ -471,13 +501,15 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
       } catch (error) {
         console.error("Failed to fetch or cache course categories:", error);
       }
+    } else {
+      console.warn("WebSocket not connected, skipping course categories fetch.");
     }
-  }, [token]);
+  }, [token, isConnected]);
 
   useEffect(() => {
     // This effect will run once when the component mounts or when token changes
     const loadAndCacheData = async () => {
-      if (token) {
+      if (token && isConnected) {
         try {
           // Fetch and cache communities
           await fetchAndCacheCommunities();
@@ -494,10 +526,9 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
           // Fetch and cache category names
           await fetchAndCacheCategoryNames(token);
 
-          // Fetch messages for communities (assuming this is what you mean by caching messages)
+          // Fetch messages for communities 
           const communities = await getUserCommunities(token);
           for (const community of communities) {
-            // This might not be necessary if 'history' messages are already handled in 'fetchInitialLastMessages'
             sendMessage({ type: 'fetch_history', community_id: community.id });
           }
 
@@ -510,7 +541,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     };
 
     loadAndCacheData();
-  }, [token, fetchAndCacheCommunities, fetchAndCacheCourses, fetchAndCacheCourseCategories, fetchAndCacheTodayPlans, fetchAndCacheCategoryNames, sendMessage]);
+  }, [token, isConnected, fetchAndCacheCommunities, fetchAndCacheCourses, fetchAndCacheCourseCategories, fetchAndCacheTodayPlans, fetchAndCacheCategoryNames, sendMessage]);
 
   const contextValue: WebSocketContextType = {
     socket,
@@ -527,6 +558,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     getCachedTodayPlans,
     getCachedCategoryNames,
     unreadCommunitiesCount,
+    markMessageAsRead
   };
 
   return (
