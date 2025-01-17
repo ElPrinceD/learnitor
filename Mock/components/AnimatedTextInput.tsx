@@ -191,7 +191,7 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
             onSubmitEditing={handleSubmitEditing} // Prevent new line and blur
           />
           <TouchableOpacity
-            onPress={() => setShowPassword(!showPassword)}
+            onPressIn={() => setShowPassword(!showPassword)}
             style={styles.toggleIcon}
           >
             <Ionicons

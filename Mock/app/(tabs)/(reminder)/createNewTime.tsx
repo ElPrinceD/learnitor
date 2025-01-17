@@ -14,7 +14,13 @@ import Colors from "../../../constants/Colors";
 import { rMS, rS, rV } from "../../../constants/responsive";
 import { SIZES } from "../../../constants/theme.js";
 import AnimatedRoundTextInput from "../../../components/AnimatedRoundTextInput.tsx";
-import { createTask, getCategories } from "../../../TimelineApiCalls.ts";
+import {
+  createTask,
+  getCategories,
+  createTimetable,
+  createPeriod,
+  getPeriod,
+} from "../../../TimelineApiCalls.ts";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import ErrorMessage from "../../../components/ErrorMessage.tsx";
 import GameButton from "../../../components/GameButton.tsx";
@@ -52,7 +58,6 @@ interface CreateTaskData {
 }
 
 const CreateNewTime = () => {
-  const [activeTab, setActiveTab] = useState("Task");
   const { userToken, userInfo } = useAuth();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -68,6 +73,7 @@ const CreateNewTime = () => {
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+
   const { status: categoriesStatus, data: categoriesData } = useQuery({
     queryKey: ["taskCategories", userToken?.token],
     queryFn: () => getCategories(userToken?.token),
@@ -333,125 +339,98 @@ const CreateNewTime = () => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === "Task" ? styles.activeTab : null]}
-          onPress={() => setActiveTab("Task")}
-        >
-          <Text style={styles.tabText}>Task</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === "TimeTable" ? styles.activeTab : null,
-          ]}
-          onPress={() => setActiveTab("TimeTable")}
-        >
-          <Text style={styles.tabText}>TimeTable</Text>
-        </TouchableOpacity>
-      </View>
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {activeTab === "Task" && (
-          <>
-            <View style={styles.inputContainer}>
-              <AnimatedTextInput
-                placeholderTextColor={themeColors.textSecondary}
-                label="Title"
-                value={title}
-                onChangeText={setTitle}
-              />
-              <AnimatedTextInput
-                placeholderTextColor={themeColors.textSecondary}
-                label="Description"
-                value={description}
-                onChangeText={setDescription}
-              />
-            </View>
-            <View style={styles.section}>
-              <DateSelector
-                onDateChange={(selectedDate: string) =>
-                  setDate(new Date(selectedDate))
-                }
-                label="Start Date"
-                minDate={true}
-              />
-              <CustomDateTimeSelector
-                mode="time"
-                label="Choose Start Time"
-                onTimeChange={(time) => {
-                  handleConfirmTime(time);
-                }}
-                buttonTitle="Pick Time"
-              />
-              <CustomDateTimeSelector
-                mode="time"
-                label="Choose End Time"
-                onTimeChange={(time) => {
-                  handleConfirmEndTime(time);
-                }}
-                buttonTitle="Pick Time"
-              />
-            </View>
-            <View style={styles.section}>
-              <CustomPicker
-                label="Category"
-                options={categoriesData?.map((cat) => cat.label) || []} // Array of strings
-                selectedValue={selectedCategory?.label || undefined} // Use label as string or undefined
-                onValueChange={(value) =>
-                  setSelectedCategory(
-                    categoriesData?.find((cat) => cat.label === value) || null
-                  )
-                }
-              />
-              <CustomPicker
-                label="Recurrence"
-                options={simplifiedRecurrenceOptions} // Simplify to strings
-                selectedValue={recurrenceOption}
-                onValueChange={setRecurrenceOption}
-              />
-              {recurrenceOption !== "Does not repeat" && (
-                <Animated.View
-                  entering={FadeInLeft.delay(200)
-                    .randomDelay()
-                    .reduceMotion(ReduceMotion.Never)}
-                  style={{ flexDirection: "row", alignItems: "center" }}
-                >
-                  <DateSelector
-                    onDateChange={(selectedDate: string) =>
-                      setRecurrenceEndDate(new Date(selectedDate))
-                    }
-                    label="End Date for Recurrence"
-                    minDate={true}
-                  />
-                </Animated.View>
-              )}
-            </View>
-
-            <View style={styles.buttonContainer}>
-              <GameButton
-                onPress={handleSaveTime}
-                title="Save"
-                style={styles.button}
-                disabled={createTaskMutation.isPending}
-              >
-                {createTaskMutation.isPending && (
-                  <ActivityIndicator size="small" color={themeColors.text} />
-                )}
-              </GameButton>
-            </View>
-          </>
-        )}
-        {activeTab === "TimeTable" && (
-          <View>
-            <TimetableCreator
-              courses={timetableCourses}
-              setCourses={setTimetableCourses} // Pass a setter to update courses
+        <>
+          <View style={styles.inputContainer}>
+            <AnimatedTextInput
+              placeholderTextColor={themeColors.textSecondary}
+              label="Title"
+              value={title}
+              onChangeText={setTitle}
+            />
+            <AnimatedTextInput
+              placeholderTextColor={themeColors.textSecondary}
+              label="Description"
+              value={description}
+              onChangeText={setDescription}
             />
           </View>
-        )}
+          <View style={styles.section}>
+            <DateSelector
+              onDateChange={(selectedDate: string) =>
+                setDate(new Date(selectedDate))
+              }
+              label="Start Date"
+              minDate={true}
+            />
+            <CustomDateTimeSelector
+              mode="time"
+              label="Choose Start Time"
+              onTimeChange={(time) => {
+                handleConfirmTime(time);
+              }}
+              buttonTitle="Pick Time"
+            />
+            <CustomDateTimeSelector
+              mode="time"
+              label="Choose End Time"
+              onTimeChange={(time) => {
+                handleConfirmEndTime(time);
+              }}
+              buttonTitle="Pick Time"
+            />
+          </View>
+          <View style={styles.section}>
+            <CustomPicker
+              label="Category"
+              options={categoriesData?.map((cat) => cat.label) || []} // Array of strings
+              selectedValue={selectedCategory?.label || undefined} // Use label as string or undefined
+              onValueChange={(value) =>
+                setSelectedCategory(
+                  categoriesData?.find((cat) => cat.label === value) || null
+                )
+              }
+            />
+            <CustomPicker
+              label="Recurrence"
+              options={simplifiedRecurrenceOptions} // Simplify to strings
+              selectedValue={recurrenceOption}
+              onValueChange={setRecurrenceOption}
+            />
+            {recurrenceOption !== "Does not repeat" && (
+              <Animated.View
+                entering={FadeInLeft.delay(200)
+                  .randomDelay()
+                  .reduceMotion(ReduceMotion.Never)}
+                style={{ flexDirection: "row", alignItems: "center" }}
+              >
+                <DateSelector
+                  onDateChange={(selectedDate: string) =>
+                    setRecurrenceEndDate(new Date(selectedDate))
+                  }
+                  label="End Date for Recurrence"
+                  minDate={true}
+                />
+              </Animated.View>
+            )}
+          </View>
+
+          <View style={styles.buttonContainer}>
+            <GameButton
+              onPress={handleSaveTime}
+              title="Save"
+              style={styles.button}
+              disabled={createTaskMutation.isPending}
+            >
+              {createTaskMutation.isPending && (
+                <ActivityIndicator size="small" color={themeColors.text} />
+              )}
+            </GameButton>
+          </View>
+        </>
       </ScrollView>
       {errorMessage && (
         <ErrorMessage

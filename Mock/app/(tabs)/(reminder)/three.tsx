@@ -133,7 +133,7 @@ const Timeline = () => {
   };
 
   const handleNavigateCreateTask = () => {
-    router.navigate("createNewTime");
+    router.navigate("TimeTable");
   };
 
   const memoizedPlans = useMemo(() => todayPlans || [], [todayPlans]);

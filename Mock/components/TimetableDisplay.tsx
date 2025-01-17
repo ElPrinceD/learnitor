@@ -4,16 +4,16 @@ import React from "react";
 import { View, Text, StyleSheet, FlatList, useColorScheme } from "react-native";
 import Colors from "../constants/Colors";
 
-interface Course {
-  subject: string;
-  teacher: string;
-  days: string[];
-  time: string;
-  duration: string;
-  endTime: string;
+interface Period {
+  course_name: string;
+  lecturer: string;
+  days: string; // Comma-separated string
+  venue: string;
+  start_time: string;
+  end_time: string;
 }
 
-const TimetableDisplay: React.FC<{ courses: Course[] }> = ({ courses }) => {
+const TimetableDisplay: React.FC<{ periods: Period[] }> = ({ periods }) => {
   const daysOfWeek = [
     "Monday",
     "Tuesday",
@@ -26,13 +26,46 @@ const TimetableDisplay: React.FC<{ courses: Course[] }> = ({ courses }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
-  const renderCourse = ({ item }: { item: Course }) => (
+  const styles = StyleSheet.create({
+    tableHeader: {
+      flexDirection: "row",
+      backgroundColor: themeColors.tint,
+      paddingVertical: 8,
+      borderTopLeftRadius: 8,
+      borderTopRightRadius: 8,
+    },
+    headerCell: {
+      flex: 1,
+      fontWeight: "bold",
+      textAlign: "left",
+      paddingHorizontal: 8,
+    },
+    row: {
+      flexDirection: "row",
+      paddingVertical: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: themeColors.textSecondary,
+    },
+    cell: {
+      flex: 1,
+      paddingHorizontal: 8,
+      color: themeColors.text,
+    },
+    dayHeader: {
+      fontSize: 18,
+      fontWeight: "bold",
+      marginBottom: 10,
+    },
+  });
+
+  const renderPeriod = ({ item }: { item: Period }) => (
     <View style={styles.row}>
       <Text style={styles.cell}>
-        {item.time} - {item.endTime}
+        {item.start_time} - {item.end_time}
       </Text>
-      <Text style={styles.cell}>{item.subject}</Text>
-      <Text style={styles.cell}>{item.teacher}</Text>
+      <Text style={styles.cell}>{item.course_name}</Text>
+      <Text style={styles.cell}>{item.lecturer}</Text>
+      <Text style={styles.cell}>{item.venue}</Text>
     </View>
   );
 
@@ -41,14 +74,14 @@ const TimetableDisplay: React.FC<{ courses: Course[] }> = ({ courses }) => {
       data={daysOfWeek}
       keyExtractor={(item) => item}
       renderItem={({ item: day }) => {
-        const dayCourses = courses.filter((course) =>
-          course.days.includes(day)
+        const dayPeriods = periods.filter((period) =>
+          period.days.split(", ").includes(day)
         );
-        if (dayCourses.length === 0) return null;
+        if (dayPeriods.length === 0) return null;
 
-        dayCourses.sort((a, b) => {
-          const [aHours, aMinutes] = a.time.split(":").map(Number);
-          const [bHours, bMinutes] = b.time.split(":").map(Number);
+        dayPeriods.sort((a, b) => {
+          const [aHours, aMinutes] = a.start_time.split(":").map(Number);
+          const [bHours, bMinutes] = b.start_time.split(":").map(Number);
           return aHours - bHours || aMinutes - bMinutes;
         });
 
@@ -59,13 +92,16 @@ const TimetableDisplay: React.FC<{ courses: Course[] }> = ({ courses }) => {
             </Text>
             <View style={styles.tableHeader}>
               <Text style={styles.headerCell}>Time</Text>
-              <Text style={styles.headerCell}>Subject</Text>
-              <Text style={styles.headerCell}>Teacher</Text>
+              <Text style={styles.headerCell}>Course Name</Text>
+              <Text style={styles.headerCell}>Lecturer</Text>
+              <Text style={styles.headerCell}>Venue</Text>
             </View>
             <FlatList
-              data={dayCourses}
-              renderItem={renderCourse}
-              keyExtractor={(item, index) => index.toString()}
+              data={dayPeriods}
+              renderItem={renderPeriod}
+              keyExtractor={(item) =>
+                item.course_name + item.start_time + item.venue
+              }
             />
           </View>
         );
@@ -73,36 +109,5 @@ const TimetableDisplay: React.FC<{ courses: Course[] }> = ({ courses }) => {
     />
   );
 };
-
-const styles = StyleSheet.create({
-  tableHeader: {
-    flexDirection: "row",
-    backgroundColor: "#e9ecef",
-    paddingVertical: 8,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-  },
-  headerCell: {
-    flex: 1,
-    fontWeight: "bold",
-    textAlign: "left",
-    paddingHorizontal: 8,
-  },
-  row: {
-    flexDirection: "row",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e9ecef",
-  },
-  cell: {
-    flex: 1,
-    paddingHorizontal: 8,
-  },
-  dayHeader: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-});
 
 export default TimetableDisplay;

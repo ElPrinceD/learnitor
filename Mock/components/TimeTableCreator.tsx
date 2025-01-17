@@ -1,12 +1,13 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   useColorScheme,
+  Modal,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import Colors from "../constants/Colors";
@@ -15,153 +16,201 @@ import AnimatedTextInput from "../components/AnimatedTextInput";
 import GameButton from "../components/GameButton";
 import TimetableDisplay from "../components/TimetableDisplay";
 import { useAuth } from "../components/AuthContext";
-import DateSelector from "../components/DateSelector"; // Assuming these paths are correct
 import CustomDateTimeSelector from "../components/CustomDateTimeSelector";
 import { useMutation } from "@tanstack/react-query";
-import { createTask } from "../TimelineApiCalls";
+import { createPeriod, createTask, createTimetable } from "../TimelineApiCalls";
 import { router } from "expo-router";
 
-interface Course {
-  subject: string;
-  teacher: string;
-  days: string[];
-  time: string;
-  duration: string;
-  endTime: string;
-  startDate: string;
-  endDate: string;
+interface Period {
+  course_name: string;
+  lecturer: string;
+  days: string;
+  venue: string;
+  start_time: string;
+  end_time: string;
+  timetable?: number;
 }
-interface CreateTaskData {
-  title: string;
+interface Timetable {
+  name: string;
   description: string;
-  due_date: string;
-  due_time_start: string;
-  due_time_end: string;
-  category?: number | null;
-  learner?: number;
-  is_recurring?: boolean;
-  recurrence_interval?: string | null;
-  recurrence_end_date?: string | null;
+  id?: number; // Add id property to the interface
 }
 
-interface TimetableCreatorProps {
-  onSubmit: (courses: Course[]) => void;
-}
-
-const TimetableCreator: React.FC<TimetableCreatorProps> = ({ onSubmit }) => {
-  const { control, handleSubmit, reset } = useForm();
-  const colorScheme = useColorScheme();
-  const themeColors = Colors[colorScheme ?? "light"];
+const TimetableCreator: React.FC = () => {
+  const {
+    control,
+    handleSubmit,
+    watch,
+    reset,
+    setValue,
+    formState: { errors },
+  } = useForm({
+    defaultValues: {
+      name: "",
+      description: "",
+      periods: [
+        {
+          course_name: "",
+          lecturer: "",
+          days: "",
+          venue: "",
+          start_time: "",
+          end_time: "",
+        },
+      ],
+    },
+  });
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [selectedTimes, setSelectedTimes] = useState<{ [key: string]: string }>(
     {}
   );
-  const [selectedDurations, setSelectedDurations] = useState<{
-    [key: string]: string;
-  }>({});
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
   const [endTimes, setEndTimes] = useState<{ [key: string]: string }>({});
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [startDate, setStartDate] = useState<Date>(new Date());
-  const [endDate, setEndDate] = useState<Date>(new Date());
+  const [timetable, setTimetable] = useState<Timetable>({
+    name: "",
+    description: "",
+  });
+  const [periods, setPeriods] = useState<Period[]>([]);
+  const [step, setStep] = useState(1); // Step tracker for multi-step form
+  const [modalVisible, setModalVisible] = useState(true); // Start with modal open
   const { userToken, userInfo } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const calculateEndTime = (startTime: string, duration: number): string => {
-    const [hours, minutes] = startTime.split(":").map(Number);
-    const endTime = new Date();
-    endTime.setHours(hours, minutes, 0, 0);
-    endTime.setMinutes(endTime.getMinutes() + duration);
-    return endTime.toTimeString().slice(0, 5);
-  };
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
 
-  const handleDurationChange = (day: string, durationText: string) => {
-    const duration = parseFloat(durationText);
-    setSelectedDurations((prev) => ({ ...prev, [day]: durationText }));
-
-    const startTime = selectedTimes[day];
-    if (startTime && !isNaN(duration)) {
-      const endTime = calculateEndTime(startTime, duration);
-      setEndTimes((prev) => ({ ...prev, [day]: endTime }));
+  const createTimetableMutation = useMutation<
+    any,
+    any,
+    {
+      timetableData: Omit<Timetable, "id"> & { created_by: number | undefined };
+      token: string;
     }
-  };
-
-  const addCourse = (data: any) => {
-    const { courseName, teacherName } = data;
-    const newStartDate = calculateNearestStartDate(selectedDays[0] || "Monday");
-    setStartDate(newStartDate);
-    const newEndDate = new Date(newStartDate);
-    newEndDate.setMonth(newEndDate.getMonth() + 6); // Set end date 6 months from start
-    setEndDate(newEndDate);
-
-    const newCourses = selectedDays.map((day) => {
-      return {
-        subject: courseName,
-        teacher: teacherName,
-        days: [day],
-        time: selectedTimes[day] || "",
-        duration: selectedDurations[day] || "",
-        endTime: endTimes[day] || "",
-        startDate: newStartDate.toISOString().split("T")[0],
-        endDate: newEndDate.toISOString().split("T")[0],
-      };
-    });
-    setCourses((prevCourses) => [...prevCourses, ...newCourses]);
-    reset();
-  };
-
-  const createTaskMutation = useMutation<any, any, any>({
-    mutationFn: async ({ taskData, token }) => {
-      await createTask(taskData, token);
+  >({
+    mutationFn: async ({ timetableData, token }) => {
+      return await createTimetable(timetableData, token);
     },
-    onSuccess: (taskData) => {
-      router.navigate("three");
-      setErrorMessage(null);
+    onSuccess: (data) => {
+      setTimetable((prev) => ({ ...prev, id: data.id })); // Assuming the response includes an id
     },
     onError: (error) => {
-      setErrorMessage(error.message || "Error creating schedule");
+      alert(error.message || "Error creating timetable");
     },
   });
 
-  const calculateNearestStartDate = (day: string): Date => {
-    const now = new Date();
-    const days = [
-      "Sunday",
-      "Monday",
-      "Tuesday",
-      "Wednesday",
-      "Thursday",
-      "Friday",
-      "Saturday",
-    ];
-    const targetDay = days.indexOf(day);
-    let diff = targetDay - now.getDay();
-    if (diff <= 0) diff += 7; // If today or passed, add 7 days to get the next occurrence
-    now.setDate(now.getDate() + diff);
-    return now;
+  const createPeriodMutation = useMutation<
+    any,
+    any,
+    { periodData: Period; token: string }
+  >({
+    mutationFn: async ({ periodData, token }) => {
+      return await createPeriod({ ...periodData }, token);
+    },
+    onError: (error) => {
+      alert(error.message || "Error creating period");
+    },
+  });
+
+  const addPeriod = (data: any) => {
+    const newPeriod: Period = {
+      course_name: data["periods"][0].course_name,
+      lecturer: data["periods"][0].lecturer,
+      days: selectedDays.join(", "),
+      venue: data["periods"][0].venue,
+      start_time: selectedTimes[selectedDays[0]] || "",
+      end_time: endTimes[selectedDays[0]] || "",
+      timetable: timetable.id,
+    };
+    setPeriods((prev) => [...prev, newPeriod]);
+
+    // Reset form fields for adding another period if needed
+    reset({
+      name: watch("name"),
+      description: watch("description"),
+      periods: [
+        {
+          course_name: "",
+          lecturer: "",
+          venue: "",
+          days: "",
+          start_time: "",
+          end_time: "",
+        },
+      ],
+    });
+    setSelectedDays([]);
+    setSelectedTimes({});
+    setEndTimes({});
   };
 
   const handleSave = () => {
-    for (const course of courses) {
-      const scheduleData: CreateTaskData = {
-        title: course.subject,
-        description: course.teacher,
-        due_date: course.startDate,
-        due_time_start: course.time,
-        due_time_end: course.endTime,
-        category: 2,
-        learner: userInfo?.user.id,
-        is_recurring: true,
-        recurrence_interval: "weekly",
-        recurrence_end_date: course.endDate,
-      };
-
-      createTaskMutation.mutate({
-        taskData: scheduleData,
-        token: userToken?.token!,
-      });
+    const { name, description } = watch();
+    if (!name.trim()) {
+      alert("Please provide a name for the timetable.");
+      return;
     }
-    console.log("save");
+    // Show loading
+    setIsLoading(true);
+
+    createTimetableMutation.mutate(
+      {
+        timetableData: {
+          name,
+          description,
+          created_by: userInfo?.user.id,
+        },
+        token: userToken?.token!,
+      },
+      {
+        onSuccess: () => {
+          console.log(timetable.id);
+          Promise.all(
+            periods.map((period) =>
+              createPeriodMutation.mutateAsync({
+                periodData: {
+                  ...period,
+                  timetable: timetable.id!, // Assuming timetable.id is not null or undefined here
+                },
+                token: userToken?.token!,
+              })
+            )
+          )
+            .then(() => {
+              setIsLoading(false); // Hide loading
+              router.navigate("three");
+            })
+            .catch((error) => {
+              setIsLoading(false); // Hide loading on failure
+              alert(error.message || "Error creating periods");
+            });
+        },
+        onError: (error) => {
+          setIsLoading(false); // Hide loading if timetable creation fails
+          alert(error.message || "Error creating timetable");
+        },
+      }
+    );
+  };
+  const nextStep = () => {
+    if (step === 1 && !errors.name) {
+      setTimetable({
+        name: watch("name"),
+        description: watch("description"),
+      });
+      setStep(step + 1);
+      setModalVisible(false); // Close the modal when moving to next step
+    } else if (step < 3) {
+      setStep(step + 1);
+    }
+  };
+
+  const previousStep = () => {
+    if (step > 1) {
+      setStep(step - 1);
+    }
+  };
+
+  const closeModalAndNavigateBack = () => {
+    router.back();
   };
 
   const renderDayButton = (item: string) => (
@@ -170,7 +219,7 @@ const TimetableCreator: React.FC<TimetableCreatorProps> = ({ onSubmit }) => {
         styles.dayButton,
         selectedDays.includes(item) ? styles.selectedDayButton : null,
       ]}
-      onPress={() =>
+      onPressIn={() =>
         setSelectedDays((prev) =>
           prev.includes(item) ? prev.filter((d) => d !== item) : [...prev, item]
         )
@@ -179,21 +228,20 @@ const TimetableCreator: React.FC<TimetableCreatorProps> = ({ onSubmit }) => {
       <Text style={{ color: themeColors.text }}>{item.substring(0, 3)}</Text>
     </TouchableOpacity>
   );
+  useEffect(() => {
+    console.log("Timetable periods:", periods);
+    console.log("Timetable details 2:", timetable);
+  }, [periods, timetable]);
+  useEffect(() => {
+    const currentTimetable = watch(["name", "description"]);
+    console.log("Timetable details:", currentTimetable);
+  }, [watch("name"), watch("description")]);
 
   const styles = StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: themeColors.background,
-      paddingVertical: rV(25),
-    },
-    input: {
-      borderWidth: 1,
-      borderColor: themeColors.tint,
-      borderRadius: 8,
-      padding: 12,
-      marginBottom: 8,
-      backgroundColor: "transparent",
-      margin: rMS(10),
+      padding: rV(15),
     },
     dayButtonContainer: {
       marginVertical: 10,
@@ -219,90 +267,205 @@ const TimetableCreator: React.FC<TimetableCreatorProps> = ({ onSubmit }) => {
       justifyContent: "space-between",
       marginTop: 20,
     },
+    buttons: {
+      width: rS(150),
+      paddingVertical: rV(10),
+      borderRadius: 10,
+      backgroundColor: themeColors.tint,
+      alignItems: "center",
+    },
     preview: {
       marginTop: 20,
+    },
+    modalContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+    },
+    modalContent: {
+      backgroundColor: themeColors.background,
+      padding: 20,
+      borderRadius: 10,
+      width: "80%",
     },
   });
 
   return (
     <>
       <ScrollView style={styles.container}>
-        <Controller
-          control={control}
-          name="courseName"
-          render={({ field: { onChange, value } }) => (
-            <AnimatedTextInput
-              label="Course Name"
-              value={value}
-              onChangeText={onChange}
+        {step === 1 && (
+          <>
+            <Modal
+              animationType="slide"
+              transparent={true}
+              visible={modalVisible}
+              onRequestClose={closeModalAndNavigateBack}
+            >
+              <View style={styles.modalContainer}>
+                <View style={styles.modalContent}>
+                  <Controller
+                    control={control}
+                    name="name"
+                    rules={{ required: "Name is required" }}
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <AnimatedTextInput
+                        label="Timetable Name"
+                        value={value}
+                        onChangeText={onChange}
+                      />
+                    )}
+                  />
+                  <Controller
+                    control={control}
+                    name="description"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <AnimatedTextInput
+                        label="Description"
+                        value={value}
+                        onChangeText={onChange}
+                      />
+                    )}
+                  />
+                  <GameButton onPress={nextStep} title="Next" />
+                  <GameButton
+                    onPress={closeModalAndNavigateBack}
+                    title="Cancel"
+                    style={{ marginTop: rV(10) }}
+                  />
+                </View>
+              </View>
+            </Modal>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <Controller
+              control={control}
+              name="periods.0.course_name"
+              render={({ field: { onChange, value } }) => (
+                <AnimatedTextInput
+                  label="Course Name"
+                  value={value}
+                  onChangeText={onChange}
+                />
+              )}
             />
-          )}
-        />
-        <Controller
-          control={control}
-          name="teacherName"
-          render={({ field: { onChange, value } }) => (
-            <AnimatedTextInput
-              label="Lecturer"
-              value={value}
-              onChangeText={onChange}
+            <Controller
+              control={control}
+              name="periods.0.lecturer"
+              render={({ field: { onChange, value } }) => (
+                <AnimatedTextInput
+                  label="Lecturer"
+                  value={value}
+                  onChangeText={onChange}
+                />
+              )}
             />
-          )}
-        />
-        <View style={styles.dayButtonContainer}>
-          {[
-            "Monday",
-            "Tuesday",
-            "Wednesday",
-            "Thursday",
-            "Friday",
-            "Saturday",
-            "Sunday",
-          ].map(renderDayButton)}
-        </View>
-        <DateSelector
-          onDateChange={(selectedDate: string) =>
-            setStartDate(new Date(selectedDate))
-          }
-          label="Start Date"
-          minDate={true}
-        />
-        {selectedDays.map((day) => (
-          <View key={day}>
-            <CustomDateTimeSelector
-              mode="time"
-              label={`Select start time for ${day}`}
-              onTimeChange={(time) =>
-                setSelectedTimes((prev) => ({ ...prev, [day]: time }))
-              }
-              buttonTitle="Pick Start Time"
+            <Controller
+              control={control}
+              name="periods.0.venue"
+              rules={{
+                required: "Venue is required",
+                minLength: {
+                  value: 1,
+                  message: "Venue must be at least 1 character",
+                },
+                maxLength: {
+                  value: 100,
+                  message: "Venue cannot exceed 100 characters",
+                },
+              }}
+              render={({ field: { onChange, value } }) => (
+                <AnimatedTextInput
+                  label="Venue"
+                  value={value}
+                  onChangeText={onChange}
+                />
+              )}
             />
-            <TextInput
-              style={styles.input}
-              placeholder={`Enter duration for ${day} (minutes)`}
-              keyboardType="numeric"
-              onChangeText={(text) => handleDurationChange(day, text)}
-            />
-            <Text style={{ color: themeColors.text }}>
-              End time for {day}: {endTimes[day] || "Not calculated"}
+            <View style={styles.dayButtonContainer}>
+              {[
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+                "Sunday",
+              ].map(renderDayButton)}
+            </View>
+            {selectedDays.map((day) => (
+              <View key={day}>
+                <CustomDateTimeSelector
+                  mode="time"
+                  label={`Select start time for ${day}`}
+                  onTimeChange={(time) =>
+                    setSelectedTimes((prev) => ({ ...prev, [day]: time }))
+                  }
+                  buttonTitle="Pick Start Time"
+                />
+                <CustomDateTimeSelector
+                  mode="time"
+                  label={`Select end time for ${day}`}
+                  onTimeChange={(endTime) =>
+                    setEndTimes((prev) => ({ ...prev, [day]: endTime }))
+                  }
+                  buttonTitle="Pick End Time"
+                />
+              </View>
+            ))}
+            <View style={styles.buttonContainer}>
+              <GameButton
+                onPress={handleSubmit(addPeriod)}
+                style={styles.buttons}
+                title="Add Course"
+              />
+              <GameButton
+                onPress={nextStep}
+                style={styles.buttons}
+                title="Preview"
+              />
+            </View>
+          </>
+        )}
+
+        {step === 3 && (
+          <View>
+            <Text
+              style={{
+                color: themeColors.text,
+                fontSize: 16,
+                fontWeight: "bold",
+                alignSelf: "center",
+                marginBottom: 10,
+              }}
+            >
+              Timetable Preview
             </Text>
+            <TimetableDisplay periods={periods || []} />
+            <View style={styles.buttonContainer}>
+              <GameButton
+                onPress={previousStep}
+                style={styles.buttons}
+                title="Back"
+                disabled={isLoading}
+              />
+              <GameButton
+                onPress={handleSave}
+                style={styles.buttons}
+                title="Save Timetable"
+                disabled={isLoading}
+              >
+                {isLoading && (
+                  <ActivityIndicator size="small" color={themeColors.text} />
+                )}
+              </GameButton>
+            </View>
           </View>
-        ))}
-        <View style={styles.buttonContainer}>
-          <GameButton onPress={handleSubmit(addCourse)} style={{ flex: 1 }}>
-            <Text>Add Course</Text>
-          </GameButton>
-        </View>
-        <View style={styles.buttonContainer}>
-          <GameButton onPress={handleSave} style={{ flex: 1 }}>
-            <Text>Save Timetable</Text>
-          </GameButton>
-        </View>
+        )}
       </ScrollView>
-      <View style={styles.preview}>
-        <Text style={{ color: themeColors.text, fontSize: 16 }}>Preview:</Text>
-        <TimetableDisplay courses={courses} />
-      </View>
     </>
   );
 };

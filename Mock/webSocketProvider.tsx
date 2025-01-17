@@ -550,7 +550,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
           );
           console.log("Communities fetched and cached.");
         } else {
-          console.log("Communities already cached.");
+          // console.log("Communities already cached.");
         }
       } catch (error) {
         console.error("Failed to fetch or cache communities:", error);
@@ -567,7 +567,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
           await AsyncStorage.setItem("courses", JSON.stringify(courses));
           console.log("Courses fetched and cached.");
         } else {
-          console.log("Courses already cached.");
+          // console.log("Courses already cached.");
         }
       } catch (error) {
         console.error("Failed to fetch or cache courses:", error);
@@ -587,7 +587,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
           );
           console.log("Course categories fetched and cached.");
         } else {
-          console.log("Course categories already cached.");
+          // console.log("Course categories already cached.");
         }
       } catch (error) {
         console.error("Failed to fetch or cache course categories:", error);

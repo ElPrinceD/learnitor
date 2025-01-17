@@ -9,7 +9,7 @@ import {
 import { Text, View } from "../../components/Themed";
 import { useAuth } from "../../components/AuthContext";
 import Colors from "../../constants/Colors";
-import { SIZES, rMS } from "../../constants";
+import { SIZES, rMS, rS } from "../../constants";
 import TaskList from "../../components/TaskList";
 import { getTodayPlans, getCategoryNames } from "../../TimelineApiCalls";
 import {
@@ -159,10 +159,9 @@ const Home: React.FC = () => {
       flexDirection: "row",
     },
     taskCountContainer: {
-      flex: 2, // Takes 2/3 of the space
+      flex: 1, // Takes 2/3 of the space
       backgroundColor: "#EF643B",
-      padding: rMS(30),
-      margin: rMS(10),
+      marginVertical: rMS(10),
       borderRadius: rMS(10),
       alignItems: "flex-end", // Align items to the bottom
       justifyContent: "center",
@@ -171,15 +170,17 @@ const Home: React.FC = () => {
       fontSize: SIZES.xxxLarge,
       color: "white",
       fontWeight: "bold",
+      paddingHorizontal: rS(10),
     },
     taskCountText: {
       fontSize: SIZES.small,
       fontWeight: "bold",
       color: "white", // Changed to white for better visibility against the background
       marginLeft: rMS(40), // Add some space between number and text if they are next to each other
+      paddingHorizontal: rS(10),
     },
     taskListContainer: {
-      flex: 2,
+      flex: 1,
       margin: rMS(10),
     },
   });
@@ -275,7 +276,7 @@ const Home: React.FC = () => {
           ) : (
             <>
               <View style={styles.sectionTitleContainer}>
-                <Text style={styles.sectionTitle}>Recommended for you</Text>
+                {/* <Text style={styles.sectionTitle}>Recommended for you</Text>
                 <TouchableOpacity style={styles.seeAllButton}>
                   <Text style={styles.seeAllText}>See All </Text>
                   <FontAwesome6
@@ -283,7 +284,7 @@ const Home: React.FC = () => {
                     size={SIZES.medium}
                     color={themeColors.tint}
                   />
-                </TouchableOpacity>
+                </TouchableOpacity> */}
               </View>
             </>
           )}

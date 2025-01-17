@@ -54,7 +54,7 @@ const GameButton: React.FC<GameButtonProps> = ({
         disabled && styles.buttonDisabled,
         ...(Array.isArray(style) ? style : [style]),
       ]}
-      onPress={onPress}
+      onPressIn={onPress}
       disabled={disabled}
       activeOpacity={0.6}
     >

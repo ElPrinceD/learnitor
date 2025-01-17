@@ -118,4 +118,52 @@ export const deleteTask = async (taskId, token) => {
     throw error;
     }
 
-  };
+};
+  
+export const createTimetable = async (timetableData, token) => {
+  try {
+    const response = await apiClient.post('/timetables/', 
+      timetableData,
+      {
+        headers: {
+          Authorization: `Token ${token}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error creating timetable:', error);
+    throw error;
+  }
+};
+
+export const createPeriod = async (periodData, token) => {
+  try {
+    const response = await apiClient.post('/periods/', 
+      periodData,
+      {
+        headers: {
+          Authorization: `Token ${token}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error creating period:', error);
+    throw error;
+  }
+};
+
+export const getPeriod = async (periodId, token) => {
+  try {
+    const response = await apiClient.get(`/periods/${periodId}/`, {
+      headers: {
+        Authorization: `Token ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching period:', error);
+    throw error;
+  }
+};
