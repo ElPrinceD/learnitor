@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { Link, Stack } from "expo-router";
+import { Link, router, Stack } from "expo-router";
 import React from "react";
 import { Pressable, useColorScheme } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -25,21 +25,19 @@ export default function Tab3Layout() {
             headerTitleStyle: {
               fontWeight: "bold",
             },
-            // headerRight: () => (
-            //   <Link href="../(reminder)/TimeTable" asChild>
-            //     <Pressable>
-            //       {({ pressed }) => (
-            //         <MaterialCommunityIcons
-            //           name="timetable"
-            //           size={25}
-            //           color={Colors[colorScheme ?? "light"].text}
-            //           style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
-            //         />
-            //       )}
-            //     </Pressable>
-            //   </Link>
-            // ),
-          }} // Hide the header
+            headerRight: () => (
+              <Pressable onPressIn={() => router.navigate("TimeTableList")}>
+                {({ pressed }) => (
+                  <MaterialCommunityIcons
+                    name="timetable"
+                    size={25}
+                    color={Colors[colorScheme ?? "light"].text}
+                    style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
+                  />
+                )}
+              </Pressable>
+            ),
+          }}
         />
         <Stack.Screen
           name="EditPlan"
@@ -66,9 +64,8 @@ export default function Tab3Layout() {
             headerStyle: {
               backgroundColor: themeColors.background,
             },
-            animation: "slide_from_bottom",
-
-            headerTitle: "TimeTables",
+            // animation: "slide_from_bottom",
+            headerTitle: "Create a TimeTable",
             headerTitleAlign: "center",
             headerShadowVisible: false,
             headerTitleStyle: {
@@ -82,7 +79,7 @@ export default function Tab3Layout() {
             headerShown: true,
             presentation: "containedModal",
             headerBackTitle: "Back",
-            animation: "fade_from_bottom",
+            // animation: "fade_from_bottom",
             headerStyle: {
               backgroundColor: themeColors.background,
             },
@@ -94,21 +91,39 @@ export default function Tab3Layout() {
             headerShadowVisible: false,
           }}
         />
-        {/* <Stack.Screen
-          name="CourseForm"
+        <Stack.Screen
+          name="TimeTableList"
           options={{
-            headerShown: false,
             headerStyle: {
               backgroundColor: themeColors.background,
             },
-            headerTitle: "Create TimeTable",
+            headerTitle: "TimeTable",
+            headerTitleAlign: "center",
+            headerTitleStyle: {
+              fontWeight: "bold",
+            },
+            headerShadowVisible: false,
+            headerBackTitle: "",
+          }}
+        />
+        <Stack.Screen
+          name="TimeTableDetails"
+          options={{
+            headerShown: true,
+            presentation: "containedModal",
+            headerBackTitle: "Back",
+            // animation: "fade_from_bottom",
+            headerStyle: {
+              backgroundColor: themeColors.background,
+            },
+            headerTitle: "Deets",
             headerTitleAlign: "center",
             headerTitleStyle: {
               fontWeight: "bold",
             },
             headerShadowVisible: false,
           }}
-        /> */}
+        />
       </Stack>
     </SafeAreaProvider>
   );

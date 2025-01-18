@@ -99,8 +99,8 @@ const TimetableDisplay: React.FC<{ periods: Period[] }> = ({ periods }) => {
             <FlatList
               data={dayPeriods}
               renderItem={renderPeriod}
-              keyExtractor={(item) =>
-                item.course_name + item.start_time + item.venue
+              keyExtractor={(item, index) =>
+                `${day}-${item.course_name}-${item.start_time}-${item.lecturer}-${index}`
               }
             />
           </View>

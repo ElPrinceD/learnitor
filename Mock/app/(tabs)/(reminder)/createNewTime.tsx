@@ -162,7 +162,6 @@ const CreateNewTime = () => {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: themeColors.background,
       paddingHorizontal: rMS(20),
       paddingBottom: rV(50),
     },

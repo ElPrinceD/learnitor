@@ -131,10 +131,16 @@ export default function TabLayout() {
             title: "Community",
             tabBarIcon: ({ color, focused }) => (
               <View>
-                <TabBarIcon name="account-group" color={color} focused={focused} />
+                <TabBarIcon
+                  name="account-group"
+                  color={color}
+                  focused={focused}
+                />
                 {unreadCommunitiesCount > 0 && (
                   <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{unreadCommunitiesCount}</Text>
+                    <Text style={styles.badgeText}>
+                      {unreadCommunitiesCount}
+                    </Text>
                   </View>
                 )}
               </View>
@@ -183,19 +189,19 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   badge: {
-    position: 'absolute',
+    position: "absolute",
     left: 15,
     top: -3,
-    backgroundColor: 'red',
+    backgroundColor: "red",
     borderRadius: 10,
     width: 20,
     height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   badgeText: {
-    color: 'white',
+    color: "white",
     fontSize: 10,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 });

@@ -136,6 +136,33 @@ export const createTimetable = async (timetableData, token) => {
     throw error;
   }
 };
+export const getTimetables = async (token: string) => {
+  try {
+    const response = await apiClient.get("/api/user/timetables/", {
+      headers: {
+        Authorization: `Token ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching timetables:", error);
+    throw error;
+  }
+};
+export const getTimetable = async (timetableId: any, token: string) => {
+  try {
+    const response = await apiClient.get(`/timetables/${timetableId}/`, {
+      headers: {
+        Authorization: `Token ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching period:', error);
+    throw error;
+  }
+};
+
 
 export const createPeriod = async (periodData, token) => {
   try {
@@ -164,6 +191,20 @@ export const getPeriod = async (periodId, token) => {
     return response.data;
   } catch (error) {
     console.error('Error fetching period:', error);
+    throw error;
+  }
+};
+
+export const getUserDetails = async (userId: number, token: string) => {
+  try {
+    const response = await apiClient.get(`/api/users/${userId}/`, {
+      headers: {
+        Authorization: `Token ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching user details:', error);
     throw error;
   }
 };

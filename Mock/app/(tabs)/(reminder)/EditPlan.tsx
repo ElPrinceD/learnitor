@@ -101,7 +101,6 @@ const EditPlan = () => {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: themeColors.background,
       paddingHorizontal: rMS(20),
       paddingBottom: rV(20),
     },
@@ -110,7 +109,7 @@ const EditPlan = () => {
       paddingVertical: rV(7),
       paddingLeft: rS(10),
       borderRadius: rMS(10),
-      backgroundColor: themeColors.tint,
+      backgroundColor: themeColors.background,
     },
     inputContainer: {
       marginTop: rV(25),

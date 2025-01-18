@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -8,17 +8,15 @@ import {
   Modal,
   ScrollView,
   ActivityIndicator,
+  FlatList,
 } from "react-native";
-import { useForm, Controller } from "react-hook-form";
+import { Controller } from "react-hook-form";
 import Colors from "../constants/Colors";
 import { rMS, rS, rV } from "../constants";
 import AnimatedTextInput from "../components/AnimatedTextInput";
 import GameButton from "../components/GameButton";
 import TimetableDisplay from "../components/TimetableDisplay";
-import { useAuth } from "../components/AuthContext";
 import CustomDateTimeSelector from "../components/CustomDateTimeSelector";
-import { useMutation } from "@tanstack/react-query";
-import { createPeriod, createTask, createTimetable } from "../TimelineApiCalls";
 import { router } from "expo-router";
 
 interface Period {
@@ -30,212 +28,67 @@ interface Period {
   end_time: string;
   timetable?: number;
 }
+
 interface Timetable {
   name: string;
   description: string;
-  id?: number; // Add id property to the interface
+  id?: number;
 }
 
-const TimetableCreator: React.FC = () => {
-  const {
-    control,
-    handleSubmit,
-    watch,
-    reset,
-    setValue,
-    formState: { errors },
-  } = useForm({
-    defaultValues: {
-      name: "",
-      description: "",
-      periods: [
-        {
-          course_name: "",
-          lecturer: "",
-          days: "",
-          venue: "",
-          start_time: "",
-          end_time: "",
-        },
-      ],
-    },
-  });
-  const [selectedDays, setSelectedDays] = useState<string[]>([]);
-  const [selectedTimes, setSelectedTimes] = useState<{ [key: string]: string }>(
-    {}
-  );
-  const [endTimes, setEndTimes] = useState<{ [key: string]: string }>({});
-  const [timetable, setTimetable] = useState<Timetable>({
-    name: "",
-    description: "",
-  });
-  const [periods, setPeriods] = useState<Period[]>([]);
-  const [step, setStep] = useState(1); // Step tracker for multi-step form
-  const [modalVisible, setModalVisible] = useState(true); // Start with modal open
-  const { userToken, userInfo } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+interface TimetableCreatorProps {
+  control: any;
+  handleSubmit: any;
+  watch: any;
+  reset: any;
+  setValue: any;
+  errors: any;
+  step: number;
+  selectedDays: string[];
+  setSelectedDays: React.Dispatch<React.SetStateAction<string[]>>;
+  selectedTimes: { [key: string]: string };
+  setSelectedTimes: React.Dispatch<
+    React.SetStateAction<{ [key: string]: string }>
+  >;
+  endTimes: { [key: string]: string };
+  setEndTimes: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>;
+  timetable: Timetable;
+  setTimetable: React.Dispatch<React.SetStateAction<Timetable>>;
+  periods: Period[];
+  setPeriods: React.Dispatch<React.SetStateAction<Period[]>>;
+  isLoading: boolean;
+  setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
+  addPeriod: (data: any) => void;
+  handleSave: () => void;
+  nextStep: () => void;
+  previousStep: () => void;
+  modalVisible: boolean;
+}
 
+const TimetableCreator: React.FC<TimetableCreatorProps> = ({
+  control,
+  handleSubmit,
+  watch,
+  reset,
+  setValue,
+  errors,
+  step,
+  selectedDays,
+  setSelectedDays,
+  selectedTimes,
+  setSelectedTimes,
+  endTimes,
+  setEndTimes,
+  timetable,
+  periods,
+  isLoading,
+  addPeriod,
+  handleSave,
+  nextStep,
+  previousStep,
+  modalVisible,
+}) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
-
-  const createTimetableMutation = useMutation<
-    any,
-    any,
-    {
-      timetableData: Omit<Timetable, "id"> & { created_by: number | undefined };
-      token: string;
-    }
-  >({
-    mutationFn: async ({ timetableData, token }) => {
-      return await createTimetable(timetableData, token);
-    },
-    onSuccess: (data) => {
-      setTimetable((prev) => ({ ...prev, id: data.id })); // Assuming the response includes an id
-    },
-    onError: (error) => {
-      alert(error.message || "Error creating timetable");
-    },
-  });
-
-  const createPeriodMutation = useMutation<
-    any,
-    any,
-    { periodData: Period; token: string }
-  >({
-    mutationFn: async ({ periodData, token }) => {
-      return await createPeriod({ ...periodData }, token);
-    },
-    onError: (error) => {
-      alert(error.message || "Error creating period");
-    },
-  });
-
-  const addPeriod = (data: any) => {
-    const newPeriod: Period = {
-      course_name: data["periods"][0].course_name,
-      lecturer: data["periods"][0].lecturer,
-      days: selectedDays.join(", "),
-      venue: data["periods"][0].venue,
-      start_time: selectedTimes[selectedDays[0]] || "",
-      end_time: endTimes[selectedDays[0]] || "",
-      timetable: timetable.id,
-    };
-    setPeriods((prev) => [...prev, newPeriod]);
-
-    // Reset form fields for adding another period if needed
-    reset({
-      name: watch("name"),
-      description: watch("description"),
-      periods: [
-        {
-          course_name: "",
-          lecturer: "",
-          venue: "",
-          days: "",
-          start_time: "",
-          end_time: "",
-        },
-      ],
-    });
-    setSelectedDays([]);
-    setSelectedTimes({});
-    setEndTimes({});
-  };
-
-  const handleSave = () => {
-    const { name, description } = watch();
-    if (!name.trim()) {
-      alert("Please provide a name for the timetable.");
-      return;
-    }
-    // Show loading
-    setIsLoading(true);
-
-    createTimetableMutation.mutate(
-      {
-        timetableData: {
-          name,
-          description,
-          created_by: userInfo?.user.id,
-        },
-        token: userToken?.token!,
-      },
-      {
-        onSuccess: () => {
-          console.log(timetable.id);
-          Promise.all(
-            periods.map((period) =>
-              createPeriodMutation.mutateAsync({
-                periodData: {
-                  ...period,
-                  timetable: timetable.id!, // Assuming timetable.id is not null or undefined here
-                },
-                token: userToken?.token!,
-              })
-            )
-          )
-            .then(() => {
-              setIsLoading(false); // Hide loading
-              router.navigate("three");
-            })
-            .catch((error) => {
-              setIsLoading(false); // Hide loading on failure
-              alert(error.message || "Error creating periods");
-            });
-        },
-        onError: (error) => {
-          setIsLoading(false); // Hide loading if timetable creation fails
-          alert(error.message || "Error creating timetable");
-        },
-      }
-    );
-  };
-  const nextStep = () => {
-    if (step === 1 && !errors.name) {
-      setTimetable({
-        name: watch("name"),
-        description: watch("description"),
-      });
-      setStep(step + 1);
-      setModalVisible(false); // Close the modal when moving to next step
-    } else if (step < 3) {
-      setStep(step + 1);
-    }
-  };
-
-  const previousStep = () => {
-    if (step > 1) {
-      setStep(step - 1);
-    }
-  };
-
-  const closeModalAndNavigateBack = () => {
-    router.back();
-  };
-
-  const renderDayButton = (item: string) => (
-    <TouchableOpacity
-      style={[
-        styles.dayButton,
-        selectedDays.includes(item) ? styles.selectedDayButton : null,
-      ]}
-      onPressIn={() =>
-        setSelectedDays((prev) =>
-          prev.includes(item) ? prev.filter((d) => d !== item) : [...prev, item]
-        )
-      }
-    >
-      <Text style={{ color: themeColors.text }}>{item.substring(0, 3)}</Text>
-    </TouchableOpacity>
-  );
-  useEffect(() => {
-    console.log("Timetable periods:", periods);
-    console.log("Timetable details 2:", timetable);
-  }, [periods, timetable]);
-  useEffect(() => {
-    const currentTimetable = watch(["name", "description"]);
-    console.log("Timetable details:", currentTimetable);
-  }, [watch("name"), watch("description")]);
 
   const styles = StyleSheet.create({
     container: {
@@ -291,56 +144,74 @@ const TimetableCreator: React.FC = () => {
     },
   });
 
-  return (
-    <>
-      <ScrollView style={styles.container}>
-        {step === 1 && (
-          <>
-            <Modal
-              animationType="slide"
-              transparent={true}
-              visible={modalVisible}
-              onRequestClose={closeModalAndNavigateBack}
-            >
-              <View style={styles.modalContainer}>
-                <View style={styles.modalContent}>
-                  <Controller
-                    control={control}
-                    name="name"
-                    rules={{ required: "Name is required" }}
-                    render={({ field: { onChange, onBlur, value } }) => (
-                      <AnimatedTextInput
-                        label="Timetable Name"
-                        value={value}
-                        onChangeText={onChange}
-                      />
-                    )}
-                  />
-                  <Controller
-                    control={control}
-                    name="description"
-                    render={({ field: { onChange, onBlur, value } }) => (
-                      <AnimatedTextInput
-                        label="Description"
-                        value={value}
-                        onChangeText={onChange}
-                      />
-                    )}
-                  />
-                  <GameButton onPress={nextStep} title="Next" />
-                  <GameButton
-                    onPress={closeModalAndNavigateBack}
-                    title="Cancel"
-                    style={{ marginTop: rV(10) }}
-                  />
-                </View>
-              </View>
-            </Modal>
-          </>
-        )}
+  const renderDayButton = (item: string) => (
+    <TouchableOpacity
+      style={[
+        styles.dayButton,
+        selectedDays.includes(item) ? styles.selectedDayButton : null,
+      ]}
+      onPressIn={() =>
+        setSelectedDays((prev) =>
+          prev.includes(item) ? prev.filter((d) => d !== item) : [...prev, item]
+        )
+      }
+    >
+      <Text style={{ color: themeColors.text }}>{item.substring(0, 3)}</Text>
+    </TouchableOpacity>
+  );
 
-        {step === 2 && (
-          <>
+  const closeModalAndNavigateBack = () => {
+    router.back();
+  };
+
+  const renderContent = () => {
+    if (step === 1) {
+      return (
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={closeModalAndNavigateBack}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Controller
+                control={control}
+                name="name"
+                rules={{ required: "Name is required" }}
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <AnimatedTextInput
+                    label="Timetable Name"
+                    value={value}
+                    onChangeText={onChange}
+                  />
+                )}
+              />
+              <Controller
+                control={control}
+                name="description"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <AnimatedTextInput
+                    label="Description"
+                    value={value}
+                    onChangeText={onChange}
+                  />
+                )}
+              />
+              <GameButton onPress={nextStep} title="Next" />
+              <GameButton
+                onPress={closeModalAndNavigateBack}
+                title="Cancel"
+                style={{ marginTop: rV(10) }}
+              />
+            </View>
+          </View>
+        </Modal>
+      );
+    } else if (step === 2) {
+      return (
+        <>
+          <View style={{ paddingTop: rV(15) }}>
             <Controller
               control={control}
               name="periods.0.course_name"
@@ -385,88 +256,101 @@ const TimetableCreator: React.FC = () => {
                 />
               )}
             />
-            <View style={styles.dayButtonContainer}>
-              {[
-                "Monday",
-                "Tuesday",
-                "Wednesday",
-                "Thursday",
-                "Friday",
-                "Saturday",
-                "Sunday",
-              ].map(renderDayButton)}
-            </View>
-            {selectedDays.map((day) => (
-              <View key={day}>
-                <CustomDateTimeSelector
-                  mode="time"
-                  label={`Select start time for ${day}`}
-                  onTimeChange={(time) =>
-                    setSelectedTimes((prev) => ({ ...prev, [day]: time }))
-                  }
-                  buttonTitle="Pick Start Time"
-                />
-                <CustomDateTimeSelector
-                  mode="time"
-                  label={`Select end time for ${day}`}
-                  onTimeChange={(endTime) =>
-                    setEndTimes((prev) => ({ ...prev, [day]: endTime }))
-                  }
-                  buttonTitle="Pick End Time"
-                />
-              </View>
-            ))}
-            <View style={styles.buttonContainer}>
-              <GameButton
-                onPress={handleSubmit(addPeriod)}
-                style={styles.buttons}
-                title="Add Course"
-              />
-              <GameButton
-                onPress={nextStep}
-                style={styles.buttons}
-                title="Preview"
-              />
-            </View>
-          </>
-        )}
-
-        {step === 3 && (
-          <View>
-            <Text
-              style={{
-                color: themeColors.text,
-                fontSize: 16,
-                fontWeight: "bold",
-                alignSelf: "center",
-                marginBottom: 10,
-              }}
-            >
-              Timetable Preview
-            </Text>
-            <TimetableDisplay periods={periods || []} />
-            <View style={styles.buttonContainer}>
-              <GameButton
-                onPress={previousStep}
-                style={styles.buttons}
-                title="Back"
-                disabled={isLoading}
-              />
-              <GameButton
-                onPress={handleSave}
-                style={styles.buttons}
-                title="Save Timetable"
-                disabled={isLoading}
-              >
-                {isLoading && (
-                  <ActivityIndicator size="small" color={themeColors.text} />
-                )}
-              </GameButton>
-            </View>
           </View>
-        )}
-      </ScrollView>
-    </>
+          <View style={styles.dayButtonContainer}>
+            {[
+              "Monday",
+              "Tuesday",
+              "Wednesday",
+              "Thursday",
+              "Friday",
+              "Saturday",
+              "Sunday",
+            ].map(renderDayButton)}
+          </View>
+          {selectedDays.map((day) => (
+            <View key={day}>
+              <CustomDateTimeSelector
+                mode="time"
+                label={`Select start time for ${day}`}
+                onTimeChange={(time) =>
+                  setSelectedTimes((prev) => ({ ...prev, [day]: time }))
+                }
+                buttonTitle="Pick Start Time"
+              />
+              <CustomDateTimeSelector
+                mode="time"
+                label={`Select end time for ${day}`}
+                onTimeChange={(endTime) =>
+                  setEndTimes((prev) => ({ ...prev, [day]: endTime }))
+                }
+                buttonTitle="Pick End Time"
+              />
+            </View>
+          ))}
+          <View style={styles.buttonContainer}>
+            <GameButton
+              onPress={handleSubmit(addPeriod)}
+              style={styles.buttons}
+              title="Add Course"
+            />
+            <GameButton
+              onPress={nextStep}
+              style={styles.buttons}
+              title="Preview"
+            />
+          </View>
+        </>
+      );
+    } else if (step === 3) {
+      return (
+        <View>
+          <Text
+            style={{
+              color: themeColors.text,
+              fontSize: 16,
+              fontWeight: "bold",
+              alignSelf: "center",
+              marginBottom: 10,
+            }}
+          >
+            Timetable Preview
+          </Text>
+          <TimetableDisplay periods={periods || []} />
+          <View style={styles.buttonContainer}>
+            <GameButton
+              onPress={previousStep}
+              style={styles.buttons}
+              title="Back"
+              disabled={isLoading}
+            />
+            <GameButton
+              onPress={handleSave}
+              style={styles.buttons}
+              title="Save Timetable"
+              disabled={isLoading}
+            >
+              {isLoading && (
+                <ActivityIndicator size="small" color={themeColors.text} />
+              )}
+            </GameButton>
+          </View>
+        </View>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <View style={styles.container}>
+      <FlatList
+        data={[{ key: "timetableCreator" }]}
+        keyExtractor={(item) => item.key}
+        renderItem={() => renderContent()}
+        ListEmptyComponent={null}
+        contentContainerStyle={{ flexGrow: 1 }}
+      />
+    </View>
   );
 };
 
