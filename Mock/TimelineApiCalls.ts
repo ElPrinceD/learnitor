@@ -162,9 +162,40 @@ export const getTimetable = async (timetableId: any, token: string) => {
     throw error;
   }
 };
+export const updateTimetable = async ({ id, name, description }, token) => {
+  try {
+    const response = await apiClient.patch(`/timetables/${id}/`, 
+      { name, description },  // Only name and description are sent as per your PUT endpoint
+      {
+        headers: {
+          Authorization: `Token ${token}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error updating timetable:', error);
+    throw error;
+  }
+};
+
+export const deleteTimetable = async (id, token) => {
+  try {
+    const response = await apiClient.delete(`/timetables/${id}/`, {
+      headers: {
+        Authorization: `Token ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting timetable:', error);
+    throw error;
+  }
+};
 
 
 export const createPeriod = async (periodData, token) => {
+  console.log("YO",periodData)
   try {
     const response = await apiClient.post('/periods/', 
       periodData,
@@ -175,6 +206,7 @@ export const createPeriod = async (periodData, token) => {
       }
     );
     return response.data;
+
   } catch (error) {
     console.error('Error creating period:', error);
     throw error;
@@ -191,6 +223,36 @@ export const getPeriod = async (periodId, token) => {
     return response.data;
   } catch (error) {
     console.error('Error fetching period:', error);
+    throw error;
+  }
+};
+export const updatePeriod = async (periodId, periodData, token) => {
+  try {
+    const response = await apiClient.patch(`/periods/${periodId}/`, 
+      periodData, // This should match the Period model structure
+      {
+        headers: {
+          Authorization: `Token ${token}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error updating period:', error);
+    throw error;
+  }
+};
+
+export const deletePeriod = async (periodId, token) => {
+  try {
+    const response = await apiClient.delete(`/periods/${periodId}/`, {
+      headers: {
+        Authorization: `Token ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting period:', error);
     throw error;
   }
 };

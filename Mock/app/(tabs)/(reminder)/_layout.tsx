@@ -112,11 +112,27 @@ export default function Tab3Layout() {
             headerShown: true,
             presentation: "containedModal",
             headerBackTitle: "Back",
-            // animation: "fade_from_bottom",
             headerStyle: {
               backgroundColor: themeColors.background,
             },
             headerTitle: "Deets",
+            headerTitleAlign: "center",
+            headerTitleStyle: {
+              fontWeight: "bold",
+            },
+            headerShadowVisible: false,
+          }}
+        />
+        <Stack.Screen
+          name="EditPeriods"
+          options={{
+            headerShown: true,
+            presentation: "containedModal",
+            headerBackTitle: "Back",
+            headerStyle: {
+              backgroundColor: themeColors.background,
+            },
+            headerTitle: "Edit Periods",
             headerTitleAlign: "center",
             headerTitleStyle: {
               fontWeight: "bold",

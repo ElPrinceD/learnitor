@@ -5,6 +5,10 @@ import { createPeriod, createTimetable } from "../../../TimelineApiCalls";
 import { useAuth } from "../../../components/AuthContext";
 import TimetableCreator from "../../../components/TimeTableCreator";
 import { router } from "expo-router";
+import { View, StyleSheet, useColorScheme } from "react-native"; // Added these imports
+import Colors from "../../../constants/Colors";
+import { rV } from "../../../constants"; // Assuming this is where rV is defined
+import ErrorMessage from "../../../components/ErrorMessage"; // Make sure this component exists
 
 interface Period {
   course_name: string;
@@ -61,6 +65,11 @@ const CreateTimetablePage: React.FC = () => {
   const { userToken, userInfo } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null); // New state for error messages
+
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
+
   // Mutation for creating a new timetable
   const createTimetableMutation = useMutation<
     any,
@@ -74,39 +83,42 @@ const CreateTimetablePage: React.FC = () => {
       return await createTimetable(timetableData, token);
     },
     onSuccess: (data) => {
-      setTimetable((prev) => ({ ...prev, id: data.id })); // Assuming the response includes an id
+      setTimetable((prev) => ({ ...prev, id: data.id }));
     },
     onError: (error) => {
-      alert(error.message || "Error creating timetable");
+      setErrorMessage(error.message || "Error creating timetable");
     },
   });
 
-  // Mutation for creating a new period
+  // Mutation for creating new periods
   const createPeriodMutation = useMutation<
     any,
     any,
-    { periodData: Period; token: string }
+    { periodData: Period[]; token: string }
   >({
     mutationFn: async ({ periodData, token }) => {
-      return await createPeriod({ ...periodData }, token);
+      createPeriod(periodData, token);
     },
     onError: (error) => {
-      alert(error.message || "Error creating period");
+      setErrorMessage(error.message || "Error creating periods");
     },
   });
 
   // Function to add a new period to the timetable
   const addPeriod = (data: any) => {
-    const newPeriod: Period = {
+    const basePeriod = {
       course_name: data["periods"][0].course_name,
       lecturer: data["periods"][0].lecturer,
-      days: selectedDays.join(", "),
       venue: data["periods"][0].venue,
-      start_time: selectedTimes[selectedDays[0]] || "",
-      end_time: endTimes[selectedDays[0]] || "",
-      timetable: timetable.id,
     };
-    setPeriods((prev) => [...prev, newPeriod]);
+
+    const newPeriods = selectedDays.map((day) => ({
+      ...basePeriod,
+      days: day,
+      start_time: selectedTimes[day] || "",
+      end_time: endTimes[day] || "",
+    }));
+    setPeriods((prev) => [...prev, ...newPeriods]);
 
     // Reset form fields for adding another period if needed
     reset({
@@ -132,7 +144,7 @@ const CreateTimetablePage: React.FC = () => {
   const handleSave = () => {
     const { name, description } = watch();
     if (!name.trim()) {
-      alert("Please provide a name for the timetable.");
+      setErrorMessage("Please provide a name for the timetable.");
       return;
     }
 
@@ -151,26 +163,33 @@ const CreateTimetablePage: React.FC = () => {
         onSuccess: (data) => {
           const timetableId = data.id;
 
-          Promise.all(
-            periods.map((period) =>
-              createPeriodMutation.mutateAsync({
-                periodData: { ...period, timetable: timetableId },
-                token: userToken?.token!,
-              })
-            )
-          )
-            .then(() => {
-              setIsLoading(false);
-              router.dismiss(1);
-            })
-            .catch((error) => {
-              setIsLoading(false);
-              alert(error.message || "Error creating periods");
-            });
+          // Update periods with the timetable ID
+          setPeriods((prevPeriods) =>
+            prevPeriods.map((period) => ({
+              ...period,
+              timetable: timetableId,
+            }))
+          );
+          createPeriodMutation.mutate(
+            {
+              periodData: periods,
+              token: userToken?.token!,
+            },
+            {
+              onSuccess: () => {
+                setIsLoading(false);
+                router.dismiss(1);
+              },
+              onError: (error) => {
+                setIsLoading(false);
+                setErrorMessage(error.message || "Error creating periods");
+              },
+            }
+          );
         },
         onError: (error) => {
-          setIsLoading(false); // Hide loading if timetable creation fails
-          alert(error.message || "Error creating timetable");
+          setIsLoading(false);
+          setErrorMessage(error.message || "Error creating timetable");
         },
       }
     );
@@ -207,33 +226,52 @@ const CreateTimetablePage: React.FC = () => {
     console.log("Timetable details:", currentTimetable);
   }, [watch("name"), watch("description")]);
 
+  const styles = StyleSheet.create({
+    errorOverlay: {
+      position: "absolute",
+      bottom: rV(45), // Adjust based on where you want it to appear
+      zIndex: 10,
+    },
+  });
+
   return (
-    <TimetableCreator
-      control={control}
-      handleSubmit={handleSubmit}
-      watch={watch}
-      reset={reset}
-      setValue={setValue}
-      errors={errors}
-      step={step}
-      selectedDays={selectedDays}
-      setSelectedDays={setSelectedDays}
-      selectedTimes={selectedTimes}
-      setSelectedTimes={setSelectedTimes}
-      endTimes={endTimes}
-      setEndTimes={setEndTimes}
-      timetable={timetable}
-      setTimetable={setTimetable}
-      periods={periods}
-      setPeriods={setPeriods}
-      isLoading={isLoading}
-      setIsLoading={setIsLoading}
-      addPeriod={addPeriod}
-      handleSave={handleSave}
-      nextStep={nextStep}
-      previousStep={previousStep}
-      modalVisible={modalVisible}
-    />
+    <>
+      <TimetableCreator
+        control={control}
+        handleSubmit={handleSubmit}
+        watch={watch}
+        reset={reset}
+        setValue={setValue}
+        errors={errors}
+        step={step}
+        selectedDays={selectedDays}
+        setSelectedDays={setSelectedDays}
+        selectedTimes={selectedTimes}
+        setSelectedTimes={setSelectedTimes}
+        endTimes={endTimes}
+        setEndTimes={setEndTimes}
+        timetable={timetable}
+        setTimetable={setTimetable}
+        periods={periods}
+        setPeriods={setPeriods}
+        isLoading={isLoading}
+        setIsLoading={setIsLoading}
+        addPeriod={addPeriod}
+        handleSave={handleSave}
+        nextStep={nextStep}
+        previousStep={previousStep}
+        modalVisible={modalVisible}
+      />
+      {errorMessage && (
+        <View style={styles.errorOverlay}>
+          <ErrorMessage
+            message={errorMessage}
+            visible={!!errorMessage}
+            onDismiss={() => setErrorMessage(null)}
+          />
+        </View>
+      )}
+    </>
   );
 };
 
