@@ -1,3 +1,3 @@
-const ApiUrl = "https://learnitor.onrender.com";
+const ApiUrl = "http://16.171.33.30";
 export default ApiUrl;
 

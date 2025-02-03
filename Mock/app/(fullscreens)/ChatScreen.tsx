@@ -35,6 +35,7 @@ import {
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import Video from "react-native-video";
 import { useNavigation } from "@react-navigation/native";
@@ -57,12 +58,14 @@ const CommunityChatScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedMessages, setSelectedMessages] = useState<IMessage[]>([]);
   const [replyToMessage, setReplyToMessage] = useState<IMessage | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<{ type: 'image' | 'document' | null, uri: string | null }>({ type: null, uri: null });
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const insets = useSafeAreaInsets();
   const [mediaUri, setMediaUri] = useState<string | null>(null);
   const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
   const [isVideoViewerVisible, setIsVideoViewerVisible] = useState(false);
+  const [isDocumentViewerVisible, setIsDocumentViewerVisible] = useState(false);
   const [editingMessage, setEditingMessage] = useState<IMessage | null>(null);
 
   const chatRef = useRef<GiftedChat>(null);
@@ -89,6 +92,8 @@ const CommunityChatScreen: React.FC = () => {
               },
             }
           : null,
+        image: data.image || null,
+        document: data.document || null,
       };
     } else if ("_id" in data && "createdAt" in data) {
       return {
@@ -104,6 +109,8 @@ const CommunityChatScreen: React.FC = () => {
               user: data.replyTo.user,
             }
           : null,
+        image: data.image || null,
+        document: data.document || null,
       };
     } else {
       console.warn("Unknown message format received:", data);
@@ -159,29 +166,8 @@ const CommunityChatScreen: React.FC = () => {
 
           if (data.type === "history" && data.community_id === communityId) {
             const transformedMessages = data.messages
-              .map((message) => ({
-                _id: message.id.toString(),
-                text: message.message,
-                createdAt: new Date(message.sent_at),
-                user: {
-                  _id: message.sender_id,
-                  name: message.sender,
-                  avatar: message.sender_image,
-                },
-                status: message.status || "sent",
-                replyTo: message.reply_to
-                  ? {
-                      _id: message.reply_to.id.toString(),
-                      text: message.reply_to.snippet,
-                      user: {
-                        _id: message.reply_to.sender_id,
-                        name: message.reply_to.sender_name,
-                      },
-                    }
-                  : null,
-                // Here we assume messages are not edited when first fetched
-                isEdited: false,
-              }))
+              .map(normalizeMessage)
+              .filter((msg): msg is IMessage => msg !== null)
               .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
             setMessages(transformedMessages);
@@ -193,77 +179,51 @@ const CommunityChatScreen: React.FC = () => {
             data.type === "message" &&
             data.community_id === communityId
           ) {
-            const newMessage = {
-              _id: data.id.toString(),
-              text: data.message,
-              createdAt: new Date(data.sent_at),
-              user: {
-                _id: data.sender_id,
-                name: data.sender,
-                avatar: data.sender_image,
-              },
-              status: "read",
-              replyTo: data.reply_to
-                ? {
-                    _id: data.reply_to.id.toString(),
-                    text: data.reply_to.snippet,
-                    user: {
-                      _id: data.reply_to.sender_id,
-                      name: data.reply_to.sender_name,
-                    },
-                  }
-                : null,
-              isEdited: false, // New messages are not edited
-            };
+            const newMessage = normalizeMessage(data);
+            if (newMessage) {
+              setMessages((prevMessages) => {
+                const updatedMessages = [newMessage, ...prevMessages].sort(
+                  (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+                );
 
-            setMessages((prevMessages) => {
-              const updatedMessages = [newMessage, ...prevMessages].sort(
-                (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
-              );
+                if (user?.id !== newMessage.user._id) {
+                  socket.send(
+                    JSON.stringify({
+                      type: "message_status_update",
+                      message_id: newMessage._id,
+                      status: "read",
+                    })
+                  );
+                  updatedMessages[0].status = "read";
+                }
 
-              if (user?.id !== newMessage.user._id) {
-                
-                socket.send(
+                AsyncStorage.setItem(
+                  `messages_${communityId}`,
+                  JSON.stringify(updatedMessages)
+                );
+                AsyncStorage.setItem(
+                  `last_message_${communityId}`,
                   JSON.stringify({
-                    type: "message_status_update",
-                    message_id: newMessage._id,
+                    ...newMessage,
                     status: "read",
                   })
                 );
-                updatedMessages[0].status = "read";
-              }
-
-              // Update cache with the new message
-              AsyncStorage.setItem(
-                `messages_${communityId}`,
-                JSON.stringify(updatedMessages)
-              );
-              // Update last message if this is the latest one
-              AsyncStorage.setItem(
-                `last_message_${communityId}`,
-                JSON.stringify({
-                  ...newMessage,
-                  status: "read",
-                })
-              );
-              
                 markMessageAsRead(communityId);
-              setTimeout(() => {
-                chatRef.current?.scrollToBottom();
-              }, 100);
-              return updatedMessages;
-            });
+                setTimeout(() => {
+                  chatRef.current?.scrollToBottom();
+                }, 100);
+                return updatedMessages;
+              });
+            }
           } else if (data.type === "message_delete") {
             setMessages((prevMessages) => {
               const updatedMessages = prevMessages.filter(
                 (m) => m._id !== data.message_id
               );
-              // Update cache when a message is deleted
               AsyncStorage.setItem(
                 `messages_${communityId}`,
                 JSON.stringify(updatedMessages)
               );
-              // Check if the deleted message was the last one
               if (prevMessages[0]?._id === data.message_id) {
                 AsyncStorage.setItem(
                   `last_message_${communityId}`,
@@ -279,12 +239,10 @@ const CommunityChatScreen: React.FC = () => {
                   ? { ...m, text: data.new_content, isEdited: true }
                   : m
               );
-              // Update cache when a message is edited
               AsyncStorage.setItem(
                 `messages_${communityId}`,
                 JSON.stringify(updatedMessages)
               );
-              // Check if the edited message was the last one
               if (prevMessages[0]?._id === data.message_id) {
                 AsyncStorage.setItem(
                   `last_message_${communityId}`,
@@ -308,6 +266,45 @@ const CommunityChatScreen: React.FC = () => {
     return socketCleanup;
   }, [socket, communityId, messages, user]);
 
+  useEffect(() => {
+    (async () => {
+      if (Platform.OS !== 'web') {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          alert('Sorry, we need camera roll permissions to make this work!');
+        }
+      }
+    })();
+  }, []);
+
+  const sendMediaMessage = useCallback(async (fileUri: string, type: 'image' | 'document') => {
+    const tempId = Math.random().toString();
+    const message = {
+      _id: tempId,
+      text: "",
+      createdAt: new Date(),
+      user: {
+        _id: user?.id || 1,
+        name: user?.first_name + " " + user?.last_name || "Unknown User",
+      },
+      [type]: fileUri,
+    };
+
+    // Add this message to UI before sending to server
+    setMessages((prevMessages) => [message, ...prevMessages]);
+
+    // Send to server
+    sendMessage({
+      type: "send_message",
+      community_id: communityId,
+      message: "", // Text can be empty for media messages
+      sender: user?.first_name + " " + user?.last_name || "Unknown User",
+      sender_id: user?.id || 1,
+      temp_id: tempId,
+      [type]: fileUri
+    });
+  }, [communityId, sendMessage, user]);
+
   const onSend = useCallback(
     (newMessages: IMessage[] = []) => {
       for (let message of newMessages) {
@@ -320,44 +317,55 @@ const CommunityChatScreen: React.FC = () => {
             _id: user?.id || 1,
             name: user?.first_name + " " + user?.last_name || "Unknown User",
           },
-          ...(message.image && { image: message.image }),
+          image: mediaPreview.uri && mediaPreview.type === 'image' ? mediaPreview.uri : undefined,
+          document: mediaPreview.uri && mediaPreview.type === 'document' ? mediaPreview.uri : undefined,
           ...(replyToMessage && { replyTo: replyToMessage._id }),
         };
         setReplyToMessage(null); // Clear reply after message is sent
+        setMediaPreview({ type: null, uri: null }); // Clear media preview after sending
 
         sendMessage({
           type: "send_message",
           community_id: communityId,
-          message: message.text,
+          message: message.text || "", 
           sender: user?.first_name + " " + user?.last_name || "Unknown User",
           sender_id: user?.id || 1,
           temp_id: tempId,
           ...(replyToMessage && { reply_to: replyToMessage._id }),
+          image: tempMessage.image ? tempMessage.image : undefined, // Ensure image is sent if present
+          document: tempMessage.document ? tempMessage.document : undefined, // Ensure document is sent if present
         });
       }
     },
-    [communityId, sendMessage, user, replyToMessage]
+    [communityId, sendMessage, user, replyToMessage, mediaPreview]
   );
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
+      aspect: [4, 3],
       quality: 1,
     });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
       const imageUri = result.assets[0].uri;
+      await sendMediaMessage(imageUri, 'image');
+    }
+  };
 
-      onSend([
-        {
-          _id: Math.random().toString(),
-          text: "",
-          createdAt: new Date(),
-          user: { _id: user?.id || 1, name: user?.first_name || "User" },
-          image: imageUri,
-        },
-      ]);
+  const pickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*', 
+        copyToCacheDirectory: true
+      });
+ 
+      if (result.type === 'success') {
+        await sendMediaMessage(result.uri, 'document');
+      }
+    } catch (error) {
+      console.error("Document picker error:", error);
     }
   };
 
@@ -726,9 +734,9 @@ const CommunityChatScreen: React.FC = () => {
     setIsImageViewerVisible(true);
   };
 
-  const onVideoPress = (uri: string) => {
+  const onDocumentPress = (uri: string) => {
     setMediaUri(uri);
-    setIsVideoViewerVisible(true);
+    setIsDocumentViewerVisible(true);
   };
 
   const renderMessageImage = (props) => (
@@ -740,14 +748,9 @@ const CommunityChatScreen: React.FC = () => {
     </TouchableOpacity>
   );
 
-  const renderMessageVideo = (props) => (
-    <TouchableOpacity onPress={() => onVideoPress(props.currentMessage.video)}>
-      <Video
-        source={{ uri: props.currentMessage.video }}
-        style={styles.messageVideo}
-        resizeMode="contain"
-        paused
-      />
+  const renderMessageDocument = (props) => (
+    <TouchableOpacity onPress={() => onDocumentPress(props.currentMessage.document)}>
+      <Text style={styles.documentText}>Document: {props.currentMessage.document.split('/').pop()}</Text>
     </TouchableOpacity>
   );
 
@@ -759,340 +762,396 @@ const CommunityChatScreen: React.FC = () => {
     </View>
   );
 
-  const renderInputToolbar = (props) => {
-    return (
-      <View>
-        {editingMessage && (
-          <View style={styles.replyContainer}>
-            <Text style={styles.replyName}>
-              Editing Message by {editingMessage.user.name}
-            </Text>
-            <TouchableOpacity
-              onPress={() => setEditingMessage(null)}
-              style={styles.closeReplyButton}
-            >
-              <Ionicons name="close" color={themeColors.text} size={20} />
-            </TouchableOpacity>
-          </View>
-        )}
-        {replyToMessage && (
-          <View style={styles.replyContainer}>
-            <Text style={styles.replyName}>
-              Replying to {replyToMessage.user.name}
-            </Text>
-            <Text style={styles.replyText}>{replyToMessage.text}</Text>
-            <TouchableOpacity
-              onPress={() => setReplyToMessage(null)}
-              style={styles.closeReplyButton}
-            >
-              <Ionicons name="close" color={themeColors.text} size={20} />
-            </TouchableOpacity>
-          </View>
-        )}
-        <InputToolbar
-          {...props}
-          containerStyle={[
-            styles.inputToolbar,
-            (editingMessage || replyToMessage) && { marginTop: 0 },
-          ]}
-          primaryStyle={{ alignItems: "center", flexDirection: "row" }}
-          renderComposer={() => (
-            <View style={styles.inputField}>
-              <TextInput
-                style={styles.textInput}
-                placeholder={
-                  editingMessage
-                    ? "Edit message"
-                    : replyToMessage
-                    ? "Reply to message"
-                    : "Message"
-                }
-                placeholderTextColor={themeColors.textSecondary}
-                value={props.text}
-                onChangeText={props.onTextChanged}
-              />
-              {editingMessage ? (
-                <TouchableOpacity onPress={onEditMessage}>
-                  <Ionicons
-                    name="checkmark"
-                    color={themeColors.text}
-                    size={24}
-                    style={styles.attachIcon}
-                  />
-                </TouchableOpacity>
-              ) : (
-                <Ionicons
-                  name="attach-outline"
-                  color={themeColors.text}
-                  size={24}
-                  onPress={pickImage}
-                  style={styles.attachIcon}
-                />
-              )}
-            </View>
+  const renderMediaPreview = () => {
+    if (mediaPreview.uri) {
+      return (
+        <View style={styles.replyContainer}>
+          {mediaPreview.type === 'image' ? (
+            <Image source={{ uri: mediaPreview.uri }} style={[styles.previewImage, { width: '100%', height: 150 }]} />
+          ) : (
+            <Text style={styles.previewDocument}>{mediaPreview.uri.split('/').pop()}</Text>
           )}
-        />
-      </View>
-    );
-  };
-
-  const renderAvatar = (props) => {
-    const avatarUrl = props.currentMessage.user.avatar || user?.profile_picture;
-
-    if (avatarUrl) {
-      return (
-        <View style={styles.avatarContainer}>
-          <Image source={{ uri: avatarUrl }} style={styles.avatar} />
-        </View>
-      );
-    } else {
-      return (
-        <View style={styles.avatarContainer}>
-          <Text style={styles.initials}>
-            {props.currentMessage.user.name.charAt(0).toUpperCase()}
-          </Text>
+          <TouchableOpacity 
+            style={styles.closeReplyButton} 
+            onPress={() => setMediaPreview({ type: null, uri: null })}
+          >
+            <Ionicons name="close" color={themeColors.text} size={20} />
+          </TouchableOpacity>
         </View>
       );
     }
+    return null;
   };
-
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      padding: 2,
-    },
-    blurBackground: {
-      opacity: 0.7,
-      backgroundColor: themeColors.tint,
-      width: "100%",
-    },
-    username: {
-      fontSize: 12,
-      color: themeColors.textSecondary,
-      marginBottom: 2,
-      fontWeight: "bold",
-      marginLeft: 10,
-      paddingRight: 20,
-    },
-    avatarContainer: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      overflow: "hidden",
-      backgroundColor: "#ccc",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    avatar: {
-      width: "100%",
-      height: "100%",
-    },
-    initials: {
-      color: "#fff",
-      fontSize: 18,
-    },
-    dateContainer: {
-      paddingVertical: 4,
-      paddingHorizontal: 8,
-      borderRadius: 10,
-      alignSelf: "center",
-      marginVertical: 10,
-    },
-    dateText: {
-      color: themeColors.textSecondary,
-      fontSize: 12,
-      fontWeight: "bold",
-    },
-    messageImage: {
-      width: 200,
-      height: 200,
-      borderRadius: 10,
-      margin: 5,
-    },
-    sendContainer: {
-      height: 44,
-      width: 55,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 14,
-      paddingHorizontal: 4,
-      backgroundColor: themeColors.tint,
-      borderRadius: 20,
-      marginHorizontal: 1,
-    },
-    sendButton: {
-      justifyContent: "center",
-    },
-    inputContainer: {
-      flex: 1,
-      backgroundColor: themeColors.background,
-      borderRadius: 20,
-      paddingVertical: 8,
-      paddingHorizontal: 16,
-      marginHorizontal: 10,
-      opacity: 0.5,
-      color: themeColors.text,
-    },
-    inputToolbar: {
-      backgroundColor: themeColors.background,
-      borderTopWidth: 0,
-      paddingHorizontal: 10,
-      paddingBottom: 35,
-      paddingTop: 10,
-      opacity: 0.9,
-    },
-    inputField: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: themeColors.normalGrey,
-      borderRadius: 20,
-      flex: 1,
-      paddingVertical: rV(6),
-      paddingHorizontal: 12,
-      marginRight: 10,
-    },
-    editedText: {
-      fontSize: 10,
-      color: themeColors.textSecondary,
-
-      padding: 2,
-    },
-    attachIcon: {
-      marginLeft: 8,
-    },
-    textInput: {
-      flex: 1,
-      color: themeColors.text,
-      fontSize: 16,
-    },
-    messageVideo: {
-      width: 200,
-      height: 200,
-      borderRadius: 10,
-      margin: 5,
-    },
-    modalContainer: {
-      flex: 1,
-      backgroundColor: "rgba(0, 0, 0, 0.9)",
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    fullScreenImage: {
-      width: "100%",
-      height: "100%",
-      resizeMode: "contain",
-    },
-    fullScreenVideo: {
-      width: "100%",
-      height: "100%",
-    },
-    replyContainer: {
-      flexDirection: "column",
-      justifyContent: "flex-start",
-      alignItems: "flex-start",
-      backgroundColor: "#E6E6E6",
-      padding: 8,
-      borderRadius: 5,
-      borderLeftWidth: 4,
-      borderLeftColor: "#007AFF",
-      marginRight: 5,
-      width: "100%",
-    },
-    replyText: {
-      color: "#000",
-      fontSize: 12,
-      marginBottom: 4,
-    },
-    replyName: {
-      color: "#007AFF",
-      fontSize: 12,
-      fontWeight: "bold",
-    },
-    closeReplyButton: {
-      position: "absolute",
-      right: 10,
-      top: 10,
-    },
-  });
-
-  return (
-    <ImageBackground
-      source={{ uri: backgroundImage }}
-      style={{ flex: 1, paddingTop: 1 }}
-    >
-      {loading ? (
-        <View
-          style={[
-            styles.container,
-            { justifyContent: "center", alignItems: "center" },
-          ]}
-        >
-          <ActivityIndicator size="large" color={themeColors.tint} />
-        </View>
-      ) : (
-        <GiftedChat
-          messages={messages}
-          onSend={onSend}
-          user={{ _id: user?.id || 1 }}
-          text={messageInput}
-          onInputTextChanged={(text) => setMessageInput(text)}
-          renderSystemMessage={(props) => (
-            <SystemMessage
-              {...props}
-              textStyle={{ color: themeColors.textSecondary }}
-            />
-          )}
-          renderAvatar={renderAvatar}
-          renderBubble={renderBubble}
-          renderSend={renderSend}
-          renderInputToolbar={renderInputToolbar}
-          renderMessageImage={renderMessageImage}
-          renderDay={renderDay}
-          minInputToolbarHeight={insets.bottom + 50}
-          scrollToBottom={true}
-          isTyping={false}
-          inverted={true}
-        />
-      )}
-
-      <Modal
-        visible={isImageViewerVisible && mediaUri !== null}
-        transparent={true}
-        onRequestClose={() => setIsImageViewerVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <TouchableOpacity onPress={() => setIsImageViewerVisible(false)}>
-            {mediaUri && (
-              <Image
-                source={{ uri: mediaUri }}
-                style={styles.fullScreenImage}
-              />
-            )}
-          </TouchableOpacity>
-        </View>
-      </Modal>
-
-      <Modal
-        visible={isVideoViewerVisible && mediaUri !== null}
-        transparent={true}
-        onRequestClose={() => setIsVideoViewerVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <TouchableOpacity onPress={() => setIsVideoViewerVisible(false)}>
-            {mediaUri && (
-              <Video
-                source={{ uri: mediaUri }}
-                style={styles.fullScreenVideo}
-                resizeMode="contain"
-                controls
-              />
-            )}
-          </TouchableOpacity>
-        </View>
-      </Modal>
-    </ImageBackground>
-  );
-};
-
-export default CommunityChatScreen;
+              
+                const renderInputToolbar = (props) => {
+                  return (
+                    <View>
+                      {renderMediaPreview()}
+                      {editingMessage && (
+                        <View style={styles.replyContainer}>
+                          <Text style={styles.replyName}>
+                            Editing Message by {editingMessage.user.name}
+                          </Text>
+                          <TouchableOpacity
+                            onPress={() => setEditingMessage(null)}
+                            style={styles.closeReplyButton}
+                          >
+                            <Ionicons name="close" color={themeColors.text} size={20} />
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                      {replyToMessage && (
+                        <View style={styles.replyContainer}>
+                          <Text style={styles.replyName}>
+                            Replying to {replyToMessage.user.name}
+                          </Text>
+                          <Text style={styles.replyText}>{replyToMessage.text}</Text>
+                          <TouchableOpacity
+                            onPress={() => setReplyToMessage(null)}
+                            style={styles.closeReplyButton}
+                          >
+                            <Ionicons name="close" color={themeColors.text} size={20} />
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                      <InputToolbar
+                        {...props}
+                        containerStyle={[
+                          styles.inputToolbar,
+                          (editingMessage || replyToMessage || mediaPreview.uri) && { marginTop: 0 },
+                        ]}
+                        primaryStyle={{ alignItems: "center", flexDirection: "row" }}
+                        renderComposer={() => (
+                          <View style={styles.inputField}>
+                            <TextInput
+                              style={styles.textInput}
+                              placeholder={
+                                editingMessage
+                                  ? "Edit message"
+                                  : replyToMessage
+                                  ? "Reply to message"
+                                  : "Message"
+                              }
+                              placeholderTextColor={themeColors.textSecondary}
+                              value={props.text}
+                              onChangeText={props.onTextChanged}
+                            />
+                            {editingMessage ? (
+                              <TouchableOpacity onPress={onEditMessage}>
+                                <Ionicons
+                                  name="checkmark"
+                                  color={themeColors.text}
+                                  size={24}
+                                  style={styles.attachIcon}
+                                />
+                              </TouchableOpacity>
+                            ) : (
+                              <>
+                                <TouchableOpacity onPress={pickImage}>
+                                  <Ionicons
+                                    name="image-outline"
+                                    color={themeColors.text}
+                                    size={24}
+                                    style={styles.attachIcon}
+                                  />
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={pickDocument}>
+                                  <Ionicons
+                                    name="document-outline"
+                                    color={themeColors.text}
+                                    size={24}
+                                    style={styles.attachIcon}
+                                  />
+                                </TouchableOpacity>
+                              </>
+                            )}
+                          </View>
+                        )}
+                      />
+                    </View>
+                  );
+                };
+              
+                const renderAvatar = (props) => {
+                  const avatarUrl = props.currentMessage.user.avatar || user?.profile_picture;
+              
+                  if (avatarUrl) {
+                    return (
+                      <View style={styles.avatarContainer}>
+                        <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+                      </View>
+                    );
+                  } else {
+                    return (
+                      <View style={styles.avatarContainer}>
+                        <Text style={styles.initials}>
+                          {props.currentMessage.user.name.charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
+                    );
+                  }
+                };
+              
+                const styles = StyleSheet.create({
+                  container: {
+                    flex: 1,
+                    padding: 2,
+                  },
+                  blurBackground: {
+                    opacity: 0.7,
+                    backgroundColor: themeColors.tint,
+                    width: "100%",
+                  },
+                  username: {
+                    fontSize: 12,
+                    color: themeColors.textSecondary,
+                    marginBottom: 2,
+                    fontWeight: "bold",
+                    marginLeft: 10,
+                    paddingRight: 20,
+                  },
+                  avatarContainer: {
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    overflow: "hidden",
+                    backgroundColor: "#ccc",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  },
+                  avatar: {
+                    width: "100%",
+                    height: "100%",
+                  },
+                  initials: {
+                    color: "#fff",
+                    fontSize: 18,
+                  },
+                  dateContainer: {
+                    paddingVertical: 4,
+                    paddingHorizontal: 8,
+                    borderRadius: 10,
+                    alignSelf: "center",
+                    marginVertical: 10,
+                  },
+                  dateText: {
+                    color: themeColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: "bold",
+                  },
+                  messageImage: {
+                    width: 200,
+                    height: 200,
+                    borderRadius: 10,
+                    margin: 5,
+                  },
+                  messageVideo: {
+                    width: 200,
+                    height: 200,
+                    borderRadius: 10,
+                    margin: 5,
+                  },
+                  sendContainer: {
+                    height: 44,
+                    width: 55,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 14,
+                    paddingHorizontal: 4,
+                    backgroundColor: themeColors.tint,
+                    borderRadius: 20,
+                    marginHorizontal: 1,
+                  },
+                  sendButton: {
+                    justifyContent: "center",
+                  },
+                  inputToolbar: {
+                    backgroundColor: themeColors.background,
+                    borderTopWidth: 0,
+                    paddingHorizontal: 10,
+                    paddingBottom: 35,
+                    paddingTop: 10,
+                    opacity: 0.9,
+                  },
+                  inputField: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    backgroundColor: themeColors.normalGrey,
+                    borderRadius: 20,
+                    flex: 1,
+                    paddingVertical: rV(6),
+                    paddingHorizontal: 12,
+                    marginRight: 10,
+                  },
+                  editedText: {
+                    fontSize: 10,
+                    color: themeColors.textSecondary,
+                    padding: 2,
+                  },
+                  attachIcon: {
+                    marginLeft: 8,
+                  },
+                  textInput: {
+                    flex: 1,
+                    color: themeColors.text,
+                    fontSize: 16,
+                  },
+                  modalContainer: {
+                    flex: 1,
+                    backgroundColor: "rgba(0, 0, 0, 0.9)",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  },
+                  fullScreenImage: {
+                    width: "100%",
+                    height: "100%",
+                    resizeMode: "contain",
+                  },
+                  fullScreenVideo: {
+                    width: "100%",
+                    height: "100%",
+                  },
+                  replyContainer: {
+                    flexDirection: "column",
+                    justifyContent: "flex-start",
+                    alignItems: "flex-start",
+                    backgroundColor: "#E6E6E6",
+                    padding: 8,
+                    borderRadius: 5,
+                    borderLeftWidth: 4,
+                    borderLeftColor: "#007AFF",
+                    marginRight: 5,
+                    width: "100%",
+                  },
+                  replyText: {
+                    color: "#000",
+                    fontSize: 12,
+                    marginBottom: 4,
+                  },
+                  replyName: {
+                    color: "#007AFF",
+                    fontSize: 12,
+                    fontWeight: "bold",
+                  },
+                  closeReplyButton: {
+                    position: "absolute",
+                    right: 10,
+                    top: 10,
+                  },
+                  documentText: {
+                    color: themeColors.text,
+                    fontSize: 14,
+                    padding: 5,
+                    borderWidth: 1,
+                    borderColor: themeColors.textSecondary,
+                    borderRadius: 5,
+                    marginVertical: 5,
+                  },
+                  previewImage: {
+                    width: '100%',
+                    height: 200,
+                    marginBottom: 10,
+                  },
+                  previewDocument: {
+                    color: themeColors.text,
+                    fontSize: 16,
+                    marginBottom: 10,
+                  },
+                });
+              
+                return (
+                  <ImageBackground
+                    source={{ uri: backgroundImage }}
+                    style={{ flex: 1, paddingTop: 1 }}
+                  >
+                    {loading ? (
+                      <View
+                        style={[
+                          styles.container,
+                          { justifyContent: "center", alignItems: "center" },
+                        ]}
+                      >
+                        <ActivityIndicator size="large" color={themeColors.tint} />
+                      </View>
+                    ) : (
+                      <GiftedChat
+                        messages={messages}
+                        onSend={onSend}
+                        user={{ _id: user?.id || 1 }}
+                        text={messageInput}
+                        onInputTextChanged={(text) => setMessageInput(text)}
+                        renderSystemMessage={(props) => (
+                          <SystemMessage
+                            {...props}
+                            textStyle={{ color: themeColors.textSecondary }}
+                          />
+                        )}
+                        renderAvatar={renderAvatar}
+                        renderBubble={renderBubble}
+                        renderSend={renderSend}
+                        renderInputToolbar={renderInputToolbar}
+                     
+                        renderMessageDocument={renderMessageDocument}
+                        renderDay={renderDay}
+                        minInputToolbarHeight={insets.bottom + 50}
+                        scrollToBottom={true}
+                        isTyping={false}
+                        inverted={true}
+                      />
+                    )}
+              
+                    <Modal
+                      visible={isImageViewerVisible && mediaUri !== null}
+                      transparent={true}
+                      onRequestClose={() => setIsImageViewerVisible(false)}
+                    >
+                      <View style={styles.modalContainer}>
+                        <TouchableOpacity onPress={() => setIsImageViewerVisible(false)}>
+                          {mediaUri && (
+                            <Image
+                              source={{ uri: mediaUri }}
+                              style={styles.fullScreenImage}
+                            />
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    </Modal>
+              
+                    <Modal
+                      visible={isVideoViewerVisible && mediaUri !== null}
+                      transparent={true}
+                      onRequestClose={() => setIsVideoViewerVisible(false)}
+                    >
+                      <View style={styles.modalContainer}>
+                        <TouchableOpacity onPress={() => setIsVideoViewerVisible(false)}>
+                          {mediaUri && (
+                            <Video
+                              source={{ uri: mediaUri }}
+                              style={styles.fullScreenVideo}
+                              resizeMode="contain"
+                              controls
+                            />
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    </Modal>
+              
+                    <Modal
+                      visible={isDocumentViewerVisible && mediaUri !== null}
+                      transparent={true}
+                      onRequestClose={() => setIsDocumentViewerVisible(false)}
+                    >
+                      <View style={styles.modalContainer}>
+                        <TouchableOpacity onPress={() => setIsDocumentViewerVisible(false)}>
+                          {mediaUri && (
+                            <Text style={styles.documentText}>View Document: {mediaUri.split('/').pop()}</Text>
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    </Modal>
+                  </ImageBackground>
+                );
+              };
+              
+              export default CommunityChatScreen;

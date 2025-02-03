@@ -92,67 +92,46 @@ const Profile = () => {
 
   const handleProfilePictureUpdate = async () => {
     try {
-      const { status } =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
         Alert.alert("Permission to access media library is required!");
         return;
       }
-
+  
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 1,
       });
-
+  
       if (!result.canceled) {
         const uri = result.assets[0].uri;
         const formData = new FormData();
-
+  
         const fileName = uri.split("/").pop();
-        const fileType = uri.split(".").pop();
-
-        // Create form data for Imgur upload
-        formData.append("image", {
+        const fileType = fileName.split(".").pop();
+  
+        // Append the file directly to FormData for S3 upload
+        formData.append("profile_picture", {
           uri,
           name: fileName,
           type: `image/${fileType}`,
-        });
-
-        const imgurConfig = {
-          headers: {
-            Authorization: "5fa58c7d05ea125", // Replace with your Imgur client ID
-            "Content-Type": "multipart/form-data",
-          },
-        };
-
-        // Upload image to Imgur
-        const imgurResponse = await axios.post(
-          "https://api.imgur.com/3/upload",
-          formData,
-          imgurConfig
-        );
-
-        const imgurLink = imgurResponse.data.data.link;
-
-        // Update user profile with Imgur image link
-        const userUpdateData = new FormData();
-        userUpdateData.append("profile_picture", imgurLink); // Send URL to the backend
-
-        const userUpdateConfig = {
+        } as any);
+  
+        const config = {
           headers: {
             Authorization: `Token ${userToken?.token}`,
-            "Content-Type": "multipart/form-data",
+            'Content-Type': 'multipart/form-data',
           },
         };
-
+  
         const response = await axios.patch(
           `${ApiUrl}/api/update/user/${userInfo?.user.id}/`,
-          { profile_picture: imgurLink },
-          userUpdateConfig
+          formData,
+          config
         );
-
+  
         // Update user info in frontend state
         if (userInfo) {
           setUserInfo({
@@ -166,6 +145,7 @@ const Profile = () => {
       }
     } catch (error) {
       console.error("Error updating profile picture:", error);
+      Alert.alert("Error", "Failed to update profile picture. Please try again.");
     }
   };
 

@@ -127,7 +127,7 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
     labelContainer: {
       position: "absolute",
       marginHorizontal: rS(13),
-      marginVertical: rV(15),
+      marginVertical: rV(10),
     },
     label: {
       borderRadius: 5,

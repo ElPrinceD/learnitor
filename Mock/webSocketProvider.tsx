@@ -14,7 +14,7 @@ import {
   getCommunityMessages,
 } from "./CommunityApiCalls";
 import { getCourseCategories, getCourses } from "./CoursesApiCalls";
-import ApiUrl from "./config";
+import WsUrl from "./configWs";
 import { getCategoryNames, getTodayPlans } from "./TimelineApiCalls";
 import { useAuth } from "./components/AuthContext";
 
@@ -72,7 +72,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
     if (socket) {
       socket.close();
     }
-    const ws = new WebSocket(`${ApiUrl}/ws/chat/?token=${token}`);
+    const ws = new WebSocket(`${WsUrl}/ws/chat/?token=${token}`);
     setSocket(ws);
 
     ws.onopen = () => {
@@ -115,6 +115,9 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
                   },
                 }
               : null,
+            image: data.image || null,  
+            video: data.video || null,  
+            document: data.document || null,  
           });
 
           await AsyncStorage.setItem(
@@ -147,7 +150,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
           }
           break;
         case "history":
-          // Store full history including replies
+          // Store full history including replies, images, videos, and documents
           const normalizedMessages = data.messages.map((msg) => ({
             _id: msg.id.toString(),
             text: msg.message,
@@ -168,6 +171,9 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
                   },
                 }
               : null,
+            image: msg.image || null,
+            video: msg.video || null,
+            document: msg.document || null,
           }));
 
           await AsyncStorage.setItem(
@@ -263,14 +269,18 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
       }
     };
 
-    ws.onclose = () => {
+    ws.onclose = (event: CloseEvent) => {
       console.log("WebSocket disconnected");
+
+      console.log("Close event code:", event?.code);
+      console.log("Close event reason:", event?.reason);
+
       setIsConnected(false);
       if (reconnectAttempts > 3) {
         console.warn("Connection lost. Trying to reconnect...");
       }
       if (reconnectAttempts > 0 || token) {
-        // reconnectWebSocket();
+        reconnectWebSocket();
       }
     };
 
@@ -347,8 +357,8 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
         );
 
         if (!cachedLastMessage) {
-          sendMessage({ type: "history", community_id: community.id });
-        } else if (userId && cachedLastMessage.sender_id !== userId) {
+          sendMessage({ type: "fetch_history", community_id: community.id });
+        } else if (userId && JSON.parse(cachedLastMessage).sender_id !== userId) {
           setUnreadCommunityMessages((prev) => ({
             ...prev,
             [community.id]: JSON.parse(cachedLastMessage),
@@ -358,7 +368,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
     } catch (error) {
       console.error("Error fetching initial last messages:", error);
     }
-  }, [token, isConnected, sendMessage]);
+  }, [token, isConnected, sendMessage, userId]);
 
   const getCommunityIdFromMessage = async (messageId: string) => {
     const allCachedMessages = await AsyncStorage.multiGet(
@@ -515,10 +525,13 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
     []
   );
 
-  const getCachedCategoryNames = async (): Promise<Record<number, string>> => {
-    const cachedData = await AsyncStorage.getItem("categoryNames");
-    return cachedData ? JSON.parse(cachedData) : {};
-  };
+  const getCachedCategoryNames = useCallback(
+    async (): Promise<Record<number, string>> => {
+      const cachedData = await AsyncStorage.getItem("categoryNames");
+      return cachedData ? JSON.parse(cachedData) : {};
+    },
+    []
+  );
 
   const subscribeToExistingUserCommunities = useCallback(async () => {
     if (socket && isConnected && token) {
@@ -547,7 +560,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
         }
       }
     },
-    [socket, isConnected]
+    [socket, isConnected, sendMessage]
   );
 
   const updateCachedCommunities = async (communityId: string | number) => {
@@ -582,13 +595,9 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
             "communities",
             JSON.stringify(communities)
           );
-          await AsyncStorage.setItem(
-            "communities",
-            JSON.stringify(communities)
-          );
           console.log("Communities fetched and cached.");
         } else {
-          // console.log("Communities already cached.");
+          console.log("Communities already cached.");
         }
       } catch (error) {
         console.error("Failed to fetch or cache communities:", error);
@@ -607,7 +616,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
           await AsyncStorage.setItem("courses", JSON.stringify(courses));
           console.log("Courses fetched and cached.");
         } else {
-          // console.log("Courses already cached.");
+          console.log("Courses already cached.");
         }
       } catch (error) {
         console.error("Failed to fetch or cache courses:", error);
@@ -629,7 +638,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
           );
           console.log("Course categories fetched and cached.");
         } else {
-          // console.log("Course categories already cached.");
+          console.log("Course categories already cached.");
         }
       } catch (error) {
         console.error("Failed to fetch or cache course categories:", error);
@@ -646,28 +655,15 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
     const loadAndCacheData = async () => {
       if (token && isConnected) {
         try {
-          // Fetch and cache communities
           await fetchAndCacheCommunities();
-
-          // Fetch and cache courses
           await fetchAndCacheCourses();
-
-          // Fetch and cache course categories
           await fetchAndCacheCourseCategories();
-
-          // Fetch and cache today's plans for the current date
           await fetchAndCacheTodayPlans(token, new Date());
-
-          // Fetch and cache category names
           await fetchAndCacheCategoryNames(token);
-
-          // Fetch messages for communities
           const communities = await getUserCommunities(token);
           for (const community of communities) {
             sendMessage({ type: "fetch_history", community_id: community.id });
           }
-
-          // Fetch initial last messages for unread count and notification purposes
           await fetchInitialLastMessages();
         } catch (error) {
           console.error("Error during initial data load:", error);
@@ -685,6 +681,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
     fetchAndCacheTodayPlans,
     fetchAndCacheCategoryNames,
     sendMessage,
+    fetchInitialLastMessages,
   ]);
 
   const contextValue: WebSocketContextType = {

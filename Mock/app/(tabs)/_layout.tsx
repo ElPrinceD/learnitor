@@ -52,7 +52,8 @@ export default function TabLayout() {
     <SafeAreaProvider>
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
+          tabBarActiveTintColor: Colors[colorScheme ?? "light"].text,
+          
 
           tabBarLabelStyle: { fontSize: 13 },
           tabBarStyle: {
@@ -62,6 +63,7 @@ export default function TabLayout() {
               height: 2,
             },
             borderTopWidth: 0,
+         
             shadowOpacity: 0.25,
             shadowRadius: 3.84,
             elevation: 5,
@@ -74,7 +76,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="home"
           options={{
-            title: "Home",
+            title: "Relax",
             tabBarIcon: ({ color, focused }) => (
               <TabBarIcon name="home" color={color} focused={focused} />
             ),
@@ -116,7 +118,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="(two)"
           options={{
-            title: "Courses",
+            title: "Learn",
             tabBarIcon: ({ color, focused }) => (
               <TabBarIcon name="book" color={color} focused={focused} />
             ),
@@ -128,16 +130,16 @@ export default function TabLayout() {
         <Tabs.Screen
           name="(community)"
           options={{
-            title: "Community",
+            title: "Squad",
             tabBarIcon: ({ color, focused }) => (
-              <View>
+              <View style={{backgroundColor: "transaparent"}}>
                 <TabBarIcon
                   name="account-group"
                   color={color}
                   focused={focused}
                 />
                 {unreadCommunitiesCount > 0 && (
-                  <View style={styles.badge}>
+                  <View style={[styles.badge, {backgroundColor:Colors[colorScheme ?? "light"].tint }]}>
                     <Text style={styles.badgeText}>
                       {unreadCommunitiesCount}
                     </Text>
@@ -153,7 +155,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="(reminder)"
           options={{
-            title: "Timeline",
+            title: "To Do",
             tabBarIcon: ({ color, focused }) => (
               <TabBarIcon
                 name="calendar-clock"
@@ -192,7 +194,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 15,
     top: -3,
-    backgroundColor: "red",
+    
     borderRadius: 10,
     width: 20,
     height: 20,

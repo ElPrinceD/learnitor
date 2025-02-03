@@ -4,6 +4,7 @@ import CommunityScreen from "./CommunityScreen";
 import CreateCommunity from "./CreateCommunity";
 import CommunityDetailScreen from "./CommunityDetailScreen";
 import EditCommunityScreen from "./EditCommunityScreen";
+import { FontAwesome6, Ionicons } from "@expo/vector-icons";
 import Colors from "../../../constants/Colors";
 import { useColorScheme, TouchableOpacity, Text, View } from "react-native";
 import { rMS } from "../../../constants";
@@ -56,7 +57,7 @@ export default function CommunityLayout() {
           const communityName = route.params?.name ?? "Community";
 
           return {
-            title: "Community Info",
+            title: "Squad Info",
             headerBackTitle: "Back",
             headerRight: () => (
               <TouchableOpacity
@@ -66,9 +67,7 @@ export default function CommunityLayout() {
                   })
                 }
               >
-                <Text style={{ color: themeColors.text, marginRight: 10, fontSize: rMS(19) }}>
-                  Edit
-                </Text>
+                <Ionicons name="settings-outline" size={24} color={themeColors.text} />
               </TouchableOpacity>
             ),
           };

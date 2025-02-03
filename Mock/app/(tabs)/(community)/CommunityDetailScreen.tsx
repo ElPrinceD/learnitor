@@ -10,6 +10,7 @@ import {
   useColorScheme,
   Share,
   Alert,
+  ScrollView,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import {
@@ -19,36 +20,35 @@ import {
 import { useAuth } from "../../../components/AuthContext";
 import Colors from "../../../constants/Colors";
 import { Community } from "../../../components/types";
-import { FontAwesome6 } from "@expo/vector-icons";
+import { FontAwesome6, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { useWebSocket } from "../../../webSocketProvider";
+import { rMS, rV } from "../../../constants";
 
-// Define the type for route params
 type RouteParams = {
-  id: string; // Community ID
+  id: string;
 };
 
 const CommunityDetailScreen: React.FC = () => {
   const route = useRoute();
   const { id } = route.params as RouteParams;
-  console.log("I: ",route.params)
   const navigation = useNavigation();
   const { userToken } = useAuth();
   const { unsubscribeFromCommunity } = useWebSocket() || { unsubscribeFromCommunity: () => {} };
   const [community, setCommunity] = useState<Community | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"Links" | "Documents" | "Images">(
-    "Links"
-  );
+  const [activeTab, setActiveTab] = useState<"Photo" | "Calendar" | "Member">("Calendar");
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+
+  // State for managing the current day
+  const [currentDay, setCurrentDay] = useState(new Date());
 
   useEffect(() => {
     const fetchCommunity = async () => {
       try {
-        // Check if community data is cached
         const cachedCommunity = await AsyncStorage.getItem(`community_${id}`);
         if (cachedCommunity) {
           setCommunity(JSON.parse(cachedCommunity));
@@ -58,9 +58,7 @@ const CommunityDetailScreen: React.FC = () => {
 
         if (userToken?.token) {
           const data = await getCommunityDetails(id, userToken?.token);
-          console.log("Community data: ", data)
           setCommunity(data);
-          // Cache the community data
           await AsyncStorage.setItem(`community_${id}`, JSON.stringify(data));
         } else {
           setError("User not authenticated.");
@@ -73,7 +71,7 @@ const CommunityDetailScreen: React.FC = () => {
       }
     };
 
-    if (id) fetchCommunity(); // Ensure id is defined before fetching
+    if (id) fetchCommunity();
   }, [id, userToken?.token]);
 
   const shareCommunity = async () => {
@@ -83,12 +81,9 @@ const CommunityDetailScreen: React.FC = () => {
       });
       if (result.action === Share.sharedAction) {
         if (result.activityType) {
-          // Shared with activity type of result.activityType
         } else {
-          // Shared
         }
       } else if (result.action === Share.dismissedAction) {
-        // Dismissed
       }
     } catch (error) {
       console.error("Error sharing community:", error);
@@ -119,20 +114,14 @@ const CommunityDetailScreen: React.FC = () => {
         await leaveCommunity(id, userToken?.token);
         Alert.alert("Success", "You have left the community.");
         
-        // Unsubscribe from WebSocket community group
         if (unsubscribeFromCommunity) {
           unsubscribeFromCommunity(id);
         }
 
-        // Navigate back to community list or home screen
-        router.navigate("/"); // Adjust this path as per your app's navigation structure
+        router.navigate("/");
 
-        // Clear cached data for this community
         await AsyncStorage.removeItem(`community_${id}`);
-
-        // Also remove this community from the cached list of user's communities
         await removeCommunityFromCache(id);
-
       } else {
         Alert.alert("Error", "User not authenticated.");
       }
@@ -142,7 +131,6 @@ const CommunityDetailScreen: React.FC = () => {
     }
   };
 
-  // Helper function to remove a community from the cached list of user's communities
   const removeCommunityFromCache = async (communityId: string) => {
     try {
       const cachedCommunities = await AsyncStorage.getItem('communities');
@@ -156,12 +144,34 @@ const CommunityDetailScreen: React.FC = () => {
     }
   };
 
+  // Function to get the day of the week
+  const getDayOfWeek = (date: Date) => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[date.getDay()];
+  };
+
+  // Function to move to the previous day
+  const previousDay = () => {
+    const newDate = new Date(currentDay);
+    newDate.setDate(newDate.getDate() - 1);
+    setCurrentDay(newDate);
+  };
+
+  // Function to move to the next day
+  const nextDay = () => {
+    const newDate = new Date(currentDay);
+    newDate.setDate(newDate.getDate() + 1);
+    setCurrentDay(newDate);
+  };
+
+  // Helper function to get date for display
+  const getDisplayDate = (date: Date) => {
+    return date.getDate().toString().padStart(2, '0');
+  };
 
   if (loading) {
     return (
-      <View
-        style={[styles.container, { backgroundColor: themeColors.background }]}
-      >
+      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
         <ActivityIndicator size="large" color={themeColors.tint} />
       </View>
     );
@@ -169,9 +179,7 @@ const CommunityDetailScreen: React.FC = () => {
 
   if (error) {
     return (
-      <View
-        style={[styles.container, { backgroundColor: themeColors.background }]}
-      >
+      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
         <Text style={{ color: themeColors.text }}>{error}</Text>
       </View>
     );
@@ -179,202 +187,165 @@ const CommunityDetailScreen: React.FC = () => {
 
   if (!community) {
     return (
-      <View
-        style={[styles.container, { backgroundColor: themeColors.background }]}
-      >
+      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
         <Text style={{ color: themeColors.text }}>Community not found.</Text>
       </View>
     );
   }
 
-  // Sort members alphabetically by first name
   const sortedMembers = community.members?.sort((a, b) =>
     a.first_name.localeCompare(b.first_name)
   );
 
+  // Simulating events for demonstration
+  const events = [
+    {
+      day: 'Monday',
+      date: 7,
+      startTime: '4:00 PM',
+      endTime: '6:00 PM',
+      lecturer: 'Dr. Jane Doe',
+      subject: 'Quantum Physics',
+      location: 'Lecture Hall A',
+    },
+    {
+      day: 'Thursday',
+      date: 10,
+      startTime: '4:15 PM',
+      endTime: '5:45 PM',
+      lecturer: 'Prof. John Smith',
+      subject: 'Advanced Calculus',
+      location: 'Room 201',
+    },
+  ];
+
   return (
-    <View
-      style={[styles.container, { backgroundColor: themeColors.background }]}
-    >
-      <View style={styles.communityHeader}>
-        <Image
-          source={{ uri: community.image_url }}
-          style={styles.profilePicture}
-        />
-        <Text style={[styles.communityName, { color: themeColors.text }]}>
-          {community.name}
-        </Text>
-        <Text
-          style={[styles.membersCount, { color: themeColors.textSecondary }]}
-        >
-          {community.members?.length} Members
-        </Text>
-        <View style={styles.iconRow}>
-          <View
-            style={[
-              styles.iconContainer,
-              { backgroundColor: themeColors.reverseText },
-            ]}
-          >
-            <FontAwesome6 name="bell" size={24} color={themeColors.text} />
-            <Text
-              style={[styles.iconLabel, { color: themeColors.textSecondary }]}
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      {/* Community Info */}
+      <View style={styles.communityInfo}>
+        <Image source={{ uri: community.image_url }} style={styles.profilePicture} />
+        <Text style={[styles.communityName, { color: themeColors.text }]}>{community.name}</Text>
+        
+        <View style={styles.communityStats}>
+          <View style={styles.statItem}>
+            <FontAwesome6 name="crown" size={16} color={themeColors.text} />
+            <Text style={[styles.statText, { color: themeColors.textSecondary }]}>Leader</Text>
+          </View>
+          <View style={[styles.statItem, styles.statDivider]}>
+            <FontAwesome6 name="users" size={16} color={themeColors.text} />
+            <Text style={[styles.statText, { color: themeColors.textSecondary }]}>{community.members?.length}+ Member</Text>
+          </View>
+          <TouchableOpacity style={[styles.statItem, styles.statDivider]} onPress={shareCommunity}>
+            <FontAwesome6 name="share" size={16} color={themeColors.text} />
+            <Text style={[styles.statText, { color: themeColors.textSecondary }]}>Share</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Tabs */}
+      <View style={styles.bottom}>
+        <View style={styles.tabsContainer}>
+          {['Photo', 'Calendar', 'Member'].map(tab => (
+            <TouchableOpacity
+              key={tab}
+              style={[
+                styles.tab,
+                activeTab === tab && { backgroundColor: themeColors.tint },
+              ]}
+              onPress={() => setActiveTab(tab as any)}
             >
-              Mute
+              <Text style={[styles.tabText, activeTab === tab && { color: '#fff' }]}>{tab}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Content based on Active Tab */}
+        <ScrollView style={styles.contentContainer}>
+          {activeTab === "Photo" && (
+            <Text style={{ color: themeColors.text }}>Photo Content</Text>
+          )}
+          {activeTab === "Calendar" && (
+            <View style={styles.calendarContainer}>
+              {/* Navigation arrows */}
+              <View style={styles.calendarNav}>
+               
+                <Text style={[styles.calendarMonth2, { color: themeColors.reverseGrey }]}>
+                  {getDayOfWeek(new Date(currentDay.getTime() - 86400000))} {/* Previous Day */}
+                </Text>
+                <TouchableOpacity onPress={previousDay}>
+                  <Ionicons name="chevron-back" size={24} color={themeColors.text} />
+                </TouchableOpacity>
+                <Text style={[styles.calendarMonth, { color: themeColors.text }]}>
+                  {getDayOfWeek(currentDay)} {/* Current Day */}
+                </Text>
+                <TouchableOpacity onPress={nextDay}>
+                  <Ionicons name="chevron-forward" size={24} color={themeColors.text} />
+                </TouchableOpacity>
+                <Text style={[styles.calendarMonth2, { color: themeColors.reverseGrey }]}>
+                  {getDayOfWeek(new Date(currentDay.getTime() + 86400000))} {/* Next Day */}
+                </Text>
+               
+              </View>
+
+                 {/* Events */}
+                 {events.map((event, index) => {
+  // Check if the event's day matches the current day
+  if (getDayOfWeek(currentDay) === event.day) {
+    return (
+      <View key={index} style={styles.event}>
+        <View style={styles.eventHeader}>
+          <Text style={[styles.eventDay, { color: themeColors.text }]}>{event.startTime}</Text>
+          <Text style={[styles.eventDay, { color: themeColors.text }]}>-</Text>
+          <Text style={[styles.eventDay, { color: themeColors.text }]}>{event.endTime}</Text>
+        </View>
+        <View style={styles.eventDetailsContainer}>
+          <View style={styles.eventDetailRow}>
+            <FontAwesome6 name="user" size={18} color={themeColors.textSecondary} />
+            <Text style={[styles.eventDetailText, { color: themeColors.textSecondary }]}>
+              {event.lecturer}
             </Text>
           </View>
-          <TouchableOpacity
-            style={[
-              styles.iconContainer,
-              { backgroundColor: themeColors.reverseText },
-            ]}
-            onPress={confirmLeaveCommunity}
-          >
-            <FontAwesome6
-              name="right-from-bracket"
-              size={24}
-              color={themeColors.text}
-            />
-            <Text
-              style={[styles.iconLabel, { color: themeColors.textSecondary }]}
-            >
-              Leave
+          <View style={styles.eventDetailRow}>
+            <MaterialIcons name="location-on" size={20} color={themeColors.textSecondary} />
+            <Text style={[styles.eventDetailText, { color: themeColors.textSecondary }]}>
+              {event.location}
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.iconContainer,
-              { backgroundColor: themeColors.reverseText },
-            ]}
-            onPress={shareCommunity}
-          >
-            <FontAwesome6 name="share" size={24} color={themeColors.text} />
-            <Text
-              style={[styles.iconLabel, { color: themeColors.textSecondary }]}
-            >
-              Share
+          </View>
+          <View style={styles.eventDetailRow}>
+            <MaterialIcons name="book" size={20} color={themeColors.textSecondary} />
+            <Text style={[styles.eventDetailText, { color: themeColors.text }]}>
+              {event.subject}
             </Text>
-          </TouchableOpacity>
+          </View>
         </View>
       </View>
-
-      {/* Members Section */}
-      <View
-        style={[
-          styles.membersSection,
-          { backgroundColor: themeColors.reverseText },
-        ]}
-      >
-        <Text style={[styles.membersTitle, { color: themeColors.text }]}>
-          Members
-        </Text>
-        <FlatList
-          data={sortedMembers}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <View style={styles.memberItem}>
-              <Image
-                source={{ uri: item.profile_picture }}
-                style={styles.memberPicture}
-              />
-              <Text style={[styles.memberName, { color: themeColors.text }]}>
-                {item.first_name} {item.last_name}
-              </Text>
+    );
+  }
+  return null; // If the event's day doesn't match, don't render it
+})}
             </View>
           )}
-          ListEmptyComponent={
-            <Text
-              style={[
-                styles.noMembersText,
-                { color: themeColors.textSecondary },
-              ]}
-            >
-              No members found.
-            </Text>
-          }
-        />
+          {activeTab === "Member" && (
+            <View style={styles.membersContainer}>
+              <FlatList
+                data={sortedMembers}
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={({ item }) => (
+                  <View style={styles.memberItem}>
+                    <Image source={{ uri: item.profile_picture }} style={styles.memberPicture} />
+                    <Text style={[styles.memberName, { color: themeColors.text }]}>{item.first_name} {item.last_name}</Text>
+                  </View>
+                )}
+                ListEmptyComponent={
+                  <Text style={[styles.noMembersText, { color: themeColors.textSecondary }]}>
+                    No members found.
+                  </Text>
+                }
+              />
+            </View>
+          )}
+        </ScrollView>
       </View>
-
-      {/* Mini Tabs */}
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === "Links" && {
-              backgroundColor: themeColors.background,
-            },
-          ]}
-          onPress={() => setActiveTab("Links")}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              { color: themeColors.text },
-              activeTab === "Links" && { color: themeColors.tint },
-            ]}
-          >
-            Links
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === "Documents" && {
-              backgroundColor: themeColors.background,
-            },
-          ]}
-          onPress={() => setActiveTab("Documents")}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              { color: themeColors.text },
-              activeTab === "Documents" && { color: themeColors.tint },
-            ]}
-          >
-            Documents
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === "Images" && {
-              backgroundColor: themeColors.background,
-            },
-          ]}
-          onPress={() => setActiveTab("Images")}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              { color: themeColors.text },
-              activeTab === "Images" && { color: themeColors.tint },
-            ]}
-          >
-            Images
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Render Content Based on Active Tab */}
-      {activeTab === "Links" && (
-        <View>
-          <Text style={{ color: themeColors.text }}>Links Content</Text>
-          {/* Add the actual Links content here */}
-        </View>
-      )}
-      {activeTab === "Documents" && (
-        <View>
-          <Text style={{ color: themeColors.text }}>Documents Content</Text>
-          {/* Add the actual Documents content here */}
-        </View>
-      )}
-      {activeTab === "Images" && (
-        <View>
-          <Text style={{ color: themeColors.text }}>Images Content</Text>
-          {/* Add the actual Images content here */}
-        </View>
-      )}
     </View>
   );
 };
@@ -382,11 +353,46 @@ const CommunityDetailScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
   },
-  communityHeader: {
-    alignItems: "center",
-    marginBottom: 10,
+  calendarNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginHorizontal: rV(20),
+  
+  },
+  calendarMonth: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  calendarMonth2: {
+    fontSize: 16,
+    fontWeight: 'normal',
+  },
+  statDivider: {
+    borderLeftWidth: 2, // Add a left border to create the line
+    borderLeftColor: 'white', // Set the color to white
+  },
+  bottom: {
+    backgroundColor: "white", 
+    height: "100%", 
+    width: "100%",
+    borderTopLeftRadius: rMS(30),
+    borderTopRightRadius: rMS(30)
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  communityInfo: {
+    alignItems: 'center',
+    marginBottom: 20,
   },
   profilePicture: {
     width: 100,
@@ -395,58 +401,90 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   communityName: {
-    fontSize: 30,
-    fontWeight: "bold",
-    textAlign: "center",
-  },
-  membersCount: {
-    fontSize: 18,
-    textAlign: "center",
+    fontSize: 24,
+    fontWeight: 'bold',
     marginVertical: 5,
   },
-  iconRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginVertical: 10,
+  communityHandleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
   },
-  iconContainer: {
-    alignItems: "center",
-    paddingHorizontal: 40,
-    paddingVertical: 7,
-    borderRadius: 10,
-    marginHorizontal: 5,
+  communityHandle: {
+    fontSize: 16,
+    color: '#666',
   },
-  iconLabel: {
+  copyIcon: {
+    marginLeft: 5,
+  },
+  communityStats: {
+    flexDirection: 'row',
+    marginTop: rMS(20),
+    justifyContent: 'space-around',
+    width: '100%',
+  },
+  statItem: {
+    alignItems: 'center',
+    flex: 1, 
+  },
+  statText: {
     fontSize: 14,
     marginTop: 5,
   },
   tabsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
+    flexDirection: 'row',
+    justifyContent: 'space-around',
     marginVertical: 10,
   },
   tab: {
     paddingVertical: 10,
     paddingHorizontal: 20,
-    borderRadius: 10,
+    borderRadius: 20,
   },
   tabText: {
     fontSize: 16,
   },
-  membersSection: {
-    marginVertical: 10,
-    paddingVertical: 10,
-    borderRadius: 10,
-    paddingHorizontal: 10,
+  contentContainer: {
+    flex: 1,
   },
-  membersTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
+  calendarContainer: {
+    padding: 10,
+  },
+  event: {
+    backgroundColor: '#E0F7FA',
+    borderRadius: 10,
+    padding: 15,
     marginBottom: 10,
+    flexDirection: 'row', // Keep row for overall layout
+    justifyContent: 'space-between', // This will push details to the right
+  },
+  eventHeader: {
+    flexDirection: 'column', // Change to column to stack times vertically
+    alignItems: 'flex-start', // Align items to the start (left)
+  },
+  eventDay: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 2, // Add some space between start time, dash, and end time
+  },
+  eventDetailsContainer: {
+    // No need for marginLeft here since we're aligning to the right
+  },
+  eventDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  eventDetailText: {
+    marginLeft: 10,
+    fontSize: 14,
+  },
+  bersContainer: {
+    padding: 10,
   },
   memberItem: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 10,
   },
   memberPicture: {
@@ -459,8 +497,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   noMembersText: {
-    textAlign: "center",
+    textAlign: 'center',
     fontSize: 16,
+  },
+  leaveButton: {
+    backgroundColor: '#FF5252',
+    borderRadius: 10,
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    alignSelf: 'center',
+    marginTop: 20,
+  },
+  leaveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 
