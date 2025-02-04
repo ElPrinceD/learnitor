@@ -164,15 +164,14 @@ const CreateTimetablePage: React.FC = () => {
           const timetableId = data.id;
 
           // Update periods with the timetable ID
-          setPeriods((prevPeriods) =>
-            prevPeriods.map((period) => ({
-              ...period,
-              timetable: timetableId,
-            }))
-          );
+          const updatedPeriods = periods.map((period) => ({
+            ...period,
+            timetable: timetableId,
+          }));
+
           createPeriodMutation.mutate(
             {
-              periodData: periods,
+              periodData: updatedPeriods,
               token: userToken?.token!,
             },
             {
