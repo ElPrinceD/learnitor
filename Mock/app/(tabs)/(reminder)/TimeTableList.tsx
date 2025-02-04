@@ -8,14 +8,17 @@ import {
   useColorScheme,
   Share,
   RefreshControl,
+  Modal,
 } from "react-native";
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery } from "@tanstack/react-query";
 import { useAuth } from "../../../components/AuthContext";
 import {
   createPeriod,
   createTimetable,
+  deleteTimetable,
   getTimetables,
   getUserDetails,
+  updateTimetable,
 } from "../../../TimelineApiCalls";
 import Colors from "../../../constants/Colors";
 import { rMS, rS, rV, SIZES } from "../../../constants";
@@ -26,6 +29,7 @@ import GameButton from "../../../components/GameButton";
 import { Skeleton } from "moti/skeleton";
 import { User } from "../../../components/types";
 import { FontAwesome6 } from "@expo/vector-icons";
+import AnimatedTextInput from "../../../components/AnimatedTextInput";
 
 interface Timetable {
   id: number;
@@ -40,32 +44,79 @@ interface Timetable {
 const TimetableListPage: React.FC = memo(() => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedTimetable, setSelectedTimetable] = useState<Timetable | null>(
+    null
+  );
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
   const { userToken } = useAuth();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
+  // UseQuery for fetching timetables
   const {
     data: timetables,
     isLoading,
     isError: timetableError,
     refetch: refetchTimetables,
   } = useQuery<Timetable[], Error>({
-    queryKey: [userToken, "timetables"],
+    queryKey: ["timetables", userToken],
     queryFn: () => getTimetables(userToken?.token!),
     refetchOnWindowFocus: true,
   });
 
+  // UseQueries for fetching user details
   const userQueries = useQueries({
     queries: useMemo(
       () =>
         (timetables || []).map((timetable) => ({
-          queryKey: [userToken, "user", timetable.created_by],
+          queryKey: ["user", timetable.created_by],
           queryFn: () =>
             getUserDetails(timetable.created_by, userToken?.token!),
           enabled: !!timetables,
         })),
       [timetables, userToken]
     ),
+  });
+
+  // Mutation for updating a timetable
+  const updateTimetableMutation = useMutation({
+    mutationFn: async ({
+      id,
+      name,
+      description,
+    }: {
+      id: number;
+      name: string;
+      description: string;
+    }) => {
+      return await updateTimetable(
+        { id, name, description },
+        userToken?.token!
+      );
+    },
+    onSuccess: () => {
+      refetchTimetables();
+      setModalVisible(false);
+    },
+    onError: (error: Error) => {
+      setErrorMessage("Error updating timetable");
+    },
+  });
+
+  // Mutation for deleting a timetable
+  const deleteTimetableMutation = useMutation({
+    mutationFn: async ({ id }: { id: number }) => {
+      return await deleteTimetable(id, userToken?.token!);
+    },
+    onSuccess: () => {
+      refetchTimetables();
+      setModalVisible(false);
+    },
+    onError: (error: Error) => {
+      setErrorMessage("Error deleting timetable");
+    },
   });
 
   useEffect(() => {
@@ -85,6 +136,31 @@ const TimetableListPage: React.FC = memo(() => {
       console.error("Error sharing timetable:", error);
     }
   }, []);
+
+  const openEditModal = useCallback((timetable: Timetable) => {
+    setSelectedTimetable(timetable);
+    setEditName(timetable.name);
+    setEditDescription(timetable.description);
+    setModalVisible(true);
+  }, []);
+
+  const handleUpdate = useCallback(() => {
+    if (selectedTimetable) {
+      updateTimetableMutation.mutate({
+        id: selectedTimetable.id,
+        name: editName,
+        description: editDescription,
+      });
+    }
+  }, [selectedTimetable, editName, editDescription, updateTimetableMutation]);
+
+  const handleDelete = useCallback(() => {
+    if (selectedTimetable) {
+      deleteTimetableMutation.mutate({
+        id: selectedTimetable.id,
+      });
+    }
+  }, [selectedTimetable, deleteTimetableMutation]);
 
   const styles = useMemo(
     () =>
@@ -170,6 +246,35 @@ const TimetableListPage: React.FC = memo(() => {
           marginVertical: rV(5),
           borderRadius: rS(8),
         },
+        modalContainer: {
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "rgba(0, 0, 0, 0.5)",
+        },
+        modalContent: {
+          backgroundColor: themeColors.background,
+          padding: rV(20),
+          borderRadius: rS(10),
+          width: "80%",
+        },
+        modalButton: {
+          marginTop: rV(10),
+          paddingVertical: rV(10),
+          backgroundColor: themeColors.tint,
+          borderRadius: 10,
+        },
+        modalButtonText: {
+          color: themeColors.text,
+          textAlign: "center",
+        },
+        // New style for ErrorMessage
+        errorOverlay: {
+          // position: "absolute",
+          // right: rS(20),
+          bottom: rV(45),
+          zIndex: 10,
+        },
       }),
     [themeColors]
   );
@@ -233,7 +338,7 @@ const TimetableListPage: React.FC = memo(() => {
               />
             </TouchableOpacity>
             <TouchableOpacity
-              onPressIn={() => console.log("Edit timetable", item.id)}
+              onPressIn={() => openEditModal(item)}
               style={styles.editButton}
             >
               <Icon name="create-outline" size={20} color={themeColors.text} />
@@ -242,7 +347,7 @@ const TimetableListPage: React.FC = memo(() => {
         </TouchableOpacity>
       );
     },
-    [styles, themeColors, handleShare, userQueries]
+    [styles, themeColors, handleShare, userQueries, openEditModal]
   );
 
   const onRefresh = useCallback(() => {
@@ -261,34 +366,79 @@ const TimetableListPage: React.FC = memo(() => {
   }
 
   return (
-    <View>
-      <FlatList
-        data={timetables}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.container}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={themeColors.tint}
-            colors={[themeColors.tint, themeColors.text]}
-            progressBackgroundColor={themeColors.background}
+    <>
+      <View style={{ flex: 1 }}>
+        <FlatList
+          data={timetables}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={styles.container}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={themeColors.tint}
+              colors={[themeColors.tint, themeColors.text]}
+              progressBackgroundColor={themeColors.background}
+            />
+          }
+        />
+        <GameButton
+          style={styles.createButton}
+          onPress={() => router.push("TimeTable")}
+        >
+          <FontAwesome6
+            name="add"
+            size={SIZES.xLarge}
+            color={themeColors.text}
           />
-        }
-      />
-      <GameButton
-        style={styles.createButton}
-        onPress={() => router.push("TimeTable")}
-      >
-        <FontAwesome6 name="add" size={SIZES.xLarge} color={themeColors.text} />
-      </GameButton>
-      <ErrorMessage
-        message={errorMessage}
-        visible={!!errorMessage}
-        onDismiss={() => setErrorMessage(null)}
-      />
-    </View>
+        </GameButton>
+
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <AnimatedTextInput
+                label="Name"
+                value={editName}
+                onChangeText={setEditName}
+              />
+              <AnimatedTextInput
+                label="Description"
+                value={editDescription}
+                onChangeText={setEditDescription}
+              />
+              <GameButton
+                onPress={handleUpdate}
+                style={styles.modalButton}
+                title="Update"
+              />
+              <GameButton
+                onPress={handleDelete}
+                style={[
+                  styles.modalButton,
+                  { backgroundColor: themeColors.errorBackground },
+                ]}
+                title="Delete"
+              />
+            </View>
+          </View>
+        </Modal>
+      </View>
+      {errorMessage && (
+        <View style={styles.errorOverlay}>
+          <ErrorMessage
+            message={errorMessage}
+            visible={!!errorMessage}
+            onDismiss={() => setErrorMessage(null)}
+          />
+        </View>
+      )}
+    </>
   );
 });
 

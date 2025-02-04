@@ -11,9 +11,11 @@ import { useAuth } from "../../../components/AuthContext";
 import { getTimetable } from "../../../TimelineApiCalls";
 import Colors from "../../../constants/Colors";
 import TimetableDisplay from "../../../components/TimetableDisplay";
-import { useLocalSearchParams } from "expo-router";
-import { rMS } from "../../../constants";
+import { router, useLocalSearchParams } from "expo-router";
+import { rMS, rS, rV, SIZES } from "../../../constants";
 import ErrorMessage from "../../../components/ErrorMessage"; // Assuming you have this component
+import GameButton from "../../../components/GameButton";
+import { FontAwesome6 } from "@expo/vector-icons";
 
 interface Period {
   course_name: string;
@@ -82,6 +84,17 @@ const TimetableDetailPage = () => {
       justifyContent: "center",
       alignItems: "center",
     },
+    editButton: {
+      position: "absolute",
+      right: rS(20),
+      bottom: rV(75),
+      width: 60,
+      height: 60,
+      borderRadius: 20,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: themeColors.buttonBackground,
+    },
   });
 
   if (isLoading) {
@@ -99,12 +112,28 @@ const TimetableDetailPage = () => {
       </View>
     );
   }
+  console.log(timetable.periods);
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{timetable.name}</Text>
       <Text style={styles.description}>{timetable.description}</Text>
       <TimetableDisplay periods={timetable.periods} />
+      <GameButton
+        style={styles.editButton}
+        onPress={() =>
+          router.push({
+            pathname: "EditPeriods",
+            params: { timetableId: timetable.id },
+          })
+        }
+      >
+        <FontAwesome6
+          name="edit"
+          size={SIZES.xLarge}
+          color={themeColors.text}
+        />
+      </GameButton>
       <ErrorMessage
         message={errorMessage}
         visible={!!errorMessage}
