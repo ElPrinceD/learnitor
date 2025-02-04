@@ -347,10 +347,19 @@ const CommunityChatScreen: React.FC = () => {
       aspect: [4, 3],
       quality: 1,
     });
-
+  
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      const imageUri = result.assets[0].uri;
-      await sendMediaMessage(imageUri, 'image');
+      const asset = result.assets[0];
+      const file = await fetch(asset.uri);
+      const blob = await file.blob();
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64data = reader.result;
+        // Assuming PNG, adjust if needed
+        const imageBase64 = `data:${blob.type};base64,${base64data.split(',')[1]}`;
+        await sendMediaMessage(imageBase64, 'image');
+      };
+      reader.readAsDataURL(blob);
     }
   };
 
