@@ -16,6 +16,7 @@ import {
   Platform,
   Alert,
 } from "react-native";
+
 import * as Clipboard from "expo-clipboard";
 import { useFocusEffect, useRoute } from "@react-navigation/native";
 import axios from "axios";
@@ -289,14 +290,19 @@ const CommunityChatScreen: React.FC = () => {
       },
       [type]: fileUri,
     };
-
+  
     // Add this message to UI before sending to server
     setMessages((prevMessages) => [message, ...prevMessages]);
-
+  
     // Send to server
+
+    if (!communityId) {
+      console.error('Community ID missing before sending message');
+      return;
+    }
     sendMessage({
       type: "send_message",
-      community_id: communityId,
+      community_id: communityId, // Make sure this is included
       message: "", // Text can be empty for media messages
       sender: user?.first_name + " " + user?.last_name || "Unknown User",
       sender_id: user?.id || 1,
@@ -949,7 +955,7 @@ const CommunityChatScreen: React.FC = () => {
                     fontWeight: "bold",
                   },
                   messageImage: {
-                    width: 200,
+                    width: 300,
                     height: 200,
                     borderRadius: 10,
                     margin: 5,
@@ -1100,7 +1106,7 @@ const CommunityChatScreen: React.FC = () => {
                         renderBubble={renderBubble}
                         renderSend={renderSend}
                         renderInputToolbar={renderInputToolbar}
-                     
+                        renderMessageImage={renderMessageImage}
                         renderMessageDocument={renderMessageDocument}
                         renderDay={renderDay}
                         minInputToolbarHeight={insets.bottom + 50}
