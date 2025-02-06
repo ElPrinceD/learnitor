@@ -16,6 +16,7 @@ import { useRoute, useNavigation } from "@react-navigation/native";
 import {
   getCommunityDetails,
   leaveCommunity,
+  getCommunityMessages
 } from "../../../CommunityApiCalls";
 import { useAuth } from "../../../components/AuthContext";
 import Colors from "../../../constants/Colors";
@@ -41,10 +42,12 @@ const CommunityDetailScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"Photo" | "Calendar" | "Member">("Calendar");
   const colorScheme = useColorScheme();
+  const [communityImages, setCommunityImages] = useState<string[]>([]);
   const themeColors = Colors[colorScheme ?? "light"];
 
   // State for managing the current day
   const [currentDay, setCurrentDay] = useState(new Date());
+  const [imageDimensions, setImageDimensions] = useState<{ [key: string]: { width: number; height: number } }>({});
 
   useEffect(() => {
     const fetchCommunity = async () => {
@@ -71,9 +74,44 @@ const CommunityDetailScreen: React.FC = () => {
       }
     };
 
-    if (id) fetchCommunity();
+    const fetchCommunityImages = async () => {
+      try {
+        if (userToken?.token) {
+          const messages = await getCommunityMessages(id, userToken.token);
+          const images = messages.filter(msg => msg.image).map(msg => msg.image);
+          setCommunityImages(images);
+          
+          // Fetch dimensions for each image
+          images.forEach((imageUrl) => {
+            Image.getSize(imageUrl, (width, height) => {
+              setImageDimensions(prevDimensions => ({
+                ...prevDimensions,
+                [imageUrl]: { width, height }
+              }));
+            }, (error) => {
+              console.error("Failed to get image dimensions for", imageUrl, error);
+            });
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch community images:", error);
+      }
+    };
+
+  
+
+    if (id) {
+      fetchCommunity();
+      fetchCommunityImages();
+    }
+
+
+ 
   }, [id, userToken?.token]);
 
+
+ 
+  
   const shareCommunity = async () => {
     try {
       const result = await Share.share({
@@ -260,10 +298,33 @@ const CommunityDetailScreen: React.FC = () => {
         </View>
 
         {/* Content based on Active Tab */}
-        <ScrollView style={styles.contentContainer}>
+          {/* Content based on Active Tab */}
+          <ScrollView style={styles.contentContainer}>
           {activeTab === "Photo" && (
-            <Text style={{ color: themeColors.text }}>Photo Content</Text>
-          )}
+          <FlatList
+            data={communityImages}
+            numColumns={2} // Two images per row
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({ item }) => {
+              const dimensions = imageDimensions[item] || { width: 100, height: 100 }; // default dimensions if not yet fetched
+              const aspectRatio = dimensions.width / dimensions.height;
+
+              return (
+                <Image 
+                  source={{ uri: item }}
+                  style={{
+                    width: '50%', // Takes half the width of the container
+                    aspectRatio: aspectRatio, // Maintains the image's aspect ratio
+                    resizeMode: 'contain', // Ensure the image fits within these dimensions without cropping
+                  }}
+                />
+              );
+            }}
+            ListEmptyComponent={
+              <Text style={{ color: themeColors.text, textAlign: 'center' }}>No photos available.</Text>
+            }
+          />
+        )}
           {activeTab === "Calendar" && (
             <View style={styles.calendarContainer}>
               {/* Navigation arrows */}

@@ -54,6 +54,7 @@ const CommunityChatScreen: React.FC = () => {
   const { socket, isConnected, sendMessage, markMessageAsRead } = useWebSocket();
   const navigation = useNavigation();
   const [messages, setMessages] = useState<IMessage[]>([]);
+  
   const [messageInput, setMessageInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -159,18 +160,19 @@ const CommunityChatScreen: React.FC = () => {
 
   useEffect(() => {
     let socketCleanup = () => {};
-
+  
     if (socket) {
       const onMessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-
+  
           if (data.type === "history" && data.community_id === communityId) {
+            // Handle history messages here
             const transformedMessages = data.messages
               .map(normalizeMessage)
               .filter((msg): msg is IMessage => msg !== null)
               .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
+  
             setMessages(transformedMessages);
             AsyncStorage.setItem(
               `messages_${communityId}`,
@@ -183,40 +185,47 @@ const CommunityChatScreen: React.FC = () => {
             const newMessage = normalizeMessage(data);
             if (newMessage) {
               setMessages((prevMessages) => {
-                const updatedMessages = [newMessage, ...prevMessages].sort(
-                  (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
-                );
-
-                if (user?.id !== newMessage.user._id) {
-                  socket.send(
+                // Check if the message already exists in the list
+                const found = prevMessages.find((msg) => msg._id === newMessage._id);
+                if (!found) {
+                  const updatedMessages = [newMessage, ...prevMessages].sort(
+                    (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+                  );
+  
+                  if (user?.id !== newMessage.user._id) {
+                    socket.send(
+                      JSON.stringify({
+                        type: "message_status_update",
+                        message_id: newMessage._id,
+                        status: "read",
+                      })
+                    );
+                    updatedMessages[0].status = "read";
+                  }
+  
+                  AsyncStorage.setItem(
+                    `messages_${communityId}`,
+                    JSON.stringify(updatedMessages)
+                  );
+                  AsyncStorage.setItem(
+                    `last_message_${communityId}`,
                     JSON.stringify({
-                      type: "message_status_update",
-                      message_id: newMessage._id,
+                      ...newMessage,
                       status: "read",
                     })
                   );
-                  updatedMessages[0].status = "read";
+                  markMessageAsRead(communityId);
+                  setTimeout(() => {
+                    chatRef.current?.scrollToBottom();
+                  }, 100);
+                  return updatedMessages;
                 }
-
-                AsyncStorage.setItem(
-                  `messages_${communityId}`,
-                  JSON.stringify(updatedMessages)
-                );
-                AsyncStorage.setItem(
-                  `last_message_${communityId}`,
-                  JSON.stringify({
-                    ...newMessage,
-                    status: "read",
-                  })
-                );
-                markMessageAsRead(communityId);
-                setTimeout(() => {
-                  chatRef.current?.scrollToBottom();
-                }, 100);
-                return updatedMessages;
+                // If the message already exists, just return the previous messages
+                return prevMessages;
               });
             }
           } else if (data.type === "message_delete") {
+            // Handle message delete
             setMessages((prevMessages) => {
               const updatedMessages = prevMessages.filter(
                 (m) => m._id !== data.message_id
@@ -234,6 +243,7 @@ const CommunityChatScreen: React.FC = () => {
               return updatedMessages;
             });
           } else if (data.type === "message_edit") {
+            // Handle message edit
             setMessages((prevMessages) => {
               const updatedMessages = prevMessages.map((m) =>
                 m._id === data.message_id
@@ -257,13 +267,13 @@ const CommunityChatScreen: React.FC = () => {
           console.error("Error processing WebSocket message:", error);
         }
       };
-
+  
       socket.addEventListener("message", onMessage);
       socketCleanup = () => {
         socket.removeEventListener("message", onMessage);
       };
     }
-
+  
     return socketCleanup;
   }, [socket, communityId, messages, user]);
 
@@ -294,21 +304,22 @@ const CommunityChatScreen: React.FC = () => {
     // Add this message to UI before sending to server
     setMessages((prevMessages) => [message, ...prevMessages]);
   
-    // Send to server
-
     if (!communityId) {
       console.error('Community ID missing before sending message');
       return;
     }
+    // Send to server
     sendMessage({
       type: "send_message",
-      community_id: communityId, // Make sure this is included
-      message: "", // Text can be empty for media messages
+      community_id: communityId,
+      message: "", 
       sender: user?.first_name + " " + user?.last_name || "Unknown User",
       sender_id: user?.id || 1,
       temp_id: tempId,
       [type]: fileUri
     });
+  
+    // No need to add the message again here, it's already added above
   }, [communityId, sendMessage, user]);
 
   const onSend = useCallback(
@@ -755,10 +766,17 @@ const CommunityChatScreen: React.FC = () => {
   };
 
   const renderMessageImage = (props) => (
-    <TouchableOpacity onPress={() => onImagePress(props.currentMessage.image)}>
-      <Image
+    <TouchableOpacity key={props.currentMessage._id} onPress={() => onImagePress(props.currentMessage.image)}>
+      <Image 
         source={{ uri: props.currentMessage.image }}
-        style={styles.messageImage}
+        style={{
+          width: '100%',
+          maxWidth: 300, // or any other max width you prefer for smaller screens
+          aspectRatio: 1, // maintain aspect ratio
+          borderRadius: 8, // slight roundness to corners
+          marginVertical: 5,
+        }}
+        resizeMode="contain" // or 'cover' if you want the image to cover the container
       />
     </TouchableOpacity>
   );
