@@ -50,29 +50,7 @@ export default function CommunityLayout() {
           
         }}
       />
-      <Stack.Screen
-        name="CommunityDetailScreen"
-        component={CommunityDetailScreen}
-        options={({ route, navigation }) => {
-          const communityName = route.params?.name ?? "Community";
-
-          return {
-            title: "Squad Info",
-            headerBackTitle: "Back",
-            headerRight: () => (
-              <TouchableOpacity
-                onPress={() =>
-                  navigation.navigate("EditCommunityScreen", {
-                    id: route.params?.id,
-                  })
-                }
-              >
-                <Ionicons name="settings-outline" size={24} color={themeColors.text} />
-              </TouchableOpacity>
-            ),
-          };
-        }}
-      />
+      
       <Stack.Screen
         name="EditCommunityScreen"
         component={EditCommunityScreen}

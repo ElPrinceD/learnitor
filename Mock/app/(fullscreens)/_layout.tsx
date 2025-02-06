@@ -4,6 +4,8 @@ import { useColorScheme, Text, TouchableOpacity, Image } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import Colors from "../../constants/Colors";
 import { rMS } from "../../constants"; // Assuming this is defined in the same place
+import { Ionicons } from "@expo/vector-icons";
+import CommunityDetailScreen from "./CommunityDetailScreen";
 
 export default function ChatScreenLayout() {
   const colorScheme = useColorScheme();
@@ -11,7 +13,17 @@ export default function ChatScreenLayout() {
 
   return (
     <SafeAreaProvider>
-      <Stack>
+      <Stack  screenOptions={{
+        headerStyle: {
+          backgroundColor: themeColors.background,
+        },
+        headerTintColor: themeColors.text,
+        headerTitleStyle: {
+          fontWeight: "bold",
+        },
+        headerTitleAlign: "center",
+        headerShadowVisible: false,
+      }}>
         <Stack.Screen
           name="ChatScreen"
           options={({ route, navigation }) => ({
@@ -51,6 +63,30 @@ export default function ChatScreenLayout() {
             headerShadowVisible: false,
           })}
         />
+
+<Stack.Screen
+        name="CommunityDetailScreen"
+        
+        options={({ route, navigation }) => {
+          const communityName = route.params?.name ?? "Community";
+
+          return {
+            title: "Squad Info",
+            headerBackTitle: "Back",
+            headerRight: () => (
+              <TouchableOpacity
+                onPress={() =>
+                  navigation.navigate("EditCommunityScreen", {
+                    id: route.params?.id,
+                  })
+                }
+              >
+                <Ionicons name="settings-outline" size={24} color={themeColors.text} />
+              </TouchableOpacity>
+            ),
+          };
+        }}
+      />
       </Stack>
     </SafeAreaProvider>
   );

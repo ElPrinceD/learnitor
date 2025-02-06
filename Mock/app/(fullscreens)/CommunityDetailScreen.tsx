@@ -17,15 +17,17 @@ import {
   getCommunityDetails,
   leaveCommunity,
   getCommunityMessages
-} from "../../../CommunityApiCalls";
-import { useAuth } from "../../../components/AuthContext";
-import Colors from "../../../constants/Colors";
-import { Community } from "../../../components/types";
+} from "../../CommunityApiCalls";
+import { useAuth } from "../../components/AuthContext";
+import Colors from "../../constants/Colors";
+import { Community } from "../../components/types";
 import { FontAwesome6, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
-import { useWebSocket } from "../../../webSocketProvider";
-import { rMS, rV } from "../../../constants";
+import { useWebSocket } from "../../webSocketProvider";
+import { rMS, rV } from "../../constants";
+import PlanItem from "../../components/PlanItem"; // Assuming this component exists in the given path
+import { SIZES, useShadows, rS } from "../../constants";
 
 type RouteParams = {
   id: string;
@@ -109,6 +111,39 @@ const CommunityDetailScreen: React.FC = () => {
  
   }, [id, userToken?.token]);
 
+
+  const dummyPlanItems = [
+    {
+      id: 1,
+      title: "Math Homework",
+      description: "Complete chapter 4 exercises",
+      due_date: "2023-10-20",
+      due_time_start: "18:00",
+      due_time_end: "20:00",
+      category: 1,
+    },
+    {
+      id: 2,
+      title: "Physics Lab Report",
+      description: "Submit lab report on Newton's laws",
+      due_date: "2023-10-22",
+      due_time_start: "14:00",
+      due_time_end: "16:00",
+      category: 2,
+    },
+  ];
+
+
+  const getCategoryColor = (type) => {
+    switch(type) {
+      case 1:
+        return "#FF5722"; // Example color for category 1
+      case 2:
+        return "#03A9F4"; // Example color for category 2
+      default:
+        return "#000";
+    }
+  };
 
  
   
@@ -348,42 +383,18 @@ const CommunityDetailScreen: React.FC = () => {
                
               </View>
 
-                 {/* Events */}
-                 {events.map((event, index) => {
-  // Check if the event's day matches the current day
-  if (getDayOfWeek(currentDay) === event.day) {
-    return (
-      <View key={index} style={styles.event}>
-        <View style={styles.eventHeader}>
-          <Text style={[styles.eventDay, { color: themeColors.text }]}>{event.startTime}</Text>
-          <Text style={[styles.eventDay, { color: themeColors.text }]}>-</Text>
-          <Text style={[styles.eventDay, { color: themeColors.text }]}>{event.endTime}</Text>
-        </View>
-        <View style={styles.eventDetailsContainer}>
-          <View style={styles.eventDetailRow}>
-            <FontAwesome6 name="user" size={18} color={themeColors.textSecondary} />
-            <Text style={[styles.eventDetailText, { color: themeColors.textSecondary }]}>
-              {event.lecturer}
-            </Text>
-          </View>
-          <View style={styles.eventDetailRow}>
-            <MaterialIcons name="location-on" size={20} color={themeColors.textSecondary} />
-            <Text style={[styles.eventDetailText, { color: themeColors.textSecondary }]}>
-              {event.location}
-            </Text>
-          </View>
-          <View style={styles.eventDetailRow}>
-            <MaterialIcons name="book" size={20} color={themeColors.textSecondary} />
-            <Text style={[styles.eventDetailText, { color: themeColors.text }]}>
-              {event.subject}
-            </Text>
-          </View>
-        </View>
-      </View>
-    );
-  }
-  return null; // If the event's day doesn't match, don't render it
-})}
+              <View style={styles.planItemsContainer}>
+                {dummyPlanItems.map((plan) => (
+                  <View key={plan.id} style={styles.planItemWrapper}>
+                    <PlanItem 
+                      plan={plan}
+                      categoryNames={{ [plan.category]: `Category ${plan.category}` }} // Dummy category names
+                      getCategoryColor={getCategoryColor}
+                      // Note: handleEditPlan is not implemented here since you're just displaying
+                    />
+                  </View>
+                ))}
+              </View>
             </View>
           )}
           {activeTab === "Member" && (
@@ -573,6 +584,15 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  planItemsContainer: {
+    marginTop: rV(18),
+  },
+  planItemWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: rV(8),
+    paddingHorizontal: rS(10),
   },
 });
 
