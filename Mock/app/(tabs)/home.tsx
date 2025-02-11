@@ -4,7 +4,6 @@ import {
   useColorScheme,
   RefreshControl,
   ScrollView,
-  TouchableOpacity,
 } from "react-native";
 import { Text, View } from "../../components/Themed";
 import { useAuth } from "../../components/AuthContext";
@@ -15,16 +14,12 @@ import { getTodayPlans, getCategoryNames } from "../../TimelineApiCalls";
 import {
   getEnrolledCourses,
   getCourseProgress,
-  getRecommendedCourses,
-  getCourseTopics,
-  getPracticeQuestions,
 } from "../../CoursesApiCalls";
+import { getAnnouncements } from "../../companyApiCalls";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "../../QueryClient";
-import { FontAwesome6 } from "@expo/vector-icons";
 
 import ErrorMessage from "../../components/ErrorMessage";
-import RecommendedCoursesList from "../../components/Recommended";
 import EnrolledCoursesList from "../../components/EnrolledCoursesList";
 import ReanimatedCarousel from "../../components/ReanimatedCarousel";
 
@@ -34,6 +29,18 @@ const Home: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Fetch Announcements
+  const {
+    status: announcementsStatus,
+    data: announcementsData = [],
+    error: announcementsError,
+  } = useQuery({
+    queryKey: ["announcements", userToken?.token],
+    queryFn: () => getAnnouncements(userToken?.token!),
+    enabled: !!userToken?.token,
+  });
+
+  // Fetch Enrolled Courses
   const {
     status: enrolledStatus,
     data: enrolledCoursesData,
@@ -44,28 +51,25 @@ const Home: React.FC = () => {
     enabled: !!userToken?.token && !!userInfo?.user?.id,
   });
 
-  const fetchTasks = async () => {
-    if (!userToken?.token) return { tasks: [], categories: {} };
-
-    const date = new Date();
-    const selectedCategory = null; // Adjust this if you have a category filter
-
-    const tasks = await getTodayPlans(userToken.token, date, selectedCategory);
-    const categories = await getCategoryNames(userToken.token);
-
-    return { tasks, categories };
-  };
-
+  // Fetch Tasks
   const {
     status: tasksStatus,
     data: tasksData = { tasks: [], categories: {} },
     error: tasksError,
   } = useQuery({
     queryKey: ["todayTasks", userToken?.token],
-    queryFn: fetchTasks,
+    queryFn: async () => {
+      if (!userToken?.token) return { tasks: [], categories: {} };
+      const date = new Date();
+      return {
+        tasks: await getTodayPlans(userToken.token, date, null),
+        categories: await getCategoryNames(userToken.token),
+      };
+    },
     enabled: !!userToken?.token,
   });
 
+  // Fetch Course Progress
   const {
     status: progressStatus,
     data: progressMap,
@@ -74,7 +78,6 @@ const Home: React.FC = () => {
     queryKey: ["progress", userToken?.token, enrolledCoursesData],
     queryFn: async () => {
       if (!enrolledCoursesData) return {};
-
       const progressPromises = enrolledCoursesData.map(async (course) => {
         const progress = await getCourseProgress(
           userInfo?.user?.id!,
@@ -85,12 +88,10 @@ const Home: React.FC = () => {
       });
 
       const progressArray = await Promise.all(progressPromises);
-      const progressMap: { [key: string]: number } = {};
-      progressArray.forEach((item) => {
-        progressMap[item.courseId] = item.progress;
-      });
-
-      return progressMap;
+      return progressArray.reduce(
+        (acc, item) => ({ ...acc, [item.courseId]: item.progress }),
+        {}
+      );
     },
     enabled: !!userToken?.token && !!enrolledCoursesData,
   });
@@ -99,18 +100,33 @@ const Home: React.FC = () => {
     if (
       enrolledStatus === "error" ||
       progressStatus === "error" ||
-      tasksStatus === "error"
+      tasksStatus === "error" ||
+      announcementsStatus === "error"
     ) {
       setErrorMessage(
         enrolledError?.message ||
           progressError?.message ||
           tasksError?.message ||
+          announcementsError?.message ||
           "An error occurred"
       );
     } else {
       setErrorMessage(null);
     }
-  }, [enrolledStatus, progressStatus, tasksStatus]);
+  }, [enrolledStatus, progressStatus, tasksStatus, announcementsStatus]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ["announcements", userToken?.token] });
+      await queryClient.invalidateQueries({ queryKey: ["enrolledCourses", userToken?.token] });
+      await queryClient.invalidateQueries({ queryKey: ["progress", userToken?.token, enrolledCoursesData] });
+      await queryClient.invalidateQueries({ queryKey: ["todayTasks", userToken?.token] });
+    } finally {
+      setRefreshing(false);
+      setErrorMessage(null);
+    }
+  }, [queryClient, userToken?.token, enrolledCoursesData]);
 
   const themeColors = Colors[colorScheme ?? "light"];
 
@@ -120,36 +136,15 @@ const Home: React.FC = () => {
       padding: rMS(12),
       flexGrow: 2,
     },
-    cardContainer: {
-      flex: 1,
-    },
     coursesContainer: {
       flex: 2.5,
-    },
-    sectionTitleContainer: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: rMS(5),
-      marginTop: rMS(15),
     },
     sectionTitle: {
       fontSize: SIZES.xLarge,
       color: themeColors.text,
       fontWeight: "bold",
-      alignSelf: "flex-start",
-    },
-    seeAllButton: {
-      flexDirection: "row",
-      alignItems: "center",
-    },
-    seeAllText: {
-      fontSize: SIZES.medium,
-      color: themeColors.tint,
-      marginRight: rMS(1),
     },
     taskAndCoursesRow: {
-      // flexDirection: "row",
       justifyContent: "space-between",
       marginTop: rMS(10),
     },
@@ -159,11 +154,11 @@ const Home: React.FC = () => {
       flexDirection: "row",
     },
     taskCountContainer: {
-      flex: 1, // Takes 2/3 of the space
+      flex: 1,
       backgroundColor: "#EF643B",
       marginVertical: rMS(10),
       borderRadius: rMS(10),
-      alignItems: "flex-end", // Align items to the bottom
+      alignItems: "flex-end",
       justifyContent: "center",
     },
     taskCountNumber: {
@@ -175,8 +170,8 @@ const Home: React.FC = () => {
     taskCountText: {
       fontSize: SIZES.small,
       fontWeight: "bold",
-      color: "white", // Changed to white for better visibility against the background
-      marginLeft: rMS(40), // Add some space between number and text if they are next to each other
+      color: "white",
+      marginLeft: rMS(40),
       paddingHorizontal: rS(10),
     },
     taskListContainer: {
@@ -185,53 +180,12 @@ const Home: React.FC = () => {
     },
   });
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await queryClient.invalidateQueries({
-        queryKey: ["coursesWithDetails", userToken?.token],
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ["enrolledCourses", userToken?.token],
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ["progress", userToken?.token, enrolledCoursesData],
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ["todayTasks", userToken?.token],
-      });
-    } finally {
-      setRefreshing(false);
-      setErrorMessage(null);
-    }
-  }, [queryClient, userToken?.token, enrolledCoursesData]);
-
-  const carouselItems = [
-    {
-      title: "",
-      description: "",
-      image:
-        "https://images.pexels.com/photos/2255441/pexels-photo-2255441.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-    },
-    {
-      title: "",
-      description: "",
-      image:
-        "https://images.pexels.com/photos/636237/pexels-photo-636237.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-    },
-    {
-      title: "",
-      description: "",
-      image:
-        "https://images.pexels.com/photos/6185656/pexels-photo-6185656.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-    },
-    {
-      title: "",
-      description: "",
-      image:
-        "https://images.pexels.com/photos/2740955/pexels-photo-2740955.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-    },
-  ];
+  // Transform announcements into carousel items
+  const carouselItems = announcementsData.map((announcement) => ({
+    title: announcement.title,
+    description: announcement.description,
+    image: announcement.image, // Ensure this key matches your API response
+  }));
 
   return (
     <View style={styles.container}>
@@ -273,21 +227,7 @@ const Home: React.FC = () => {
                 )}
               </View>
             </View>
-          ) : (
-            <>
-              <View style={styles.sectionTitleContainer}>
-                {/* <Text style={styles.sectionTitle}>Recommended for you</Text>
-                <TouchableOpacity style={styles.seeAllButton}>
-                  <Text style={styles.seeAllText}>See All </Text>
-                  <FontAwesome6
-                    name="arrow-right"
-                    size={SIZES.medium}
-                    color={themeColors.tint}
-                  />
-                </TouchableOpacity> */}
-              </View>
-            </>
-          )}
+          ) : null}
         </View>
       </ScrollView>
       <ErrorMessage

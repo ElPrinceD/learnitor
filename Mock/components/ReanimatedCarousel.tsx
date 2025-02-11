@@ -116,13 +116,13 @@ const ReanimatedCarousel: React.FC<ReanimatedCarouselProps> = ({ data }) => {
         renderItem={({ item }: { item: CarouselItem }) => (
           <View style={styles.carouselItem}>
             <Image source={{ uri: item.image }} style={styles.image} />
-            <View style={styles.overlay}>
-              <View style={styles.textContainer}>
-                <Text style={styles.title}>{item.title}</Text>
-                <Text style={styles.description}>{item.description}</Text>
-              </View>
+            {/* <View style={styles.overlay}> */}
+              {/* <View style={styles.textContainer}> */}
+                {/* <Text style={styles.title}>{item.title}</Text> */}
+                {/* <Text style={styles.description}>{item.description}</Text> */}
+              {/* </View> */}
           
-            </View>
+            {/* </View> */}
           </View>
         )}
       />

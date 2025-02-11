@@ -72,7 +72,7 @@ const Intro = () => {
       <StatusBar hidden={true} />
 
       <Image
-        source={require("../../assets/images/Learning-cuate.png")}
+        source={require("../../assets/images/homepage.png")}
         style={styles.image}
       />
       <View style={styles.textContainer}>
