@@ -9,6 +9,7 @@ import {
   Alert,
   useColorScheme,
   ScrollView,
+  Linking,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -56,13 +57,17 @@ const Profile = () => {
     }
   };
 
+
   const handleTerms = () => {
-    // Handle navigation to Terms screen
+    // Assuming your terms URL is something like this, replace with your actual URL
+    Linking.openURL(`${ApiUrl}/terms-and-conditions/`);
   };
 
   const handlePrivacy = () => {
-    // Handle navigation to Privacy screen
+    // Assuming your privacy policy URL is something like this, replace with your actual URL
+    Linking.openURL(`${ApiUrl}/privacy-policy/`);
   };
+
 
   const handleTellAFriend = async () => {
     try {

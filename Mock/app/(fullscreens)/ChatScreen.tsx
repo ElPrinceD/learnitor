@@ -16,7 +16,7 @@ import {
   Platform,
   Alert,
 } from "react-native";
-
+import FastImage from 'react-native-fast-image';
 import * as Clipboard from "expo-clipboard";
 import { useFocusEffect, useRoute } from "@react-navigation/native";
 import axios from "axios";

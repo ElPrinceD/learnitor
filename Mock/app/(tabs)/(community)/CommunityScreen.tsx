@@ -21,6 +21,7 @@ import CommunityList from "../../../components/CommunityList";
 import GlobalCommunityList from "../../../components/GlobalCommunityList";
 import { Skeleton } from "moti/skeleton";
 import { useWebSocket } from "../../../webSocketProvider";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { searchCommunities } from "../../../CommunityApiCalls";
 
 const CommunityScreen: React.FC = () => {
@@ -31,6 +32,7 @@ const CommunityScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isFetching, setIsFetching] = useState(false);
   const [lastMessages, setLastMessages] = useState<Record<string, any>>({});
+  const [initialLoad, setInitialLoad] = useState(true);
   const { userToken } = useAuth();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -44,9 +46,14 @@ const CommunityScreen: React.FC = () => {
     subscribeToExistingUserCommunities,
     fetchAndCacheCommunities,
     markMessageAsRead,
-    db,
-    fetchMessagesPage, // New addition for pagination (not used here but available)
-  } = useWebSocket();
+  } = useWebSocket() || {
+    isConnected: false,
+    socket: null,
+    joinAndSubscribeToCommunity: () => {},
+    unsubscribeFromCommunity: () => {},
+    subscribeToExistingUserCommunities: () => {},
+    fetchAndCacheCommunities: () => {},
+  };
 
   // Utility function for mapping communities
   const mapCommunities = (communities, lastMessages) => {
@@ -65,24 +72,38 @@ const CommunityScreen: React.FC = () => {
   useEffect(() => {
     const loadCachedData = async () => {
       try {
-        await fetchAndCacheCommunities();
-        const [communitiesResult] = await db.executeSql("SELECT * FROM communities");
-        const communities = Array.from({ length: communitiesResult.rows.length }, (_, i) => communitiesResult.rows.item(i));
+        const cachedCommunities = await AsyncStorage.getItem("communities");
+        if (cachedCommunities) {
+          setMyCommunities(JSON.parse(cachedCommunities));
+          const messages = await Promise.all(
+            JSON.parse(cachedCommunities).map(async (community: Community) => {
+              const message = await AsyncStorage.getItem(
+                `last_message_${community.id}`
+              );
+              const parsedMessage = message ? JSON.parse(message) : null;
+              console.log(
+                `Status of last message in community ${community.id}: ${
+                  parsedMessage?.status || "no message"
+                }`
+              );
+              return [community.id, parsedMessage];
+            })
+          );
+          setLastMessages(Object.fromEntries(messages));
 
-        const messagesPromises = communities.map(async (community: Community) => {
-          const [lastMessageResult] = await db.executeSql("SELECT * FROM last_messages WHERE community_id = ?", [community.id]);
-          const parsedMessage = lastMessageResult.rows.length > 0 ? lastMessageResult.rows.item(0) : null;
-          return [community.id, parsedMessage];
-        });
-        const messages = await Promise.all(messagesPromises);
-        setLastMessages(Object.fromEntries(messages));
-
-        setMyCommunities(communities);
+          // Here we ensure that only messages with status other than 'read' show the indicator
+          const unreadIndicatorStatus = Object.fromEntries(
+            messages.map(([id, message]) => [id, message?.status !== "read"])
+          );
+          console.log("Unread status:", unreadIndicatorStatus);
+        }
         setLoading(false);
+        setInitialLoad(false);
       } catch (error) {
         console.error("Error loading cached communities:", error);
         setErrorMessage("Failed to load communities");
         setLoading(false);
+        setInitialLoad(false);
       }
     };
     loadCachedData();
@@ -117,11 +138,16 @@ const CommunityScreen: React.FC = () => {
     useCallback(() => {
       if (isConnected) {
         subscribeToExistingUserCommunities();
+        fetchAndCacheCommunities();
       }
       return () => {
         // Unsubscribe logic can still be here if needed
       };
-    }, [isConnected, subscribeToExistingUserCommunities])
+    }, [
+      isConnected,
+      subscribeToExistingUserCommunities,
+      fetchAndCacheCommunities,
+    ])
   );
 
   // Listen to WebSocket messages for updating last messages
@@ -131,14 +157,24 @@ const CommunityScreen: React.FC = () => {
         const data = JSON.parse(event.data);
 
         if (data.type === "message") {
+          const newMessage = {
+            ...data,
+            status: "sent",
+            sent_at: new Date(data.sent_at).toISOString(),
+          };
           setLastMessages((prevState) => ({
             ...prevState,
-            [data.community_id]: {
-              ...data,
-              status: "sent",
-              sent_at: new Date().toISOString(),
-            },
+            [data.community_id]: newMessage,
           }));
+
+          console.log(
+            `Status of last message in community ${data.community_id}: ${newMessage.status}`
+          );
+          // Cache the new message status
+          AsyncStorage.setItem(
+            `last_message_${data.community_id}`,
+            JSON.stringify(newMessage)
+          );
         } else if (data.type === "message_status") {
           setLastMessages((prevState) => ({
             ...prevState,
@@ -147,6 +183,19 @@ const CommunityScreen: React.FC = () => {
               status: data.status,
             },
           }));
+
+          console.log(`Status of message ${data.message_id}: ${data.status}`);
+          // Update cache with new status
+          const cachedMessage = lastMessages[data.message_id];
+          if (cachedMessage) {
+            AsyncStorage.setItem(
+              `last_message_${cachedMessage.community_id}`,
+              JSON.stringify({
+                ...cachedMessage,
+                status: data.status,
+              })
+            );
+          }
         }
       } catch (error) {
         console.error("Error processing WebSocket message:", error);
@@ -162,7 +211,7 @@ const CommunityScreen: React.FC = () => {
         socket.removeEventListener("message", onMessage);
       }
     };
-  }, [isConnected, socket]);
+  }, [isConnected, socket, lastMessages]);
 
   const handleNavigateCreateCommunity = useCallback(() => {
     router.navigate("CreateCommunity");
@@ -205,14 +254,17 @@ const CommunityScreen: React.FC = () => {
 
   const handleCommunityPress = useCallback(
     async (community: Community) => {
-      console.log("Community pressed:", community.id);
+      console.log("Community pressed 1:", community.id);
 
       try {
-        const isUserCommunity = myCommunities.some((c) => c.id === community.id);
+        const isUserCommunity = myCommunities.some(
+          (c) => c.id === community.id
+        );
 
         if (!isUserCommunity && isConnected) {
           await joinAndSubscribeToCommunity(community.id);
           setMyCommunities((prev) => [...prev, community]);
+          await fetchAndCacheCommunities(); // Await this if it's asynchronous
         }
 
         const lastMessage = getLastMessage(community.id);
@@ -228,6 +280,7 @@ const CommunityScreen: React.FC = () => {
           }));
         }
 
+        console.log("Community pressed:", community.id);
         router.navigate({
           pathname: "ChatScreen",
           params: {
@@ -240,7 +293,14 @@ const CommunityScreen: React.FC = () => {
         console.error("Error in handleCommunityPress:", error);
       }
     },
-    [myCommunities, isConnected, joinAndSubscribeToCommunity, getLastMessage]
+    [
+      myCommunities,
+      isConnected,
+      joinAndSubscribeToCommunity,
+      fetchAndCacheCommunities,
+      getLastMessage,
+      socket,
+    ]
   );
   const styles = StyleSheet.create({
     container: {
@@ -297,7 +357,7 @@ const CommunityScreen: React.FC = () => {
         <SearchBar onSearch={handleSearch} />
       </View>
 
-      {loading ? (
+      {initialLoad || loading ? (
         Array.from({ length: 6 }).map((_, index) => (
           <View key={`skeleton-${index}`} style={styles.skeletonItem}>
             <Skeleton
