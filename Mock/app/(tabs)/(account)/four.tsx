@@ -57,7 +57,6 @@ const Profile = () => {
     }
   };
 
-
   const handleTerms = () => {
     // Assuming your terms URL is something like this, replace with your actual URL
     Linking.openURL(`${ApiUrl}/terms-and-conditions/`);
@@ -67,7 +66,6 @@ const Profile = () => {
     // Assuming your privacy policy URL is something like this, replace with your actual URL
     Linking.openURL(`${ApiUrl}/privacy-policy/`);
   };
-
 
   const handleTellAFriend = async () => {
     try {

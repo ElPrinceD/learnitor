@@ -15,13 +15,14 @@ import {
   ToastAndroid,
   Platform,
   Alert,
+  Dimensions,
 } from "react-native";
 import FastImage from 'react-native-fast-image';
 import * as Clipboard from "expo-clipboard";
 import { useFocusEffect, useRoute } from "@react-navigation/native";
 import axios from "axios";
 import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
-
+import ImageViewing from 'react-native-image-viewing';
 import Colors from "../../constants/Colors";
 import { useAuth } from "../../components/AuthContext";
 import { Message } from "../../components/types";
@@ -54,7 +55,7 @@ const CommunityChatScreen: React.FC = () => {
   const { socket, isConnected, sendMessage, markMessageAsRead } = useWebSocket();
   const navigation = useNavigation();
   const [messages, setMessages] = useState<IMessage[]>([]);
-  
+  const { width } = Dimensions.get('window');
   const [messageInput, setMessageInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,7 +71,7 @@ const CommunityChatScreen: React.FC = () => {
   const [isDocumentViewerVisible, setIsDocumentViewerVisible] = useState(false);
   const [editingMessage, setEditingMessage] = useState<IMessage | null>(null);
 
-  const chatRef = useRef<GiftedChat>(null);
+  
 
   const normalizeMessage = (data) => {
     if ("message" in data && "sent_at" in data) {
@@ -162,12 +163,12 @@ const CommunityChatScreen: React.FC = () => {
     let socketCleanup = () => {};
   
     if (socket) {
-      const onMessage = (event) => {
+      const onMessage = (event: MessageEvent) => {
         try {
           const data = JSON.parse(event.data);
   
           if (data.type === "history" && data.community_id === communityId) {
-            // Handle history messages here
+            // Process and store the history messages.
             const transformedMessages = data.messages
               .map(normalizeMessage)
               .filter((msg): msg is IMessage => msg !== null)
@@ -178,54 +179,80 @@ const CommunityChatScreen: React.FC = () => {
               `messages_${communityId}`,
               JSON.stringify(transformedMessages)
             );
-          } else if (
-            data.type === "message" &&
-            data.community_id === communityId
-          ) {
+          } else if (data.type === "message" && data.community_id === communityId) {
+            // Normalize the incoming message.
             const newMessage = normalizeMessage(data);
             if (newMessage) {
               setMessages((prevMessages) => {
-                // Check if the message already exists in the list
-                const found = prevMessages.find((msg) => msg._id === newMessage._id);
-                if (!found) {
-                  const updatedMessages = [newMessage, ...prevMessages].sort(
-                    (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+                // If the server returns a temp_id, check for an optimistic message.
+                if (data.temp_id) {
+                  const foundIndex = prevMessages.findIndex(
+                    (msg) => msg._id === data.temp_id
                   );
+                  if (foundIndex !== -1) {
+                    // Replace the optimistic message with the confirmed message.
+                    const updatedMessages = [...prevMessages];
+                    updatedMessages[foundIndex] = newMessage;
   
-                  if (user?.id !== newMessage.user._id) {
-                    socket.send(
+                    // If the message is from another user, send a read receipt.
+                    if (user?.id !== newMessage.user._id) {
+                      socket.send(
+                        JSON.stringify({
+                          type: "message_status_update",
+                          message_id: newMessage._id,
+                          status: "read",
+                        })
+                      );
+                      updatedMessages[foundIndex].status = "read";
+                    }
+  
+                    AsyncStorage.setItem(
+                      `messages_${communityId}`,
+                      JSON.stringify(updatedMessages)
+                    );
+                    AsyncStorage.setItem(
+                      `last_message_${communityId}`,
                       JSON.stringify({
-                        type: "message_status_update",
-                        message_id: newMessage._id,
+                        ...newMessage,
                         status: "read",
                       })
                     );
-                    updatedMessages[0].status = "read";
+                    markMessageAsRead(communityId);
+                    return updatedMessages;
                   }
+                }
   
-                  AsyncStorage.setItem(
-                    `messages_${communityId}`,
-                    JSON.stringify(updatedMessages)
-                  );
-                  AsyncStorage.setItem(
-                    `last_message_${communityId}`,
+                // If not a duplicate, add the new message.
+                const updatedMessages = [newMessage, ...prevMessages].sort(
+                  (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+                );
+                if (user?.id !== newMessage.user._id) {
+                  socket.send(
                     JSON.stringify({
-                      ...newMessage,
+                      type: "message_status_update",
+                      message_id: newMessage._id,
                       status: "read",
                     })
                   );
-                  markMessageAsRead(communityId);
-                  setTimeout(() => {
-                    chatRef.current?.scrollToBottom();
-                  }, 100);
-                  return updatedMessages;
+                  updatedMessages[0].status = "read";
                 }
-                // If the message already exists, just return the previous messages
-                return prevMessages;
+                AsyncStorage.setItem(
+                  `messages_${communityId}`,
+                  JSON.stringify(updatedMessages)
+                );
+                AsyncStorage.setItem(
+                  `last_message_${communityId}`,
+                  JSON.stringify({
+                    ...newMessage,
+                    status: "read",
+                  })
+                );
+                markMessageAsRead(communityId);
+                return updatedMessages;
               });
             }
           } else if (data.type === "message_delete") {
-            // Handle message delete
+            // Handle message deletion.
             setMessages((prevMessages) => {
               const updatedMessages = prevMessages.filter(
                 (m) => m._id !== data.message_id
@@ -243,7 +270,7 @@ const CommunityChatScreen: React.FC = () => {
               return updatedMessages;
             });
           } else if (data.type === "message_edit") {
-            // Handle message edit
+            // Handle message edits.
             setMessages((prevMessages) => {
               const updatedMessages = prevMessages.map((m) =>
                 m._id === data.message_id
@@ -275,7 +302,8 @@ const CommunityChatScreen: React.FC = () => {
     }
   
     return socketCleanup;
-  }, [socket, communityId, messages, user]);
+  }, [socket, communityId, user, markMessageAsRead]);
+  
 
   useEffect(() => {
     (async () => {
@@ -299,16 +327,34 @@ const CommunityChatScreen: React.FC = () => {
         name: user?.first_name + " " + user?.last_name || "Unknown User",
       },
       [type]: fileUri,
+      status: isConnected ? "sending" : "pending",
     };
   
-    // Add this message to UI before sending to server
-    setMessages((prevMessages) => [message, ...prevMessages]);
+    // Add this message to UI only if it doesn't exist
+    setMessages((prevMessages) => {
+      if (!prevMessages.some(msg => msg._id === tempId)) {
+        return [message, ...prevMessages];
+      }
+      return prevMessages;
+    });
   
     if (!communityId) {
       console.error('Community ID missing before sending message');
       return;
     }
     // Send to server
+   
+
+    if (!isConnected) {
+    const messageToStore = {
+      ...message,
+      communityId: communityId,
+      content: {
+        [type]: fileUri
+      },
+    };
+    AsyncStorage.setItem(`unsent_message_${tempId}`, JSON.stringify(messageToStore));
+  } else {
     sendMessage({
       type: "send_message",
       community_id: communityId,
@@ -318,15 +364,15 @@ const CommunityChatScreen: React.FC = () => {
       temp_id: tempId,
       [type]: fileUri
     });
-  
-    // No need to add the message again here, it's already added above
-  }, [communityId, sendMessage, user]);
+  }
+  }, [communityId, sendMessage, user, isConnected]);
 
   const onSend = useCallback(
     (newMessages: IMessage[] = []) => {
       for (let message of newMessages) {
+        // Generate a temporary ID for the optimistic message.
         const tempId = Math.random().toString();
-        const tempMessage = {
+        const tempMessage: IMessage = {
           _id: tempId,
           text: message.text,
           createdAt: new Date(),
@@ -334,35 +380,71 @@ const CommunityChatScreen: React.FC = () => {
             _id: user?.id || 1,
             name: user?.first_name + " " + user?.last_name || "Unknown User",
           },
-          image: mediaPreview.uri && mediaPreview.type === 'image' ? mediaPreview.uri : undefined,
-          document: mediaPreview.uri && mediaPreview.type === 'document' ? mediaPreview.uri : undefined,
+          image:
+            mediaPreview.uri && mediaPreview.type === "image"
+              ? mediaPreview.uri
+              : undefined,
+          document:
+            mediaPreview.uri && mediaPreview.type === "document"
+              ? mediaPreview.uri
+              : undefined,
+          status: isConnected ? "sending" : "pending",
           ...(replyToMessage && { replyTo: replyToMessage._id }),
         };
-        setReplyToMessage(null); // Clear reply after message is sent
-        setMediaPreview({ type: null, uri: null }); // Clear media preview after sending
-
-        sendMessage({
-          type: "send_message",
-          community_id: communityId,
-          message: message.text || "", 
-          sender: user?.first_name + " " + user?.last_name || "Unknown User",
-          sender_id: user?.id || 1,
-          temp_id: tempId,
-          ...(replyToMessage && { reply_to: replyToMessage._id }),
-          image: tempMessage.image ? tempMessage.image : undefined, // Ensure image is sent if present
-          document: tempMessage.document ? tempMessage.document : undefined, // Ensure document is sent if present
+  
+        // Clear reply and media preview after sending.
+        setReplyToMessage(null);
+        setMediaPreview({ type: null, uri: null });
+  
+        // Optimistically add the new message to the UI if not already added.
+        setMessages((prevMessages) => {
+          if (!prevMessages.some((msg) => msg._id === tempId)) {
+            return [tempMessage, ...prevMessages];
+          }
+          return prevMessages;
         });
+  
+        if (!isConnected) {
+        const messageToStore = {
+          ...tempMessage,
+          communityId: communityId,
+          content: {
+            text: message.text,
+            image: tempMessage.image ? tempMessage.image : undefined,
+            document: tempMessage.document ? tempMessage.document : undefined,
+          },
+          replyTo: replyToMessage?._id,
+        };
+        AsyncStorage.setItem(
+          `unsent_message_${tempId}`,
+          JSON.stringify(messageToStore)
+        );
+      }
+  
+        // If online, send the message via the socket. Make sure to include the temp_id.
+        else {
+          sendMessage({
+            type: "send_message",
+            community_id: communityId,
+            message: message.text || "",
+            sender: user?.first_name + " " + user?.last_name || "Unknown User",
+            sender_id: user?.id || 1,
+            temp_id: tempId, // Sending the temporary ID.
+            ...(replyToMessage && { reply_to: replyToMessage._id }),
+            image: tempMessage.image ? tempMessage.image : undefined,
+            document: tempMessage.document ? tempMessage.document : undefined,
+          });
+        }
       }
     },
-    [communityId, sendMessage, user, replyToMessage, mediaPreview]
+    [communityId, sendMessage, user, replyToMessage, isConnected, mediaPreview]
   );
+  
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
+      allowsEditing: false, 
     });
   
     if (!result.canceled && result.assets && result.assets.length > 0) {
@@ -456,10 +538,17 @@ const CommunityChatScreen: React.FC = () => {
         message_id: editingMessage._id,
         new_content: messageInput,
       });
+      setMessages((prevMessages) => prevMessages.map(m => 
+        m._id === editingMessage._id ? { ...m, text: messageInput, isEdited: true } : m
+      ));
+      AsyncStorage.setItem(
+        `messages_${communityId}`,
+        JSON.stringify(messages)
+      );
       setEditingMessage(null);
       setMessageInput("");
     }
-  }, [editingMessage, messageInput, sendMessage]);
+  }, [editingMessage, messageInput, sendMessage, messages, communityId]);
 
   const handleDeleteMessage = useCallback(() => {
     const { canDelete } = canEditDeleteOrReply();
@@ -487,13 +576,17 @@ const CommunityChatScreen: React.FC = () => {
                     !selectedMessages.some((selMsg) => selMsg._id === m._id)
                 )
               );
+              AsyncStorage.setItem(
+                `messages_${communityId}`,
+                JSON.stringify(messages)
+              );
               setSelectedMessages([]);
             },
           },
         ]
       );
     }
-  }, [selectedMessages, sendMessage, canEditDeleteOrReply]);
+  }, [selectedMessages, sendMessage, canEditDeleteOrReply, messages, communityId]);
 
   const updateHeader = useCallback(() => {
     const { canDelete, canEdit, canReply } = canEditDeleteOrReply();
@@ -677,36 +770,27 @@ const CommunityChatScreen: React.FC = () => {
             onPressIn={() => handlePress(props.currentMessage)}
             onLongPress={() => handleLongPress(props.currentMessage)}
             renderCustomView={() => {
-              if (
-                props.currentMessage.replyTo &&
-                props.currentMessage.replyTo._id !== null
-              ) {
-                return (
-                  <View style={styles.replyContainer}>
-                    <Text style={styles.replyName}>
-                      Replying to {props.currentMessage.replyTo.user.name}
-                    </Text>
-                    <Text style={styles.replyText}>
-                      {props.currentMessage.replyTo.text}
-                    </Text>
-                  </View>
-                );
-              }
-
-              if (
-                props.currentMessage.user._id !== user?.id &&
-                (props.previousMessage?.user?._id !==
-                  props.currentMessage.user._id ||
-                  props.isFirst)
-              ) {
-                return (
-                  <Text style={styles.username}>
-                    {props.currentMessage.user.name}
+              // ... (your existing custom view rendering)
+              return (
+                <>
+                  {props.currentMessage.replyTo && props.currentMessage.replyTo._id !== null && (
+                    <View style={styles.replyContainer}>
+                      <Text style={styles.replyName}>
+                        Replying to {props.currentMessage.replyTo.user.name}
+                      </Text>
+                      <Text style={styles.replyText}>
+                        {props.currentMessage.replyTo.text}
+                      </Text>
+                    </View>
+                  )}
+                  <Text style={styles.statusText}>
+                    {props.currentMessage.status === 'pending' ? 'Pending' : 
+                     props.currentMessage.status === 'sending' ? 'Sending' : 
+                     props.currentMessage.status === 'sent' ? 'Sent' : 
+                     props.currentMessage.status === 'read' ? 'Read' : ''}
                   </Text>
-                );
-              }
-
-              return null;
+                </>
+              );
             }}
           />
           {props.currentMessage.isEdited && (
@@ -766,17 +850,18 @@ const CommunityChatScreen: React.FC = () => {
   };
 
   const renderMessageImage = (props) => (
-    <TouchableOpacity key={props.currentMessage._id} onPress={() => onImagePress(props.currentMessage.image)}>
+    <TouchableOpacity 
+      key={props.currentMessage._id} 
+      onPress={() => onImagePress(props.currentMessage.image)}
+      style={styles.messageImageContainer}
+    >
       <Image 
         source={{ uri: props.currentMessage.image }}
         style={{
-          width: '100%',
-          maxWidth: 300, // or any other max width you prefer for smaller screens
-          aspectRatio: 1, // maintain aspect ratio
-          borderRadius: 8, // slight roundness to corners
-          marginVertical: 5,
+          width: width * 0.6, // Control the size, here it's 60% of screen width
+          height: width * 0.6,
+          resizeMode: 'contain',
         }}
-        resizeMode="contain" // or 'cover' if you want the image to cover the container
       />
     </TouchableOpacity>
   );
@@ -929,6 +1014,18 @@ const CommunityChatScreen: React.FC = () => {
                   container: {
                     flex: 1,
                     padding: 2,
+                  },
+                  messageImageContainer: {
+                    
+                    borderRadius: 8,
+                    padding: 5,
+                    marginVertical: 5,
+                  },
+                  statusText: {
+                    fontSize: 10,
+                    color: themeColors.textSecondary,
+                    textAlign: 'right',
+                    paddingRight: 5,
                   },
                   blurBackground: {
                     opacity: 0.7,
@@ -1132,24 +1229,16 @@ const CommunityChatScreen: React.FC = () => {
                         isTyping={false}
                         inverted={true}
                       />
+                      
                     )}
               
-                    <Modal
-                      visible={isImageViewerVisible && mediaUri !== null}
-                      transparent={true}
-                      onRequestClose={() => setIsImageViewerVisible(false)}
-                    >
-                      <View style={styles.modalContainer}>
-                        <TouchableOpacity onPress={() => setIsImageViewerVisible(false)}>
-                          {mediaUri && (
-                            <Image
-                              source={{ uri: mediaUri }}
-                              style={styles.fullScreenImage}
-                            />
-                          )}
-                        </TouchableOpacity>
-                      </View>
-                    </Modal>
+                     {/* Use ImageViewing for full-screen image preview */}
+    <ImageViewing
+      images={[{ uri: mediaUri }]}
+      imageIndex={0}
+      visible={isImageViewerVisible}
+      onRequestClose={() => setIsImageViewerVisible(false)}
+    />
               
                     <Modal
                       visible={isVideoViewerVisible && mediaUri !== null}

@@ -338,14 +338,49 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
   );
 
   useEffect(() => {
-    if (socket && isConnected && messageQueue.length > 0) {
-      console.log("Sending queued messages.");
-      while (messageQueue.length > 0) {
-        const msg = messageQueue.shift();
-        socket.send(JSON.stringify(msg));
-      }
+    if (isConnected) {
+      const resendUnsentMessages = async () => {
+        try {
+          // Get all keys from AsyncStorage.
+          const allKeys = await AsyncStorage.getAllKeys();
+          // Filter to keys that start with 'unsent_message_'.
+          const unsentKeys = allKeys.filter((key) =>
+            key.startsWith("unsent_message_")
+          );
+          
+          // Process each unsent message.
+          for (const key of unsentKeys) {
+            const json = await AsyncStorage.getItem(key);
+            if (json) {
+              const message = JSON.parse(json);
+              
+              // Send the message.
+              // If sendMessage returns a promise, await it.
+              await sendMessage({
+                type: "send_message",
+                community_id: message.communityId,
+                message: message.content.text,
+                sender: message.user.name,
+                sender_id: message.user._id,
+                temp_id: message._id,
+                ...(message.replyTo && { reply_to: message.replyTo }),
+                image: message.content.image,
+                document: message.content.document,
+              });
+              
+              // Remove the key once the message is sent.
+              await AsyncStorage.removeItem(key);
+            }
+          }
+        } catch (error) {
+          console.error("Error resending unsent messages: ", error);
+        }
+      };
+  
+      resendUnsentMessages();
     }
-  }, [socket, isConnected]);
+  }, [isConnected, sendMessage]);
+  
 
   const fetchInitialLastMessages = useCallback(async () => {
     if (!token || !isConnected) return;
