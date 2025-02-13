@@ -7,6 +7,7 @@ import { useAuth } from "./components/AuthContext";
 import { router } from "expo-router";
 import { Platform } from "react-native";
 import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export interface PushNotificationState {
   expoPushToken?: Notifications.ExpoPushToken;
@@ -125,48 +126,57 @@ async function presentForegroundNotification(notification: Notifications.Notific
 }
 
   useEffect(() => {
-    if (!userToken?.token) {
-      console.log("Waiting for user token...");
-      return; // Wait until the userToken is available
-    }
+  if (!userToken?.token) {
+    console.log("Waiting for user token...");
+    return;
+  }
 
-    registerForPushNotificationsAsync().then((token) => {
-      if (token) {
-        setExpoPushToken(token);
-        saveTokenToBackend(token.data, userToken.token); 
-      }
-    });
+  registerForPushNotificationsAsync().then((token) => {
+    if (token) {
+      setExpoPushToken(token);
 
-    notificationListener.current =
-      Notifications.addNotificationReceivedListener((notification) => {
-        console.log("Notification received:", notification);
-        setNotification(notification);
-        
-        // Present the notification when the app is in the foreground
-        presentForegroundNotification(notification);
-      });
-
-    responseListener.current =
-      Notifications.addNotificationResponseReceivedListener((response) => {
-        const { data } = response.notification.request.content;
-        if (data && data.community_id && data.message_id) {
-          console.log("Notification response data:", data);
-          router.push({
-            pathname: 'ChatScreen',
-            params: { communityId: data.community_id, name: data.community_name },
-          });
+      // Check if token has changed before sending it again
+      AsyncStorage.getItem("savedPushToken").then((storedToken) => {
+        if (storedToken !== token.data) {
+          saveTokenToBackend(token.data, userToken.token);
+          AsyncStorage.setItem("savedPushToken", token.data);
         }
       });
+    }
+  });
 
-    return () => {
-      if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
+  if (!notificationListener.current) {
+    notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
+      console.log("Notification received:", notification);
+      setNotification(notification);
+    });
+  }
+
+  if (!responseListener.current) {
+    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
+      console.log("Notification response:", response);
+      const { data } = response.notification.request.content;
+      if (data && data.community_id) {
+        router.push({
+          pathname: "ChatScreen",
+          params: { communityId: data.community_id, name: data.community_name },
+        });
       }
-      if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
-      }
-    };
-  }, [userToken]);
+    });
+  }
+
+  return () => {
+    if (notificationListener.current) {
+      Notifications.removeNotificationSubscription(notificationListener.current);
+      notificationListener.current = undefined;
+    }
+    if (responseListener.current) {
+      Notifications.removeNotificationSubscription(responseListener.current);
+      responseListener.current = undefined;
+    }
+  };
+}, [userToken]);
+
 
   return {
     expoPushToken,

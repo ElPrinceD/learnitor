@@ -34,10 +34,10 @@ import {
   IMessage,
   InputToolbar,
 } from "react-native-gifted-chat";
-
+import PreloadImage from "../../components/PreloadImage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
-import * as DocumentPicker from 'expo-document-picker';
+// import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import Video from "react-native-video";
 import { useNavigation } from "@react-navigation/native";
@@ -464,10 +464,10 @@ const CommunityChatScreen: React.FC = () => {
 
   const pickDocument = async () => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: '*/*', 
-        copyToCacheDirectory: true
-      });
+      // const result = await DocumentPicker.getDocumentAsync({
+      //   type: '*/*', 
+      //   copyToCacheDirectory: true
+      // });
  
       if (result.type === 'success') {
         await sendMediaMessage(result.uri, 'document');

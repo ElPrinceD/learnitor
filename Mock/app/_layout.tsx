@@ -42,6 +42,12 @@ const RootLayoutNav = () => {
   const { userToken, isLoading } = useAuth();
 
   const [navigationCompleted, setNavigationCompleted] = useState(false);
+  const { expoPushToken, notification } = usePushNotifications();
+  
+  if (notification) {
+    console.log("Notification received:", notification);
+  }
+
 
   useEffect(() => {
     if (isLoading) return;

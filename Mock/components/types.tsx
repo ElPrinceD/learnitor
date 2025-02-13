@@ -29,6 +29,8 @@ export interface Message {
   sender: string; // Email or username of the sender
   message: string;
   sent_at: string; // ISO 8601 date string
+  image: string;
+  status: string;
 }
 
 export interface Community {
