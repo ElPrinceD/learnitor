@@ -6,7 +6,7 @@ import React, {
   useCallback,
   FC,
 } from "react";
-import * as SQLite from "expo-sqlite";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   getCommunities,
   getCommunityDetails,
@@ -17,15 +17,6 @@ import { getCourseCategories, getCourses } from "./CoursesApiCalls";
 import WsUrl from "./configWs";
 import { getCategoryNames, getTodayPlans } from "./TimelineApiCalls";
 import { useAuth } from "./components/AuthContext";
-import db from "./Database";
-import { 
-  Category, 
-  Course, 
-  User, 
-  Message, 
-  Community, 
-  Plan 
-} from "./components/types"; // Assuming your types are exported from a file named 'types'
 
 interface WebSocketContextType {
   socket: WebSocket | null;
@@ -40,12 +31,12 @@ interface WebSocketContextType {
   fetchAndCacheTodayPlans: (
     token: string | null,
     date: Date | null,
-    category?: number
-  ) => Promise<Plan[]>;
+    category?: string
+  ) => Promise<any[]>;
   fetchAndCacheCategoryNames: (
     token: string | null
   ) => Promise<Record<number, string>>;
-  getCachedTodayPlans: (date: Date, category?: number) => Promise<Plan[]>;
+  getCachedTodayPlans: (date: Date, category?: string) => Promise<any[]>;
   getCachedCategoryNames: () => Promise<Record<number, string>>;
   unreadCommunitiesCount: number;
   markMessageAsRead: (communityId: string) => void;
@@ -66,16 +57,21 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [unreadCommunityMessages, setUnreadCommunityMessages] = useState<
-    Record<string, Message>
+    Record<string, any>
   >({});
+
   const { userToken, userInfo } = useAuth();
+  const [lastMessages, setLastMessages] = useState<Record<string, any>>({});
   const userId = userInfo?.user?.id;
 
   const messageQueue: any[] = [];
 
   const connectWebSocket = useCallback(() => {
-    if (!token || socket) return; 
+    if (!token) return;
 
+    if (socket) {
+      socket.close();
+    }
     const ws = new WebSocket(`${WsUrl}/ws/chat/?token=${token}`);
     setSocket(ws);
 
@@ -92,77 +88,178 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
 
       switch (data.type) {
         case "message":
-          const newMessage: Message = {
-            id: data.id,
-            community: data.community_id,
-            sender: data.sender_id,
-            message: data.message,
-            sent_at: data.sent_at,
-          };
-          await db.insertOrUpdateMessage(newMessage);
+          // Update full message history with reply information
+          const cachedMessages = await AsyncStorage.getItem(
+            `messages_${data.community_id}`
+          );
+          const updatedMessages = cachedMessages
+            ? JSON.parse(cachedMessages)
+            : [];
+          updatedMessages.push({
+            _id: data.id.toString(),
+            text: data.message,
+            createdAt: new Date(data.sent_at),
+            user: {
+              _id: data.sender_id,
+              name: data.sender,
+              avatar: data.sender_image || null,
+            },
+            status: data.status || "sent",
+            replyTo: data.reply_to
+              ? {
+                  _id: data.reply_to.id ? data.reply_to.id.toString() : null,
+                  text: data.reply_to.snippet || null,
+                  user: {
+                    _id: data.reply_to.sender_id || null,
+                    name: data.reply_to.sender_name || null,
+                  },
+                }
+              : null,
+            image: data.image || null,  
+            video: data.video || null,  
+            document: data.document || null,  
+          });
 
-          await db.insertOrUpdateLastMessage(data.community_id, newMessage);
+          await AsyncStorage.setItem(
+            `messages_${data.community_id}`,
+            JSON.stringify(updatedMessages)
+          );
+
+          // Update last message for list view with status
+          const newLastMessage = {
+            ...data,
+            status: data.status || "sent",
+            sent_at: new Date(data.sent_at).toISOString(),
+            replyTo: data.reply_to
+              ? {
+                  id: data.reply_to.id ? data.reply_to.id.toString() : null,
+                  snippet: data.reply_to.snippet || null,
+                  sender_name: data.reply_to.sender_name || null,
+                }
+              : null,
+          };
+          await AsyncStorage.setItem(
+            `last_message_${data.community_id}`,
+            JSON.stringify(newLastMessage)
+          );
           if (userId && data.sender_id !== userId) {
             setUnreadCommunityMessages((prev) => ({
               ...prev,
-              [data.community_id]: newMessage,
+              [data.community_id]: newLastMessage,
             }));
           }
           break;
         case "history":
-          for (const msg of data.messages) {
-            const message: Message = {
-              id: msg.id,
-              community: data.community_id,
-              sender: msg.sender_id,
-              message: msg.message,
-              sent_at: msg.sent_at,
-            };
-            await db.insertOrUpdateMessage(message);
-          }
+          // Store full history including replies, images, videos, and documents
+          const normalizedMessages = data.messages.map((msg) => ({
+            _id: msg.id.toString(),
+            text: msg.message,
+            createdAt: new Date(msg.sent_at),
+            user: {
+              _id: msg.sender_id,
+              name: msg.sender,
+              avatar: msg.sender_image || null,
+            },
+            status: msg.status || "sent",
+            replyTo: msg.reply_to
+              ? {
+                  _id: msg.reply_to.id ? msg.reply_to.id.toString() : null,
+                  text: msg.reply_to.snippet || null,
+                  user: {
+                    _id: msg.reply_to.sender_id || null,
+                    name: msg.reply_to.sender_name || null,
+                  },
+                }
+              : null,
+            image: msg.image || null,
+            video: msg.video || null,
+            document: msg.document || null,
+          }));
+
+          await AsyncStorage.setItem(
+            `messages_${data.community_id}`,
+            JSON.stringify(normalizedMessages)
+          );
+
+          // Store only the last message for list view
           if (data.messages.length > 0) {
             const lastMessage = data.messages[data.messages.length - 1];
-            await db.insertOrUpdateLastMessage(data.community_id, {
-              id: lastMessage.id,
-              community: data.community_id,
-              sender: lastMessage.sender_id,
-              message: lastMessage.message,
-              sent_at: lastMessage.sent_at,
-            });
+            await AsyncStorage.setItem(
+              `last_message_${data.community_id}`,
+              JSON.stringify({
+                ...lastMessage,
+                sent_at: new Date(lastMessage.sent_at).toISOString(),
+                status: lastMessage.status || "sent",
+                replyTo: lastMessage.reply_to
+                  ? {
+                      id: lastMessage.reply_to.id
+                        ? lastMessage.reply_to.id.toString()
+                        : null,
+                      snippet: lastMessage.reply_to.snippet || null,
+                      sender_name: lastMessage.reply_to.sender_name || null,
+                    }
+                  : null,
+              })
+            );
             if (userId && lastMessage.sender_id !== userId) {
               setUnreadCommunityMessages((prev) => ({
                 ...prev,
-                [data.community_id]: lastMessage,
+                [data.community_id]: {
+                  ...lastMessage,
+                  status: lastMessage.status || "sent",
+                  sent_at: new Date(lastMessage.sent_at).toISOString(),
+                  replyTo: lastMessage.reply_to
+                    ? {
+                        id: lastMessage.reply_to.id
+                          ? lastMessage.reply_to.id.toString()
+                          : null,
+                        snippet: lastMessage.reply_to.snippet || null,
+                        sender_name: lastMessage.reply_to.sender_name || null,
+                      }
+                    : null,
+                },
               }));
             }
           }
           break;
         case "message_status":
+          // Update message status in both full history and last message cache
           const messageId = data.message_id;
           const communityId = await getCommunityIdFromMessage(messageId);
           if (communityId) {
-            await db.insertOrUpdateMessage({
-              id: messageId,
-              community: communityId,
-              sender: data.sender_id,
-              message: '', // We're only updating status here
-              sent_at: '', // Assuming no change in sent_at
-              status: data.status,
-            });
-            const lastMessage = await db.getLastMessage(communityId);
-            if (lastMessage && lastMessage.id === messageId) {
-              await db.insertOrUpdateLastMessage(communityId, {
-                ...lastMessage,
-                status: data.status,
-              });
-              if (userId && data.sender_id !== userId) {
-                setUnreadCommunityMessages((prev) => ({
-                  ...prev,
-                  [communityId]: {
-                    ...lastMessage,
-                    status: data.status,
-                  },
-                }));
+            const messages = await AsyncStorage.getItem(
+              `messages_${communityId}`
+            );
+            if (messages) {
+              let parsedMessages = JSON.parse(messages);
+              const messageIndex = parsedMessages.findIndex(
+                (msg) => msg._id === messageId.toString()
+              );
+              if (messageIndex !== -1) {
+                parsedMessages[messageIndex].status = data.status;
+                await AsyncStorage.setItem(
+                  `messages_${communityId}`,
+                  JSON.stringify(parsedMessages)
+                );
+              }
+            }
+            const lastMessage = await AsyncStorage.getItem(
+              `last_message_${communityId}`
+            );
+            if (lastMessage) {
+              let parsedLastMessage = JSON.parse(lastMessage);
+              if (parsedLastMessage.id === messageId) {
+                parsedLastMessage.status = data.status;
+                await AsyncStorage.setItem(
+                  `last_message_${communityId}`,
+                  JSON.stringify(parsedLastMessage)
+                );
+                if (userId && data.sender_id !== userId) {
+                  setUnreadCommunityMessages((prev) => ({
+                    ...prev,
+                    [communityId]: parsedLastMessage,
+                  }));
+                }
               }
             }
           }
@@ -174,6 +271,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
 
     ws.onclose = (event: CloseEvent) => {
       console.log("WebSocket disconnected");
+
       console.log("Close event code:", event?.code);
       console.log("Close event reason:", event?.reason);
 
@@ -202,7 +300,6 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
   }, [token]);
 
   useEffect(() => {
-    if (!token || socket) return; 
     if (token) {
       connectWebSocket();
     }
@@ -244,29 +341,36 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
     if (isConnected) {
       const resendUnsentMessages = async () => {
         try {
-          const unsentMessages = await db.db.transaction(tx => {
-            tx.executeSql(
-              'SELECT * FROM messages WHERE status = ?',
-              ['pending'],
-              (_, { rows }) => rows._array
-            );
-          });
+          // Get all keys from AsyncStorage.
+          const allKeys = await AsyncStorage.getAllKeys();
+          // Filter to keys that start with 'unsent_message_'.
+          const unsentKeys = allKeys.filter((key) =>
+            key.startsWith("unsent_message_")
+          );
           
-          for (const message of unsentMessages) {
-            await sendMessage({
-              type: "send_message",
-              community_id: message.community,
-              message: message.message,
-              sender: message.sender,
-              sender_id: message.sender,
-              temp_id: message.id,
-            });
-            
-            // Update message status to 'sending' in the database
-            await db.insertOrUpdateMessage({
-              ...message,
-              status: 'sending',
-            });
+          // Process each unsent message.
+          for (const key of unsentKeys) {
+            const json = await AsyncStorage.getItem(key);
+            if (json) {
+              const message = JSON.parse(json);
+              
+              // Send the message.
+              // If sendMessage returns a promise, await it.
+              await sendMessage({
+                type: "send_message",
+                community_id: message.communityId,
+                message: message.content.text,
+                sender: message.user.name,
+                sender_id: message.user._id,
+                temp_id: message._id,
+                ...(message.replyTo && { reply_to: message.replyTo }),
+                image: message.content.image,
+                document: message.content.document,
+              });
+              
+              // Remove the key once the message is sent.
+              await AsyncStorage.removeItem(key);
+            }
           }
         } catch (error) {
           console.error("Error resending unsent messages: ", error);
@@ -276,19 +380,23 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
       resendUnsentMessages();
     }
   }, [isConnected, sendMessage]);
+  
 
   const fetchInitialLastMessages = useCallback(async () => {
     if (!token || !isConnected) return;
     try {
       const communities = await getUserCommunities(token);
       for (const community of communities) {
-        const lastMessage = await db.getLastMessage(community.id);
-        if (!lastMessage) {
+        const cachedLastMessage = await AsyncStorage.getItem(
+          `last_message_${community.id}`
+        );
+
+        if (!cachedLastMessage) {
           sendMessage({ type: "fetch_history", community_id: community.id });
-        } else if (userId && lastMessage.sender !== userId) {
+        } else if (userId && JSON.parse(cachedLastMessage).sender_id !== userId) {
           setUnreadCommunityMessages((prev) => ({
             ...prev,
-            [community.id]: lastMessage,
+            [community.id]: JSON.parse(cachedLastMessage),
           }));
         }
       }
@@ -297,20 +405,26 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
     }
   }, [token, isConnected, sendMessage, userId]);
 
-  const getCommunityIdFromMessage = async (messageId: number) => {
-    const messages = await db.db.transaction(tx => {
-      tx.executeSql(
-        'SELECT community FROM messages WHERE id = ?',
-        [messageId],
-        (_, { rows }) => rows.length > 0 ? rows.item(0).community : null
-      );
-    });
-    return messages;
+  const getCommunityIdFromMessage = async (messageId: string) => {
+    const allCachedMessages = await AsyncStorage.multiGet(
+      (
+        await AsyncStorage.getAllKeys()
+      ).filter((key) => key.startsWith("messages_"))
+    );
+    for (const [key, messages] of allCachedMessages) {
+      if (messages) {
+        const parsedMessages = JSON.parse(messages);
+        if (parsedMessages.some((msg) => msg._id === messageId)) {
+          return key.split("_")[1]; // Extract community_id from the key
+        }
+      }
+    }
+    return null;
   };
 
   // Calculate unread communities count
   const unreadCommunitiesCount = Object.values(unreadCommunityMessages).filter(
-    (message) => message.status !== "read"
+    (message) => message?.status !== "read"
   ).length;
 
   const markMessageAsRead = useCallback(
@@ -323,13 +437,19 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
         },
       }));
 
-      // Update SQLite to persist this status
-      const lastMessage = await db.getLastMessage(communityId);
-      if (lastMessage) {
-        await db.insertOrUpdateLastMessage(communityId, {
-          ...lastMessage,
-          status: "read",
-        });
+      // Update AsyncStorage to persist this status
+      const lastMessageStr = await AsyncStorage.getItem(
+        `last_message_${communityId}`
+      );
+      if (lastMessageStr) {
+        const lastMessage = JSON.parse(lastMessageStr);
+        await AsyncStorage.setItem(
+          `last_message_${communityId}`,
+          JSON.stringify({
+            ...lastMessage,
+            status: "read",
+          })
+        );
 
         socket?.send(
           JSON.stringify({
@@ -340,7 +460,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
         );
       }
     },
-    [socket]
+    [lastMessages, socket]
   );
 
   const joinAndSubscribeToCommunity = useCallback(
@@ -386,22 +506,17 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
   );
 
   const fetchAndCacheTodayPlans = useCallback(
-    async (token: string, date: Date, category?: number) => {
+    async (token: string, date: Date, category?: string) => {
       if (token && isConnected) {
         try {
-          const dateString = date.toISOString().split("T")[0];
-          const plans = await getTodayPlans(token, date, category);
-          for (const plan of plans) {
-            await db.insertOrUpdatePlan({
-              id: plan.id,
-              title: plan.title,
-              description: plan.description,
-              due_date: plan.due_date,
-              due_time_start: plan.due_time_start,
-              due_time_end: plan.due_time_end,
-              category: plan.category,
-            });
+          const dateString = date?.toISOString().split("T")[0];
+          const cacheKey = `todayPlans_${dateString}_${category || "all"}`;
+          const cachedPlans = await AsyncStorage.getItem(cacheKey);
+          if (cachedPlans) {
+            return JSON.parse(cachedPlans);
           }
+          const plans = await getTodayPlans(token, date, category);
+          await AsyncStorage.setItem(cacheKey, JSON.stringify(plans));
           return plans;
         } catch (error) {
           console.error("Failed to fetch or cache today's plans:", error);
@@ -416,12 +531,15 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
     async (token: string) => {
       if (token && isConnected) {
         try {
+          const cachedCategories = await AsyncStorage.getItem("categoryNames");
+          if (cachedCategories) {
+            return JSON.parse(cachedCategories);
+          }
           const categories = await getCategoryNames(token);
-          await db.db.transaction(tx => {
-            Object.entries(categories).forEach(([id, name]) => {
-              tx.executeSql('INSERT OR REPLACE INTO plans (id, planData) VALUES (?, ?)', [id, JSON.stringify({ name })]);
-            });
-          });
+          await AsyncStorage.setItem(
+            "categoryNames",
+            JSON.stringify(categories)
+          );
           return categories;
         } catch (error) {
           console.error("Failed to fetch or cache category names:", error);
@@ -433,26 +551,19 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
   );
 
   const getCachedTodayPlans = useCallback(
-    async (date: Date, category?: number): Promise<Plan[]> => {
+    async (date: Date, category?: string) => {
       const dateString = date.toISOString().split("T")[0];
-      const plans = await db.getPlansByDate(dateString);
-      return plans.filter(plan => plan.category === (category || 0));
+      const cacheKey = `todayPlans_${dateString}_${category || "all"}`;
+      const cachedData = await AsyncStorage.getItem(cacheKey);
+      return cachedData ? JSON.parse(cachedData) : [];
     },
     []
   );
 
   const getCachedCategoryNames = useCallback(
     async (): Promise<Record<number, string>> => {
-      const categories = await db.db.transaction(tx => {
-        return tx.executeSql('SELECT * FROM plans', [], (_, { rows }) => {
-          const result = {};
-          rows._array.forEach(row => {
-            result[row.id] = JSON.parse(row.planData).name;
-          });
-          return result;
-        });
-      });
-      return categories;
+      const cachedData = await AsyncStorage.getItem("categoryNames");
+      return cachedData ? JSON.parse(cachedData) : {};
     },
     []
   );
@@ -491,7 +602,18 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
     if (token && isConnected) {
       try {
         const newCommunity = await getCommunityDetails(communityId, token);
-        await db.insertOrUpdateCommunity(newCommunity);
+        let cachedCommunities = await AsyncStorage.getItem("communities");
+        let communities = cachedCommunities
+          ? JSON.parse(cachedCommunities)
+          : [];
+
+        if (!communities.some((c) => c.id === communityId)) {
+          communities.push(newCommunity);
+          await AsyncStorage.setItem(
+            "communities",
+            JSON.stringify(communities)
+          );
+        }
       } catch (error) {
         console.error("Error updating cached communities:", error);
       }
@@ -501,11 +623,17 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
   const fetchAndCacheCommunities = useCallback(async () => {
     if (token && isConnected) {
       try {
-        const communities = await getUserCommunities(token);
-        for (const community of communities) {
-          await db.insertOrUpdateCommunity(community);
+        let cachedCommunities = await AsyncStorage.getItem("communities");
+        if (!cachedCommunities || JSON.parse(cachedCommunities).length === 0) {
+          const communities = await getUserCommunities(token);
+          await AsyncStorage.setItem(
+            "communities",
+            JSON.stringify(communities)
+          );
+          console.log("Communities fetched and cached.");
+        } else {
+          console.log("Communities already cached.");
         }
-        console.log("Communities fetched and cached.");
       } catch (error) {
         console.error("Failed to fetch or cache communities:", error);
       }
@@ -517,11 +645,14 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
   const fetchAndCacheCourses = useCallback(async () => {
     if (token && isConnected) {
       try {
-        const courses = await getCourses(token);
-        for (const course of courses) {
-          await db.insertOrUpdateCourse(course);
+        let cachedCourses = await AsyncStorage.getItem("courses");
+        if (!cachedCourses || JSON.parse(cachedCourses).length === 0) {
+          const courses = await getCourses(token);
+          await AsyncStorage.setItem("courses", JSON.stringify(courses));
+          console.log("Courses fetched and cached.");
+        } else {
+          console.log("Courses already cached.");
         }
-        console.log("Courses fetched and cached.");
       } catch (error) {
         console.error("Failed to fetch or cache courses:", error);
       }
@@ -533,13 +664,17 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
   const fetchAndCacheCourseCategories = useCallback(async () => {
     if (token && isConnected) {
       try {
-        const categories = await getCourseCategories(token);
-        for (const category of categories) {
-          await db.db.transaction(tx => {
-            tx.executeSql('INSERT OR REPLACE INTO course_categories (id, name) VALUES (?, ?)', [category.id, category.name]);
-          });
+        let cachedCategories = await AsyncStorage.getItem("courseCategories");
+        if (!cachedCategories || JSON.parse(cachedCategories).length === 0) {
+          const categories = await getCourseCategories(token);
+          await AsyncStorage.setItem(
+            "courseCategories",
+            JSON.stringify(categories)
+          );
+          console.log("Course categories fetched and cached.");
+        } else {
+          console.log("Course categories already cached.");
         }
-        console.log("Course categories fetched and cached.");
       } catch (error) {
         console.error("Failed to fetch or cache course categories:", error);
       }
@@ -551,10 +686,10 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
   }, [token, isConnected]);
 
   useEffect(() => {
+    // This effect will run once when the component mounts or when token changes
     const loadAndCacheData = async () => {
       if (token && isConnected) {
         try {
-          await db.initDatabase();
           await fetchAndCacheCommunities();
           await fetchAndCacheCourses();
           await fetchAndCacheCourseCategories();
