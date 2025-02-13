@@ -3,17 +3,20 @@ import React from "react";
 import { useColorScheme, Text, TouchableOpacity, Image } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import Colors from "../../constants/Colors";
-import { rMS } from "../../constants"; // Assuming this is defined in the same place
+import { rMS, rS, rV, SIZES } from "../../constants";
 import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "../../components/AuthContext";
 import CommunityDetailScreen from "./CommunityDetailScreen";
 
 export default function ChatScreenLayout() {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+  const { userToken, userInfo } = useAuth();
+  const user = userInfo?.user;
 
   return (
     <SafeAreaProvider>
-      <Stack  screenOptions={{
+      <Stack screenOptions={{
         headerStyle: {
           backgroundColor: themeColors.background,
         },
@@ -29,7 +32,6 @@ export default function ChatScreenLayout() {
           options={({ route, navigation }) => ({
             headerShown: true,
             headerBackTitle: "Back",
-           
             headerTitle: () => (
               <TouchableOpacity
                 onPress={() =>
@@ -41,7 +43,7 @@ export default function ChatScreenLayout() {
               >
                 <Image 
                   source={{ uri: route.params?.image }} 
-                  style={{ width: 30, height: 30, marginRight: 10 }}
+                  style={{ width: rS(30), height: rV(30), marginRight: SIZES.small, borderRadius: rMS(SIZES.xSmall) }}
                 />
                 <Text
                   style={{
@@ -57,36 +59,36 @@ export default function ChatScreenLayout() {
             headerStyle: {
               backgroundColor: themeColors.reverseText,
             },
-            
             headerTitleAlign: "center",
             headerTintColor: themeColors.text,
             headerShadowVisible: false,
           })}
         />
+        <Stack.Screen
+          name="CommunityDetailScreen"
+          options={({ route, navigation }) => {
+            const communityName = route.params?.name ?? "Community";
+            const isCreator = route.params?.created_by === user?.email; // Assume userEmail is passed or stored in navigation state
 
-<Stack.Screen
-        name="CommunityDetailScreen"
-        
-        options={({ route, navigation }) => {
-          const communityName = route.params?.name ?? "Community";
-
-          return {
-            title: "Squad Info",
-            headerBackTitle: "Back",
-            headerRight: () => (
-              <TouchableOpacity
-                onPress={() =>
-                  navigation.navigate("EditCommunityScreen", {
-                    id: route.params?.id,
-                  })
-                }
-              >
-                <Ionicons name="settings-outline" size={24} color={themeColors.text} />
-              </TouchableOpacity>
-            ),
-          };
-        }}
-      />
+            return {
+              title: "Squad Info",
+              headerBackTitle: "Back",
+              headerRight: () => (
+                isCreator ? (
+                  <TouchableOpacity
+                    onPress={() =>
+                      navigation.navigate("EditCommunityScreen", {
+                        id: route.params?.id,
+                      })
+                    }
+                  >
+                    <Ionicons name="settings-outline" size={24} color={themeColors.text} />
+                  </TouchableOpacity>
+                ) : null
+              ),
+            };
+          }}
+        />
       </Stack>
     </SafeAreaProvider>
   );

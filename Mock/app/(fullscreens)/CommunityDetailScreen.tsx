@@ -16,11 +16,13 @@ import { useRoute, useNavigation } from "@react-navigation/native";
 import {
   getCommunityDetails,
   leaveCommunity,
-  getCommunityMessages
+  getCommunityMessages,
+  getCommunityTimetable
 } from "../../CommunityApiCalls";
 import { useAuth } from "../../components/AuthContext";
 import Colors from "../../constants/Colors";
 import { Community } from "../../components/types";
+import TimetableItem from '../../components/TimetableItem'; // Import the new component
 import { FontAwesome6, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
@@ -37,7 +39,8 @@ const CommunityDetailScreen: React.FC = () => {
   const route = useRoute();
   const { id } = route.params as RouteParams;
   const navigation = useNavigation();
-  const { userToken } = useAuth();
+  const { userToken, userInfo } = useAuth();
+  const user = userInfo?.user;
   const { unsubscribeFromCommunity } = useWebSocket() || { unsubscribeFromCommunity: () => {} };
   const [community, setCommunity] = useState<Community | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,6 +49,8 @@ const CommunityDetailScreen: React.FC = () => {
   const colorScheme = useColorScheme();
   const [communityImages, setCommunityImages] = useState<string[]>([]);
   const themeColors = Colors[colorScheme ?? "light"];
+  const [isUserLeader, setIsUserLeader] = useState(false);
+  const [timetable, setTimetable] = useState([]);
 
   // State for managing the current day
   const [currentDay, setCurrentDay] = useState(new Date());
@@ -100,38 +105,47 @@ const CommunityDetailScreen: React.FC = () => {
       }
     };
 
-  
+
+    const fetchCommunityTimetable = async () => {
+      try {
+        if (userToken?.token) {
+          const timetableData = await getCommunityTimetable(id, userToken.token);
+          setTimetable(timetableData);
+          console.log(timetableData)
+        }
+      } catch (error) {
+        console.error("Failed to fetch community timetable:", error);
+      }
+    };
 
     if (id) {
       fetchCommunity();
       fetchCommunityImages();
+      fetchCommunityTimetable();
     }
-
-
- 
   }, [id, userToken?.token]);
 
 
-  const dummyPlanItems = [
-    {
-      id: 1,
-      title: "Math Homework",
-      description: "Complete chapter 4 exercises",
-      due_date: "2023-10-20",
-      due_time_start: "18:00",
-      due_time_end: "20:00",
-      category: 1,
-    },
-    {
-      id: 2,
-      title: "Physics Lab Report",
-      description: "Submit lab report on Newton's laws",
-      due_date: "2023-10-22",
-      due_time_start: "14:00",
-      due_time_end: "16:00",
-      category: 2,
-    },
-  ];
+  
+
+   
+
+    // Function to check if the user is the creator of the community
+    const checkUserRole = (communityData: Community) => {
+      if (communityData.created_by === user?.email) {
+        setIsUserLeader(true);
+      } else {
+        setIsUserLeader(false);
+      }
+    };
+  
+
+    const handleTimetableItemPress = (plan) => {
+      // Handle the press event for the timetable item
+      console.log('Timetable item pressed:', plan);
+    };
+
+
 
 
   const getCategoryColor = (type) => {
@@ -300,9 +314,9 @@ const CommunityDetailScreen: React.FC = () => {
         <Text style={[styles.communityName, { color: themeColors.text }]}>{community.name}</Text>
         
         <View style={styles.communityStats}>
-          <View style={styles.statItem}>
-            <FontAwesome6 name="crown" size={16} color={themeColors.text} />
-            <Text style={[styles.statText, { color: themeColors.textSecondary }]}>Leader</Text>
+        <View style={styles.statItem}>
+            <FontAwesome6 name={isUserLeader ? "crown" : "user"} size={SIZES.large} color={themeColors.text} />
+            <Text style={[styles.statText, { color: themeColors.textSecondary }]}>{isUserLeader ? "Leader" : "Member"}</Text>
           </View>
           <View style={[styles.statItem, styles.statDivider]}>
             <FontAwesome6 name="users" size={16} color={themeColors.text} />
@@ -360,43 +374,18 @@ const CommunityDetailScreen: React.FC = () => {
             }
           />
         )}
+          
           {activeTab === "Calendar" && (
-            <View style={styles.calendarContainer}>
-              {/* Navigation arrows */}
-              <View style={styles.calendarNav}>
-               
-                <Text style={[styles.calendarMonth2, { color: themeColors.reverseGrey }]}>
-                  {getDayOfWeek(new Date(currentDay.getTime() - 86400000))} {/* Previous Day */}
-                </Text>
-                <TouchableOpacity onPress={previousDay}>
-                  <Ionicons name="chevron-back" size={24} color={themeColors.text} />
-                </TouchableOpacity>
-                <Text style={[styles.calendarMonth, { color: themeColors.text }]}>
-                  {getDayOfWeek(currentDay)} {/* Current Day */}
-                </Text>
-                <TouchableOpacity onPress={nextDay}>
-                  <Ionicons name="chevron-forward" size={24} color={themeColors.text} />
-                </TouchableOpacity>
-                <Text style={[styles.calendarMonth2, { color: themeColors.reverseGrey }]}>
-                  {getDayOfWeek(new Date(currentDay.getTime() + 86400000))} {/* Next Day */}
-                </Text>
-               
-              </View>
+        <View style={styles.calendarContainer}>
+          <View style={styles.planItemsContainer}>
+            {timetable.map((plan) => (
+              <TimetableItem key={plan.id} plan={plan} onPress={handleTimetableItemPress} />
+            ))}
+          </View>
+        </View>
+      )}
 
-              <View style={styles.planItemsContainer}>
-                {dummyPlanItems.map((plan) => (
-                  <View key={plan.id} style={styles.planItemWrapper}>
-                    <PlanItem 
-                      plan={plan}
-                      categoryNames={{ [plan.category]: `Category ${plan.category}` }} // Dummy category names
-                      getCategoryColor={getCategoryColor}
-                      // Note: handleEditPlan is not implemented here since you're just displaying
-                    />
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
+          
           {activeTab === "Member" && (
             <View style={styles.membersContainer}>
               <FlatList

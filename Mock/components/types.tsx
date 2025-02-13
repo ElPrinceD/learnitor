@@ -148,4 +148,5 @@ export interface Community {
   id: string;
   name: string;
   image_url: string;
+  created_by: string;
 }

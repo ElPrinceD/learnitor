@@ -10,6 +10,7 @@ const apiClient = axios.create({
 
 const COMMUNITY_API_BASE_URL = '/api/communities';
 const MESSAGE_API_BASE_URL = '/api/messages'
+
 // {GET APIs}
 
 export const getCommunities = async (token: string) => {
@@ -56,6 +57,21 @@ export const getCommunityDetails = async (communityId: string | number, token: a
         throw error;
     }
 };
+
+
+export const getCommunityTimetable = async (communityId: string, token: string) => {
+    try {
+        const response = await apiClient.get(`api/timetables/community/${communityId}/`, {
+            headers: {
+                Authorization: `Token ${token}`,
+            },
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching community details:', error);
+        throw error;
+    }
+    };
 
 export const updateCommunity = async (communityId: string, communityData: any, token: string) => {
     try {
