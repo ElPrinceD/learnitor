@@ -86,8 +86,8 @@ export default function Tab2Layout() {
           }}
         />
          <Stack.Screen
-          name="FAQ"
-          component={FAQScreen}
+          name="FAQScreen"
+          
           options={{
             headerShown: true,
             headerTitle: () => (
