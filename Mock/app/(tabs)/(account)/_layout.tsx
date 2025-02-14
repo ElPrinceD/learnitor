@@ -85,6 +85,30 @@ export default function Tab2Layout() {
             presentation: "modal",
           }}
         />
+         <Stack.Screen
+          name="FAQ"
+          component={FAQScreen}
+          options={{
+            headerShown: true,
+            headerTitle: () => (
+              <Text
+                style={{
+                  color: themeColors.text,
+                  fontSize: 20,
+                  fontWeight: "bold",
+                }}
+              >
+                FAQ
+              </Text>
+            ),
+            headerStyle: {
+              backgroundColor: themeColors.background,
+            },
+            headerTitleAlign: "center",
+            headerShadowVisible: false,
+            presentation: "modal",
+          }}
+        />
       </Stack>
     </SafeAreaProvider>
   );

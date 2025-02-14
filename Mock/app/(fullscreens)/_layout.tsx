@@ -7,6 +7,7 @@ import { rMS, rS, rV, SIZES } from "../../constants";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../components/AuthContext";
 import CommunityDetailScreen from "./CommunityDetailScreen";
+import CommunityImagesScreen from "./CommunityImageScreen";
 
 export default function ChatScreenLayout() {
   const colorScheme = useColorScheme();
@@ -87,6 +88,14 @@ export default function ChatScreenLayout() {
                 ) : null
               ),
             };
+          }}
+        />
+         <Stack.Screen
+          name="CommunityImageScreen"
+          
+          options={{
+            title: "Photos",
+            headerBackTitle: "Back",
           }}
         />
       </Stack>

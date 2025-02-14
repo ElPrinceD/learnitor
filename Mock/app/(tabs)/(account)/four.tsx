@@ -82,7 +82,7 @@ const Profile = () => {
   };
 
   const handleHelpCenter = () => {
-    // Handle navigation to Help Center screen
+    router.navigate("FAQScreen");
   };
 
   const handleProfilePictureUpdate = async () => {
