@@ -38,6 +38,7 @@ export interface Community {
   name: string;
   description: string;
   image_url: string;
+  created_at: string;
   isMember: boolean;
   shareable_link: string;
   membersCount: number;

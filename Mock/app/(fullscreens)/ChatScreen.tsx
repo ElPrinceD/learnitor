@@ -642,10 +642,10 @@ const CommunityChatScreen: React.FC = () => {
             <Image
               source={{ uri: route.params?.image }}
               style={{
-                width: rS(40),
-                height: rS(40),
-                marginRight: SIZES.small,
-                borderRadius: rMS(SIZES.xLarge),
+                width: rS(33),
+                height: rS(30),
+                marginRight: rS(8),
+                borderRadius: rMS(20),
               }}
             />
             <Text style={{ color: themeColors.text, fontSize: rMS(SIZES.large) }}>
@@ -777,14 +777,11 @@ const CommunityChatScreen: React.FC = () => {
     >
       <Image 
         source={{ uri: props.currentMessage.image }}
-        style={{
-          width: rS(320),
-          height: rV(200),
-          resizeMode: 'contain',
-        }}
+        style={styles.whatsappImage}
       />
     </TouchableOpacity>
   );
+  
 
   const renderMessageDocument = (props) => (
     <TouchableOpacity onPress={() => onDocumentPress(props.currentMessage.document)}>
@@ -933,18 +930,26 @@ const CommunityChatScreen: React.FC = () => {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      padding: SIZES.small,
+      padding: rMS(10), // SIZES.small replaced with 10
     },
+   
     messageImageContainer: {
-      borderRadius: rMS(SIZES.small),
-      padding: SIZES.small,
-      marginVertical: SIZES.small,
+      borderRadius: rMS(10),
+      overflow: "hidden", // ensures the image respects the rounded corners
+      marginVertical: rV(0),
+      paddingHorizontal: rS(2),  // minimal horizontal padding
+      paddingVertical: rV(0), 
+    },
+    whatsappImage: {
+      width: rS(150),  // adjust these numbers to fit your design
+      height: rV(150),
+      resizeMode: "cover",
     },
     statusText: {
-      fontSize: SIZES.xSmall,
+      fontSize: SIZES.xSmall, // text property remains
       color: themeColors.textSecondary,
-      textAlign: 'right',
-      paddingRight: SIZES.xSmall,
+      textAlign: "right",
+      paddingRight: rS(8), // SIZES.xSmall replaced with 8
     },
     blurBackground: {
       opacity: 0.7,
@@ -952,12 +957,12 @@ const CommunityChatScreen: React.FC = () => {
       width: "100%",
     },
     username: {
-      fontSize: SIZES.small,
+      fontSize: SIZES.small, // text property remains
       color: themeColors.textSecondary,
-      marginBottom: SIZES.xSmall,
+      marginBottom: rV(8), // SIZES.xSmall replaced with 8
       fontWeight: "bold",
-      marginLeft: SIZES.small,
-      paddingRight: SIZES.medium,
+      marginLeft: rS(10), // SIZES.small replaced with 10
+      paddingRight: rS(12), // SIZES.medium replaced with 12
     },
     avatarContainer: {
       width: rS(36),
@@ -974,7 +979,7 @@ const CommunityChatScreen: React.FC = () => {
     },
     initials: {
       color: "#fff",
-      fontSize: SIZES.medium,
+      fontSize: SIZES.medium, // text property remains
     },
     dateContainer: {
       paddingVertical: rV(4),
@@ -985,32 +990,32 @@ const CommunityChatScreen: React.FC = () => {
     },
     dateText: {
       color: themeColors.textSecondary,
-      fontSize: SIZES.small,
+      fontSize: SIZES.small, // text property remains
       fontWeight: "bold",
     },
     messageImage: {
       width: rS(300),
       height: rV(200),
       borderRadius: rMS(10),
-      margin: SIZES.small,
+      margin: rMS(10), // SIZES.small replaced with 10
     },
     messageVideo: {
       width: rS(200),
       height: rV(200),
       borderRadius: rMS(10),
-      margin: SIZES.small,
+      margin: rMS(10), // SIZES.small replaced with 10
     },
     sendContainer: {
-      height: rV(44),
-      width: rS(55),
+      height: rV(30),
+      width: rS(45),
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
-      gap: SIZES.medium,
-      paddingHorizontal: SIZES.xSmall,
+      gap: rS(12), // SIZES.medium replaced with 12
+      paddingHorizontal: rS(2), // SIZES.xSmall replaced with 8
       backgroundColor: themeColors.tint,
       borderRadius: rMS(20),
-      marginHorizontal: SIZES.xSmall,
+      marginHorizontal: rS(4), // SIZES.xSmall replaced with 8
     },
     sendButton: {
       justifyContent: "center",
@@ -1018,8 +1023,8 @@ const CommunityChatScreen: React.FC = () => {
     inputToolbar: {
       backgroundColor: themeColors.background,
       borderTopWidth: 0,
-      paddingHorizontal: SIZES.small,
-      paddingBottom: insets.bottom + rV(35),
+      paddingHorizontal: rS(10), // SIZES.small replaced with 10
+      paddingBottom: insets.bottom,
       paddingTop: rV(10),
       opacity: 0.9,
     },
@@ -1029,22 +1034,22 @@ const CommunityChatScreen: React.FC = () => {
       backgroundColor: themeColors.normalGrey,
       borderRadius: rMS(20),
       flex: 1,
-      paddingVertical: rV(6),
-      paddingHorizontal: SIZES.small,
-      marginRight: SIZES.small,
+      paddingVertical: rV(8),
+      paddingHorizontal: rS(10), // SIZES.small replaced with 10
+      marginRight: rS(10), // SIZES.small replaced with 10
     },
     editedText: {
-      fontSize: SIZES.xSmall,
+      fontSize: SIZES.Small, // text property remains
       color: themeColors.textSecondary,
-      padding: SIZES.xSmall,
+      padding: rMS(8), // SIZES.xSmall replaced with 8
     },
     attachIcon: {
-      marginLeft: SIZES.medium,
+      marginLeft: rS(10), // SIZES.medium replaced with 12
     },
     textInput: {
       flex: 1,
       color: themeColors.text,
-      fontSize: SIZES.small,
+      fontSize: SIZES.medium, // text property remains
       fontFamily: FONT.regular,
     },
     modalContainer: {
@@ -1067,21 +1072,21 @@ const CommunityChatScreen: React.FC = () => {
       justifyContent: "flex-start",
       alignItems: "flex-start",
       backgroundColor: "#E6E6E6",
-      padding: SIZES.small,
+      padding: rMS(10), // SIZES.small replaced with 10
       borderRadius: rMS(5),
       borderLeftWidth: rS(4),
       borderLeftColor: "#007AFF",
-      marginRight: SIZES.small,
+      marginRight: rS(4),
       width: "100%",
     },
     replyText: {
       color: "#000",
-      fontSize: SIZES.small,
-      marginBottom: SIZES.xSmall,
+      fontSize: SIZES.small, // text property remains
+      marginBottom: rV(8), // SIZES.xSmall replaced with 8
     },
     replyName: {
       color: "#007AFF",
-      fontSize: SIZES.small,
+      fontSize: SIZES.small, // text property remains
       fontWeight: "bold",
     },
     closeReplyButton: {
@@ -1091,24 +1096,25 @@ const CommunityChatScreen: React.FC = () => {
     },
     documentText: {
       color: themeColors.text,
-      fontSize: SIZES.small,
-      padding: SIZES.small,
+      fontSize: SIZES.small, // text property remains
+      padding: rMS(10), // SIZES.small replaced with 10
       borderWidth: rS(1),
       borderColor: themeColors.textSecondary,
       borderRadius: rMS(5),
-      marginVertical: SIZES.small,
+      marginVertical: rV(10), // SIZES.small replaced with 10
     },
     previewImage: {
-      width: '100%',
+      width: "100%",
       height: rV(200),
-      marginBottom: SIZES.small,
+      marginBottom: rV(10), // SIZES.small replaced with 10
     },
     previewDocument: {
       color: themeColors.text,
-      fontSize: SIZES.medium,
-      marginBottom: SIZES.small,
+      fontSize: SIZES.medium, // text property remains
+      marginBottom: rV(10), // SIZES.small replaced with 10
     },
   });
+  
 
   return (
     <ImageBackground

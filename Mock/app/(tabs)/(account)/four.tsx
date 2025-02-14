@@ -296,7 +296,7 @@ const Profile = () => {
             color={themeColors.icon}
             style={styles.icon}
           />
-          <Text style={styles.optionText}>Help Center</Text>
+          <Text style={styles.optionText}>FAQ</Text>
         </TouchableOpacity>
 
         <Text style={styles.sectionTitle}>Terms</Text>
