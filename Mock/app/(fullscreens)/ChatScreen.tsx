@@ -17,7 +17,7 @@ import {
   Alert,
   Dimensions,
 } from "react-native";
-import FastImage from 'react-native-fast-image';
+import setSoftInputMode from "react-native-set-soft-input-mode";
 import * as Clipboard from "expo-clipboard";
 import { useFocusEffect, useRoute } from "@react-navigation/native";
 import axios from "axios";
@@ -33,6 +33,8 @@ import {
   IMessage,
   InputToolbar,
 } from "react-native-gifted-chat";
+import { Swipeable } from "react-native-gesture-handler";
+
 import PreloadImage from "../../components/PreloadImage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
@@ -45,6 +47,7 @@ import { rMS, rV, rS, SIZES, useShadows } from "../../constants";
 import Colors from "../../constants/Colors";
 import { FONT } from "../../constants";
 import { router } from "expo-router";
+import AppImage from "../../components/AppImage";
 
 const CommunityChatScreen: React.FC = () => {
   const route = useRoute();
@@ -54,6 +57,7 @@ const CommunityChatScreen: React.FC = () => {
   const { socket, isConnected, sendMessage, markMessageAsRead } = useWebSocket();
   const navigation = useNavigation();
   const [messages, setMessages] = useState<IMessage[]>([]);
+  const [messageIds, setMessageIds] = useState(new Set<string>());
   const { width } = Dimensions.get('window');
   const [messageInput, setMessageInput] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +73,22 @@ const CommunityChatScreen: React.FC = () => {
   const [isVideoViewerVisible, setIsVideoViewerVisible] = useState(false);
   const [isDocumentViewerVisible, setIsDocumentViewerVisible] = useState(false);
   const [editingMessage, setEditingMessage] = useState<IMessage | null>(null);
+  const [profileImages, setProfileImages] = useState<Record<string, string>>({}); // Cache for profile images
 
+
+  
+  useEffect(() => {
+    if (Platform.OS === "android" && setSoftInputMode) {
+      setSoftInputMode.set(3); // 3 is typically for ADJUST_RESIZE
+      return () => {
+        setSoftInputMode.set(1); // 1 is typically for ADJUST_PAN
+      };
+    }
+    return () => {};
+  }, []);
+
+
+  // Normalize message data format
   const normalizeMessage = (data) => {
     if ("message" in data && "sent_at" in data) {
       return {
@@ -123,31 +142,42 @@ const CommunityChatScreen: React.FC = () => {
       ? "https://images.pexels.com/photos/9665185/pexels-photo-9665185.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
       : "https://images.pexels.com/photos/7599590/pexels-photo-7599590.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2";
 
-  const fetchMessageHistory = useCallback(async () => {
-    try {
-      setLoading(true);
-      const cachedMessages = await AsyncStorage.getItem(
-        `messages_${communityId}`
-      );
-
-      if (cachedMessages) {
-        let parsedMessages = JSON.parse(cachedMessages).map(normalizeMessage);
-
-        const validMessages = parsedMessages
-          .filter((msg): msg is IMessage => msg !== null)
-          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
-        setMessages(validMessages);
-      } else {
-        await sendMessage({ type: "fetch_history", community_id: communityId });
-      }
-    } catch (error) {
-      console.error("Error fetching message history:", error);
-      setError("Failed to load message history");
-    } finally {
-      setLoading(false);
-    }
-  }, [communityId, sendMessage]);
+      const fetchMessageHistory = useCallback(async () => {
+        try {
+          // If offline, load cached messages (if available) and return early.
+          if (!isConnected) {
+            const cachedMessages = await AsyncStorage.getItem(`messages_${communityId}`);
+            if (cachedMessages) {
+              const parsedMessages = JSON.parse(cachedMessages).map(normalizeMessage);
+              const validMessages = parsedMessages
+                .filter((msg): msg is IMessage => msg !== null)
+                .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+              setMessages(validMessages);
+            }
+            // Do not attempt a server fetch if offline.
+            return;
+          }
+      
+          // If online, show the spinner and then fetch the history.
+          setLoading(true);
+          const cachedMessages = await AsyncStorage.getItem(`messages_${communityId}`);
+          if (cachedMessages) {
+            const parsedMessages = JSON.parse(cachedMessages).map(normalizeMessage);
+            const validMessages = parsedMessages
+              .filter((msg): msg is IMessage => msg !== null)
+              .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+            setMessages(validMessages);
+          } else {
+            await sendMessage({ type: "fetch_history", community_id: communityId });
+          }
+        } catch (error) {
+          console.error("Error fetching message history:", error);
+          setError("Failed to load message history");
+        } finally {
+          setLoading(false);
+        }
+      }, [communityId, sendMessage, isConnected]);
+      
 
   useFocusEffect(
     useCallback(() => {
@@ -179,36 +209,21 @@ const CommunityChatScreen: React.FC = () => {
             const newMessage = normalizeMessage(data);
             if (newMessage) {
               setMessages((prevMessages) => {
-                if (data.temp_id) {
-                  const foundIndex = prevMessages.findIndex(
-                    (msg) => msg._id === data.temp_id
-                  );
-                  if (foundIndex !== -1) {
-                    const updatedMessages = [...prevMessages];
-                    updatedMessages[foundIndex] = newMessage;
-                    if (user?.id === newMessage.user._id) {
-                      updatedMessages[foundIndex].status = "read";
-                    }
-                    
-                    AsyncStorage.setItem(
-                      `messages_${communityId}`,
-                      JSON.stringify(updatedMessages)
-                    );
-                    return updatedMessages;
-                  }
-                }
-                const updatedMessages = [newMessage, ...prevMessages].sort(
-                  (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+                // Look for a temporary message with a matching tempId.
+                const index = prevMessages.findIndex(
+                  (m) => m.tempId && m.tempId === data.temp_id
                 );
-                if (user?.id === newMessage.user._id) {
-                  updatedMessages[0].status = "read";
+                if (index !== -1) {
+                  // Update the temporary message with the final data.
+                  const updatedMessages = [...prevMessages];
+                  updatedMessages[index] = newMessage;
+                  return updatedMessages;
+                } else {
+                  // If no matching temporary message exists, add it normally.
+                  return [newMessage, ...prevMessages];
                 }
-                AsyncStorage.setItem(
-                  `messages_${communityId}`,
-                  JSON.stringify(updatedMessages)
-                );
-                return updatedMessages;
               });
+              // Optionally update AsyncStorage if needed.
             }
           } else if (data.type === "message_delete") {
             setMessages((prevMessages) => {
@@ -247,7 +262,8 @@ const CommunityChatScreen: React.FC = () => {
     }
   
     return socketCleanup;
-  }, [socket, communityId, user]);
+  }, [socket, communityId]);
+  
 
   useEffect(() => {
     (async () => {
@@ -260,60 +276,69 @@ const CommunityChatScreen: React.FC = () => {
     })();
   }, []);
 
-  const sendMediaMessage = useCallback(async (fileUri: string, type: 'image' | 'document') => {
-    const tempId = Math.random().toString();
-    const message = {
-      _id: tempId,
-      text: "",
-      createdAt: new Date(),
-      user: {
-        _id: user?.id || 1,
-        name: user?.first_name + " " + user?.last_name || "Unknown User",
-      },
-      [type]: fileUri,
-      status: isConnected ? "sending" : "pending",
-    };
-  
-    setMessages((prevMessages) => {
-      if (!prevMessages.some(msg => msg._id === tempId)) {
-        return [message, ...prevMessages];
-      }
-      return prevMessages;
-    });
-  
-    if (!communityId) {
-      console.error('Community ID missing before sending message');
-      return;
-    }
-    
-    if (!isConnected) {
-      const messageToStore = {
-        ...message,
-        communityId: communityId,
-        content: {
-          [type]: fileUri
+  const sendMediaMessage = useCallback(
+    async (fileUri: string, type: 'image' | 'document') => {
+      // Create a more unique temporary ID
+      const tempId = Date.now().toString() + Math.random().toString(36).substr(2, 5);
+      const message = {
+        _id: tempId,
+        tempId, // Include a tempId property for matching later
+        text: "",
+        createdAt: new Date(),
+        user: {
+          _id: user?.id || 1,
+          name: user?.first_name + " " + user?.last_name || "Unknown User",
         },
+        [type]: fileUri,
+        status: isConnected ? "sending" : "pending",
       };
-      AsyncStorage.setItem(`unsent_message_${tempId}`, JSON.stringify(messageToStore));
-    } else {
-      sendMessage({
-        type: "send_message",
-        community_id: communityId,
-        message: "", 
-        sender: user?.first_name + " " + user?.last_name || "Unknown User",
-        sender_id: user?.id || 1,
-        temp_id: tempId,
-        [type]: fileUri
+  
+      // Add the temporary message to state if it doesn't exist already
+      setMessages((prevMessages) => {
+        if (!prevMessages.some((msg) => msg._id === tempId)) {
+          return [message, ...prevMessages];
+        }
+        return prevMessages;
       });
-    }
-  }, [communityId, sendMessage, user, isConnected]);
+  
+      if (!communityId) {
+        console.error("Community ID missing before sending message");
+        return;
+      }
+  
+      if (!isConnected) {
+        const messageToStore = {
+          ...message,
+          communityId,
+          content: {
+            [type]: fileUri,
+          },
+        };
+        AsyncStorage.setItem(`unsent_message_${tempId}`, JSON.stringify(messageToStore));
+      } else {
+        sendMessage({
+          type: "send_message",
+          community_id: communityId,
+          message: "",
+          sender: user?.first_name + " " + user?.last_name || "Unknown User",
+          sender_id: user?.id || 1,
+          temp_id: tempId, // Pass the temporary ID so the server can echo it back
+          [type]: fileUri,
+        });
+      }
+    },
+    [communityId, sendMessage, user, isConnected]
+  );
+  
 
   const onSend = useCallback(
     (newMessages: IMessage[] = []) => {
       for (let message of newMessages) {
-        const tempId = Math.random().toString();
+        // Create a unique temporary ID
+        const tempId = Date.now().toString() + Math.random().toString(36).substr(2, 5);
         const tempMessage: IMessage = {
-          _id: tempId,
+          _id: tempId, // initial temporary ID
+          tempId,       // add a tempId field for later matching
           text: message.text,
           createdAt: new Date(),
           user: {
@@ -326,45 +351,33 @@ const CommunityChatScreen: React.FC = () => {
           ...(replyToMessage && { replyTo: replyToMessage._id }),
         };
   
+        // Clear temporary states
         setReplyToMessage(null);
         setMediaPreview({ type: null, uri: null });
   
-        setMessages((prevMessages) => {
-          if (!prevMessages.some((msg) => msg._id === tempId)) {
-            return [tempMessage, ...prevMessages];
-          }
-          return prevMessages;
-        });
-  
-        if (!isConnected) {
-          const messageToStore = {
-            ...tempMessage,
-            communityId: communityId,
-            content: {
-              text: message.text,
-              image: tempMessage.image ? tempMessage.image : undefined,
-              document: tempMessage.document ? tempMessage.document : undefined,
-            },
-            replyTo: replyToMessage?._id,
-          };
-          AsyncStorage.setItem(`unsent_message_${tempId}`, JSON.stringify(messageToStore));
-        } else {
-          sendMessage({
-            type: "send_message",
-            community_id: communityId,
-            message: message.text || "",
-            sender: user?.first_name + " " + user?.last_name || "Unknown User",
-            sender_id: user?.id || 1,
-            temp_id: tempId,
-            ...(replyToMessage && { reply_to: replyToMessage._id }),
-            image: tempMessage.image ? tempMessage.image : undefined,
-            document: tempMessage.document ? tempMessage.document : undefined,
-          });
+        // Only add if it doesn't already exist
+        if (!messageIds.has(tempId)) {
+          setMessages((prevMessages) => [tempMessage, ...prevMessages]);
+          setMessageIds(new Set([...messageIds, tempId]));
         }
+  
+        // Send the message with the tempId so the server can echo it back
+        sendMessage({
+          type: "send_message",
+          community_id: communityId,
+          message: message.text || "",
+          sender: user?.first_name + " " + user?.last_name || "Unknown User",
+          sender_id: user?.id || 1,
+          temp_id: tempId, // pass the temporary id
+          ...(replyToMessage && { reply_to: replyToMessage._id }),
+          image: tempMessage.image ? tempMessage.image : undefined,
+          document: tempMessage.document ? tempMessage.document : undefined,
+        });
       }
     },
-    [communityId, sendMessage, user, replyToMessage, isConnected, mediaPreview]
+    [communityId, sendMessage, user, replyToMessage, isConnected, mediaPreview, messageIds]
   );
+  
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -631,7 +644,7 @@ const CommunityChatScreen: React.FC = () => {
         ),
         headerTitle: () => (
           <TouchableOpacity
-            onPress={() => {
+            onPressIn={() => {
               router.push({
                 pathname: "CommunityDetailScreen",
                 params: { id: communityId },
@@ -667,12 +680,26 @@ const CommunityChatScreen: React.FC = () => {
   ]);
 
   const renderBubble = useCallback(
+    
     (props) => {
       const isSelected = selectedMessages.some(
         (m) => m._id === props.currentMessage._id
       );
-
+   
+      const isFirstMessageOfBlock =
+        !props.previousMessage ||
+        props.previousMessage?.user?._id !== props.currentMessage.user._id;
+      const isOtherUser = props.currentMessage.user._id !== user?.id;
+      const isNewDay =
+        !props.previousMessage ||
+        (props.currentMessage?.createdAt &&
+          props.previousMessage?.createdAt &&
+          props.currentMessage.createdAt.toDateString() !==
+            props.previousMessage.createdAt.toDateString());
+  
       return (
+      
+      
         <TouchableOpacity
           onPressIn={() => handlePress(props.currentMessage)}
           onLongPress={() => handleLongPress(props.currentMessage)}
@@ -687,31 +714,74 @@ const CommunityChatScreen: React.FC = () => {
             wrapperStyle={{
               ...props.wrapperStyle,
               ...(isSelected && styles.blurBackground),
+              left: { backgroundColor: themeColors.background },
+              right: { backgroundColor: themeColors.tint },
+            }}
+            containerStyle={{
+              marginVertical: isFirstMessageOfBlock ? 5 : 0,
             }}
             onPressIn={() => handlePress(props.currentMessage)}
             onLongPress={() => handleLongPress(props.currentMessage)}
             renderCustomView={() => (
               <>
-                {props.currentMessage.replyTo && props.currentMessage.replyTo._id !== null && (
-                  <View style={styles.replyContainer}>
-                    <Text style={styles.replyName}>
-                      Replying to {props.currentMessage.replyTo.user.name}
-                    </Text>
-                    <Text style={styles.replyText}>
-                      {props.currentMessage.replyTo.text}
-                    </Text>
-                  </View>
-                )}
-                {props.currentMessage.user._id === user?.id && (
-                  <Text style={styles.statusText}>
-                    {props.currentMessage.status === 'pending' ? 'Pending' : 
-                     props.currentMessage.status === 'sending' ? 'Sending' : 
-                     props.currentMessage.status === 'sent' ? 'Sent' : 
-                     props.currentMessage.status === 'read' ? 'Read' : ''}
+                {props.currentMessage.replyTo &&
+                  props.currentMessage.replyTo._id !== null && (
+                    <View style={styles.replyContainer}>
+                      <Text style={styles.replyName}>
+                        {`Replying to ${
+                          props.currentMessage.replyTo.user?.name || "Unknown"
+                        }`}
+                      </Text>
+                      <Text style={styles.replyText}>
+                        {props.currentMessage.replyTo.text}
+                      </Text>
+                    </View>
+                  )}
+                {(isOtherUser && isFirstMessageOfBlock) ||
+                (isOtherUser && isNewDay) ? (
+                  <Text style={styles.username}>
+                    {props.currentMessage.user.name}
                   </Text>
+                ) : null}
+                {!isOtherUser && (
+                  // Display the status icon at the bottom of the bubble
+                  <View style={styles.statusContainer}>
+                    {props.currentMessage.status === "pending" && (
+                      <MaterialCommunityIcons
+                        name="clock-outline"
+                        size={SIZES.small}
+                        color={themeColors.textSecondary}
+                      />
+                    )}
+                    {props.currentMessage.status === "sending" && (
+                      <MaterialCommunityIcons
+                        name="sync"
+                        size={SIZES.small}
+                        color={themeColors.textSecondary}
+                      />
+                    )}
+                    {props.currentMessage.status === "sent" && (
+                      <MaterialCommunityIcons
+                        name="check"
+                        size={SIZES.small}
+                        color={themeColors.textSecondary}
+                      />
+                    )}
+                    {props.currentMessage.status === "read" && (
+                      <MaterialCommunityIcons
+                        name="check-all"
+                        size={SIZES.small}
+                        color={themeColors.textSecondary}
+                      />
+                    )}
+                  </View>
                 )}
               </>
             )}
+            textStyle={{
+              right: { color: "#ffff" },
+              left: { color: themeColors.text },
+            }}
           />
           {props.currentMessage.isEdited && (
             <Text
@@ -727,9 +797,73 @@ const CommunityChatScreen: React.FC = () => {
             </Text>
           )}
         </TouchableOpacity>
+
       );
     },
-    [selectedMessages, user?.id, handlePress, handleLongPress, messages]
+    [selectedMessages, user?.id, handlePress, handleLongPress, messages, themeColors]
+  );
+  
+
+  const renderAvatar = (props) => {
+    const userId = props.currentMessage.user._id;
+    let avatarUrl = profileImages[userId] || props.currentMessage.user.avatar || user?.profile_picture;
+
+    if (!profileImages[userId]) {
+      setProfileImages(prev => ({ ...prev, [userId]: avatarUrl }));
+    }
+
+    if (avatarUrl) {
+      return (
+        <View style={styles.avatarContainer}>
+          <AppImage uri={avatarUrl} style={styles.avatar} />
+        </View>
+      );
+    } else {
+      return (
+        <View style={styles.avatarContainer}>
+          <Text style={styles.initials}>
+            {props.currentMessage.user.name.charAt(0).toUpperCase()}
+          </Text>
+        </View>
+      );
+    }
+  };
+
+  // Update renderMessageImage to allow swiping through images
+  const renderMessageImage = (props) => {
+    const images = messages.filter(msg => msg.image).map(msg => ({ uri: msg.image }));
+    const currentIndex = images.findIndex(img => img.uri === props.currentMessage.image);
+
+    return (
+      <TouchableOpacity
+        key={props.currentMessage._id}
+        onPress={() => {
+          setMediaUri(props.currentMessage.image);
+          setIsImageViewerVisible(true);
+        }}
+        style={styles.messageImageContainer}
+      >
+        <AppImage uri={props.currentMessage.image} style={styles.whatsappImage} />
+      </TouchableOpacity>
+    );
+  };
+
+  // Update ImageViewing usage for image gallery functionality
+  const renderImageViewer = () => (
+    <ImageViewing
+      images={messages.filter(msg => msg.image).map(msg => ({
+        uri: msg.image,
+        // Here we define a custom render function for each image
+        renderItem: (item) => (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <AppImage uri={item.uri} style={{ width: '100%', height: '100%' }} />
+          </View>
+        )
+      }))}
+      imageIndex={messages.findIndex(msg => msg.image === mediaUri)}
+      visible={isImageViewerVisible}
+      onRequestClose={() => setIsImageViewerVisible(false)}
+    />
   );
 
   const renderDay = (props) => {
@@ -740,9 +874,23 @@ const CommunityChatScreen: React.FC = () => {
         previousMessage?.createdAt &&
         currentMessage.createdAt.toDateString() !==
           previousMessage.createdAt.toDateString());
-
+  
     if (!isNewDay) return null;
-
+  
+    const formatDate = (date: Date) => {
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(today.getDate() - 1);
+  
+      if (date.toDateString() === today.toDateString()) {
+        return 'Today';
+      } else if (date.toDateString() === yesterday.toDateString()) {
+        return 'Yesterday';
+      } else {
+        return date.toDateString();
+      }
+    };
+  
     return (
       <View
         style={[
@@ -751,9 +899,7 @@ const CommunityChatScreen: React.FC = () => {
         ]}
       >
         <Text style={styles.dateText}>
-          {currentMessage.createdAt
-            ? currentMessage.createdAt.toDateString()
-            : "Unknown Date"}
+          {currentMessage.createdAt ? formatDate(currentMessage.createdAt) : "Unknown Date"}
         </Text>
       </View>
     );
@@ -769,18 +915,10 @@ const CommunityChatScreen: React.FC = () => {
     setIsDocumentViewerVisible(true);
   };
 
-  const renderMessageImage = (props) => (
-    <TouchableOpacity 
-      key={props.currentMessage._id} 
-      onPress={() => onImagePress(props.currentMessage.image)}
-      style={styles.messageImageContainer}
-    >
-      <Image 
-        source={{ uri: props.currentMessage.image }}
-        style={styles.whatsappImage}
-      />
-    </TouchableOpacity>
-  );
+
+
+  
+  
   
 
   const renderMessageDocument = (props) => (
@@ -789,13 +927,36 @@ const CommunityChatScreen: React.FC = () => {
     </TouchableOpacity>
   );
 
-  const renderSend = (props) => (
-    <View style={styles.sendContainer}>
-      <Send {...props} containerStyle={styles.sendButton} alwaysShowSend>
-        <Ionicons name="send" color="#ffffff" size={SIZES.large} />
-      </Send>
-    </View>
-  );
+  const renderSend = (props) => {
+    const hasText = props.text && props.text.trim().length > 0; // Check if user has typed text
+  
+    return (
+      <View>
+        {/* Attachment buttons should always be visible */}
+        {!hasText && (
+          <View style={styles.attachButtonContainer}>
+            <TouchableOpacity onPress={pickImage} style={styles.attachButton}>
+              <Ionicons name="image-outline" color={themeColors.text} size={SIZES.xLarge} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={pickDocument} style={styles.attachButton}>
+              <Ionicons name="document-outline" color={themeColors.text} size={SIZES.xLarge} />
+            </TouchableOpacity>
+          </View>
+        )}
+  
+        {/* Send button appears when user types */}
+        {hasText && (
+          <View style={styles.sendContainer}>
+          <Send {...props} containerStyle={styles.sendButton} alwaysShowSend>
+            <Ionicons name="send" color="#ffffff" size={SIZES.large} />
+          </Send>
+          </View>
+        )}
+      </View>
+    );
+  };
+  
+  
 
   const renderMediaPreview = () => {
     if (mediaPreview.uri) {
@@ -882,22 +1043,7 @@ const CommunityChatScreen: React.FC = () => {
                 </TouchableOpacity>
               ) : (
                 <>
-                  <TouchableOpacity onPress={pickImage}>
-                    <Ionicons
-                      name="image-outline"
-                      color={themeColors.text}
-                      size={SIZES.large}
-                      style={styles.attachIcon}
-                    />
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={pickDocument}>
-                    <Ionicons
-                      name="document-outline"
-                      color={themeColors.text}
-                      size={SIZES.large}
-                      style={styles.attachIcon}
-                    />
-                  </TouchableOpacity>
+                 
                 </>
               )}
             </View>
@@ -907,63 +1053,63 @@ const CommunityChatScreen: React.FC = () => {
     );
   };
 
-  const renderAvatar = (props) => {
-    const avatarUrl = props.currentMessage.user.avatar || user?.profile_picture;
-
-    if (avatarUrl) {
-      return (
-        <View style={styles.avatarContainer}>
-          <Image source={{ uri: avatarUrl }} style={styles.avatar} />
-        </View>
-      );
-    } else {
-      return (
-        <View style={styles.avatarContainer}>
-          <Text style={styles.initials}>
-            {props.currentMessage.user.name.charAt(0).toUpperCase()}
-          </Text>
-        </View>
-      );
-    }
-  };
+  
 
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      padding: rMS(10), // SIZES.small replaced with 10
+      padding: rMS(10),
     },
-   
+  
+    // Message Bubble Styles
+    statusContainer: {
+      alignSelf: "flex-end",
+      marginTop: 5,
+    },
+    statusTimeContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      marginRight: rS(5),
+    },
+    timeText: {
+      fontSize: SIZES.xSmall,
+      color: themeColors.textSecondary,
+      marginRight: rS(5),
+    },
+    statusIconContainer: {
+      flexDirection: 'row',
+    },
     messageImageContainer: {
       borderRadius: rMS(10),
-      overflow: "hidden", // ensures the image respects the rounded corners
+      overflow: "hidden",
       marginVertical: rV(0),
-      paddingHorizontal: rS(2),  // minimal horizontal padding
-      paddingVertical: rV(0), 
+      paddingHorizontal: rS(2),
+      paddingVertical: rV(0),
     },
     whatsappImage: {
-      width: rS(150),  // adjust these numbers to fit your design
+      width: rS(150),
       height: rV(150),
       resizeMode: "cover",
     },
+  
+    // Status & Username Styles
     statusText: {
-      fontSize: SIZES.xSmall, // text property remains
+      fontSize: SIZES.xSmall,
       color: themeColors.textSecondary,
       textAlign: "right",
-      paddingRight: rS(8), // SIZES.xSmall replaced with 8
-    },
-    blurBackground: {
-      opacity: 0.7,
-      backgroundColor: themeColors.tint,
-      width: "100%",
+      paddingRight: rS(8),
     },
     username: {
-      fontSize: SIZES.small, // text property remains
+      fontSize: SIZES.small,
       color: themeColors.textSecondary,
-      marginBottom: rV(8), // SIZES.xSmall replaced with 8
       fontWeight: "bold",
-      marginLeft: rS(10), // SIZES.small replaced with 10
-      paddingRight: rS(12), // SIZES.medium replaced with 12
+      marginBottom: rV(1),
+      marginLeft: rS(10),
+      paddingRight: rS(12),
     },
+  
+    // Avatar Styles
     avatarContainer: {
       width: rS(36),
       height: rS(36),
@@ -979,8 +1125,10 @@ const CommunityChatScreen: React.FC = () => {
     },
     initials: {
       color: "#fff",
-      fontSize: SIZES.medium, // text property remains
+      fontSize: SIZES.medium,
     },
+  
+    // Date Styles
     dateContainer: {
       paddingVertical: rV(4),
       paddingHorizontal: rS(8),
@@ -990,68 +1138,132 @@ const CommunityChatScreen: React.FC = () => {
     },
     dateText: {
       color: themeColors.textSecondary,
-      fontSize: SIZES.small, // text property remains
+      fontSize: SIZES.small,
       fontWeight: "bold",
     },
+  
+    // Media Styles
     messageImage: {
       width: rS(300),
       height: rV(200),
       borderRadius: rMS(10),
-      margin: rMS(10), // SIZES.small replaced with 10
+      margin: rMS(10),
     },
     messageVideo: {
       width: rS(200),
       height: rV(200),
       borderRadius: rMS(10),
-      margin: rMS(10), // SIZES.small replaced with 10
+      margin: rMS(10),
     },
-    sendContainer: {
-      height: rV(30),
-      width: rS(45),
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: rS(12), // SIZES.medium replaced with 12
-      paddingHorizontal: rS(2), // SIZES.xSmall replaced with 8
-      backgroundColor: themeColors.tint,
-      borderRadius: rMS(20),
-      marginHorizontal: rS(4), // SIZES.xSmall replaced with 8
-    },
-    sendButton: {
-      justifyContent: "center",
-    },
+  
+    // Input Toolbar & Send Button Styles
     inputToolbar: {
       backgroundColor: themeColors.background,
       borderTopWidth: 0,
-      paddingHorizontal: rS(10), // SIZES.small replaced with 10
-      paddingBottom: insets.bottom,
+      paddingHorizontal: rS(10),
+      paddingBottom: insets.bottom + rV(5),
       paddingTop: rV(10),
       opacity: 0.9,
     },
     inputField: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: themeColors.normalGrey,
+      backgroundColor: themeColors.reverseText,
       borderRadius: rMS(20),
       flex: 1,
       paddingVertical: rV(8),
-      paddingHorizontal: rS(10), // SIZES.small replaced with 10
-      marginRight: rS(10), // SIZES.small replaced with 10
-    },
-    editedText: {
-      fontSize: SIZES.Small, // text property remains
-      color: themeColors.textSecondary,
-      padding: rMS(8), // SIZES.xSmall replaced with 8
-    },
-    attachIcon: {
-      marginLeft: rS(10), // SIZES.medium replaced with 12
+      paddingHorizontal: rS(10),
+      marginRight: rS(10),
     },
     textInput: {
       flex: 1,
       color: themeColors.text,
-      fontSize: SIZES.medium, // text property remains
+      fontSize: SIZES.medium,
       fontFamily: FONT.regular,
     },
+  
+    // Attach Button (Now Outside Send Button)
+    attachButtonContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginRight: rS(10), // Space before the send button
+    },
+    attachButton: {
+      padding: rS(5),
+    },
+    attachIcon: {
+      color: themeColors.text,
+      fontSize: SIZES.large,
+    },
+  
+    // Send Button (Now Separate)
+    sendContainer: {
+      height: rV(30),
+      width: rS(35),
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: themeColors.tint,
+      borderRadius: rMS(20),
+    },
+    sendButton: {
+      justifyContent: "center",
+      alignItems: "center",
+    },
+  
+    // Reply & Editing Styles
+    replyContainer: {
+      flexDirection: "column",
+      justifyContent: "flex-start",
+      alignItems: "flex-start",
+      backgroundColor: "#E6E6E6",
+      padding: rMS(10),
+      borderRadius: rMS(5),
+      borderLeftWidth: rS(4),
+      borderLeftColor: "#007AFF",
+      marginRight: rS(4),
+      width: "100%",
+    },
+    replyText: {
+      color: "#000",
+      fontSize: SIZES.small,
+      marginBottom: rV(8),
+    },
+    replyName: {
+      color: "#007AFF",
+      fontSize: SIZES.small,
+      fontWeight: "bold",
+    },
+    closeReplyButton: {
+      position: "absolute",
+      right: rS(10),
+      top: rV(10),
+    },
+  
+    // Document Preview Styles
+    documentText: {
+      color: themeColors.text,
+      fontSize: SIZES.small,
+      padding: rMS(10),
+      borderWidth: rS(1),
+      borderColor: themeColors.textSecondary,
+      borderRadius: rMS(5),
+      marginVertical: rV(10),
+    },
+
+   
+
+    previewImage: {
+      width: "100%",
+      height: rV(200),
+      marginBottom: rV(10),
+    },
+    previewDocument: {
+      color: themeColors.text,
+      fontSize: SIZES.medium,
+      marginBottom: rV(10),
+    },
+  
+    // Modal Styles
     modalContainer: {
       flex: 1,
       backgroundColor: "rgba(0, 0, 0, 0.9)",
@@ -1067,67 +1279,23 @@ const CommunityChatScreen: React.FC = () => {
       width: "100%",
       height: "100%",
     },
-    replyContainer: {
-      flexDirection: "column",
-      justifyContent: "flex-start",
-      alignItems: "flex-start",
-      backgroundColor: "#E6E6E6",
-      padding: rMS(10), // SIZES.small replaced with 10
-      borderRadius: rMS(5),
-      borderLeftWidth: rS(4),
-      borderLeftColor: "#007AFF",
-      marginRight: rS(4),
+  
+    // Blur Effect
+    blurBackground: {
+      opacity: 0.7,
+      backgroundColor: themeColors.tint,
       width: "100%",
-    },
-    replyText: {
-      color: "#000",
-      fontSize: SIZES.small, // text property remains
-      marginBottom: rV(8), // SIZES.xSmall replaced with 8
-    },
-    replyName: {
-      color: "#007AFF",
-      fontSize: SIZES.small, // text property remains
-      fontWeight: "bold",
-    },
-    closeReplyButton: {
-      position: "absolute",
-      right: rS(10),
-      top: rV(10),
-    },
-    documentText: {
-      color: themeColors.text,
-      fontSize: SIZES.small, // text property remains
-      padding: rMS(10), // SIZES.small replaced with 10
-      borderWidth: rS(1),
-      borderColor: themeColors.textSecondary,
-      borderRadius: rMS(5),
-      marginVertical: rV(10), // SIZES.small replaced with 10
-    },
-    previewImage: {
-      width: "100%",
-      height: rV(200),
-      marginBottom: rV(10), // SIZES.small replaced with 10
-    },
-    previewDocument: {
-      color: themeColors.text,
-      fontSize: SIZES.medium, // text property remains
-      marginBottom: rV(10), // SIZES.small replaced with 10
     },
   });
   
+  
+  
 
   return (
-    <ImageBackground
-      source={{ uri: backgroundImage }}
-      style={{ flex: 1, paddingTop: rV(1) }}
-    >
-      {loading ? (
-        <View
-          style={[
-            styles.container,
-            { justifyContent: "center", alignItems: "center" },
-          ]}
-        >
+
+    <ImageBackground source={{ uri: backgroundImage }} style={{ flex: 1, paddingTop: rV(1) }}>
+      {loading && messages.length === 0 ? (
+        <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
           <ActivityIndicator size="large" color={themeColors.tint} />
         </View>
       ) : (
@@ -1138,10 +1306,7 @@ const CommunityChatScreen: React.FC = () => {
           text={messageInput}
           onInputTextChanged={(text) => setMessageInput(text)}
           renderSystemMessage={(props) => (
-            <SystemMessage
-              {...props}
-              textStyle={{ color: themeColors.textSecondary }}
-            />
+            <SystemMessage {...props} textStyle={{ color: themeColors.textSecondary }} />
           )}
           renderAvatar={renderAvatar}
           renderBubble={renderBubble}
@@ -1156,14 +1321,16 @@ const CommunityChatScreen: React.FC = () => {
           inverted={true}
         />
       )}
-      
+  
+      {renderImageViewer()}
+  
       <ImageViewing
         images={[{ uri: mediaUri }]}
         imageIndex={0}
         visible={isImageViewerVisible}
         onRequestClose={() => setIsImageViewerVisible(false)}
       />
-
+  
       <Modal
         visible={isVideoViewerVisible && mediaUri !== null}
         transparent={true}
@@ -1182,7 +1349,7 @@ const CommunityChatScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
       </Modal>
-
+  
       <Modal
         visible={isDocumentViewerVisible && mediaUri !== null}
         transparent={true}
@@ -1197,7 +1364,9 @@ const CommunityChatScreen: React.FC = () => {
         </View>
       </Modal>
     </ImageBackground>
+    
   );
+  
 };
 
 export default CommunityChatScreen;

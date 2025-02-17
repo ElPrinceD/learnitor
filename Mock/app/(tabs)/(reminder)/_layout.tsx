@@ -60,7 +60,7 @@ export default function Tab3Layout() {
           name="TimeTable"
           options={{
             headerShown: true,
-            presentation: "modal",
+            presentation: "card",
             headerStyle: {
               backgroundColor: themeColors.background,
             },

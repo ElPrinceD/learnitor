@@ -41,7 +41,7 @@ export default {
         foregroundImage: "./assets/images/adaptive-icon.png",
         backgroundColor: "#ffffff"
       },
-      softwareKeyboardLayoutMode: "pan",
+      
       package: "com.cradle.learnitor",
       // googleServicesFile: process.env.GOOGLE_SERVICES_JSON
     },

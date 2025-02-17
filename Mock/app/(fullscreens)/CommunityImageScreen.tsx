@@ -4,7 +4,6 @@ import React from "react";
 import {
   View,
   FlatList,
-  Image,
   TouchableOpacity,
   StyleSheet,
   useColorScheme,
@@ -15,6 +14,7 @@ import { useRoute } from "@react-navigation/native";
 import Colors from "../../constants/Colors";
 import { rMS, rS, rV, SIZES } from "../../constants";
 import ImageView from "react-native-image-viewing";
+import AppImage from "../../components/AppImage"; // Import your custom AppImage component
 
 type RouteParams = {
   id: string;
@@ -25,7 +25,7 @@ const CommunityImagesScreen: React.FC = () => {
   const route = useRoute();
   const { id, images } = route.params as RouteParams;
 
-  // 1) Convert images to an array if it's a comma-separated string:
+  // Convert images to an array if it's a comma-separated string:
   let imagesToRender: string[] = [];
 
   if (typeof images === "string") {
@@ -35,8 +35,6 @@ const CommunityImagesScreen: React.FC = () => {
     // We already have an array of strings
     imagesToRender = images;
   }
-
-
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -51,7 +49,7 @@ const CommunityImagesScreen: React.FC = () => {
         setIsVisible(true);
       }}
     >
-      <Image source={{ uri: item }} style={styles.image} />
+      <AppImage uri={item} style={styles.image} />
     </TouchableOpacity>
   );
 
@@ -108,6 +106,5 @@ const styles = StyleSheet.create({
     height: rV(100),
     margin: rS(5),
     borderRadius: rMS(5),
-    resizeMode: "cover",
   },
 });

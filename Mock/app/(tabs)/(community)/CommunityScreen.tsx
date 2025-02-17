@@ -23,6 +23,8 @@ import { Skeleton } from "moti/skeleton";
 import { useWebSocket } from "../../../webSocketProvider";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { searchCommunities } from "../../../CommunityApiCalls";
+import FastImage from "react-native-fast-image";
+
 
 const CommunityScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -37,6 +39,13 @@ const CommunityScreen: React.FC = () => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const colorMode = colorScheme === "dark" ? "dark" : "light";
+
+
+
+
+  
+
+
 
   const {
     isConnected,

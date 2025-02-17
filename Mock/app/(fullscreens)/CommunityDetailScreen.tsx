@@ -274,41 +274,41 @@ const CommunityDetailScreen: React.FC = () => {
         </View>
 
         {/* Sections from the Image */}
-        <View style={styles.sectionContainer}>
+        <View style={[styles.sectionContainer, {backgroundColor: themeColors.background}]}>
           <TouchableOpacity style={styles.sectionItem} onPress={() => {
             router.push({
               pathname: "CommunityImageScreen",
               params: { id, images: communityImages },
             });
           }}>
-            <Ionicons name="image-outline" size={24} color="black" style={styles.icon} />
+            <Ionicons name="image-outline" size={24} color={themeColors.text} style={styles.icon} />
             <View style={styles.sectionTextContainer}>
               <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Media, links and docs</Text>
               <Text style={[styles.sectionValue, { color: themeColors.textSecondary }]}>{communityImages.length}</Text>
             </View>
-            <Ionicons name="chevron-forward-outline" size={24} color="black" />
+            <Ionicons name="chevron-forward-outline" size={24} color={themeColors.text} />
           </TouchableOpacity>
          
          
           
           <TouchableOpacity style={styles.sectionItem}>
-            <Ionicons name="download-outline" size={24} color="black" style={styles.icon} />
+            <Ionicons name="download-outline" size={24} color={themeColors.text} style={styles.icon} />
             <View style={styles.sectionTextContainer}>
               <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Save to Photos</Text>
               <Text style={[styles.sectionValue, { color: themeColors.textSecondary }]}>Default</Text>
             </View>
-            <Ionicons name="chevron-forward-outline" size={24} color="black" />
+            <Ionicons name="chevron-forward-outline" size={24} color={themeColors.text} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.sectionItem}>
-            <Ionicons name="timer-outline" size={24} color="black" style={styles.icon} />
+            <Ionicons name="timer-outline" size={24} color={themeColors.text} style={styles.icon} />
             <View style={styles.sectionTextContainer}>
               <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Disappearing messages</Text>
               <Text style={[styles.sectionValue, { color: themeColors.textSecondary }]}>Off</Text>
             </View>
-            <Ionicons name="chevron-forward-outline" size={24} color="black" />
+            <Ionicons name="chevron-forward-outline" size={24} color={themeColors.text} />
           </TouchableOpacity>
           <View style={styles.sectionItem}>
-            <Ionicons name="lock-closed-outline" size={24} color="black" style={styles.icon} />
+            <Ionicons name="lock-closed-outline" size={24} color={themeColors.text} style={styles.icon} />
             <View style={styles.sectionTextContainer}>
               <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Lock chat</Text>
             </View>
@@ -319,30 +319,19 @@ const CommunityDetailScreen: React.FC = () => {
             />
           </View>
           <TouchableOpacity style={styles.sectionItem}>
-            <Ionicons name="lock-closed" size={24} color="black" style={styles.icon} />
+            <Ionicons name="lock-closed" size={24} color={themeColors.text} style={styles.icon} />
             <View style={styles.sectionTextContainer}>
               <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Encryption</Text>
               <Text style={[styles.sectionValue, { color: themeColors.textSecondary }]}>Messages and calls are end-to-end encrypted.</Text>
             </View>
-            <Ionicons name="chevron-forward-outline" size={24} color="black" />
+            <Ionicons name="chevron-forward-outline" size={24} color={themeColors.text} />
           </TouchableOpacity>
         </View>
 
         {/* Members Section */}
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionHeaderText, { color: themeColors.text }]}>Members</Text>
-          {sortedMembers.length > 0 && (
-            <TouchableOpacity
-              onPress={() => {
-                router.push({
-                  pathname: "/community-members",
-                  params: { id },
-                });
-              }}
-            >
-              <Text style={[styles.viewAllText, { color: themeColors.tint }]}>View All</Text>
-            </TouchableOpacity>
-          )}
+       
         </View>
         {sortedMembers.length === 0 ? (<Text
             style={{
@@ -357,7 +346,7 @@ const CommunityDetailScreen: React.FC = () => {
           <FlatList
             data={sortedMembers.slice(0, 5)}
             keyExtractor={(item) => item.id.toString()}
-            style={{ marginBottom: 15 }}
+            style={{ marginBottom: 15,paddingHorizontal: rS(16), }}
             renderItem={({ item }) => (
               <View style={styles.memberItem}>
                 <Image
@@ -369,7 +358,7 @@ const CommunityDetailScreen: React.FC = () => {
                     {item.first_name} {item.last_name}
                   </Text>
                  
-                </View><Ionicons name="chevron-forward-outline" size={24} color="black" />
+                </View>
               </View>
             )}
           />
@@ -384,7 +373,7 @@ const CommunityDetailScreen: React.FC = () => {
             <TouchableOpacity
               onPress={() => {
                 router.push({
-                  pathname: "/community-calendar",
+                  pathname: "TimeTable",
                   params: { id },
                 });
               }}
@@ -489,8 +478,6 @@ const CommunityDetailScreen: React.FC = () => {
     </View>
   );
 };
-
-export default CommunityDetailScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -724,6 +711,7 @@ const styles = StyleSheet.create({
   sectionContainer: {
     paddingHorizontal: rS(16),
     marginTop: rV(20),
+    
   },
   sectionItem: {
     flexDirection: 'row',
@@ -746,3 +734,5 @@ const styles = StyleSheet.create({
     color: '#888',
   },
 });
+export default CommunityDetailScreen;
+

@@ -92,6 +92,9 @@ useEffect(() => {
 // Update presentForegroundNotification to use scheduleNotificationAsync
 async function presentForegroundNotification(notification: Notifications.Notification) {
   if (!notification) return;
+
+  const data = notification.request.content.data || {};
+  const imageUrl = data.community_image || null;
   
   if (Platform.OS === 'ios') {
     await Notifications.setNotificationCategoryAsync('default', [
@@ -110,6 +113,9 @@ async function presentForegroundNotification(notification: Notifications.Notific
     data: notification.request.content.data,
     subtitle: notification.request.content.subtitle || null,
     sound: notification.request.content.sound || "default",
+    attachments: imageUrl
+      ? [{ uri: imageUrl }] // Attach the image if available
+      : [],
     launchImageName: notification.request.content.launchImageName || "",
     badge: notification.request.content.badge || null,
     categoryIdentifier: notification.request.content.categoryIdentifier || "",
@@ -159,7 +165,7 @@ async function presentForegroundNotification(notification: Notifications.Notific
       if (data && data.community_id) {
         router.push({
           pathname: "ChatScreen",
-          params: { communityId: data.community_id, name: data.community_name },
+          params: { communityId: data.community_id, name: data.community_name, image: data.community_image },
         });
       }
     });

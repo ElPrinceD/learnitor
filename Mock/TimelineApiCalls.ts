@@ -121,6 +121,7 @@ export const deleteTask = async (taskId, token) => {
 };
   
 export const createTimetable = async (timetableData, token) => {
+  console.log(timetableData)
   try {
     const response = await apiClient.post('/timetables/', 
       timetableData,
