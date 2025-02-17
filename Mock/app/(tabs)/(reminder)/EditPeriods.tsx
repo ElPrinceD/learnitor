@@ -11,17 +11,12 @@ import {
 import { useForm, Controller } from "react-hook-form";
 import Colors from "../../../constants/Colors";
 import { rMS, rS, rV } from "../../../constants";
-import AnimatedTextInput from "../../../components/AnimatedTextInput";
+import AnimatedRoundTextInput from "../../../components/AnimatedRoundTextInput";
 import GameButton from "../../../components/GameButton";
 import CustomDateTimeSelector from "../../../components/CustomDateTimeSelector";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import {
-  getPeriod,
-  updatePeriod,
-  deletePeriod,
-  getTimetable,
-} from "../../../TimelineApiCalls";
-import { router, useLocalSearchParams } from "expo-router";
+import { useMutation } from "@tanstack/react-query";
+import { updatePeriod, deletePeriod } from "../../../TimelineApiCalls";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { useAuth } from "../../../components/AuthContext";
 
 interface Period {
@@ -36,166 +31,54 @@ interface Period {
 }
 
 const EditPeriodsPage: React.FC = () => {
-  const { control, handleSubmit, setValue, watch } = useForm<{
-    periods: Partial<Period>[];
-  }>({
-    defaultValues: { periods: [] },
+  const { control, handleSubmit, setValue } = useForm<Partial<Period>>({
+    defaultValues: {},
   });
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
-  const [periods, setPeriods] = useState<Period[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { userToken } = useAuth();
-  const { timetableId } = useLocalSearchParams<{ timetableId: string }>();
-
-  // Fetch all periods for the timetable
-  const { data: fetchedPeriods, isLoading: fetchingPeriods } = useQuery<
-    Period[],
-    Error
-  >({
-    queryKey: ["periods", timetableId],
-    queryFn: async () => {
-      const timetable = await getTimetable(
-        Number(timetableId),
-        userToken?.token!
-      );
-      return timetable.periods;
-    },
-  });
+  const navigation = useNavigation();
+  const route = useRoute();
+  const { period } = route.params as { period: Period };
 
   useEffect(() => {
-    if (fetchedPeriods) {
-      setPeriods(fetchedPeriods);
-      fetchedPeriods.forEach((period, index) => {
-        setValue(`periods.${index}.course_name`, period.course_name);
-        setValue(`periods.${index}.lecturer`, period.lecturer);
-        setValue(`periods.${index}.venue`, period.venue);
-        setValue(`periods.${index}.days`, period.days);
-        setValue(`periods.${index}.start_time`, period.start_time);
-        setValue(`periods.${index}.end_time`, period.end_time);
-      });
+    if (period) {
+      setValue("course_name", period.course_name);
+      setValue("lecturer", period.lecturer);
+      setValue("venue", period.venue);
+      setValue("days", period.days);
+      setValue("start_time", period.start_time);
+      setValue("end_time", period.end_time);
+      setIsLoading(false);
     }
-    setIsLoading(false);
-  }, [fetchedPeriods, setValue]);
+  }, [period, setValue]);
 
   const updatePeriodMutation = useMutation({
-    mutationFn: async (periodData: { id: number; data: Partial<Period> }) => {
-      return updatePeriod(periodData.id, periodData.data, userToken?.token!);
+    mutationFn: async (periodData: Partial<Period>) => {
+      return updatePeriod(period.id, periodData, userToken?.token!);
+    },
+    onSuccess: () => {
+      navigation.goBack();
     },
   });
 
-  const deletePeriodMutation = useMutation({
-    mutationFn: async (periodId: number) => {
-      return deletePeriod(periodId, userToken?.token!);
-    },
-    onSuccess: (_, periodId) => {
-      setPeriods((currentPeriods) =>
-        currentPeriods.filter((p) => p.id !== periodId)
-      );
-    },
-  });
-
-  const handleUpdate = async () => {
-    const updates = periods.map((period, index) => ({
-      id: period.id,
-      data: watch(`periods.${index}`),
-    }));
-
+  const handleUpdate = async (data: Partial<Period>) => {
     try {
-      await Promise.all(
-        updates.map((update) => updatePeriodMutation.mutateAsync(update))
-      );
-      router.back();
+      await updatePeriodMutation.mutateAsync(data);
     } catch (error) {
-      console.error("Error updating periods:", error);
+      console.error("Error updating period:", error);
     }
   };
 
-  const handleDelete = async (periodId: number) => {
-    await deletePeriodMutation.mutateAsync(periodId);
+  const handleDelete = async () => {
+    try {
+      await deletePeriod(period.id, userToken?.token!);
+      navigation.goBack();
+    } catch (error) {
+      console.error("Error deleting period:", error);
+    }
   };
-
-  const renderPeriodFields = () =>
-    periods.map((period, index) => (
-      <View key={period.id} style={{ marginBottom: rV(20) }}>
-        <Controller
-          control={control}
-          name={`periods.${index}.course_name`}
-          render={({ field: { onChange, value } }) => (
-            <AnimatedTextInput
-              label={`Course Name (${period.days})`}
-              value={value}
-              onChangeText={onChange}
-            />
-          )}
-        />
-        <Controller
-          control={control}
-          name={`periods.${index}.lecturer`}
-          render={({ field: { onChange, value } }) => (
-            <AnimatedTextInput
-              label={`Lecturer (${period.days})`}
-              value={value}
-              onChangeText={onChange}
-            />
-          )}
-        />
-        <Controller
-          control={control}
-          name={`periods.${index}.venue`}
-          rules={{
-            required: "Venue is required",
-            minLength: {
-              value: 1,
-              message: "Venue must be at least 1 character",
-            },
-            maxLength: {
-              value: 100,
-              message: "Venue cannot exceed 100 characters",
-            },
-          }}
-          render={({ field: { onChange, value } }) => (
-            <AnimatedTextInput
-              label={`Venue (${period.days})`}
-              value={value}
-              onChangeText={onChange}
-            />
-          )}
-        />
-        <Controller
-          control={control}
-          name={`periods.${index}.start_time`}
-          render={({ field: { onChange, value } }) => (
-            <CustomDateTimeSelector
-              mode="time"
-              label={`Start Time (${period.days})`}
-              value={value}
-              onTimeChange={onChange}
-              buttonTitle="Pick Start Time"
-            />
-          )}
-        />
-        <Controller
-          control={control}
-          name={`periods.${index}.end_time`}
-          render={({ field: { onChange, value } }) => (
-            <CustomDateTimeSelector
-              mode="time"
-              label={`End Time (${period.days})`}
-              value={value}
-              onTimeChange={onChange}
-              buttonTitle="Pick End Time"
-            />
-          )}
-        />
-
-        <GameButton
-          onPress={() => handleDelete(period.id)}
-          style={styles.deleteButton}
-          title="Delete this period"
-        />
-      </View>
-    ));
 
   const styles = StyleSheet.create({
     container: {
@@ -226,7 +109,7 @@ const EditPeriodsPage: React.FC = () => {
     },
   });
 
-  if (isLoading || fetchingPeriods) {
+  if (isLoading) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color={themeColors.tint} />
@@ -236,12 +119,86 @@ const EditPeriodsPage: React.FC = () => {
 
   return (
     <ScrollView style={styles.container}>
-      {renderPeriodFields()}
+      <Controller
+        control={control}
+        name="course_name"
+        render={({ field: { onChange, value } }) => (
+          <AnimatedRoundTextInput
+            label="Course Name"
+            value={value}
+            onChangeText={onChange}
+          />
+        )}
+      />
+      <Controller
+        control={control}
+        name="lecturer"
+        render={({ field: { onChange, value } }) => (
+          <AnimatedRoundTextInput
+            label="Lecturer"
+            value={value}
+            onChangeText={onChange}
+          />
+        )}
+      />
+      <Controller
+        control={control}
+        name="venue"
+        render={({ field: { onChange, value } }) => (
+          <AnimatedRoundTextInput
+            label="Venue"
+            value={value}
+            onChangeText={onChange}
+          />
+        )}
+      />
+      <Controller
+        control={control}
+        name="days"
+        render={({ field: { onChange, value } }) => (
+          <AnimatedRoundTextInput
+            label="Days"
+            value={value}
+            onChangeText={onChange}
+          />
+        )}
+      />
+      <Controller
+        control={control}
+        name="start_time"
+        render={({ field: { onChange, value } }) => (
+          <CustomDateTimeSelector
+            mode="time"
+            label="Start Time"
+            value={value}
+            onTimeChange={onChange}
+            buttonTitle="Pick Start Time"
+          />
+        )}
+      />
+      <Controller
+        control={control}
+        name="end_time"
+        render={({ field: { onChange, value } }) => (
+          <CustomDateTimeSelector
+            mode="time"
+            label="End Time"
+            value={value}
+            onTimeChange={onChange}
+            buttonTitle="Pick End Time"
+          />
+        )}
+      />
       <View style={styles.buttonContainer}>
         <GameButton
           onPress={handleSubmit(handleUpdate)}
           style={styles.buttons}
-          title="Update All"
+          title="Update"
+        />
+        <GameButton
+          onPress={handleDelete}
+          style={styles.deleteButton}
+          title="Delete"
         />
       </View>
     </ScrollView>
