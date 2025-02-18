@@ -24,9 +24,14 @@ export const getTodayPlans = async (token, date, selectedCategory) => {
 };
 
 
-export const cancelPeriodForToday = async (periodId: number, token: string) => {
+
+
+export const cancelPeriodForToday = async (periodId, token) => {
+  console.log(token)
   try {
-    const response = await apiClient.post(`/periods/${periodId}/cancel_for_today/`, {}, {
+    const response = await apiClient.post(`/periods/${periodId}/cancel/`, {
+      date: new Date().toISOString().split('T')[0]
+    }, {
       headers: { Authorization: `Token ${token}` },
     });
     return response.data;
@@ -36,10 +41,12 @@ export const cancelPeriodForToday = async (periodId: number, token: string) => {
   }
 };
 
-// ✅ Uncancel a period for today
-export const uncancelPeriodForToday = async (periodId: number, token: string) => {
+
+export const uncancelPeriodForToday = async (periodId, token) => {
   try {
-    const response = await apiClient.post(`/periods/${periodId}/uncancel_for_today/`, {}, {
+    const response = await apiClient.post(`/periods/${periodId}/uncancel/`, {
+      date: new Date().toISOString().split('T')[0]
+    }, {
       headers: { Authorization: `Token ${token}` },
     });
     return response.data;

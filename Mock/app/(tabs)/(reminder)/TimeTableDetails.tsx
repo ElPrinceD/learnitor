@@ -25,6 +25,8 @@ interface Period {
   venue: string;
   start_time: string;
   end_time: string;
+  cancelled?: boolean;
+  canceled_dates: string[];
 }
 
 interface Timetable {
@@ -120,21 +122,7 @@ const TimetableDetailPage = () => {
       <Text style={styles.title}>{timetable.name}</Text>
       <Text style={styles.description}>{timetable.description}</Text>
       <TimetableDisplay periods={timetable.periods} />
-      <GameButton
-        style={styles.editButton}
-        onPress={() =>
-          router.push({
-            pathname: "EditPeriods",
-            params: { timetableId: timetable.id },
-          })
-        }
-      >
-        <FontAwesome6
-          name="edit"
-          size={SIZES.xLarge}
-          color={themeColors.text}
-        />
-      </GameButton>
+     
       <ErrorMessage
         message={errorMessage}
         visible={!!errorMessage}

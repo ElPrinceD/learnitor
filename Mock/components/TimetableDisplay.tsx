@@ -1,20 +1,19 @@
-// components/TimetableDisplay.tsx
-
 import React from "react";
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
-  useColorScheme,
   TouchableOpacity,
   Animated,
   Alert,
+  useColorScheme,
 } from "react-native";
 import Colors from "../constants/Colors";
 import { router } from "expo-router";
-// Recommended named import
 import { Swipeable } from "react-native-gesture-handler";
+import { cancelPeriodForToday, uncancelPeriodForToday } from "../TimelineApiCalls";
+import { useAuth } from "./AuthContext";
 
 interface Period {
   id: string;
@@ -25,6 +24,7 @@ interface Period {
   start_time: string;
   end_time: string;
   cancelled?: boolean;
+  canceled_dates: string[]; // Add this field
 }
 
 interface TimetableDisplayProps {
@@ -43,8 +43,10 @@ const TimetableDisplay: React.FC<TimetableDisplayProps> = ({ periods }) => {
   ];
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+  const { userToken } = useAuth(); // Replace with actual user token
 
-  // Helper to format time as HH:MM only.
+  const today = new Date().toISOString().split('T')[0];
+
   const formatTime = (timeStr: string) => {
     const parts = timeStr.split(":");
     if (parts.length >= 2) {
@@ -53,11 +55,10 @@ const TimetableDisplay: React.FC<TimetableDisplayProps> = ({ periods }) => {
     return timeStr;
   };
 
-  // Local state to manage period changes (delete, cancel)
   const [localPeriods, setLocalPeriods] = React.useState<Period[]>(
     periods.map((period) => ({
       ...period,
-      cancelled: period.cancelled ?? false,
+      cancelled: period.canceled_dates.includes(today),
     }))
   );
 
@@ -68,7 +69,6 @@ const TimetableDisplay: React.FC<TimetableDisplayProps> = ({ periods }) => {
   };
 
   const handleEdit = (period: Period) => {
-    console.log("Periodic: ", period);
     router.push({
       pathname: "EditPeriods",
       params: {
@@ -83,18 +83,27 @@ const TimetableDisplay: React.FC<TimetableDisplayProps> = ({ periods }) => {
     });
   };
 
-  // Toggle the cancelled state
-  const handleToggleCancel = (periodToToggle: Period) => {
-    setLocalPeriods((prev) =>
-      prev.map((period) =>
-        period.id === periodToToggle.id
-          ? { ...period, cancelled: !period.cancelled }
-          : period
-      )
-    );
+  const handleToggleCancel = async (periodToToggle: Period) => {
+    try {
+      if (periodToToggle.cancelled) {
+        await uncancelPeriodForToday(periodToToggle.id, userToken?.token);
+        periodToToggle.canceled_dates = periodToToggle.canceled_dates.filter(date => date !== today);
+      } else {
+        await cancelPeriodForToday(periodToToggle.id, userToken?.token);
+        periodToToggle.canceled_dates.push(today);
+      }
+      setLocalPeriods((prev) =>
+        prev.map((period) =>
+          period.id === periodToToggle.id
+            ? { ...period, cancelled: !period.cancelled }
+            : period
+        )
+      );
+    } catch (error) {
+      console.error("Error toggling cancel state:", error);
+    }
   };
 
-  // Confirm deletion before performing the delete action
   const confirmDelete = (period: Period) => {
     Alert.alert(
       "Delete Period",
@@ -106,7 +115,6 @@ const TimetableDisplay: React.FC<TimetableDisplayProps> = ({ periods }) => {
     );
   };
 
-  // Confirm cancellation (or uncancellation) before toggling the state
   const confirmToggleCancel = (period: Period) => {
     if (period.cancelled) {
       Alert.alert(
@@ -169,8 +177,7 @@ const TimetableDisplay: React.FC<TimetableDisplayProps> = ({ periods }) => {
     actionContainer: {
       flexDirection: "row",
       alignItems: "center",
-      // Adjust the width to accommodate three buttons (3 x 80)
-      width: 240,
+      width: 240, // Enough width to hold three buttons (3 x 80)
     },
     actionButton: {
       justifyContent: "center",
@@ -184,7 +191,6 @@ const TimetableDisplay: React.FC<TimetableDisplayProps> = ({ periods }) => {
     },
   });
 
-  // Render the swipeable action buttons for a period
   const renderRightActions = (
     progress: Animated.AnimatedInterpolation<number>,
     dragX: Animated.AnimatedInterpolation<number>,
@@ -217,7 +223,6 @@ const TimetableDisplay: React.FC<TimetableDisplayProps> = ({ periods }) => {
     </View>
   );
 
-  // Wrap each period row in a Swipeable component
   const renderPeriod = ({ item }: { item: Period }) => (
     <Swipeable
       renderRightActions={(progress, dragX) =>
@@ -246,7 +251,6 @@ const TimetableDisplay: React.FC<TimetableDisplayProps> = ({ periods }) => {
       data={daysOfWeek}
       keyExtractor={(item) => item}
       renderItem={({ item: day }) => {
-        // Filter the periods for the current day (assumes days are separated by ", ")
         const dayPeriods = localPeriods.filter((period) =>
           period.days.split(", ").includes(day)
         );
