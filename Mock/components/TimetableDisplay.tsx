@@ -9,15 +9,15 @@ import {
   useColorScheme,
   TouchableOpacity,
   Animated,
+  Alert,
 } from "react-native";
 import Colors from "../constants/Colors";
-import { useNavigation } from "@react-navigation/native";
+import { router } from "expo-router";
 // Recommended named import
 import { Swipeable } from "react-native-gesture-handler";
-import { router } from "expo-router";
-
 
 interface Period {
+  id: string;
   course_name: string;
   lecturer: string;
   days: string; // Comma-separated string
@@ -29,8 +29,6 @@ interface Period {
 
 interface TimetableDisplayProps {
   periods: Period[];
-  // Optionally, add callbacks (e.g. onEditPeriod) if you want the parent
-  // to handle the edit action.
 }
 
 const TimetableDisplay: React.FC<TimetableDisplayProps> = ({ periods }) => {
@@ -46,30 +44,89 @@ const TimetableDisplay: React.FC<TimetableDisplayProps> = ({ periods }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
+  // Helper to format time as HH:MM only.
+  const formatTime = (timeStr: string) => {
+    const parts = timeStr.split(":");
+    if (parts.length >= 2) {
+      return `${parts[0]}:${parts[1]}`;
+    }
+    return timeStr;
+  };
 
-  // Local state is used here to manage period changes (delete, cancel)
+  // Local state to manage period changes (delete, cancel)
   const [localPeriods, setLocalPeriods] = React.useState<Period[]>(
-    periods.map((period) => ({ ...period, cancelled: period.cancelled ?? false }))
+    periods.map((period) => ({
+      ...period,
+      cancelled: period.cancelled ?? false,
+    }))
   );
 
   const handleDelete = (periodToDelete: Period) => {
-    setLocalPeriods((prev) => prev.filter((period) => period !== periodToDelete));
+    setLocalPeriods((prev) =>
+      prev.filter((period) => period.id !== periodToDelete.id)
+    );
   };
 
-  const handleEdit = (periodToEdit: Period) => {
-      router.push({
-                pathname: "EditPeriods",
-                params: { period: periodToEdit } },
-              )
-    
+  const handleEdit = (period: Period) => {
+    console.log("Periodic: ", period);
+    router.push({
+      pathname: "EditPeriods",
+      params: {
+        periodId: period.id,
+        periodCourseName: period.course_name,
+        periodLecturer: period.lecturer,
+        periodStart: period.start_time,
+        periodEnd: period.end_time,
+        periodVenue: period.venue,
+        periodDays: period.days,
+      },
+    });
   };
 
-  const handleCancel = (periodToCancel: Period) => {
+  // Toggle the cancelled state
+  const handleToggleCancel = (periodToToggle: Period) => {
     setLocalPeriods((prev) =>
       prev.map((period) =>
-        period === periodToCancel ? { ...period, cancelled: true } : period
+        period.id === periodToToggle.id
+          ? { ...period, cancelled: !period.cancelled }
+          : period
       )
     );
+  };
+
+  // Confirm deletion before performing the delete action
+  const confirmDelete = (period: Period) => {
+    Alert.alert(
+      "Delete Period",
+      "Are you sure you want to delete this period?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "OK", onPress: () => handleDelete(period) },
+      ]
+    );
+  };
+
+  // Confirm cancellation (or uncancellation) before toggling the state
+  const confirmToggleCancel = (period: Period) => {
+    if (period.cancelled) {
+      Alert.alert(
+        "Uncancel Period",
+        "Are you sure you want to uncancel this period?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "OK", onPress: () => handleToggleCancel(period) },
+        ]
+      );
+    } else {
+      Alert.alert(
+        "Cancel Period",
+        "Are you sure you want to cancel this period?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "OK", onPress: () => handleToggleCancel(period) },
+        ]
+      );
+    }
   };
 
   const styles = StyleSheet.create({
@@ -136,7 +193,7 @@ const TimetableDisplay: React.FC<TimetableDisplayProps> = ({ periods }) => {
     <View style={styles.actionContainer}>
       <TouchableOpacity
         style={[styles.actionButton, { backgroundColor: "red" }]}
-        onPress={() => handleDelete(period)}
+        onPress={() => confirmDelete(period)}
       >
         <Text style={styles.actionText}>Delete</Text>
       </TouchableOpacity>
@@ -147,10 +204,15 @@ const TimetableDisplay: React.FC<TimetableDisplayProps> = ({ periods }) => {
         <Text style={styles.actionText}>Edit</Text>
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.actionButton, { backgroundColor: "gray" }]}
-        onPress={() => handleCancel(period)}
+        style={[
+          styles.actionButton,
+          { backgroundColor: period.cancelled ? "green" : "gray" },
+        ]}
+        onPress={() => confirmToggleCancel(period)}
       >
-        <Text style={styles.actionText}>Cancel</Text>
+        <Text style={styles.actionText}>
+          {period.cancelled ? "Uncancel" : "Cancel"}
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -164,7 +226,7 @@ const TimetableDisplay: React.FC<TimetableDisplayProps> = ({ periods }) => {
     >
       <View style={styles.row}>
         <Text style={[styles.cell, item.cancelled && styles.cancelledText]}>
-          {item.start_time} - {item.end_time}
+          {formatTime(item.start_time)} - {formatTime(item.end_time)}
         </Text>
         <Text style={[styles.cell, item.cancelled && styles.cancelledText]}>
           {item.course_name}

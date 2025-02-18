@@ -23,6 +23,32 @@ export const getTodayPlans = async (token, date, selectedCategory) => {
   });
 };
 
+
+export const cancelPeriodForToday = async (periodId: number, token: string) => {
+  try {
+    const response = await apiClient.post(`/periods/${periodId}/cancel_for_today/`, {}, {
+      headers: { Authorization: `Token ${token}` },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error canceling period for today:", error);
+    throw error;
+  }
+};
+
+// ✅ Uncancel a period for today
+export const uncancelPeriodForToday = async (periodId: number, token: string) => {
+  try {
+    const response = await apiClient.post(`/periods/${periodId}/uncancel_for_today/`, {}, {
+      headers: { Authorization: `Token ${token}` },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error uncanceling period for today:", error);
+    throw error;
+  }
+};
+
 export const getCategoryNames = async (token) => {
     try {
         const response = await apiClient.get('/api/task/categories/', {

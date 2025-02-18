@@ -1,12 +1,13 @@
+// pages/EditPeriodsPage.tsx
+
 import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
-  useColorScheme,
   ActivityIndicator,
+  useColorScheme,
 } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import Colors from "../../../constants/Colors";
@@ -19,6 +20,7 @@ import { updatePeriod, deletePeriod } from "../../../TimelineApiCalls";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useAuth } from "../../../components/AuthContext";
 
+// This interface is used for the API (times as strings)
 interface Period {
   id: number;
   course_name: string;
@@ -30,8 +32,38 @@ interface Period {
   timetable: number;
 }
 
+// Create a separate interface for form data where times are Dates.
+interface PeriodFormData {
+  course_name: string;
+  lecturer: string;
+  days: string;
+  venue: string;
+  start_time: Date;
+  end_time: Date;
+}
+
+//
+// Helper to parse a "HH:mm" string into a Date object using today's date.
+//
+const parseTime = (timeString: string): Date => {
+  const [hours, minutes] = timeString.split(":").map(Number);
+  const date = new Date();
+  date.setHours(hours, minutes, 0, 0);
+  return date;
+};
+
+//
+// Helper to format a Date object into a "HH:mm" string.
+//
+const formatTime = (date: Date): string => {
+  // Ensure two-digit hours/minutes
+  const hours = date.getHours().toString().padStart(2, "0");
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+  return `${hours}:${minutes}`;
+};
+
 const EditPeriodsPage: React.FC = () => {
-  const { control, handleSubmit, setValue } = useForm<Partial<Period>>({
+  const { control, handleSubmit, setValue } = useForm<PeriodFormData>({
     defaultValues: {},
   });
   const colorScheme = useColorScheme();
@@ -40,40 +72,82 @@ const EditPeriodsPage: React.FC = () => {
   const { userToken } = useAuth();
   const navigation = useNavigation();
   const route = useRoute();
-  const { period } = route.params as { period: Period };
 
+  // Destructure period details from route.params (from your timetable edit action)
+  const {
+    periodId,
+    periodCourseName,
+    periodLecturer,
+    periodStart,
+    periodEnd,
+    periodVenue,
+    periodDays, // optional
+  } = route.params as {
+    periodId: number;
+    periodCourseName: string;
+    periodLecturer: string;
+    periodStart: string;
+    periodEnd: string;
+    periodVenue: string;
+    periodDays?: string;
+  };
+
+  // Populate the form with the new details.
   useEffect(() => {
-    if (period) {
-      setValue("course_name", period.course_name);
-      setValue("lecturer", period.lecturer);
-      setValue("venue", period.venue);
-      setValue("days", period.days);
-      setValue("start_time", period.start_time);
-      setValue("end_time", period.end_time);
+    if (periodId) {
+      setValue("course_name", periodCourseName);
+      setValue("lecturer", periodLecturer);
+      setValue("venue", periodVenue);
+      setValue("start_time", parseTime(periodStart));
+      setValue("end_time", parseTime(periodEnd));
+      if (periodDays) {
+        setValue("days", periodDays);
+      }
       setIsLoading(false);
     }
-  }, [period, setValue]);
+  }, [
+    periodId,
+    periodCourseName,
+    periodLecturer,
+    periodVenue,
+    periodStart,
+    periodEnd,
+    periodDays,
+    setValue,
+  ]);
 
+  // Update period mutation using the periodId.
+  // Note: updatePeriod expects the API data (with times as strings).
   const updatePeriodMutation = useMutation({
     mutationFn: async (periodData: Partial<Period>) => {
-      return updatePeriod(period.id, periodData, userToken?.token!);
+      return updatePeriod(periodId, periodData, userToken?.token!);
     },
     onSuccess: () => {
       navigation.goBack();
     },
   });
 
-  const handleUpdate = async (data: Partial<Period>) => {
+  const handleUpdate = async (data: PeriodFormData) => {
     try {
-      await updatePeriodMutation.mutateAsync(data);
+      // Convert Date objects to strings in the "HH:mm" format before sending.
+      const updatedData: Partial<Period> = {
+        course_name: data.course_name,
+        lecturer: data.lecturer,
+        venue: data.venue,
+        days: data.days,
+        start_time: formatTime(data.start_time),
+        end_time: formatTime(data.end_time),
+      };
+      await updatePeriodMutation.mutateAsync(updatedData);
     } catch (error) {
       console.error("Error updating period:", error);
     }
   };
 
+  // Delete period mutation using periodId.
   const handleDelete = async () => {
     try {
-      await deletePeriod(period.id, userToken?.token!);
+      await deletePeriod(periodId, userToken?.token!);
       navigation.goBack();
     } catch (error) {
       console.error("Error deleting period:", error);
@@ -98,7 +172,7 @@ const EditPeriodsPage: React.FC = () => {
       textAlign: "center",
     },
     buttonContainer: {
-      justifyContent: "center", // Center the button
+      justifyContent: "center",
       marginTop: 20,
     },
     buttons: {

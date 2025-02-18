@@ -18,6 +18,7 @@ import GameButton from "../../../components/GameButton";
 import { FontAwesome6 } from "@expo/vector-icons";
 
 interface Period {
+  id: string;
   course_name: string;
   lecturer: string;
   days: string;
