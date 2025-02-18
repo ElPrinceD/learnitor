@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
+import { View, StyleSheet, Button, Text, useColorScheme } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, router } from "expo-router";
 import { useAuth } from "../../components/AuthContext";
@@ -8,6 +8,9 @@ import { getPracticeAnswers } from "../../CoursesApiCalls";
 import Questions from "../../components/Questions";
 import { Question, Answer, GameDetailsResponse } from "../../components/types";
 import { StatusBar } from "expo-status-bar";
+import Colors from "../../constants/Colors";
+import { rMS, rV, SIZES } from "../../constants";
+import GameButton from "../../components/GameButton";
 
 export default function Game() {
   const { userToken, userInfo } = useAuth();
@@ -25,6 +28,14 @@ export default function Game() {
   const [currentQuestion, setCurrentQuestion] = useState<number>(0);
   const [questionDuration, setQuestionDuration] = useState<number>(20000); // Default duration set to 20 seconds
   const webSocket = useRef<WebSocket | null>(null);
+  const [doubleDipActive, setDoubleDipActive] = useState(false);
+  const [askTheAIActive, setAskTheAIActive] = useState(false);
+  const [aiPrediction, setAiPrediction] = useState<number | null>(null);
+  const [doubleDipUsed, setDoubleDipUsed] = useState(false); // Track if Double Dip power-up has been used
+  const [askTheAIUsed, setAskTheAIUsed] = useState(false); // Track if Ask the AI power-up has been used
+
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
 
   const {
     data: gameDetails,
@@ -86,6 +97,13 @@ export default function Game() {
 
     return () => clearTimeout(timer);
   }, [currentQuestion, questionDuration, gameQuestions]);
+
+  useEffect(() => {
+    // Clear AI prediction and reset power-up states when the question changes
+    setAiPrediction(null);
+    setAskTheAIActive(false);
+    setDoubleDipActive(false);
+  }, [currentQuestion]);
 
   const sendWebSocketMessage = (questionId: number) => {
     if (webSocket.current && webSocket.current.readyState === WebSocket.OPEN) {
@@ -188,8 +206,31 @@ export default function Game() {
           }
         }
       } else {
-        // For questions with a single correct answer, prevent changing the answer once selected
-        if (!updatedAnswers[questionId]) {
+        // For questions with a single correct answer, allow changing the answer if double dip is active
+        if (doubleDipActive) {
+          if (
+            updatedAnswers[questionId] &&
+            updatedAnswers[questionId].includes(answerId)
+          ) {
+            return updatedAnswers;
+          }
+          const isCorrect = gameAnswers.find(
+            (answer) => answer.id === answerId
+          )?.isRight;
+          if (!isCorrect) {
+            updatedAnswers[questionId] = [
+              ...(updatedAnswers[questionId] || []),
+              answerId,
+            ];
+            if ((updatedAnswers[questionId].length = 2)) {
+              setDoubleDipActive(false); // Deactivate double dip after two attempts
+            }
+          } else {
+            updatedAnswers[questionId] = [answerId]; // If correct, reset to single correct answer
+            setDoubleDipActive(false); // Deactivate double dip
+            sendWebSocketMessage(questionId);
+          }
+        } else {
           updatedAnswers[questionId] = [answerId];
           sendWebSocketMessage(questionId);
         }
@@ -244,28 +285,93 @@ export default function Game() {
     );
   };
 
+  const activateDoubleDip = () => {
+    if (!doubleDipUsed && !askTheAIActive && !doubleDipActive) {
+      setDoubleDipActive(true);
+      setDoubleDipUsed(true); // Mark Double Dip as used
+    }
+  };
+
+  const activateAskTheAI = () => {
+    if (!askTheAIUsed && !doubleDipActive && !askTheAIActive) {
+      setAskTheAIActive(true);
+      const currentQuestionId = gameQuestions[currentQuestion].id;
+
+      // Simulate AI prediction (in a real scenario, this would involve calling an AI service)
+      const correctAnswerIds = gameAnswers
+        .filter(
+          (answer) => answer.question === currentQuestionId && answer.isRight
+        )
+        .map((answer) => answer.id);
+      const aiGuess =
+        correctAnswerIds[Math.floor(Math.random() * correctAnswerIds.length)];
+      setAiPrediction(aiGuess);
+
+      // Deactivate after a short period (e.g., 10 seconds)
+      setTimeout(() => {
+        setAskTheAIActive(false);
+        setAiPrediction(null);
+      }, 20000);
+
+      setAskTheAIUsed(true); // Mark Ask The AI as used
+    }
+  };
+
+  const answerLabels = ["A", "B", "C", "D"];
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
     },
+    powerUpContainer: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      margin: rMS(10),
+    },
+    aiPrediction: {
+      fontSize: SIZES.medium,
+      color: themeColors.text,
+      textAlign: "center",
+      alignSelf: "center",
+    },
+    answerButton: {
+      padding: rMS(10),
+      marginVertical: rV(5),
+      borderRadius: 5,
+      borderWidth: 1,
+      borderColor: "#ccc",
+    },
+    correctAnswer: {
+      backgroundColor: "#097969",
+    },
+    wrongAnswer: {
+      backgroundColor: "#D22B2B",
+    },
   });
 
-  // if (gameLoading)
-  //   return (
-  //     <View style={styles.container}>
-  //       <Text>Loading...</Text>
-  //     </View>
-  //   );
-  // if (gameError)
-  //   return (
-  //     <View style={styles.container}>
-  //       <Text>Error: {gameError.message}</Text>
-  //     </View>
-  //   );
-
   return (
-    <ScrollView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar hidden={true} />
+      <View style={styles.powerUpContainer}>
+        <GameButton
+          title="Double Dip"
+          onPress={activateDoubleDip}
+          disabled={doubleDipUsed || doubleDipActive || askTheAIActive}
+        />
+        <GameButton
+          title="Ask The Prince"
+          onPress={activateAskTheAI}
+          disabled={askTheAIUsed || askTheAIActive || doubleDipActive}
+        />
+      </View>
+      {askTheAIActive && aiPrediction !== null && (
+        <View style={styles.aiPrediction}>
+          <Text>The Prince thinks the correct answer is:</Text>
+          <Text>
+            {gameAnswers.find((answer) => answer.id === aiPrediction)?.text}
+          </Text>
+        </View>
+      )}
       {gameQuestions.length > 0 && (
         <Questions
           practiceQuestions={gameQuestions}
@@ -276,8 +382,9 @@ export default function Game() {
           }
           isAnswerSelected={isAnswerSelected}
           handleAnswerSelection={handleAnswerSelection}
+          styles={styles}
         />
       )}
-    </ScrollView>
+    </View>
   );
 }

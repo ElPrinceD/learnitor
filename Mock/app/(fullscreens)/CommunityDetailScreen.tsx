@@ -369,7 +369,7 @@ const CommunityDetailScreen: React.FC = () => {
           <Text style={[styles.sectionHeaderText, { color: themeColors.text }]}>
             Calendar
           </Text>
-          {timetable?.length > 0 && (
+       
             <TouchableOpacity
               onPress={() => {
                 router.push({
@@ -382,7 +382,7 @@ const CommunityDetailScreen: React.FC = () => {
                 Add
               </Text>
             </TouchableOpacity>
-          )}
+          
         </View>
         {timetable?.length === 0 ? (
           <Text
