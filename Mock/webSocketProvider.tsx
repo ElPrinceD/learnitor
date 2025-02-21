@@ -280,7 +280,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({
         console.warn("Connection lost. Trying to reconnect...");
       }
       if (reconnectAttempts > 0 || token) {
-        reconnectWebSocket();
+        //reconnectWebSocket();
       }
     };
 
