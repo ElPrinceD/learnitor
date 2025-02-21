@@ -121,6 +121,7 @@ export default function Tab3Layout() {
               fontWeight: "bold",
             },
             headerShadowVisible: false,
+            
           }}
         />
         <Stack.Screen

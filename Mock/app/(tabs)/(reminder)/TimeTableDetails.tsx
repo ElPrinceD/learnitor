@@ -160,7 +160,7 @@ const TimetableDetailPage = () => {
         style={styles.editButton}
         onPress={handleEditTimetable}
       >
-        <FontAwesome6 name="plus" size={30} color={themeColors.text} />
+        <FontAwesome6 name="file-pen" size={30} color={themeColors.text} />
       </TouchableOpacity>
     </View>
   );
