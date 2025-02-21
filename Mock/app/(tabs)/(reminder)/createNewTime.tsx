@@ -1,13 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
-  useColorScheme,
-  ScrollView,
   ActivityIndicator,
   Platform,
+  ScrollView,
+  useColorScheme,
 } from "react-native";
 import { router } from "expo-router";
 import { useAuth } from "../../../components/AuthContext";
@@ -19,11 +18,12 @@ import { createTask, getCategories } from "../../../TimelineApiCalls.ts";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import ErrorMessage from "../../../components/ErrorMessage.tsx";
 import GameButton from "../../../components/GameButton.tsx";
-import CustomPicker from "../../../components/CustomPicker"; // Custom picker component
-import DateSelector from "../../../components/DateSelector.tsx";
+import CustomPicker from "../../../components/CustomPicker";
+import DateSelector from "../../../components/DateSelector.tsx"; // Use DateSelector
 import CustomDateTimeSelector from "../../../components/CustomDateTimeSelector.tsx";
 import Animated, { FadeInLeft, ReduceMotion } from "react-native-reanimated";
 import setSoftInputMode from "react-native-set-soft-input-mode";
+
 interface Category {
   value: number;
   label: string;
@@ -46,17 +46,13 @@ const CreateNewTime = () => {
   const { userToken, userInfo } = useAuth();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  // date will hold both the selected date and start time
-  const [date, setDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(new Date());
+  const [dueDate, setDueDate] = useState(new Date());
+  const [startTime, setStartTime] = useState(new Date());
+  const [endTime, setEndTime] = useState(new Date());
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [recurrenceOption, setRecurrenceOption] = useState("Does not repeat");
   const [recurrenceEndDate, setRecurrenceEndDate] = useState(new Date());
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  // State to control the visibility of the time pickers
-  const [showStartPicker, setShowStartPicker] = useState(false);
-  const [showEndPicker, setShowEndPicker] = useState(false);
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -67,22 +63,22 @@ const CreateNewTime = () => {
     enabled: !!userToken?.token,
   });
 
-
-  
   useEffect(() => {
     if (Platform.OS === "android" && setSoftInputMode) {
-      setSoftInputMode.set(1); // 3 is typically for ADJUST_RESIZE
+      setSoftInputMode.set(1); // ADJUST_PAN
       return () => {
-        setSoftInputMode.set(1); // 1 is typically for ADJUST_PAN
+        setSoftInputMode.set(1);
       };
     }
     return () => {};
   }, []);
+
   const createTaskMutation = useMutation<any, any, any>({
     mutationFn: async ({ taskData, token }) => {
       await createTask(taskData, token);
     },
     onSuccess: () => {
+      console.log('success')
       router.navigate("three");
       setErrorMessage(null);
     },
@@ -91,41 +87,45 @@ const CreateNewTime = () => {
     },
   });
 
-  // When a time is selected from the time picker modal, update the corresponding Date state
-  const handleConfirmTime = (selectedTime: string) => {
-    if (selectedTime) {
-      const [hours, minutes] = selectedTime.split(":").map(Number);
-      const newDate = new Date(date);
-      newDate.setHours(hours);
-      newDate.setMinutes(minutes);
-      setDate(newDate);
+  const parseTime = (timeString: string): Date => {
+    if (!timeString) return new Date();
+    const [hours, minutes] = timeString.split(":").map(Number);
+    if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      console.error(`Invalid time string: ${timeString}, Hours: ${hours}, Minutes: ${minutes}`);
+      return new Date(); // Fallback to current time if invalid
     }
+    const newDate = new Date();
+    newDate.setHours(hours, minutes, 0, 0);
+    return newDate;
   };
 
-  const handleConfirmEndTime = (selectedTime: string) => {
-    if (selectedTime) {
-      const [hours, minutes] = selectedTime.split(":").map(Number);
-      const newEndDate = new Date(endDate);
-      newEndDate.setHours(hours);
-      newEndDate.setMinutes(minutes);
-      setEndDate(newEndDate);
-    }
+  const formatTime = (date: Date): string => {
+    if (!(date instanceof Date) || isNaN(date.getTime())) return "00:00";
+    const hours = date.getHours().toString().padStart(2, "0");
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    return `${hours}:${minutes}`;
+  };
+
+  const formatDate = (date: Date): string => {
+    if (!(date instanceof Date) || isNaN(date.getTime())) return new Date().toISOString().split("T")[0];
+    return date.toISOString().split("T")[0];
   };
 
   const handleSaveTime = () => {
+    console.log()
     const dataToSave: CreateTaskData = {
       title,
       description,
-      due_date: date.toISOString().split("T")[0],
-      due_time_start: date.toTimeString().split(" ")[0].slice(0, 5),
-      due_time_end: endDate.toTimeString().split(" ")[0].slice(0, 5),
+      due_date: formatDate(dueDate),
+      due_time_start: formatTime(startTime),
+      due_time_end: formatTime(endTime),
       category: selectedCategory?.value,
       learner: userInfo?.user.id,
       is_recurring: recurrenceOption !== "Does not repeat",
       recurrence_interval: recurrenceOption !== "Does not repeat" ? recurrenceOption.toLowerCase() : null,
       recurrence_end_date:
         recurrenceOption !== "Does not repeat"
-          ? recurrenceEndDate.toISOString().split("T")[0]
+          ? formatDate(recurrenceEndDate)
           : null,
     };
 
@@ -146,11 +146,11 @@ const CreateNewTime = () => {
     container: {
       flex: 1,
       paddingHorizontal: rMS(20),
-      paddingBottom: rV(50),
+     
       backgroundColor: themeColors.background,
     },
     sectionContainer: {
-      backgroundColor: "#f5f5f5",
+      backgroundColor: themeColors.secondaryBackground,
       padding: rV(15),
       borderRadius: rMS(8),
       marginBottom: rV(15),
@@ -159,7 +159,7 @@ const CreateNewTime = () => {
       fontSize: rMS(16),
       fontWeight: "bold",
       marginBottom: rV(10),
-      color: "#333",
+      color: themeColors.text,
     },
     timeRow: {
       flexDirection: "row",
@@ -171,18 +171,15 @@ const CreateNewTime = () => {
     },
     timeText: {
       fontSize: rMS(16),
-      color: "#333",
+      color: themeColors.text,
     },
-    arrow: {
-      fontSize: rMS(20),
-      color: "#333",
-    },
+  
     buttonContainer: {
       alignItems: "center",
       marginVertical: rV(20),
     },
     button: {
-      width: rS(150),
+      width: "100%",
       paddingVertical: rV(10),
       borderRadius: 10,
       backgroundColor: themeColors.tint,
@@ -195,7 +192,7 @@ const CreateNewTime = () => {
       <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {/* Task Details Section */}
         <View style={styles.sectionContainer}>
-          <Text style={styles.sectionHeader}>Task Details</Text>
+   
           <AnimatedRoundTextInput
             placeholderTextColor={themeColors.textSecondary}
             label="Title"
@@ -212,29 +209,52 @@ const CreateNewTime = () => {
 
         {/* Time Details Section */}
         <View style={styles.sectionContainer}>
-          <Text style={styles.sectionHeader}>Time Details</Text>
+
           <DateSelector
-            onDateChange={(selectedDate: string) => setDate(new Date(selectedDate))}
+            onDateChange={(selectedDate: string) => {
+              const newDate = new Date(selectedDate);
+              if (!isNaN(newDate.getTime())) {
+                setDueDate(newDate);
+              } else {
+                console.error(`Invalid due date: ${selectedDate}`);
+              }
+            }}
             label="Start Date"
             minDate={true}
           />
-          <TouchableOpacity style={styles.timeRow} onPress={() => setShowStartPicker(true)}>
-            <Text style={styles.timeText}>
-              {`Start Time: ${date.toTimeString().split(" ")[0].slice(0, 5)}`}
-            </Text>
-            <Text style={styles.arrow}>&gt;</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.timeRow} onPress={() => setShowEndPicker(true)}>
-            <Text style={styles.timeText}>
-              {`End Time: ${endDate.toTimeString().split(" ")[0].slice(0, 5)}`}
-            </Text>
-            <Text style={styles.arrow}>&gt;</Text>
-          </TouchableOpacity>
+          <CustomDateTimeSelector
+            mode="time"
+            label="Start Time"
+            value={formatTime(startTime)}
+            onTimeChange={(time) => {
+              const newTime = parseTime(time);
+              if (!isNaN(newTime.getTime())) {
+                setStartTime(newTime);
+              } else {
+                console.error(`Invalid start time: ${time}`);
+              }
+            }}
+            buttonTitle="Pick Start Time"
+          />
+          <CustomDateTimeSelector
+            mode="time"
+            label="End Time"
+            value={formatTime(endTime)}
+            onTimeChange={(time) => {
+              const newTime = parseTime(time);
+              if (!isNaN(newTime.getTime())) {
+                setEndTime(newTime);
+              } else {
+                console.error(`Invalid end time: ${time}`);
+              }
+            }}
+            buttonTitle="Pick End Time"
+          />
         </View>
 
         {/* Other Details Section */}
         <View style={styles.sectionContainer}>
-          <Text style={styles.sectionHeader}>Other Details</Text>
+
           <CustomPicker
             label="Category"
             options={categoriesData?.map((cat) => cat.label) || []}
@@ -255,9 +275,14 @@ const CreateNewTime = () => {
               style={{ marginTop: rV(10) }}
             >
               <DateSelector
-                onDateChange={(selectedDate: string) =>
-                  setRecurrenceEndDate(new Date(selectedDate))
-                }
+                onDateChange={(selectedDate: string) => {
+                  const newDate = new Date(selectedDate);
+                  if (!isNaN(newDate.getTime())) {
+                    setRecurrenceEndDate(newDate);
+                  } else {
+                    console.error(`Invalid recurrence end date: ${selectedDate}`);
+                  }
+                }}
                 label="End Date for Recurrence"
                 minDate={true}
               />
@@ -284,26 +309,6 @@ const CreateNewTime = () => {
           message={errorMessage}
           visible={!!errorMessage}
           onDismiss={() => setErrorMessage(null)}
-        />
-      )}
-      {showStartPicker && (
-        <CustomDateTimeSelector
-          mode="time"
-          onTimeChange={(time) => {
-            handleConfirmTime(time);
-            setShowStartPicker(false);
-          }}
-          onCancel={() => setShowStartPicker(false)}
-        />
-      )}
-      {showEndPicker && (
-        <CustomDateTimeSelector
-          mode="time"
-          onTimeChange={(time) => {
-            handleConfirmEndTime(time);
-            setShowEndPicker(false);
-          }}
-          onCancel={() => setShowEndPicker(false)}
         />
       )}
     </View>

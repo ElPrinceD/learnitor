@@ -42,7 +42,7 @@ const Profile = () => {
     try {
       
       clearUserDataCache();
-      //logout();
+      logout();
       router.replace("Intro");
     } catch (error) {
       console.error("Error logging out:", error);

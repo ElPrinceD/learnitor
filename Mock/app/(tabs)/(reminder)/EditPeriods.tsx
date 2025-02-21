@@ -237,32 +237,32 @@ const EditPeriodsPage: React.FC = () => {
           />
         )}
       />
-      <Controller
-        control={control}
-        name="start_time"
-        render={({ field: { onChange, value } }) => (
-          <CustomDateTimeSelector
-            mode="time"
-            label="Start Time"
-            value={value}
-            onTimeChange={onChange}
-            buttonTitle="Pick Start Time"
-          />
-        )}
-      />
-      <Controller
-        control={control}
-        name="end_time"
-        render={({ field: { onChange, value } }) => (
-          <CustomDateTimeSelector
-            mode="time"
-            label="End Time"
-            value={value}
-            onTimeChange={onChange}
-            buttonTitle="Pick End Time"
-          />
-        )}
-      />
+    <Controller
+  control={control}
+  name="start_time"
+  render={({ field: { onChange, value } }) => (
+    <CustomDateTimeSelector
+      mode="time"
+      label="Start Time"
+      value={formatTime(value)} // Convert Date to string
+      onTimeChange={(time) => onChange(parseTime(time))} // Convert string back to Date
+      buttonTitle="Pick Start Time"
+    />
+  )}
+/>
+<Controller
+  control={control}
+  name="end_time"
+  render={({ field: { onChange, value } }) => (
+    <CustomDateTimeSelector
+      mode="time"
+      label="End Time"
+      value={formatTime(value)} // Convert Date to string
+      onTimeChange={(time) => onChange(parseTime(time))} // Convert string back to Date
+      buttonTitle="Pick End Time"
+    />
+  )}
+/>
       <View style={styles.buttonContainer}>
         <GameButton
           onPress={handleSubmit(handleUpdate)}

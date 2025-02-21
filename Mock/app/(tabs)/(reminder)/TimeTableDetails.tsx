@@ -5,6 +5,7 @@ import {
   useColorScheme,
   Text,
   ActivityIndicator,
+  TouchableOpacity,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../../../components/AuthContext";
@@ -46,8 +47,10 @@ const TimetableDetailPage = () => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
-  const { timetableId } = useLocalSearchParams();
+  const { timetableId, isUserLeader } = useLocalSearchParams<{ timetableId: string, isUserLeader?: string }>();
+  const isUserLeaderBool = isUserLeader === 'true';
 
+  
   const {
     data: timetable,
     isLoading,
@@ -93,10 +96,19 @@ const TimetableDetailPage = () => {
       bottom: rV(75),
       width: 60,
       height: 60,
-      borderRadius: 20,
+      borderRadius: 30, // Make it circular
       justifyContent: "center",
       alignItems: "center",
-      backgroundColor: themeColors.buttonBackground,
+      backgroundColor: themeColors.tint,
+      elevation: 5, // For Android shadow
+      shadowColor: "#000", // For iOS shadow
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+    },
+    editButtonText: {
+      color: themeColors.text,
+      fontSize: SIZES.large,
     },
   });
 
@@ -115,19 +127,41 @@ const TimetableDetailPage = () => {
       </View>
     );
   }
-  console.log(timetable.periods);
+
+
+  const handleEditTimetable = () => {
+   
+    router.push({
+      pathname: "TimeTable", // Adjust this path according to your routing setup
+     params: {
+        id: timetable.id, // Pass the ID for editing
+        timetable: JSON.stringify({ 
+          name: timetable.name, 
+          description: timetable.description 
+        }),
+        periods: JSON.stringify(timetable.periods),
+      },
+    });
+  };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{timetable.name}</Text>
       <Text style={styles.description}>{timetable.description}</Text>
-      <TimetableDisplay periods={timetable.periods} />
+      <TimetableDisplay periods={timetable.periods} isUserLeader= {isUserLeaderBool} />
      
       <ErrorMessage
         message={errorMessage}
         visible={!!errorMessage}
         onDismiss={() => setErrorMessage(null)}
       />
+
+<TouchableOpacity 
+        style={styles.editButton}
+        onPress={handleEditTimetable}
+      >
+        <FontAwesome6 name="plus" size={30} color={themeColors.text} />
+      </TouchableOpacity>
     </View>
   );
 };

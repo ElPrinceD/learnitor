@@ -139,7 +139,7 @@ const AnimatedRoundTextInput: React.FC<AnimatedRoundTextInputProps> = ({
     label: {
       borderRadius: 70,
       fontWeight: "bold",
-      backgroundColor: themeColors.background,
+      backgroundColor: themeColors.secondaryBackground,
       zIndex: 1,
     },
     input: {

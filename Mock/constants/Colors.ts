@@ -4,6 +4,7 @@ const gradientButton = 'linear-gradient(to right, #1565C0 0%, #0D47A1 100%)'; //
 const lightTextColor = '#000';
 const lightTextSecondaryColor = '#666';
 const lightBackgroundColor = '#f0f1f2'; // Keeping the original light background
+const lightSecondaryBackground = '#fcfcfc';
 const lightCardColor = '#E3F2FD'; // Light blue card
 const lightBorderColor = '#0D47A1';
 const lightShadowColor = '#000';
@@ -14,6 +15,7 @@ const lightGradientBackgroundColor = '#f2f2f2'; // Keeping the original light gr
 const darkTextColor = '#fff';
 const darkTextSecondaryColor = '#ccc';
 const darkBackgroundColor = '#18191a'; // Keeping the original dark background
+const darkSecondaryBackground = '#1e1e1f'
 const darkCardColor = '#263238'; // Dark blue card
 const darkShadowColor = '#696969';
 const darkTabIconDefaultColor = '#ccc';
@@ -42,6 +44,7 @@ export default {
     tint: tintColor,
     border: lightBorderColor,
     shadow: lightShadowColor,
+    secondaryBackground: lightSecondaryBackground,
     tabIconDefault: lightTabIconDefaultColor,
     tabIconSelected: tintColor,
     buttonBackground: tintColor,
@@ -60,6 +63,7 @@ export default {
     normalGrey: lightGrey,
     reverseGrey: lightGrey,
     textSecondary: darkTextSecondaryColor,
+    secondaryBackground: darkSecondaryBackground,
     tintSecond: tintColorSecond,
     background: darkBackgroundColor,
     card: darkCardColor,

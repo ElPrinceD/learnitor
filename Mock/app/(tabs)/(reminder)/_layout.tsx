@@ -77,7 +77,7 @@ export default function Tab3Layout() {
           name="createNewTime"
           options={{
             headerShown: true,
-            presentation: "containedModal",
+            presentation: "card",
             headerBackTitle: "Back",
             // animation: "fade_from_bottom",
             headerStyle: {
@@ -103,7 +103,7 @@ export default function Tab3Layout() {
               fontWeight: "bold",
             },
             headerShadowVisible: false,
-            headerBackTitle: "",
+            headerBackTitle: "Back",
           }}
         />
         <Stack.Screen
@@ -115,7 +115,7 @@ export default function Tab3Layout() {
             headerStyle: {
               backgroundColor: themeColors.background,
             },
-            headerTitle: "Deets",
+            headerTitle: "Timetable",
             headerTitleAlign: "center",
             headerTitleStyle: {
               fontWeight: "bold",

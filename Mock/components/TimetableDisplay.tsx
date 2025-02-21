@@ -10,7 +10,6 @@ import {
   useColorScheme,
 } from "react-native";
 import Colors from "../constants/Colors";
-import { router } from "expo-router";
 import { Swipeable } from "react-native-gesture-handler";
 import { cancelPeriodForToday, uncancelPeriodForToday } from "../TimelineApiCalls";
 import { useAuth } from "./AuthContext";
@@ -29,9 +28,10 @@ interface Period {
 
 interface TimetableDisplayProps {
   periods: Period[];
+  isUserLeader: boolean;
 }
 
-const TimetableDisplay: React.FC<TimetableDisplayProps> = ({ periods }) => {
+const TimetableDisplay: React.FC<TimetableDisplayProps> = ({ periods, isUserLeader  }) => {
   const daysOfWeek = [
     "Monday",
     "Tuesday",
@@ -66,21 +66,6 @@ const TimetableDisplay: React.FC<TimetableDisplayProps> = ({ periods }) => {
     setLocalPeriods((prev) =>
       prev.filter((period) => period.id !== periodToDelete.id)
     );
-  };
-
-  const handleEdit = (period: Period) => {
-    router.push({
-      pathname: "EditPeriods",
-      params: {
-        periodId: period.id,
-        periodCourseName: period.course_name,
-        periodLecturer: period.lecturer,
-        periodStart: period.start_time,
-        periodEnd: period.end_time,
-        periodVenue: period.venue,
-        periodDays: period.days,
-      },
-    });
   };
 
   const handleToggleCancel = async (periodToToggle: Period) => {
@@ -147,6 +132,7 @@ const TimetableDisplay: React.FC<TimetableDisplayProps> = ({ periods }) => {
     },
     headerCell: {
       flex: 1,
+      color: themeColors.background,
       fontWeight: "bold",
       textAlign: "left",
       paddingHorizontal: 8,
@@ -177,7 +163,7 @@ const TimetableDisplay: React.FC<TimetableDisplayProps> = ({ periods }) => {
     actionContainer: {
       flexDirection: "row",
       alignItems: "center",
-      width: 240, // Enough width to hold three buttons (3 x 80)
+      width: 160, // Adjusted width after removing the Edit button
     },
     actionButton: {
       justifyContent: "center",
@@ -204,12 +190,6 @@ const TimetableDisplay: React.FC<TimetableDisplayProps> = ({ periods }) => {
         <Text style={styles.actionText}>Delete</Text>
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.actionButton, { backgroundColor: "blue" }]}
-        onPress={() => handleEdit(period)}
-      >
-        <Text style={styles.actionText}>Edit</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
         style={[
           styles.actionButton,
           { backgroundColor: period.cancelled ? "green" : "gray" },
@@ -223,28 +203,51 @@ const TimetableDisplay: React.FC<TimetableDisplayProps> = ({ periods }) => {
     </View>
   );
 
-  const renderPeriod = ({ item }: { item: Period }) => (
-    <Swipeable
-      renderRightActions={(progress, dragX) =>
-        renderRightActions(progress, dragX, item)
-      }
-    >
-      <View style={styles.row}>
-        <Text style={[styles.cell, item.cancelled && styles.cancelledText]}>
-          {formatTime(item.start_time)} - {formatTime(item.end_time)}
-        </Text>
-        <Text style={[styles.cell, item.cancelled && styles.cancelledText]}>
-          {item.course_name}
-        </Text>
-        <Text style={[styles.cell, item.cancelled && styles.cancelledText]}>
-          {item.lecturer}
-        </Text>
-        <Text style={[styles.cell, item.cancelled && styles.cancelledText]}>
-          {item.venue}
-        </Text>
-      </View>
-    </Swipeable>
-  );
+  const renderPeriod = ({ item }: { item: Period }) => {
+    // Conditionally render Swipeable if the user is a leader
+    if (isUserLeader) {
+      return (
+        <Swipeable
+          renderRightActions={(progress, dragX) =>
+            renderRightActions(progress, dragX, item)
+          }
+        >
+          <View style={styles.row}>
+            <Text style={[styles.cell, item.cancelled && styles.cancelledText]}>
+              {formatTime(item.start_time)} - {formatTime(item.end_time)}
+            </Text>
+            <Text style={[styles.cell, item.cancelled && styles.cancelledText]}>
+              {item.course_name}
+            </Text>
+            <Text style={[styles.cell, item.cancelled && styles.cancelledText]}>
+              {item.lecturer}
+            </Text>
+            <Text style={[styles.cell, item.cancelled && styles.cancelledText]}>
+              {item.venue}
+            </Text>
+          </View>
+        </Swipeable>
+      );
+    } else {
+    
+      return (
+        <View style={styles.row}>
+          <Text style={[styles.cell, item.cancelled && styles.cancelledText]}>
+            {formatTime(item.start_time)} - {formatTime(item.end_time)}
+          </Text>
+          <Text style={[styles.cell, item.cancelled && styles.cancelledText]}>
+            {item.course_name}
+          </Text>
+          <Text style={[styles.cell, item.cancelled && styles.cancelledText]}>
+            {item.lecturer}
+          </Text>
+          <Text style={[styles.cell, item.cancelled && styles.cancelledText]}>
+            {item.venue}
+          </Text>
+        </View>
+      );
+    }
+  }
 
   return (
     <FlatList

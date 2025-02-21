@@ -17,12 +17,13 @@ import {
   Alert,
   Dimensions,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import setSoftInputMode from "react-native-set-soft-input-mode";
 import * as Clipboard from "expo-clipboard";
 import { useFocusEffect, useRoute } from "@react-navigation/native";
 import axios from "axios";
 import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
-import ImageViewing from 'react-native-image-viewing';
+import ImageViewing from "react-native-image-viewing";
 import { useAuth } from "../../components/AuthContext";
 import { Message } from "../../components/types";
 import {
@@ -34,8 +35,6 @@ import {
   InputToolbar,
 } from "react-native-gifted-chat";
 import { Swipeable } from "react-native-gesture-handler";
-
-import PreloadImage from "../../components/PreloadImage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -58,37 +57,41 @@ const CommunityChatScreen: React.FC = () => {
   const navigation = useNavigation();
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [messageIds, setMessageIds] = useState(new Set<string>());
-  const { width } = Dimensions.get('window');
+  const { width } = Dimensions.get("window");
   const [messageInput, setMessageInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedMessages, setSelectedMessages] = useState<IMessage[]>([]);
   const [replyToMessage, setReplyToMessage] = useState<IMessage | null>(null);
-  const [mediaPreview, setMediaPreview] = useState<{ type: 'image' | 'document' | null, uri: string | null }>({ type: null, uri: null });
+  const [mediaPreview, setMediaPreview] = useState<{ type: "image" | "document" | null; uri: string | null }>({
+    type: null,
+    uri: null,
+  });
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const insets = useSafeAreaInsets();
-  const [mediaUri, setMediaUri] = useState<string | null>(null);
+  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
   const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
   const [isVideoViewerVisible, setIsVideoViewerVisible] = useState(false);
   const [isDocumentViewerVisible, setIsDocumentViewerVisible] = useState(false);
   const [editingMessage, setEditingMessage] = useState<IMessage | null>(null);
-  const [profileImages, setProfileImages] = useState<Record<string, string>>({}); // Cache for profile images
+  const [profileImages, setProfileImages] = useState<Record<string, string>>({});
+  const giftedChatRef = useRef(null);
 
-
-  
   useEffect(() => {
-    if (Platform.OS === "android" && setSoftInputMode) {
-      setSoftInputMode.set(3); // 3 is typically for ADJUST_RESIZE
+    console.log("setSoftInputMode:", setSoftInputMode);
+
+    if (Platform.OS === "android" && setSoftInputMode?.set) {
+      console.log("Setting Soft Input Mode");
+      setSoftInputMode.set(3); // ADJUST_RESIZE
+
       return () => {
-        setSoftInputMode.set(1); // 1 is typically for ADJUST_PAN
+        setSoftInputMode.set(1); // ADJUST_PAN
       };
     }
     return () => {};
   }, []);
 
-
-  // Normalize message data format
   const normalizeMessage = (data) => {
     if ("message" in data && "sent_at" in data) {
       return {
@@ -97,7 +100,7 @@ const CommunityChatScreen: React.FC = () => {
         createdAt: new Date(data.sent_at),
         user: {
           _id: data.sender_id,
-          name: data.sender,
+          name: data.sender || "Unknown User",
           avatar: data.sender_image,
         },
         status: data.status || "sent",
@@ -107,7 +110,7 @@ const CommunityChatScreen: React.FC = () => {
               text: data.reply_to.snippet || null,
               user: {
                 _id: data.reply_to.sender_id || null,
-                name: data.reply_to.sender_name || null,
+                name: data.reply_to.sender_name || "Unknown User",
               },
             }
           : null,
@@ -142,42 +145,28 @@ const CommunityChatScreen: React.FC = () => {
       ? "https://images.pexels.com/photos/9665185/pexels-photo-9665185.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
       : "https://images.pexels.com/photos/7599590/pexels-photo-7599590.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2";
 
-      const fetchMessageHistory = useCallback(async () => {
-        try {
-          // If offline, load cached messages (if available) and return early.
-          if (!isConnected) {
-            const cachedMessages = await AsyncStorage.getItem(`messages_${communityId}`);
-            if (cachedMessages) {
-              const parsedMessages = JSON.parse(cachedMessages).map(normalizeMessage);
-              const validMessages = parsedMessages
-                .filter((msg): msg is IMessage => msg !== null)
-                .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-              setMessages(validMessages);
-            }
-            // Do not attempt a server fetch if offline.
-            return;
-          }
-      
-          // If online, show the spinner and then fetch the history.
-          setLoading(true);
-          const cachedMessages = await AsyncStorage.getItem(`messages_${communityId}`);
-          if (cachedMessages) {
-            const parsedMessages = JSON.parse(cachedMessages).map(normalizeMessage);
-            const validMessages = parsedMessages
-              .filter((msg): msg is IMessage => msg !== null)
-              .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-            setMessages(validMessages);
-          } else {
-            await sendMessage({ type: "fetch_history", community_id: communityId });
-          }
-        } catch (error) {
-          console.error("Error fetching message history:", error);
-          setError("Failed to load message history");
-        } finally {
-          setLoading(false);
-        }
-      }, [communityId, sendMessage, isConnected]);
-      
+  const fetchMessageHistory = useCallback(async () => {
+    try {
+      setLoading(true);
+      const cachedMessages = await AsyncStorage.getItem(`messages_${communityId}`);
+      if (cachedMessages) {
+        const parsedMessages = JSON.parse(cachedMessages).map(normalizeMessage);
+        const validMessages = parsedMessages
+          .filter((msg): msg is IMessage => msg !== null)
+          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        setMessages(validMessages);
+      }
+
+      if (isConnected) {
+        await sendMessage({ type: "fetch_history", community_id: communityId });
+      }
+    } catch (error) {
+      console.error("Error fetching message history:", error);
+      setError("Failed to load message history");
+    } finally {
+      setLoading(false);
+    }
+  }, [communityId, sendMessage, isConnected]);
 
   useFocusEffect(
     useCallback(() => {
@@ -188,65 +177,46 @@ const CommunityChatScreen: React.FC = () => {
 
   useEffect(() => {
     let socketCleanup = () => {};
-  
+
     if (socket) {
       const onMessage = (event: MessageEvent) => {
         try {
           const data = JSON.parse(event.data);
-  
+
           if (data.type === "history" && data.community_id === communityId) {
             const transformedMessages = data.messages
               .map(normalizeMessage)
               .filter((msg): msg is IMessage => msg !== null)
               .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-  
+
             setMessages(transformedMessages);
-            AsyncStorage.setItem(
-              `messages_${communityId}`,
-              JSON.stringify(transformedMessages)
-            );
+            AsyncStorage.setItem(`messages_${communityId}`, JSON.stringify(transformedMessages));
           } else if (data.type === "message" && data.community_id === communityId) {
             const newMessage = normalizeMessage(data);
             if (newMessage) {
               setMessages((prevMessages) => {
-                // Look for a temporary message with a matching tempId.
-                const index = prevMessages.findIndex(
-                  (m) => m.tempId && m.tempId === data.temp_id
-                );
+                const index = prevMessages.findIndex((m) => m.tempId && m.tempId === data.temp_id);
                 if (index !== -1) {
-                  // Update the temporary message with the final data.
                   const updatedMessages = [...prevMessages];
                   updatedMessages[index] = newMessage;
                   return updatedMessages;
                 } else {
-                  // If no matching temporary message exists, add it normally.
                   return [newMessage, ...prevMessages];
                 }
               });
-              // Optionally update AsyncStorage if needed.
             }
           } else if (data.type === "message_delete") {
             setMessages((prevMessages) => {
-              const updatedMessages = prevMessages.filter(
-                (m) => m._id !== data.message_id
-              );
-              AsyncStorage.setItem(
-                `messages_${communityId}`,
-                JSON.stringify(updatedMessages)
-              );
+              const updatedMessages = prevMessages.filter((m) => m._id !== data.message_id);
+              AsyncStorage.setItem(`messages_${communityId}`, JSON.stringify(updatedMessages));
               return updatedMessages;
             });
           } else if (data.type === "message_edit") {
             setMessages((prevMessages) => {
               const updatedMessages = prevMessages.map((m) =>
-                m._id === data.message_id
-                  ? { ...m, text: data.new_content, isEdited: true }
-                  : m
+                m._id === data.message_id ? { ...m, text: data.new_content, isEdited: true } : m
               );
-              AsyncStorage.setItem(
-                `messages_${communityId}`,
-                JSON.stringify(updatedMessages)
-              );
+              AsyncStorage.setItem(`messages_${communityId}`, JSON.stringify(updatedMessages));
               return updatedMessages;
             });
           }
@@ -254,35 +224,33 @@ const CommunityChatScreen: React.FC = () => {
           console.error("Error processing WebSocket message:", error);
         }
       };
-  
+
       socket.addEventListener("message", onMessage);
       socketCleanup = () => {
         socket.removeEventListener("message", onMessage);
       };
     }
-  
+
     return socketCleanup;
   }, [socket, communityId]);
-  
 
   useEffect(() => {
     (async () => {
-      if (Platform.OS !== 'web') {
+      if (Platform.OS !== "web") {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-          alert('Sorry, we need camera roll permissions to make this work!');
+        if (status !== "granted") {
+          alert("Sorry, we need camera roll permissions to make this work!");
         }
       }
     })();
   }, []);
 
   const sendMediaMessage = useCallback(
-    async (fileUri: string, type: 'image' | 'document') => {
-      // Create a more unique temporary ID
+    async (fileUri: string, type: "image" | "document") => {
       const tempId = Date.now().toString() + Math.random().toString(36).substr(2, 5);
       const message = {
         _id: tempId,
-        tempId, // Include a tempId property for matching later
+        tempId,
         text: "",
         createdAt: new Date(),
         user: {
@@ -292,27 +260,22 @@ const CommunityChatScreen: React.FC = () => {
         [type]: fileUri,
         status: isConnected ? "sending" : "pending",
       };
-  
-      // Add the temporary message to state if it doesn't exist already
-      setMessages((prevMessages) => {
-        if (!prevMessages.some((msg) => msg._id === tempId)) {
-          return [message, ...prevMessages];
-        }
-        return prevMessages;
-      });
-  
+
+      if (!messageIds.has(tempId)) {
+        setMessages((prevMessages) => [message, ...prevMessages]);
+        setMessageIds(new Set([...messageIds, tempId]));
+      }
+
       if (!communityId) {
         console.error("Community ID missing before sending message");
         return;
       }
-  
+
       if (!isConnected) {
         const messageToStore = {
           ...message,
           communityId,
-          content: {
-            [type]: fileUri,
-          },
+          content: { [type]: fileUri },
         };
         AsyncStorage.setItem(`unsent_message_${tempId}`, JSON.stringify(messageToStore));
       } else {
@@ -322,23 +285,21 @@ const CommunityChatScreen: React.FC = () => {
           message: "",
           sender: user?.first_name + " " + user?.last_name || "Unknown User",
           sender_id: user?.id || 1,
-          temp_id: tempId, // Pass the temporary ID so the server can echo it back
+          temp_id: tempId,
           [type]: fileUri,
         });
       }
     },
-    [communityId, sendMessage, user, isConnected]
+    [communityId, sendMessage, user, isConnected, messageIds]
   );
-  
 
   const onSend = useCallback(
     (newMessages: IMessage[] = []) => {
       for (let message of newMessages) {
-        // Create a unique temporary ID
         const tempId = Date.now().toString() + Math.random().toString(36).substr(2, 5);
         const tempMessage: IMessage = {
-          _id: tempId, // initial temporary ID
-          tempId,       // add a tempId field for later matching
+          _id: tempId,
+          tempId,
           text: message.text,
           createdAt: new Date(),
           user: {
@@ -350,41 +311,41 @@ const CommunityChatScreen: React.FC = () => {
           status: isConnected ? "sending" : "pending",
           ...(replyToMessage && { replyTo: replyToMessage._id }),
         };
-  
-        // Clear temporary states
+
         setReplyToMessage(null);
         setMediaPreview({ type: null, uri: null });
-  
-        // Only add if it doesn't already exist
+
         if (!messageIds.has(tempId)) {
           setMessages((prevMessages) => [tempMessage, ...prevMessages]);
           setMessageIds(new Set([...messageIds, tempId]));
         }
-  
-        // Send the message with the tempId so the server can echo it back
+
         sendMessage({
           type: "send_message",
           community_id: communityId,
           message: message.text || "",
           sender: user?.first_name + " " + user?.last_name || "Unknown User",
           sender_id: user?.id || 1,
-          temp_id: tempId, // pass the temporary id
+          temp_id: tempId,
           ...(replyToMessage && { reply_to: replyToMessage._id }),
           image: tempMessage.image ? tempMessage.image : undefined,
           document: tempMessage.document ? tempMessage.document : undefined,
         });
+
+        if (replyToMessage) {
+          setSelectedMessages([]);
+        }
       }
     },
     [communityId, sendMessage, user, replyToMessage, isConnected, mediaPreview, messageIds]
   );
-  
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: false, 
+      allowsEditing: false,
     });
-  
+
     if (!result.canceled && result.assets && result.assets.length > 0) {
       const asset = result.assets[0];
       const file = await fetch(asset.uri);
@@ -392,8 +353,8 @@ const CommunityChatScreen: React.FC = () => {
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64data = reader.result;
-        const imageBase64 = `data:${blob.type};base64,${base64data.split(',')[1]}`;
-        await sendMediaMessage(imageBase64, 'image');
+        const imageBase64 = `data:${blob.type};base64,${base64data.split(",")[1]}`;
+        await sendMediaMessage(imageBase64, "image");
       };
       reader.readAsDataURL(blob);
     }
@@ -401,21 +362,14 @@ const CommunityChatScreen: React.FC = () => {
 
   const pickDocument = async () => {
     try {
-      // const result = await DocumentPicker.getDocumentAsync({
-      //   type: '*/*', 
-      //   copyToCacheDirectory: true
-      // });
- 
-      if (result.type === 'success') {
-        await sendMediaMessage(result.uri, 'document');
-      }
+      // Assuming DocumentPicker is implemented elsewhere if needed
     } catch (error) {
       console.error("Document picker error:", error);
     }
   };
 
   const handleForwardSelected = useCallback(() => {
-    // TODO: Implement the logic for forwarding messages
+    // TODO: Implement forwarding logic
   }, [selectedMessages]);
 
   const handleCopySelected = useCallback(async () => {
@@ -428,10 +382,10 @@ const CommunityChatScreen: React.FC = () => {
     (message: IMessage) => {
       const isSelected = selectedMessages.some((m) => m._id === message._id);
       setSelectedMessages((prevSelectedMessages) => {
-        const isSelected = prevSelectedMessages.some((m) => m._id === message._id);
-        return isSelected
+        const updated = isSelected
           ? prevSelectedMessages.filter((m) => m._id !== message._id)
           : [...prevSelectedMessages, message];
+        return updated;
       });
 
       const updatedMessages = messages.map((m) =>
@@ -447,14 +401,10 @@ const CommunityChatScreen: React.FC = () => {
   }, []);
 
   const canEditDeleteOrReply = useCallback(() => {
-    const userMessages = selectedMessages.filter(
-      (msg) => msg.user._id === user?.id
-    );
+    const userMessages = selectedMessages.filter((msg) => msg.user._id === user?.id);
     return {
       canEdit: selectedMessages.length === 1 && userMessages.length === 1,
-      canDelete:
-        userMessages.length === selectedMessages.length &&
-        userMessages.length > 0,
+      canDelete: userMessages.length === selectedMessages.length && userMessages.length > 0,
       canReply: selectedMessages.length === 1,
     };
   }, [selectedMessages, user]);
@@ -473,17 +423,18 @@ const CommunityChatScreen: React.FC = () => {
         message_id: editingMessage._id,
         new_content: messageInput,
       });
-      setMessages((prevMessages) => prevMessages.map(m => 
-        m._id === editingMessage._id ? { ...m, text: messageInput, isEdited: true } : m
-      ));
-      AsyncStorage.setItem(
-        `messages_${communityId}`,
-        JSON.stringify(messages)
-      );
+      setMessages((prevMessages) => {
+        const updatedMessages = prevMessages.map((m) =>
+          m._id === editingMessage._id ? { ...m, text: messageInput, isEdited: true } : m
+        );
+        AsyncStorage.setItem(`messages_${communityId}`, JSON.stringify(updatedMessages));
+        return updatedMessages;
+      });
       setEditingMessage(null);
       setMessageInput("");
+      setSelectedMessages([]);
     }
-  }, [editingMessage, messageInput, sendMessage, messages, communityId]);
+  }, [editingMessage, messageInput, sendMessage, communityId]);
 
   const handleDeleteMessage = useCallback(() => {
     const { canDelete } = canEditDeleteOrReply();
@@ -492,36 +443,27 @@ const CommunityChatScreen: React.FC = () => {
         "Confirm Delete",
         "Are you sure you want to delete these messages?",
         [
-          {
-            text: "Cancel",
-            style: "cancel",
-          },
+          { text: "Cancel", style: "cancel" },
           {
             text: "OK",
             onPress: () => {
               selectedMessages.forEach((message) => {
-                sendMessage({
-                  type: "delete_message",
-                  message_id: message._id,
-                });
+                sendMessage({ type: "delete_message", message_id: message._id });
               });
-              setMessages((prevMessages) =>
-                prevMessages.filter(
-                  (m) =>
-                    !selectedMessages.some((selMsg) => selMsg._id === m._id)
-                )
-              );
-              AsyncStorage.setItem(
-                `messages_${communityId}`,
-                JSON.stringify(messages)
-              );
+              setMessages((prevMessages) => {
+                const updatedMessages = prevMessages.filter(
+                  (m) => !selectedMessages.some((selMsg) => selMsg._id === m._id)
+                );
+                AsyncStorage.setItem(`messages_${communityId}`, JSON.stringify(updatedMessages));
+                return updatedMessages;
+              });
               setSelectedMessages([]);
             },
           },
         ]
       );
     }
-  }, [selectedMessages, sendMessage, canEditDeleteOrReply, messages, communityId]);
+  }, [selectedMessages, sendMessage, canEditDeleteOrReply, communityId]);
 
   const updateHeader = useCallback(() => {
     const { canDelete, canEdit, canReply } = canEditDeleteOrReply();
@@ -572,46 +514,44 @@ const CommunityChatScreen: React.FC = () => {
                   size={SIZES.large}
                   color={themeColors.text}
                   style={{ marginRight: SIZES.small, fontSize: rMS(SIZES.large) }}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity onPressIn={handleDeselectAll}>
-                <Text style={{ color: themeColors.text, fontSize: rMS(SIZES.large) }}>
-                  {" "}
-                  Deselect ({selectedMessages.length})
-                </Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
-      ),
-      headerTitle: () => (
-        <TouchableOpacity
-          onPressIn={() =>
-            navigation.navigate("CommunityDetailScreen", { id: communityId })
-          }
-          style={{ flexDirection: "row", alignItems: "center" }}
-        >
-          <Text style={{ color: themeColors.text, fontSize: rMS(SIZES.large) }}></Text>
-        </TouchableOpacity>
-      ),
-    });
-  }, [
-    selectedMessages,
-    navigation,
-    communityId,
-    themeColors,
-    handleCopySelected,
-    handleDeleteMessage,
-    handleEditMessage,
-    canEditDeleteOrReply,
-  ]);
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity onPressIn={handleDeselectAll}>
+                  <Text style={{ color: themeColors.text, fontSize: rMS(SIZES.large) }}>
+                    {" "}
+                    Deselect ({selectedMessages.length})
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        ),
+        headerTitle: () => (
+          <TouchableOpacity
+            onPressIn={() =>
+              navigation.navigate("CommunityDetailScreen", { id: communityId })
+            }
+            style={{ flexDirection: "row", alignItems: "center" }}
+          >
+            <Text style={{ color: themeColors.text, fontSize: rMS(SIZES.large) }}></Text>
+          </TouchableOpacity>
+        ),
+      });
+    }, [
+      selectedMessages,
+      navigation,
+      communityId,
+      themeColors,
+      handleCopySelected,
+      handleDeleteMessage,
+      handleEditMessage,
+      canEditDeleteOrReply,
+    ]);
 
   const handlePress = useCallback(
     (message: IMessage) => {
       setSelectedMessages((prevSelectedMessages) => {
-        const isSelected = prevSelectedMessages.some(
-          (m) => m._id === message._id
-        );
+        const isSelected = prevSelectedMessages.some((m) => m._id === message._id);
         const currentLength = prevSelectedMessages.length;
 
         if (currentLength > 0 || isSelected) {
@@ -623,7 +563,7 @@ const CommunityChatScreen: React.FC = () => {
         return prevSelectedMessages;
       });
     },
-    [selectedMessages, navigation, communityId, themeColors, handleCopySelected]
+    [selectedMessages]
   );
 
   useEffect(() => {
@@ -632,7 +572,7 @@ const CommunityChatScreen: React.FC = () => {
         headerRight: () => null,
         headerLeft: () => (
           <TouchableOpacity
-            onPressIn={() => navigation.goBack()}
+            onPress={() => navigation.goBack()}
             style={{ marginLeft: SIZES.xSmall }}
           >
             <MaterialCommunityIcons
@@ -644,12 +584,7 @@ const CommunityChatScreen: React.FC = () => {
         ),
         headerTitle: () => (
           <TouchableOpacity
-            onPressIn={() => {
-              router.push({
-                pathname: "CommunityDetailScreen",
-                params: { id: communityId },
-              });
-            }}
+            onPress={() => router.push({ pathname: "CommunityDetailScreen", params: { id: communityId } })}
             style={{ flexDirection: "row", alignItems: "center" }}
           >
             <Image
@@ -670,22 +605,11 @@ const CommunityChatScreen: React.FC = () => {
     } else {
       updateHeader();
     }
-  }, [
-    selectedMessages,
-    navigation,
-    communityId,
-    route.params?.name,
-    themeColors,
-    updateHeader,
-  ]);
+  }, [selectedMessages, navigation, communityId, route.params?.name, themeColors, updateHeader]);
 
   const renderBubble = useCallback(
-    
     (props) => {
-      const isSelected = selectedMessages.some(
-        (m) => m._id === props.currentMessage._id
-      );
-   
+      const isSelected = selectedMessages.some((m) => m._id === props.currentMessage._id);
       const isFirstMessageOfBlock =
         !props.previousMessage ||
         props.previousMessage?.user?._id !== props.currentMessage.user._id;
@@ -696,55 +620,64 @@ const CommunityChatScreen: React.FC = () => {
           props.previousMessage?.createdAt &&
           props.currentMessage.createdAt.toDateString() !==
             props.previousMessage.createdAt.toDateString());
-  
+      const isLastMessage = messages[0]?._id === props.currentMessage._id;
+
+      const messageText = props.currentMessage.text
+        ? props.currentMessage.text
+        : props.currentMessage.image
+        ? "Photo"
+        : props.currentMessage.document
+        ? "Document"
+        : "";
+
       return (
-      
-      
         <TouchableOpacity
-          onPressIn={() => handlePress(props.currentMessage)}
+          onPress={() => handlePress(props.currentMessage)}
           onLongPress={() => handleLongPress(props.currentMessage)}
-          style={
-            isSelected
-              ? [props.containerStyle, styles.blurBackground]
-              : props.containerStyle
-          }
+          style={isSelected ? [props.containerStyle, styles.blurBackground] : props.containerStyle}
         >
           <Bubble
             {...props}
+            text={messageText}
             wrapperStyle={{
               ...props.wrapperStyle,
               ...(isSelected && styles.blurBackground),
-              left: { backgroundColor: themeColors.background },
+              left: { backgroundColor: themeColors.secondaryBackground },
               right: { backgroundColor: themeColors.tint },
             }}
             containerStyle={{
               marginVertical: isFirstMessageOfBlock ? 5 : 0,
             }}
-            onPressIn={() => handlePress(props.currentMessage)}
-            onLongPress={() => handleLongPress(props.currentMessage)}
             renderCustomView={() => (
               <>
-                {props.currentMessage.replyTo &&
-                  props.currentMessage.replyTo._id !== null && (
+                {props.currentMessage.replyTo && props.currentMessage.replyTo._id !== null && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      const index = messages.findIndex((m) => m._id === props.currentMessage.replyTo._id);
+                      if (index !== -1 && giftedChatRef.current) {
+                        giftedChatRef.current.scrollToIndex({ index, animated: true });
+                      }
+                    }}
+                  >
                     <View style={styles.replyContainer}>
                       <Text style={styles.replyName}>
-                        {`Replying to ${
-                          props.currentMessage.replyTo.user?.name || "Unknown"
-                        }`}
+                        {`Replying to ${props.currentMessage.replyTo.user?.name }`}
                       </Text>
                       <Text style={styles.replyText}>
-                        {props.currentMessage.replyTo.text}
+                        {props.currentMessage.replyTo.image
+                          ? "Photo"
+                          : props.currentMessage.replyTo.document
+                          ? "Document"
+                          : props.currentMessage.replyTo.text}
                       </Text>
                     </View>
-                  )}
-                {(isOtherUser && isFirstMessageOfBlock) ||
-                (isOtherUser && isNewDay) ? (
-                  <Text style={styles.username}>
-                    {props.currentMessage.user.name}
-                  </Text>
+                  </TouchableOpacity>
+                )}
+                {(isOtherUser && isFirstMessageOfBlock) || (isOtherUser && isNewDay) ? (
+                  <Text style={styles.username}>{props.currentMessage.user.name}</Text>
                 ) : null}
+                
                 {!isOtherUser && (
-                  // Display the status icon at the bottom of the bubble
                   <View style={styles.statusContainer}>
                     {props.currentMessage.status === "pending" && (
                       <MaterialCommunityIcons
@@ -779,7 +712,7 @@ const CommunityChatScreen: React.FC = () => {
               </>
             )}
             textStyle={{
-              right: { color: "#ffff" },
+              right: { color: themeColors.text },
               left: { color: themeColors.text },
             }}
           />
@@ -787,84 +720,81 @@ const CommunityChatScreen: React.FC = () => {
             <Text
               style={[
                 styles.editedText,
-                {
-                  alignSelf:
-                    props.position === "left" ? "flex-start" : "flex-end",
-                },
+                { alignSelf: props.position === "left" ? "flex-start" : "flex-end" },
               ]}
             >
               Edited
             </Text>
           )}
         </TouchableOpacity>
-
       );
     },
     [selectedMessages, user?.id, handlePress, handleLongPress, messages, themeColors]
   );
-  
 
-  const renderAvatar = (props) => {
-    const userId = props.currentMessage.user._id;
-    let avatarUrl = profileImages[userId] || props.currentMessage.user.avatar || user?.profile_picture;
+  const renderAvatar = useCallback(
+    (props) => {
+      const userId = props.currentMessage.user._id;
+      const avatarUrl = profileImages[userId] || props.currentMessage.user.avatar || user?.profile_picture;
 
-    if (!profileImages[userId]) {
-      setProfileImages(prev => ({ ...prev, [userId]: avatarUrl }));
-    }
+      useEffect(() => {
+        if (!profileImages[userId] && avatarUrl) {
+          setProfileImages((prev) => ({ ...prev, [userId]: avatarUrl }));
+        }
+      }, [userId, avatarUrl]);
 
-    if (avatarUrl) {
+      if (avatarUrl) {
+        return (
+          <View style={styles.avatarContainer}>
+            <AppImage uri={avatarUrl} style={styles.avatar} />
+          </View>
+        );
+      } else {
+        return (
+          <View style={styles.avatarContainer}>
+            <Text style={styles.initials}>
+              {props.currentMessage.user.name.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+        );
+      }
+    },
+    [profileImages, user?.profile_picture]
+  );
+
+  const renderMessageImage = useCallback(
+    (props) => {
       return (
-        <View style={styles.avatarContainer}>
-          <AppImage uri={avatarUrl} style={styles.avatar} />
-        </View>
+        <TouchableOpacity
+          key={props.currentMessage._id}
+          onPress={() => {
+            setSelectedImageUri(props.currentMessage.image);
+            setIsImageViewerVisible(true);
+          }}
+          style={styles.messageImageContainer}
+        >
+          <AppImage uri={props.currentMessage.image} style={styles.whatsappImage} />
+        </TouchableOpacity>
       );
-    } else {
-      return (
-        <View style={styles.avatarContainer}>
-          <Text style={styles.initials}>
-            {props.currentMessage.user.name.charAt(0).toUpperCase()}
-          </Text>
-        </View>
-      );
-    }
-  };
+    },
+    []
+  );
 
-  // Update renderMessageImage to allow swiping through images
-  const renderMessageImage = (props) => {
-    const images = messages.filter(msg => msg.image).map(msg => ({ uri: msg.image }));
-    const currentIndex = images.findIndex(img => img.uri === props.currentMessage.image);
+  const renderImageViewer = useCallback(() => {
+    const imageList = messages.filter((msg) => msg.image).map((msg) => ({ uri: msg.image }));
+    const initialIndex = imageList.findIndex((img) => img.uri === selectedImageUri);
 
     return (
-      <TouchableOpacity
-        key={props.currentMessage._id}
-        onPress={() => {
-          setMediaUri(props.currentMessage.image);
-          setIsImageViewerVisible(true);
-        }}
-        style={styles.messageImageContainer}
-      >
-        <AppImage uri={props.currentMessage.image} style={styles.whatsappImage} />
-      </TouchableOpacity>
+      <ImageViewing
+        images={imageList}
+        imageIndex={initialIndex >= 0 ? initialIndex : 0}
+        visible={isImageViewerVisible}
+        onRequestClose={() => setIsImageViewerVisible(false)}
+        swipeToCloseEnabled={true}
+        doubleTapToZoomEnabled={true}
+      />
     );
-  };
-
-  // Update ImageViewing usage for image gallery functionality
-  const renderImageViewer = () => (
-    <ImageViewing
-      images={messages.filter(msg => msg.image).map(msg => ({
-        uri: msg.image,
-        // Here we define a custom render function for each image
-        renderItem: (item) => (
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <AppImage uri={item.uri} style={{ width: '100%', height: '100%' }} />
-          </View>
-        )
-      }))}
-      imageIndex={messages.findIndex(msg => msg.image === mediaUri)}
-      visible={isImageViewerVisible}
-      onRequestClose={() => setIsImageViewerVisible(false)}
-    />
-  );
+  }, [messages, selectedImageUri, isImageViewerVisible]);
 
   const renderDay = (props) => {
     const { currentMessage, previousMessage } = props;
@@ -872,32 +802,26 @@ const CommunityChatScreen: React.FC = () => {
       !previousMessage ||
       (currentMessage?.createdAt &&
         previousMessage?.createdAt &&
-        currentMessage.createdAt.toDateString() !==
-          previousMessage.createdAt.toDateString());
-  
+        currentMessage.createdAt.toDateString() !== previousMessage.createdAt.toDateString());
+
     if (!isNewDay) return null;
-  
+
     const formatDate = (date: Date) => {
       const today = new Date();
       const yesterday = new Date(today);
       yesterday.setDate(today.getDate() - 1);
-  
+
       if (date.toDateString() === today.toDateString()) {
-        return 'Today';
+        return "Today";
       } else if (date.toDateString() === yesterday.toDateString()) {
-        return 'Yesterday';
+        return "Yesterday";
       } else {
         return date.toDateString();
       }
     };
-  
+
     return (
-      <View
-        style={[
-          styles.dateContainer,
-          { backgroundColor: themeColors.background },
-        ]}
-      >
+      <View style={[styles.dateContainer, { backgroundColor: themeColors.background }]}>
         <Text style={styles.dateText}>
           {currentMessage.createdAt ? formatDate(currentMessage.createdAt) : "Unknown Date"}
         </Text>
@@ -906,33 +830,28 @@ const CommunityChatScreen: React.FC = () => {
   };
 
   const onImagePress = (uri: string) => {
-    setMediaUri(uri);
+    setSelectedImageUri(uri);
     setIsImageViewerVisible(true);
   };
 
   const onDocumentPress = (uri: string) => {
-    setMediaUri(uri);
+    setSelectedImageUri(uri);
     setIsDocumentViewerVisible(true);
   };
 
-
-
-  
-  
-  
-
   const renderMessageDocument = (props) => (
     <TouchableOpacity onPress={() => onDocumentPress(props.currentMessage.document)}>
-      <Text style={styles.documentText}>Document: {props.currentMessage.document.split('/').pop()}</Text>
+      <Text style={styles.documentText}>
+        Document: {props.currentMessage.document.split("/").pop()}
+      </Text>
     </TouchableOpacity>
   );
 
   const renderSend = (props) => {
-    const hasText = props.text && props.text.trim().length > 0; // Check if user has typed text
-  
+    const hasText = props.text && props.text.trim().length > 0;
+
     return (
       <View>
-        {/* Attachment buttons should always be visible */}
         {!hasText && (
           <View style={styles.attachButtonContainer}>
             <TouchableOpacity onPress={pickImage} style={styles.attachButton}>
@@ -943,32 +862,31 @@ const CommunityChatScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         )}
-  
-        {/* Send button appears when user types */}
         {hasText && (
           <View style={styles.sendContainer}>
-          <Send {...props} containerStyle={styles.sendButton} alwaysShowSend>
-            <Ionicons name="send" color="#ffffff" size={SIZES.large} />
-          </Send>
+            <Send {...props} containerStyle={styles.sendButton} alwaysShowSend>
+              <Ionicons name="send" color="#ffffff" size={SIZES.large} />
+            </Send>
           </View>
         )}
       </View>
     );
   };
-  
-  
 
   const renderMediaPreview = () => {
     if (mediaPreview.uri) {
       return (
         <View style={styles.replyContainer}>
-          {mediaPreview.type === 'image' ? (
-            <Image source={{ uri: mediaPreview.uri }} style={[styles.previewImage, { width: '100%', height: rV(150) }]} />
+          {mediaPreview.type === "image" ? (
+            <Image
+              source={{ uri: mediaPreview.uri }}
+              style={[styles.previewImage, { width: "100%", height: rV(150) }]}
+            />
           ) : (
-            <Text style={styles.previewDocument}>{mediaPreview.uri.split('/').pop()}</Text>
+            <Text style={styles.previewDocument}>{mediaPreview.uri.split("/").pop()}</Text>
           )}
-          <TouchableOpacity 
-            style={styles.closeReplyButton} 
+          <TouchableOpacity
+            style={styles.closeReplyButton}
             onPress={() => setMediaPreview({ type: null, uri: null })}
           >
             <Ionicons name="close" color={themeColors.text} size={SIZES.medium} />
@@ -985,9 +903,7 @@ const CommunityChatScreen: React.FC = () => {
         {renderMediaPreview()}
         {editingMessage && (
           <View style={styles.replyContainer}>
-            <Text style={styles.replyName}>
-              Editing Message by {editingMessage.user.name}
-            </Text>
+            <Text style={styles.replyName}>Editing Message by {editingMessage.user.name}</Text>
             <TouchableOpacity
               onPress={() => setEditingMessage(null)}
               style={styles.closeReplyButton}
@@ -999,9 +915,15 @@ const CommunityChatScreen: React.FC = () => {
         {replyToMessage && (
           <View style={styles.replyContainer}>
             <Text style={styles.replyName}>
-              Replying to {replyToMessage.user.name}
+              Replying to {replyToMessage.user?.name || "Unknown User"}
             </Text>
-            <Text style={styles.replyText}>{replyToMessage.text}</Text>
+            <Text style={styles.replyText}>
+              {replyToMessage.image
+                ? "Photo"
+                : replyToMessage.document
+                ? "Document"
+                : replyToMessage.text}
+            </Text>
             <TouchableOpacity
               onPress={() => setReplyToMessage(null)}
               style={styles.closeReplyButton}
@@ -1041,11 +963,7 @@ const CommunityChatScreen: React.FC = () => {
                     style={styles.attachIcon}
                   />
                 </TouchableOpacity>
-              ) : (
-                <>
-                 
-                </>
-              )}
+              ) : null}
             </View>
           )}
         />
@@ -1053,23 +971,19 @@ const CommunityChatScreen: React.FC = () => {
     );
   };
 
-  
-
   const styles = StyleSheet.create({
     container: {
       flex: 1,
       padding: rMS(10),
     },
-  
-    // Message Bubble Styles
     statusContainer: {
       alignSelf: "flex-end",
       marginTop: 5,
     },
     statusTimeContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'flex-end',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "flex-end",
       marginRight: rS(5),
     },
     timeText: {
@@ -1078,7 +992,7 @@ const CommunityChatScreen: React.FC = () => {
       marginRight: rS(5),
     },
     statusIconContainer: {
-      flexDirection: 'row',
+      flexDirection: "row",
     },
     messageImageContainer: {
       borderRadius: rMS(10),
@@ -1092,8 +1006,6 @@ const CommunityChatScreen: React.FC = () => {
       height: rV(150),
       resizeMode: "cover",
     },
-  
-    // Status & Username Styles
     statusText: {
       fontSize: SIZES.xSmall,
       color: themeColors.textSecondary,
@@ -1108,8 +1020,6 @@ const CommunityChatScreen: React.FC = () => {
       marginLeft: rS(10),
       paddingRight: rS(12),
     },
-  
-    // Avatar Styles
     avatarContainer: {
       width: rS(36),
       height: rS(36),
@@ -1127,8 +1037,6 @@ const CommunityChatScreen: React.FC = () => {
       color: "#fff",
       fontSize: SIZES.medium,
     },
-  
-    // Date Styles
     dateContainer: {
       paddingVertical: rV(4),
       paddingHorizontal: rS(8),
@@ -1141,8 +1049,6 @@ const CommunityChatScreen: React.FC = () => {
       fontSize: SIZES.small,
       fontWeight: "bold",
     },
-  
-    // Media Styles
     messageImage: {
       width: rS(300),
       height: rV(200),
@@ -1155,8 +1061,6 @@ const CommunityChatScreen: React.FC = () => {
       borderRadius: rMS(10),
       margin: rMS(10),
     },
-  
-    // Input Toolbar & Send Button Styles
     inputToolbar: {
       backgroundColor: themeColors.background,
       borderTopWidth: 0,
@@ -1181,12 +1085,10 @@ const CommunityChatScreen: React.FC = () => {
       fontSize: SIZES.medium,
       fontFamily: FONT.regular,
     },
-  
-    // Attach Button (Now Outside Send Button)
     attachButtonContainer: {
       flexDirection: "row",
       alignItems: "center",
-      marginRight: rS(10), // Space before the send button
+      marginRight: rS(10),
     },
     attachButton: {
       padding: rS(5),
@@ -1195,8 +1097,6 @@ const CommunityChatScreen: React.FC = () => {
       color: themeColors.text,
       fontSize: SIZES.large,
     },
-  
-    // Send Button (Now Separate)
     sendContainer: {
       height: rV(30),
       width: rS(35),
@@ -1209,8 +1109,6 @@ const CommunityChatScreen: React.FC = () => {
       justifyContent: "center",
       alignItems: "center",
     },
-  
-    // Reply & Editing Styles
     replyContainer: {
       flexDirection: "column",
       justifyContent: "flex-start",
@@ -1238,8 +1136,6 @@ const CommunityChatScreen: React.FC = () => {
       right: rS(10),
       top: rV(10),
     },
-  
-    // Document Preview Styles
     documentText: {
       color: themeColors.text,
       fontSize: SIZES.small,
@@ -1249,9 +1145,6 @@ const CommunityChatScreen: React.FC = () => {
       borderRadius: rMS(5),
       marginVertical: rV(10),
     },
-
-   
-
     previewImage: {
       width: "100%",
       height: rV(200),
@@ -1262,8 +1155,6 @@ const CommunityChatScreen: React.FC = () => {
       fontSize: SIZES.medium,
       marginBottom: rV(10),
     },
-  
-    // Modal Styles
     modalContainer: {
       flex: 1,
       backgroundColor: "rgba(0, 0, 0, 0.9)",
@@ -1279,27 +1170,33 @@ const CommunityChatScreen: React.FC = () => {
       width: "100%",
       height: "100%",
     },
-  
-    // Blur Effect
     blurBackground: {
       opacity: 0.7,
       backgroundColor: themeColors.tint,
       width: "100%",
     },
+    editedText: {
+      fontSize: SIZES.xSmall,
+      color: themeColors.textSecondary,
+      marginTop: rV(2),
+    },
+    lastMessagePreview: {
+      fontSize: SIZES.small,
+      color: themeColors.textSecondary,
+      marginTop: rV(2),
+      alignSelf: "center",
+    },
   });
-  
-  
-  
 
   return (
-
-    <ImageBackground source={{ uri: backgroundImage }} style={{ flex: 1, paddingTop: rV(1) }}>
+    <View style={{ flex: 1, paddingTop: rV(1) }}>
       {loading && messages.length === 0 ? (
         <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
           <ActivityIndicator size="large" color={themeColors.tint} />
         </View>
       ) : (
         <GiftedChat
+          ref={giftedChatRef}
           messages={messages}
           onSend={onSend}
           user={{ _id: user?.id || 1 }}
@@ -1321,26 +1218,17 @@ const CommunityChatScreen: React.FC = () => {
           inverted={true}
         />
       )}
-  
       {renderImageViewer()}
-  
-      <ImageViewing
-        images={[{ uri: mediaUri }]}
-        imageIndex={0}
-        visible={isImageViewerVisible}
-        onRequestClose={() => setIsImageViewerVisible(false)}
-      />
-  
       <Modal
-        visible={isVideoViewerVisible && mediaUri !== null}
+        visible={isVideoViewerVisible && selectedImageUri !== null}
         transparent={true}
         onRequestClose={() => setIsVideoViewerVisible(false)}
       >
         <View style={styles.modalContainer}>
           <TouchableOpacity onPress={() => setIsVideoViewerVisible(false)}>
-            {mediaUri && (
+            {selectedImageUri && (
               <Video
-                source={{ uri: mediaUri }}
+                source={{ uri: selectedImageUri }}
                 style={styles.fullScreenVideo}
                 resizeMode="contain"
                 controls
@@ -1349,24 +1237,23 @@ const CommunityChatScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
       </Modal>
-  
       <Modal
-        visible={isDocumentViewerVisible && mediaUri !== null}
+        visible={isDocumentViewerVisible && selectedImageUri !== null}
         transparent={true}
         onRequestClose={() => setIsDocumentViewerVisible(false)}
       >
         <View style={styles.modalContainer}>
           <TouchableOpacity onPress={() => setIsDocumentViewerVisible(false)}>
-            {mediaUri && (
-              <Text style={styles.documentText}>View Document: {mediaUri.split('/').pop()}</Text>
+            {selectedImageUri && (
+              <Text style={styles.documentText}>
+                View Document: {selectedImageUri.split("/").pop()}
+              </Text>
             )}
           </TouchableOpacity>
         </View>
       </Modal>
-    </ImageBackground>
-    
+    </View>
   );
-  
 };
 
 export default CommunityChatScreen;

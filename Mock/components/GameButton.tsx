@@ -41,7 +41,7 @@ const GameButton: React.FC<GameButtonProps> = ({
       backgroundColor: themeColors.buttonDisabled,
     },
     text: {
-      color: themeColors.text,
+      color: themeColors.background,
       fontSize: 16,
       fontWeight: "bold",
       textAlign: "center",

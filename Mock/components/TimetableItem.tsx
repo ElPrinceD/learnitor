@@ -21,7 +21,7 @@ const TimetableItem = ({ plan, onPress }) => {
       </View>
       {/* Details Section */}
       <View style={styles.detailsWrapper}>
-        <Text style={[styles.eventName, { color: themeColors.text }]}>{plan.name}</Text>
+        <Text style={[styles.eventName, { color: themeColors.background }]}>{plan.name}</Text>
         <Text style={[styles.description, { color: themeColors.textSecondary }]}>{plan.description}</Text>
       </View>
     </TouchableOpacity>

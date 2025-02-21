@@ -1,11 +1,11 @@
 export default {
   expo: {
-    name: "Mock",
-    slug: "mock",
+    name: "Slate",
+    slug: "slate",
     description: "Learn it all",
     version: "1.0.0",
     orientation: "portrait",
-    icon: "./assets/images/icon.png",
+    icon: "./assets/images/SLATE.png",
     scheme: "myapp",
     userInterfaceStyle: "automatic",
     splash: {
@@ -41,7 +41,7 @@ export default {
         foregroundImage: "./assets/images/adaptive-icon.png",
         backgroundColor: "#ffffff"
       },
-      
+        //softwareKeyboardLayoutMode: "pan",
       package: "com.cradle.learnitor",
       // googleServicesFile: process.env.GOOGLE_SERVICES_JSON
     },

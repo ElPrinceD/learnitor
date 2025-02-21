@@ -46,22 +46,22 @@ const CommunityDetailScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Mute toggle
+  
   const [isMuted, setIsMuted] = useState<boolean>(false);
 
-  // Following (joined) or not
+  
   const [isFollowing, setIsFollowing] = useState<boolean>(true);
 
-  // Community images
+  
   const [communityImages, setCommunityImages] = useState<string[]>([]);
 
-  // Community timetable (calendar)
+  
   const [timetable, setTimetable] = useState<any[]>([]);
 
-  // Check if user is the creator or leader
+  
   const [isUserLeader, setIsUserLeader] = useState(false);
 
-  // State for image viewer
+  
   const [visible, setIsVisible] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -129,7 +129,7 @@ const CommunityDetailScreen: React.FC = () => {
   const handleTimetableItemPress = (item) => {
     router.push({
       pathname: "TimeTableDetails",
-      params: { timetableId: item.id },
+      params: { timetableId: item.id, isUserLeader: isUserLeader },
     });
   };
 
@@ -369,7 +369,7 @@ const CommunityDetailScreen: React.FC = () => {
           <Text style={[styles.sectionHeaderText, { color: themeColors.text }]}>
             Calendar
           </Text>
-          {timetable?.length > 0 && (
+          {isUserLeader&& (
             <TouchableOpacity
               onPress={() => {
                 router.push({
@@ -397,7 +397,7 @@ const CommunityDetailScreen: React.FC = () => {
         ) : (
           <View style={styles.calendarContainer}>
             <FlatList
-              data={timetable.slice(0, 3)} // Show only first 3 events
+              data={timetable} // Show only first 3 events
               keyExtractor={(item) => item.id.toString()}
               renderItem={({ item }) => (
                 <TimetableItem plan={{ ...item, logo: community.image_url }} onPress={() => handleTimetableItemPress(item)} />

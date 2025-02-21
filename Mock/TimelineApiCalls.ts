@@ -24,10 +24,8 @@ export const getTodayPlans = async (token, date, selectedCategory) => {
 };
 
 
-
-
 export const cancelPeriodForToday = async (periodId, token) => {
-  console.log(token)
+ 
   try {
     const response = await apiClient.post(`/periods/${periodId}/cancel/`, {
       date: new Date().toISOString().split('T')[0]
@@ -95,6 +93,7 @@ export const getCategories = async (token) => {
 };
   
  export const createTask = async (taskData, token) => {
+  console.log(taskData)
   try{
     const response = await apiClient.post('/api/learner/task/create/',
       taskData,
@@ -196,7 +195,8 @@ export const getTimetable = async (timetableId: any, token: string) => {
     throw error;
   }
 };
-export const updateTimetable = async ({ id, name, description }, token) => {
+export const updateTimetable = async ( id, name, description , token) => {
+  console.log(name)
   try {
     const response = await apiClient.patch(`/timetables/${id}/`, 
       { name, description },  // Only name and description are sent as per your PUT endpoint
