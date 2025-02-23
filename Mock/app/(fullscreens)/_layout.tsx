@@ -35,7 +35,7 @@ export default function ChatScreenLayout() {
             headerBackTitle: "Back",
             headerTitle: () => (
               <TouchableOpacity
-                onPress={() =>
+                onPressIn={() =>
                   navigation.navigate("CommunityDetailScreen", {
                     id: route.params?.communityId,
                   })
@@ -92,6 +92,14 @@ export default function ChatScreenLayout() {
         />
          <Stack.Screen
           name="CommunityImageScreen"
+          
+          options={{
+            title: "Photos",
+            headerBackTitle: "Back",
+          }}
+        />
+         <Stack.Screen
+          name="ImagePreviewScreen"
           
           options={{
             title: "Photos",

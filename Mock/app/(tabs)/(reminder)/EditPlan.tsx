@@ -157,7 +157,7 @@ const EditPlan = () => {
       backgroundColor: themeColors.background,
     },
     sectionContainer: {
-      backgroundColor: "#f5f5f5",
+      backgroundColor: themeColors.secondaryBackground,
       padding: rV(15),
       borderRadius: rMS(8),
       marginBottom: rV(15),
@@ -166,7 +166,7 @@ const EditPlan = () => {
       fontSize: rMS(16),
       fontWeight: "bold",
       marginBottom: rV(10),
-      color: "#333",
+      color: themeColors.text,
     },
     toggleContainer: {
       flexDirection: "row",

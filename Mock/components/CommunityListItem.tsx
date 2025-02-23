@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import moment from "moment";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Community } from "./types";
 import Colors from "../constants/Colors";
 import { rS, rV, SIZES } from "../constants";
@@ -18,53 +19,52 @@ interface CommunityListItemProps {
   item: Community;
   onPress: () => void;
   showLastMessage?: boolean;
-  lastMessage?: { sender?: string; message?: string; sent_at: string; status?: string } | null;
+  lastMessage?: { sender?: string; message?: string; sent_at: string; status?: string; image?: string | null } | null;
   isGlobal?: boolean;
-  showUnreadIndicator?: boolean; // New prop for controlling unread indicator visibility
+  showUnreadIndicator?: boolean;
 }
 
 const CommunityListItem: React.FC<CommunityListItemProps> = ({
   item,
   onPress,
-  showLastMessage,
+  showLastMessage = false,
   lastMessage,
-  isGlobal,
-  showUnreadIndicator = false, // Default to true if not provided
+  isGlobal = false,
+  showUnreadIndicator = false,
 }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const { userInfo } = useAuth();
 
-  // Set max length for sender and message text
+  // Constants for text truncation
   const MAX_SENDER_LENGTH = 15;
   const MAX_MESSAGE_LENGTH = 40;
   const MAX_DESCRIPTION_LENGTH = 80;
 
-  // Determine the display name for the sender
-  const displaySenderName =
-    lastMessage?.sender === userInfo?.user.first_name
-      ? "You"
-      : lastMessage?.sender;
+  // Determine sender display name
+  const displaySenderName = lastMessage?.sender === userInfo?.user.first_name ? "You" : lastMessage?.sender || "";
 
-  // Truncate the sender name if it exceeds MAX_SENDER_LENGTH
-  const truncatedSenderName = displaySenderName
-    ? displaySenderName.length > MAX_SENDER_LENGTH
+  // Truncate sender name if necessary
+  const truncatedSenderName = useCallback(() => {
+    if (!displaySenderName) return "";
+    return displaySenderName.length > MAX_SENDER_LENGTH
       ? `${displaySenderName.substring(0, MAX_SENDER_LENGTH)}...`
-      : displaySenderName
-    : "";
+      : displaySenderName;
+  }, [displaySenderName]);
 
-  const getLastMessageTimeDisplay = (timestamp: string) => {
+  // Format last message timestamp
+  const getLastMessageTimeDisplay = useCallback((timestamp: string) => {
     const messageDate = moment(timestamp);
     const today = moment();
+    if (messageDate.isSame(today, "day")) return messageDate.format("HH:mm");
+    if (messageDate.isSame(today.subtract(1, "day"), "day")) return "Yesterday";
+    return messageDate.format("DD/MM/YY");
+  }, []);
 
-    if (messageDate.isSame(today, "day")) {
-      return messageDate.format("HH:mm");
-    } else if (messageDate.isSame(today.subtract(1, "day"), "day")) {
-      return "Yesterday";
-    } else {
-      return messageDate.format("DD/MM/YY");
-    }
-  };
+  // Truncate message text if necessary
+  const truncatedMessage = useCallback((message: string) => {
+    return message.length > MAX_MESSAGE_LENGTH ? `${message.substring(0, MAX_MESSAGE_LENGTH)}...` : message;
+  }, []);
 
   const styles = StyleSheet.create({
     communityItem: {
@@ -78,16 +78,16 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
       width: 50,
       height: 50,
       borderRadius: 50,
-      position: 'relative',
+      position: "relative",
     },
     unreadIndicator: {
-      position: 'absolute',
+      position: "absolute",
       bottom: 0,
       right: 0,
       width: 15,
       height: 15,
       borderRadius: 7.5,
-      backgroundColor: 'green',
+      backgroundColor: "green",
     },
     communityTextContainer: {
       flex: 1,
@@ -96,6 +96,10 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
       fontSize: SIZES.large,
       fontWeight: "bold",
       color: themeColors.text,
+    },
+    lastMessageContainer: {
+      flexDirection: "row",
+      alignItems: "center",
     },
     lastMessage: {
       fontSize: 14,
@@ -116,11 +120,14 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
       paddingVertical: 5,
       paddingHorizontal: 10,
       borderRadius: 5,
-      marginLeft: 'auto',
+      marginLeft: "auto",
     },
     joinButtonText: {
       color: themeColors.background,
       fontSize: SIZES.medium,
+    },
+    photoIcon: {
+      marginRight: 4,
     },
   });
 
@@ -132,10 +139,8 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
     >
       <View style={styles.communityItem}>
         <View style={styles.communityImage}>
-          <Image source={{ uri: item.image_url }} style={{width: '100%', height: '100%', borderRadius: 50}} />
-          {!isGlobal && lastMessage && showUnreadIndicator && (
-            <View style={styles.unreadIndicator} />
-          )}
+          <Image source={{ uri: item.image_url }} style={{ width: "100%", height: "100%", borderRadius: 50 }} />
+          {!isGlobal && lastMessage && showUnreadIndicator && <View style={styles.unreadIndicator} />}
         </View>
         <View style={styles.communityTextContainer}>
           <Text style={styles.communityName}>{item.name}</Text>
@@ -146,30 +151,38 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
                 : item.description}
             </Text>
           ) : (
-            showLastMessage &&
-            lastMessage &&
-            lastMessage.message !== undefined && (
-              <Text style={styles.lastMessage}>
-                {truncatedSenderName ? `${truncatedSenderName}: ` : ""}
-                {lastMessage.message.length > MAX_MESSAGE_LENGTH
-                  ? `${lastMessage.message.substring(0, MAX_MESSAGE_LENGTH)}...`
-                  : lastMessage.message}
-              </Text>
+            showLastMessage && lastMessage && (
+              <View style={styles.lastMessageContainer}>
+                {lastMessage.image ? (
+                  <>
+                    {truncatedSenderName() && <Text style={styles.lastMessage}>{`${truncatedSenderName()}: `}</Text>}
+                    <MaterialCommunityIcons
+                      name="image"
+                      size={SIZES.small}
+                      color={themeColors.textSecondary}
+                      style={styles.photoIcon}
+                    />
+                    <Text style={styles.lastMessage}>Photo</Text>
+                  </>
+                ) : (
+                  lastMessage.message !== undefined && (
+                    <Text style={styles.lastMessage}>
+                      {truncatedSenderName() ? `${truncatedSenderName()}: ` : ""}
+                      {truncatedMessage(lastMessage.message)}
+                    </Text>
+                  )
+                )}
+              </View>
             )
           )}
         </View>
         {isGlobal ? (
-          <TouchableOpacity 
-            style={styles.joinButton}
-            onPress={onPress}
-          >
+          <TouchableOpacity style={styles.joinButton} onPress={onPress}>
             <Text style={styles.joinButtonText}>Join</Text>
           </TouchableOpacity>
         ) : (
-          showLastMessage && lastMessage && (
-            <Text style={styles.lastMessageTime}>
-              {getLastMessageTimeDisplay(lastMessage.sent_at)}
-            </Text>
+          showLastMessage && lastMessage?.sent_at && (
+            <Text style={styles.lastMessageTime}>{getLastMessageTimeDisplay(lastMessage.sent_at)}</Text>
           )
         )}
       </View>

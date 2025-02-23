@@ -9,6 +9,7 @@ import {
   Share,
   useColorScheme,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import Toast from "react-native-root-toast";
@@ -43,6 +44,7 @@ export default function GameWaitingScreen() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [gameQuestions, setGameQuestions] = useState<Question[]>([]);
+  const [loading, setLoading] = useState(true); // Loading state for fetching game details
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];

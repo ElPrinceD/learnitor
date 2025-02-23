@@ -6,6 +6,7 @@ import ApiUrl from './config';
 import { useAuth } from "./components/AuthContext";
 import { router } from "expo-router";
 import { Platform } from "react-native";
+import SLATE from "./assets/images/SLATE.png"
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -94,6 +95,7 @@ async function presentForegroundNotification(notification: Notifications.Notific
   if (!notification) return;
 
   const data = notification.request.content.data || {};
+  console.log("Data: ",data)
   const imageUrl = data.community_image || null;
   
   if (Platform.OS === 'ios') {
@@ -117,7 +119,7 @@ async function presentForegroundNotification(notification: Notifications.Notific
       ? [{ uri: imageUrl }] // Attach the image if available
       : [],
     launchImageName: notification.request.content.launchImageName || "",
-    badge: notification.request.content.badge || null,
+    badge: SLATE,
     categoryIdentifier: notification.request.content.categoryIdentifier || "",
     threadIdentifier: notification.request.content.threadIdentifier || "",
     targetContentIdentifier: notification.request.content.targetContentIdentifier || null,

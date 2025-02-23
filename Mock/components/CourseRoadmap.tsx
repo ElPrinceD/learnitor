@@ -58,7 +58,7 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
       fontSize: rMS(12),
       color: themeColors.text,
       marginTop: rV(18),
-      width: rS(120),
+      maxWidth: "80%", // now responsive instead of a fixed width
     },
     backgroundContainer: {
       position: "absolute",
@@ -66,7 +66,7 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
       left: 0,
       right: 0,
       bottom: 0,
-      zIndex: -1, // Ensure the background is behind other elements
+      zIndex: -1,
     },
     backgroundSVG: {
       position: "absolute",
@@ -78,6 +78,7 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
       elevation: 0,
     },
   });
+  
 
   const renderTimelineItem = (
     topic: Topic,
