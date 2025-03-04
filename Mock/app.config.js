@@ -48,7 +48,7 @@ export default {
       "expo-router",
       "expo-font",
       "expo-secure-store",
-      "expo-sqlite",
+  
       "@react-native-google-signin/google-signin",
       "react-native-video",
       "expo-notifications",

@@ -49,7 +49,7 @@ export default function Tab2Layout() {
             headerShadowVisible: false,
           }}
         />
-        <Stack.Screen name="EnrolledCourse" options={{ headerShown: false }} />
+        <Stack.Screen name="EnrolledCourse" options={{ headerShown: false, headerBackVisible: false,  }} />
         <Stack.Screen
           name="(topic)"
           options={{

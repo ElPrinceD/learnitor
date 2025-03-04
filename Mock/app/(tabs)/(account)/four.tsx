@@ -107,7 +107,7 @@ const Profile = () => {
         const fileName = uri.split("/").pop();
         const fileType = fileName.split(".").pop();
   
-        // Append the file directly to FormData for S3 upload
+        
         formData.append("profile_picture", {
           uri,
           name: fileName,
@@ -121,6 +121,7 @@ const Profile = () => {
           },
         };
   
+        console.log("Forms:", formData)
         const response = await axios.patch(
           `${ApiUrl}/api/update/user/${userInfo?.user.id}/`,
           formData,

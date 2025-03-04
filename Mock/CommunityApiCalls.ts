@@ -162,10 +162,13 @@ export const sendMessageToCommunity = async (communityId: number, message: strin
 };
 
 export const createCommunity = async (communityData: any, token: string) => {
+
+    console.log('Community: ',communityData)
     try {
         const response = await apiClient.post(`${COMMUNITY_API_BASE_URL}/`, communityData, {
             headers: {
                 Authorization: `Token ${token}`,
+                "Content-Type": "multipart/form-data",
             },
         });
         return response.data;

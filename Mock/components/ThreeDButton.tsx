@@ -63,7 +63,7 @@ const ThreeDButton = ({ title, onPress }) => {
       padding: rMS(8),
       borderRadius: 10,
       transform: [{ rotate: "45deg" }],
-      backgroundColor: "#483222",
+      backgroundColor:themeColors.tint,
       // backgroundColor: "#436A6E",
       shadowColor: "#000",
       shadowOffset: { width: 4, height: 9 },
@@ -77,7 +77,7 @@ const ThreeDButton = ({ title, onPress }) => {
       backgroundColor: "#2E2016",
     },
     inner: {
-      backgroundColor: themeColors.icon,
+      backgroundColor: themeColors.tintSecond,
       alignItems: "center",
       justifyContent: "center",
       height: "100%",

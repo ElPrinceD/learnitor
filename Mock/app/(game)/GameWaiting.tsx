@@ -24,6 +24,7 @@ import { SIZES, rMS, rS, rV } from "../../constants";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { getGameDetails, startGame } from "../../GamesApiCalls";
 import { queryClient } from "../../QueryClient";
+import WsUrl from "../../configWs";
 
 export default function GameWaitingScreen() {
   const { userInfo, userToken } = useAuth();
@@ -34,9 +35,7 @@ export default function GameWaitingScreen() {
     gameId?: string;
   };
 
-  if (!userInfo) {
-    return null;
-  }
+  if (!userInfo) return null;
 
   const [creator, setCreator] = useState<string | undefined>();
   const [creatorId, setCreatorId] = useState<number | undefined>();
@@ -44,7 +43,7 @@ export default function GameWaitingScreen() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [gameQuestions, setGameQuestions] = useState<Question[]>([]);
-  const [loading, setLoading] = useState(true); // Loading state for fetching game details
+  const [loading, setLoading] = useState(true);
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -53,7 +52,6 @@ export default function GameWaitingScreen() {
   const {
     data: gameDetails,
     error: gameDetailsError,
-    refetch: refetchGameDetails,
   } = useQuery<GameDetailsResponse, Error>({
     queryKey: ["gameDetails", id || gameId, userToken?.token],
     queryFn: () => getGameDetails(id || gameId, userToken?.token),
@@ -66,7 +64,6 @@ export default function GameWaitingScreen() {
       setCreator(gameDetails.creator.first_name);
       setCreatorId(gameDetails.creator.id);
       setGameCode(gameDetails.code);
-
       if (gameDetails.players) {
         const newPlayers = gameDetails.players.map((player) => ({
           id: player.id,
@@ -79,31 +76,45 @@ export default function GameWaitingScreen() {
         }));
         setPlayers(newPlayers);
       }
+      setLoading(false);
     }
-  }, [gameDetails]);
+  }, [gameDetails, userInfo]);
+
+  const goToGame = useCallback(() => {
+    router.navigate({
+      pathname: "Game",
+      params: {
+        questions: JSON.stringify(gameQuestions),
+        isCreator,
+        gameId: gameId || id,
+        joinerGameId: id || gameId,
+        gameCode,
+      },
+    });
+  }, [gameQuestions, isCreator, gameId, id, gameCode]);
 
   const connectWebSocket = useCallback(() => {
-    if (gameCode) {
-      ws.current = new WebSocket(
-        `wss://learnitor.onrender.com/games/${gameCode}/ws/`
-      );
+    if (!gameCode || ws.current) return; // Prevent multiple connections
 
-      ws.current.onopen = () => {
-        console.log("WebSocket connection opened");
-      };
+    ws.current = new WebSocket(`${WsUrl}/games/${gameCode}/ws/`);
 
-      ws.current.onerror = (error) => {
-        console.error("WebSocket connection error:", error);
-        // Handle reconnection
-        setTimeout(connectWebSocket, 5000); // Exponential backoff can be implemented here
-      };
+    ws.current.onopen = () => {
+      console.log("WebSocket connection opened");
+    };
 
-      ws.current.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
+    ws.current.onerror = (error) => {
+      console.error("WebSocket error:", error);
+      // Attempt reconnection with a delay
+      setTimeout(connectWebSocket, 5000);
+    };
 
-          if (data && data.data && data.data.players) {
-            const newPlayers = data.data.players.map((player: any) => ({
+    ws.current.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "game.update" || data.type === "game.players") {
+          const payload = data.data || data;
+          if (payload.players) {
+            const newPlayers = payload.players.map((player: any) => ({
               id: player.id,
               profileName: `${player.first_name} ${player.last_name}`,
               profile_picture:
@@ -113,82 +124,54 @@ export default function GameWaitingScreen() {
             }));
             setPlayers(newPlayers);
           }
-
-          if (data.type === "game.start") {
-            console.log(
-              "User has received start game ",
-              userInfo?.user.first_name
-            );
+          if (payload.started) {
+            console.log("Game started via update");
             goToGame();
           }
-        } catch (error) {
-          console.error("Error parsing JSON data:", error);
+        } else if (data.type === "game.start") {
+          console.log("Received game.start message");
+          goToGame();
         }
-      };
+      } catch (error) {
+        console.error("Error parsing WebSocket message:", error);
+      }
+    };
 
-      return () => {
-        ws.current?.close();
-      };
-    }
-  }, [gameCode]);
+    ws.current.onclose = () => {
+      console.log("WebSocket connection closed");
+      ws.current = null;
+    };
+  }, [gameCode, userInfo, goToGame]);
 
   useEffect(() => {
     connectWebSocket();
+   
   }, [connectWebSocket]);
 
   const copyToClipboard = async () => {
     await Clipboard.setStringAsync(gameCode);
-    Toast.show("Game code copied", {
-      duration: Toast.durations.LONG,
-      position: Toast.positions.BOTTOM,
-      shadow: true,
-      animation: true,
-      hideOnPress: true,
-      delay: 0,
-      opacity: 0.8,
-    });
+    Toast.show("Game code copied", { duration: Toast.durations.LONG });
   };
 
   const shareGameCode = async () => {
     try {
-      await Share.share({
-        message: `Join my game with this code: ${gameCode}`,
-      });
+      await Share.share({ message: `Join my game with this code: ${gameCode}` });
     } catch (error) {
       console.error("Error sharing game code:", error);
     }
   };
 
   const startGameMutation = useMutation<any, any, any>({
-    mutationFn: async ({ gameId, token }) => {
-      const response = await startGame(id || gameId, token);
-    },
+    mutationFn: ({ gameId, token }) => startGame(id || gameId, token),
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["gameDetails", id || gameId],
-      });
+      queryClient.invalidateQueries({ queryKey: ["gameDetails", id || gameId] });
       goToGame();
     },
-    onError: (error: Error) => {
-      setErrorMessage(error.message || "Error starting game");
-    },
+    onError: (error: Error) => setErrorMessage(error.message || "Error starting game"),
   });
 
-  const handleStartGame = async () => {
-    startGameMutation.mutate({ gameId: gameId, token: userToken?.token });
-  };
-
-  const goToGame = () => {
-    router.navigate({
-      pathname: "Game",
-      params: {
-        questions: JSON.stringify(gameQuestions),
-        isCreator: isCreator,
-        gameId: gameId || id,
-        joinerGameId: id || gameId,
-        gameCode: gameCode,
-      },
-    });
+  const handleStartGame = () => {
+    startGameMutation.mutate({ gameId: gameId || id, token: userToken?.token });
   };
 
   const styles = StyleSheet.create({
@@ -257,10 +240,7 @@ export default function GameWaitingScreen() {
 
   const renderPlayer = ({ item }: { item: Player }) => (
     <View style={styles.playerContainer}>
-      <Image
-        source={{ uri: item.profile_picture }}
-        style={styles.profileImage}
-      />
+      <Image source={{ uri: item.profile_picture }} style={styles.profileImage} />
       <Text style={styles.profileName}>{item.profileName}</Text>
     </View>
   );
@@ -277,9 +257,7 @@ export default function GameWaitingScreen() {
         </TouchableOpacity>
         <TouchableOpacity onPress={shareGameCode} style={styles.iconButton}>
           <Ionicons
-            name={
-              Platform.OS === "ios" ? "share-outline" : "share-social-sharp"
-            }
+            name={Platform.OS === "ios" ? "share-outline" : "share-social-sharp"}
             size={30}
             color={themeColors.icon}
           />
@@ -287,26 +265,26 @@ export default function GameWaitingScreen() {
       </View>
       <Text style={styles.waitingText}>Waiting for others...</Text>
       {gameDetailsError && (
-        <Text
-          style={{ color: "red", textAlign: "center", marginBottom: rV(10) }}
-        >
+        <Text style={{ color: "red", textAlign: "center", marginBottom: rV(10) }}>
           {gameDetailsError.message}
         </Text>
       )}
-      <FlatList
-        data={players}
-        renderItem={renderPlayer}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.playersList}
-      />
+      {loading ? (
+        <ActivityIndicator size="large" color={themeColors.tint} />
+      ) : (
+        <FlatList
+          data={players}
+          renderItem={renderPlayer}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={styles.playersList}
+        />
+      )}
       {(isCreator || creatorId === userInfo?.user.id) && (
-        <View>
-          <GameButton
-            title="Start Game"
-            onPress={handleStartGame}
-            style={styles.startButtonContainer}
-          />
-        </View>
+        <GameButton
+          title="Start Game"
+          onPress={handleStartGame}
+          style={styles.startButtonContainer}
+        />
       )}
     </View>
   );

@@ -1,23 +1,36 @@
 import 'react-native-get-random-values';
+
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
   StyleSheet,
-  Image,
+
   Text,
   TextInput,
+  ImageBackground,
   useColorScheme,
   TouchableOpacity,
   Modal,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Keyboard,
+  Image,
   ToastAndroid,
   Platform,
   Alert,
   Dimensions,
 } from "react-native";
+import LinearGradient from 'react-native-linear-gradient';
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+
 import * as Clipboard from "expo-clipboard";
 import { useFocusEffect, useRoute } from "@react-navigation/native";
+import axios from "axios";
+import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
+import ImageViewing from "react-native-image-viewing";
+
 import { useAuth } from "../../components/AuthContext";
+import { Message } from "../../components/types";
 import {
   GiftedChat,
   Bubble,
@@ -26,27 +39,28 @@ import {
   IMessage,
   InputToolbar,
 } from "react-native-gifted-chat";
+import { Swipeable } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import Video from "react-native-video";
 import { useNavigation } from "@react-navigation/native";
 import { useWebSocket } from "../../webSocketProvider";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { rMS, rV, rS, SIZES } from "../../constants";
+import { rMS, rV, rS, SIZES, useShadows } from "../../constants";
 import Colors from "../../constants/Colors";
 import { FONT } from "../../constants";
 import { router } from "expo-router";
 import AppImage from "../../components/AppImage";
 import * as MediaLibrary from "expo-media-library";
 import * as FileSystem from "expo-file-system";
-import ImageViewing from "react-native-image-viewing";
 
 const CommunityChatScreen: React.FC = () => {
   const route = useRoute();
   const { communityId } = route.params as { communityId: string };
-  const { userInfo } = useAuth();
+  const { userToken, userInfo } = useAuth();
   const user = userInfo?.user;
-  const { socket, isConnected, sendMessage } = useWebSocket();
+  const { socket, isConnected, sendMessage, markMessageAsRead } = useWebSocket();
   const navigation = useNavigation();
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [messageIds, setMessageIds] = useState(new Set<string>());
@@ -56,10 +70,7 @@ const CommunityChatScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedMessages, setSelectedMessages] = useState<IMessage[]>([]);
   const [replyToMessage, setReplyToMessage] = useState<IMessage | null>(null);
-  const [mediaPreview, setMediaPreview] = useState<{
-    type: "image" | "document" | null;
-    uri: string | null;
-  }>({
+  const [mediaPreview, setMediaPreview] = useState<{ type: "image" | "document" | null; uri: string | null }>({
     type: null,
     uri: null,
   });
@@ -68,10 +79,13 @@ const CommunityChatScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
   const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
+  const [isVideoViewerVisible, setIsVideoViewerVisible] = useState(false);
   const [isDocumentViewerVisible, setIsDocumentViewerVisible] = useState(false);
   const [editingMessage, setEditingMessage] = useState<IMessage | null>(null);
   const [profileImages, setProfileImages] = useState<Record<string, string>>({});
-  const giftedChatRef = useRef(null);
+ 
+
+
 
   const normalizeMessage = (data) => {
     if ("message" in data && "sent_at" in data) {
@@ -123,42 +137,22 @@ const CommunityChatScreen: React.FC = () => {
     }
   };
 
+  const backgroundImage =
+    colorScheme === "dark"
+      ? "https://images.pexels.com/photos/9665185/pexels-photo-9665185.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
+      : "https://images.pexels.com/photos/7599590/pexels-photo-7599590.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2";
+
   const fetchMessageHistory = useCallback(async () => {
     try {
       setLoading(true);
-
-      // Fetch sent messages
       const cachedMessages = await AsyncStorage.getItem(`messages_${communityId}`);
-      let validMessages: IMessage[] = [];
       if (cachedMessages) {
         const parsedMessages = JSON.parse(cachedMessages).map(normalizeMessage);
-        validMessages = parsedMessages
+        const validMessages = parsedMessages
           .filter((msg): msg is IMessage => msg !== null)
           .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        setMessages(validMessages);
       }
-
-      // Fetch unsent (queued) messages
-      const allKeys = await AsyncStorage.getAllKeys();
-      const unsentKeys = allKeys.filter((key) => key.startsWith("unsent_message_"));
-      const unsentMessages: IMessage[] = [];
-      for (const key of unsentKeys) {
-        const messageStr = await AsyncStorage.getItem(key);
-        if (messageStr) {
-          const message = JSON.parse(messageStr);
-          if (message.communityId === communityId) {
-            unsentMessages.push(normalizeMessage(message));
-          }
-        }
-      }
-
-      // Merge sent and unsent messages, ensuring no duplicates
-      const mergedMessages = [...validMessages, ...unsentMessages]
-        .filter((msg, index, self) => 
-          index === self.findIndex((m) => m._id === msg._id)
-        )
-        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
-      setMessages(mergedMessages);
 
       if (isConnected) {
         await sendMessage({ type: "fetch_history", community_id: communityId });
@@ -194,11 +188,9 @@ const CommunityChatScreen: React.FC = () => {
 
             setMessages((prevMessages) => {
               const pendingMessages = prevMessages.filter((m) => m.status === "pending");
-              const updatedMessages = [...pendingMessages, ...transformedMessages]
-                .filter((msg, index, self) => 
-                  index === self.findIndex((m) => m._id === msg._id)
-                )
-                .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+              const updatedMessages = [...pendingMessages, ...transformedMessages].sort(
+                (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+              );
               AsyncStorage.setItem(`messages_${communityId}`, JSON.stringify(updatedMessages));
               return updatedMessages;
             });
@@ -210,12 +202,9 @@ const CommunityChatScreen: React.FC = () => {
                 if (index !== -1) {
                   const updatedMessages = [...prevMessages];
                   updatedMessages[index] = newMessage;
-                  AsyncStorage.setItem(`messages_${communityId}`, JSON.stringify(updatedMessages));
                   return updatedMessages;
                 } else {
-                  const updatedMessages = [newMessage, ...prevMessages];
-                  AsyncStorage.setItem(`messages_${communityId}`, JSON.stringify(updatedMessages));
-                  return updatedMessages;
+                  return [newMessage, ...prevMessages];
                 }
               });
             }
@@ -263,10 +252,41 @@ const CommunityChatScreen: React.FC = () => {
     })();
   }, []);
 
+  useEffect(() => {
+    if (isConnected) {
+      const sendUnsentMessages = async () => {
+        try {
+          const keys = await AsyncStorage.getAllKeys();
+          const unsentKeys = keys.filter((key) => key.startsWith("unsent_message_"));
+          for (const key of unsentKeys) {
+            const messageStr = await AsyncStorage.getItem(key);
+            if (messageStr) {
+              const message = JSON.parse(messageStr);
+              sendMessage({
+                type: "send_message",
+                community_id: message.communityId,
+                message: message.text || "",
+                sender: user?.first_name + " " + user?.last_name || "Unknown User",
+                sender_id: user?.id || 1,
+                temp_id: message.tempId,
+                image: message.image ? message.image : undefined,
+                document: message.document ? message.document : undefined,
+              });
+              await AsyncStorage.removeItem(key);
+            }
+          }
+        } catch (error) {
+          console.error("Error sending unsent messages:", error);
+        }
+      };
+      sendUnsentMessages();
+    }
+  }, [isConnected, sendMessage, user]);
+
   const sendMediaMessage = useCallback(
     async (fileUri: string, type: "image" | "document") => {
       const tempId = Date.now().toString() + Math.random().toString(36).substr(2, 5);
-      const message: IMessage = {
+      const message = {
         _id: tempId,
         tempId,
         text: "",
@@ -280,11 +300,7 @@ const CommunityChatScreen: React.FC = () => {
       };
 
       if (!messageIds.has(tempId)) {
-        setMessages((prevMessages) => {
-          const updatedMessages = [message, ...prevMessages];
-          AsyncStorage.setItem(`messages_${communityId}`, JSON.stringify(updatedMessages));
-          return updatedMessages;
-        });
+        setMessages((prevMessages) => [message, ...prevMessages]);
         setMessageIds(new Set([...messageIds, tempId]));
       }
 
@@ -292,8 +308,9 @@ const CommunityChatScreen: React.FC = () => {
         const messageToStore = {
           ...message,
           communityId,
+          content: { [type]: fileUri },
         };
-        await AsyncStorage.setItem(`unsent_message_${tempId}`, JSON.stringify(messageToStore));
+        AsyncStorage.setItem(`unsent_message_${tempId}`, JSON.stringify(messageToStore));
       } else {
         sendMessage({
           type: "send_message",
@@ -332,11 +349,7 @@ const CommunityChatScreen: React.FC = () => {
         setMediaPreview({ type: null, uri: null });
 
         if (!messageIds.has(tempId)) {
-          setMessages((prevMessages) => {
-            const updatedMessages = [tempMessage, ...prevMessages];
-            AsyncStorage.setItem(`messages_${communityId}`, JSON.stringify(updatedMessages));
-            return updatedMessages;
-          });
+          setMessages((prevMessages) => [tempMessage, ...prevMessages]);
           setMessageIds(new Set([...messageIds, tempId]));
         }
 
@@ -368,30 +381,32 @@ const CommunityChatScreen: React.FC = () => {
     [communityId, sendMessage, user, replyToMessage, isConnected, mediaPreview, messageIds]
   );
 
-  const pickImage = useCallback(async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        allowsMultipleSelection: true,
-        quality: 1,
-      });
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+    });
 
-      if (!result.canceled && result.assets) {
-        const selectedUris = result.assets.map((asset) => asset.uri);
-        router.push({
-          pathname: "ImagePreviewScreen",
-          params: { uris: JSON.stringify(selectedUris), communityId },
-        });
-      }
-    } catch (error) {
-      console.error("Image picker error:", error);
-      ToastAndroid.show("Failed to pick images", ToastAndroid.SHORT);
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const asset = result.assets[0];
+      const file = await fetch(asset.uri);
+      const blob = await file.blob();
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64data = reader.result;
+        const imageBase64 = `data:${blob.type};base64,${base64data.split(",")[1]}`;
+        await sendMediaMessage(imageBase64, "image");
+      };
+      reader.readAsDataURL(blob);
     }
-  }, [router, communityId]);
+  };
 
   const pickDocument = async () => {
-    console.log("Document picking not implemented in this version.");
+    try {
+      // Assuming DocumentPicker is implemented elsewhere if needed
+    } catch (error) {
+      console.error("Document picker error:", error);
+    }
   };
 
   const handleForwardSelected = useCallback(() => {
@@ -500,7 +515,7 @@ const CommunityChatScreen: React.FC = () => {
           {selectedMessages.length > 0 && (
             <>
               {canDelete && (
-                <TouchableOpacity onPress={handleDeleteMessage}>
+                <TouchableOpacity onPressIn={handleDeleteMessage}>
                   <MaterialCommunityIcons
                     name="delete"
                     size={SIZES.large}
@@ -510,7 +525,7 @@ const CommunityChatScreen: React.FC = () => {
                 </TouchableOpacity>
               )}
               {canEdit && (
-                <TouchableOpacity onPress={handleEditMessage}>
+                <TouchableOpacity onPressIn={handleEditMessage}>
                   <MaterialCommunityIcons
                     name="pencil"
                     size={SIZES.large}
@@ -520,7 +535,11 @@ const CommunityChatScreen: React.FC = () => {
                 </TouchableOpacity>
               )}
               {canReply && (
-                <TouchableOpacity onPress={() => setReplyToMessage(selectedMessages[0])}>
+                <TouchableOpacity
+                  onPressIn={() => {
+                    setReplyToMessage(selectedMessages[0]);
+                  }}
+                >
                   <MaterialCommunityIcons
                     name="reply"
                     size={SIZES.large}
@@ -529,7 +548,7 @@ const CommunityChatScreen: React.FC = () => {
                   />
                 </TouchableOpacity>
               )}
-              <TouchableOpacity onPress={handleCopySelected}>
+              <TouchableOpacity onPressIn={handleCopySelected}>
                 <MaterialCommunityIcons
                   name="content-copy"
                   size={SIZES.large}
@@ -537,8 +556,9 @@ const CommunityChatScreen: React.FC = () => {
                   style={{ marginRight: SIZES.medium, fontSize: rMS(SIZES.large) }}
                 />
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleDeselectAll}>
+              <TouchableOpacity onPressIn={handleDeselectAll}>
                 <Text style={{ color: themeColors.text, fontSize: rMS(SIZES.large) }}>
+                  {" "}
                   Deselect ({selectedMessages.length})
                 </Text>
               </TouchableOpacity>
@@ -548,7 +568,9 @@ const CommunityChatScreen: React.FC = () => {
       ),
       headerTitle: () => (
         <TouchableOpacity
-          onPress={() => navigation.navigate("CommunityDetailScreen", { id: communityId })}
+          onPressIn={() =>
+            navigation.navigate("CommunityDetailScreen", { id: communityId })
+          }
           style={{ flexDirection: "row", alignItems: "center" }}
         >
           <Text style={{ color: themeColors.text, fontSize: rMS(SIZES.large) }}></Text>
@@ -602,9 +624,7 @@ const CommunityChatScreen: React.FC = () => {
         ),
         headerTitle: () => (
           <TouchableOpacity
-            onPress={() =>
-              router.push({ pathname: "CommunityDetailScreen", params: { id: communityId } })
-            }
+            onPressIn={() => router.push({ pathname: "CommunityDetailScreen", params: { id: communityId } })}
             style={{ flexDirection: "row", alignItems: "center" }}
           >
             <Image
@@ -640,6 +660,7 @@ const CommunityChatScreen: React.FC = () => {
           props.previousMessage?.createdAt &&
           props.currentMessage.createdAt.toDateString() !==
             props.previousMessage.createdAt.toDateString());
+      const isLastMessage = messages[0]?._id === props.currentMessage._id;
   
       const messageText = props.currentMessage.text
         ? props.currentMessage.text
@@ -671,12 +692,7 @@ const CommunityChatScreen: React.FC = () => {
               <>
                 {props.currentMessage.replyTo && props.currentMessage.replyTo._id !== null && (
                   <TouchableOpacity
-                    onPress={() => {
-                      const index = messages.findIndex((m) => m._id === props.currentMessage.replyTo?._id);
-                      if (index !== -1 && giftedChatRef.current) {
-                        giftedChatRef.current.scrollToIndex({ index, animated: true });
-                      }
-                    }}
+                   
                   >
                     <View style={styles.replyContainer}>
                       <Text style={styles.replyName}>
@@ -831,25 +847,25 @@ const CommunityChatScreen: React.FC = () => {
   };
 
   const renderImageViewer = useCallback(() => {
-    const imageList = messages.filter((msg) => msg.image).map((msg) => ({ uri: msg.image }));
-    const initialIndex = imageList.findIndex((img) => img.uri === selectedImageUri);
-
+    const imageList = messages.filter((msg) => msg.image).map((msg) => msg.image);
+    const initialIndex = imageList.indexOf(selectedImageUri);
+  
     return (
-      <ImageViewing
-        images={imageList}
-        imageIndex={initialIndex >= 0 ? initialIndex : 0}
+      <Modal
         visible={isImageViewerVisible}
+        transparent={true}
         onRequestClose={() => setIsImageViewerVisible(false)}
-        swipeToCloseEnabled={true}
-        doubleTapToZoomEnabled={true}
-        FooterComponent={({ imageIndex }) => (
-          <View style={{ flexDirection: "row", justifyContent: "center", padding: 10 }}>
-            <TouchableOpacity onPress={() => saveImageToCameraRoll(imageList[imageIndex].uri)}>
-              <Ionicons name="download-outline" size={24} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        )}
-      />
+      >
+        <View style={styles.modalContainer}>
+          <Image
+            source={{ uri: imageList[initialIndex] }}
+            style={styles.fullScreenImage}
+          />
+          <TouchableOpacity onPress={() => saveImageToCameraRoll(imageList[initialIndex])}>
+            <Ionicons name="download-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </Modal>
     );
   }, [messages, selectedImageUri, isImageViewerVisible]);
 
@@ -1032,6 +1048,20 @@ const CommunityChatScreen: React.FC = () => {
       alignSelf: "flex-end",
       marginTop: 5,
     },
+    statusTimeContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      marginRight: rS(5),
+    },
+    timeText: {
+      fontSize: SIZES.xSmall,
+      color: themeColors.textSecondary,
+      marginRight: rS(5),
+    },
+    statusIconContainer: {
+      flexDirection: "row",
+    },
     messageImageContainer: {
       borderRadius: rMS(10),
       overflow: "hidden",
@@ -1043,6 +1073,12 @@ const CommunityChatScreen: React.FC = () => {
       width: rS(150),
       height: rV(150),
       resizeMode: "cover",
+    },
+    statusText: {
+      fontSize: SIZES.xSmall,
+      color: themeColors.textSecondary,
+      textAlign: "right",
+      paddingRight: rS(8),
     },
     username: {
       fontSize: SIZES.small,
@@ -1080,6 +1116,18 @@ const CommunityChatScreen: React.FC = () => {
       color: themeColors.textSecondary,
       fontSize: SIZES.small,
       fontWeight: "bold",
+    },
+    messageImage: {
+      width: rS(300),
+      height: rV(200),
+      borderRadius: rMS(10),
+      margin: rMS(10),
+    },
+    messageVideo: {
+      width: rS(200),
+      height: rV(200),
+      borderRadius: rMS(10),
+      margin: rMS(10),
     },
     inputToolbar: {
       backgroundColor: themeColors.background,
@@ -1174,6 +1222,21 @@ const CommunityChatScreen: React.FC = () => {
       fontSize: SIZES.medium,
       marginBottom: rV(10),
     },
+    modalContainer: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.9)",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    fullScreenImage: {
+      width: "100%",
+      height: "100%",
+      resizeMode: "contain",
+    },
+    fullScreenVideo: {
+      width: "100%",
+      height: "100%",
+    },
     blurBackground: {
       opacity: 0.7,
       backgroundColor: themeColors.tint,
@@ -1183,6 +1246,12 @@ const CommunityChatScreen: React.FC = () => {
       fontSize: SIZES.xSmall,
       color: themeColors.textSecondary,
       marginTop: rV(2),
+    },
+    lastMessagePreview: {
+      fontSize: SIZES.small,
+      color: themeColors.textSecondary,
+      marginTop: rV(2),
+      alignSelf: "center",
     },
   });
 
@@ -1194,7 +1263,7 @@ const CommunityChatScreen: React.FC = () => {
         </View>
       ) : (
         <GiftedChat
-          ref={giftedChatRef}
+       
           messages={messages}
           onSend={onSend}
           user={{ _id: user?.id || 1 }}
@@ -1218,6 +1287,24 @@ const CommunityChatScreen: React.FC = () => {
       )}
       {renderImageViewer()}
       <Modal
+        visible={isVideoViewerVisible && selectedImageUri !== null}
+        transparent={true}
+        onRequestClose={() => setIsVideoViewerVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <TouchableOpacity onPress={() => setIsVideoViewerVisible(false)}>
+            {selectedImageUri && (
+              <Video
+                source={{ uri: selectedImageUri }}
+                style={styles.fullScreenVideo}
+                resizeMode="contain"
+                controls
+              />
+            )}
+          </TouchableOpacity>
+        </View>
+      </Modal>
+      <Modal
         visible={isDocumentViewerVisible && selectedImageUri !== null}
         transparent={true}
         onRequestClose={() => setIsDocumentViewerVisible(false)}
@@ -1234,6 +1321,6 @@ const CommunityChatScreen: React.FC = () => {
       </Modal>
     </View>
   );
-};
+}
 
 export default CommunityChatScreen;

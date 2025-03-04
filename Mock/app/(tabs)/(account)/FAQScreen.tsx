@@ -52,11 +52,68 @@ const FAQScreen: React.FC = () => {
     </View>
   );
 
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: rS(16),
+    },
+    searchContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: rV(20),
+      borderWidth: 1,
+      borderColor: '#ccc',
+      borderRadius: rMS(8),
+      paddingHorizontal: rS(10),
+      paddingVertical: rV(5),
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: rS(16),
+    },
+    searchIcon: {
+      marginLeft: rS(10),
+    },
+    faqItem: {
+      marginBottom: rV(15),
+    },
+    questionContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: rS(10),
+      backgroundColor: themeColors.secondaryBackground,
+      borderRadius: rMS(8),
+    },
+    questionText: {
+      fontSize: rS(16),
+      fontWeight: 'bold',
+    },
+    answerContainer: {
+      padding: rS(10),
+      backgroundColor: themeColors.background,
+      borderBottomLeftRadius: rMS(8),
+      borderBottomRightRadius: rMS(8),
+    },
+    answerText: {
+      fontSize: rS(14),
+      lineHeight: rV(20),
+    },
+    listContainer: {
+      paddingBottom: rV(20),
+    },
+    emptyText: {
+      textAlign: 'center',
+      padding: rV(20),
+      fontSize: rS(16),
+    },
+  });
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <View style={styles.searchContainer}>
         <TextInput
-          style={[styles.searchInput, { color: themeColors.text, backgroundColor: themeColors.card }]}
+          style={[styles.searchInput, { color: themeColors.text, backgroundColor: themeColors.background }]}
           placeholder="Search FAQs"
           placeholderTextColor={themeColors.textSecondary}
           value={searchQuery}
@@ -75,61 +132,6 @@ const FAQScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: rS(16),
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: rV(20),
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: rMS(8),
-    paddingHorizontal: rS(10),
-    paddingVertical: rV(5),
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: rS(16),
-  },
-  searchIcon: {
-    marginLeft: rS(10),
-  },
-  faqItem: {
-    marginBottom: rV(15),
-  },
-  questionContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: rS(10),
-    backgroundColor: '#f0f0f0',
-    borderRadius: rMS(8),
-  },
-  questionText: {
-    fontSize: rS(16),
-    fontWeight: 'bold',
-  },
-  answerContainer: {
-    padding: rS(10),
-    backgroundColor: '#e0e0e0',
-    borderBottomLeftRadius: rMS(8),
-    borderBottomRightRadius: rMS(8),
-  },
-  answerText: {
-    fontSize: rS(14),
-    lineHeight: rV(20),
-  },
-  listContainer: {
-    paddingBottom: rV(20),
-  },
-  emptyText: {
-    textAlign: 'center',
-    padding: rV(20),
-    fontSize: rS(16),
-  },
-});
+
 
 export default FAQScreen;

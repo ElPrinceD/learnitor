@@ -169,11 +169,7 @@ const CommunityDetailScreen: React.FC = () => {
         <Text style={[styles.followerCount, { color: themeColors.textSecondary }]}>
           {community?.description || `The official channel of ${community?.name}.`}
         </Text>
-        {isUserLeader && (
-          <Text style={[styles.leaderBadge, { color: themeColors.tint }]}>
-            You are the Leader
-          </Text>
-        )}
+    
       </View>
 
       <View style={styles.communityStats}>
@@ -309,7 +305,7 @@ const CommunityDetailScreen: React.FC = () => {
         style={styles.reportButton}
         onPress={() => Alert.alert("Report", "Report channel functionality.")}
       >
-        <Text style={styles.reportButtonText}>Report channel</Text>
+        <Text style={styles.reportButtonText}>Delete channel</Text>
       </TouchableOpacity>
     </>
   ), [community, isUserLeader, themeColors, timetable, handleTimetableItemPress, confirmLeaveCommunity]);
@@ -384,7 +380,7 @@ const CommunityDetailScreen: React.FC = () => {
     },
     unfollowButtonText: { fontSize: SIZES.medium, fontWeight: "600", color: themeColors.errorText },
     reportButton: {
-      backgroundColor: themeColors.secondaryBackground,
+      backgroundColor: themeColors.errorText,
       marginTop: rV(10),
       marginBottom: rV(40),
       marginHorizontal: rS(16),
@@ -392,7 +388,7 @@ const CommunityDetailScreen: React.FC = () => {
       borderRadius: rMS(8),
       alignItems: "center",
     },
-    reportButtonText: { fontSize: SIZES.medium, fontWeight: "600", color: themeColors.errorText },
+    reportButtonText: { fontSize: SIZES.medium, fontWeight: "600", color: themeColors.background },
   });
 
   const data = useMemo(() => (

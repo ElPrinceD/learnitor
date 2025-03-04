@@ -8,7 +8,7 @@ const TimetableItem = ({ plan, onPress }) => {
   const themeColors = Colors[colorScheme ?? "light"];
 
   // Use a default color scheme for the card based on the plan name.
-  const cardColor = plan.name === "Human Biology 1" ? '#E0F7FA' : '#F0F4C3';
+  const cardColor = plan.name === "Human Biology 1" ? '#E0F7FA' : themeColors.secondaryBackground;
 
   return (
     <TouchableOpacity
@@ -21,7 +21,7 @@ const TimetableItem = ({ plan, onPress }) => {
       </View>
       {/* Details Section */}
       <View style={styles.detailsWrapper}>
-        <Text style={[styles.eventName, { color: themeColors.background }]}>{plan.name}</Text>
+        <Text style={[styles.eventName, { color: themeColors.text }]}>{plan.name}</Text>
         <Text style={[styles.description, { color: themeColors.textSecondary }]}>{plan.description}</Text>
       </View>
     </TouchableOpacity>

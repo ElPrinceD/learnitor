@@ -72,6 +72,9 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
       alignItems: "center",
       gap: 14,
       paddingLeft: rS(1),
+     
+      
+     
       paddingVertical: rV(10),
     },
     communityImage: {

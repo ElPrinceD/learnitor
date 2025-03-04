@@ -3,7 +3,7 @@ import { queryClient } from "./QueryClient";
 import { useQuery } from "@tanstack/react-query";
 import { getGameDetails } from "./GamesApiCalls";
 import ApiUrl from "./config";
-
+import WsUrl from "./configWs";
 export const useWebSocket = (
   gameCode,
   userInfo,
@@ -21,7 +21,7 @@ export const useWebSocket = (
 
   useEffect(() => {
     if (gameCode) {
-      ws.current = new WebSocket(`wss://learnitor.onrender.com/games/${gameCode}/ws/`);
+      ws.current = new WebSocket(`${WsUrl}/games/${gameCode}/ws/`);
 
       ws.current.onopen = () => console.log("WebSocket connection opened");
 

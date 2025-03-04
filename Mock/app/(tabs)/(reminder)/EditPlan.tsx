@@ -23,7 +23,7 @@ import CustomPicker from "../../../components/CustomPicker";
 import DateSelector from "../../../components/DateSelector.tsx";
 import CustomDateTimeSelector from "../../../components/CustomDateTimeSelector.tsx";
 import Animated, { FadeInLeft, ReduceMotion } from "react-native-reanimated";
-import setSoftInputMode from "react-native-set-soft-input-mode";
+
 
 interface Category {
   value: number;
@@ -65,15 +65,7 @@ const EditPlan = () => {
     enabled: !!userToken?.token,
   });
 
-  useEffect(() => {
-    if (Platform.OS === "android" && setSoftInputMode) {
-      setSoftInputMode.set(1); // ADJUST_PAN
-      return () => {
-        setSoftInputMode.set(1);
-      };
-    }
-    return () => {};
-  }, []);
+
 
   const updateTaskMutation = useMutation<any, any, any>({
     mutationFn: async ({ taskId, taskData, token }) => {

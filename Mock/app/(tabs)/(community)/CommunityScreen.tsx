@@ -13,7 +13,7 @@ import SearchBar from "../../../components/SearchBar2";
 import Colors from "../../../constants/Colors";
 import { useAuth } from "../../../components/AuthContext";
 import ErrorMessage from "../../../components/ErrorMessage";
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { SIZES, rS, rV } from "../../../constants";
 import { Community } from "../../../components/types";
@@ -23,7 +23,7 @@ import { Skeleton } from "moti/skeleton";
 import { useWebSocket } from "../../../webSocketProvider";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { searchCommunities } from "../../../CommunityApiCalls";
-import FastImage from "react-native-fast-image";
+
 
 
 const CommunityScreen: React.FC = () => {
@@ -39,6 +39,7 @@ const CommunityScreen: React.FC = () => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const colorMode = colorScheme === "dark" ? "dark" : "light";
+  const params = useLocalSearchParams();
 
 
 
@@ -145,18 +146,38 @@ const CommunityScreen: React.FC = () => {
   // Use WebSocket for real-time subscriptions
   useFocusEffect(
     useCallback(() => {
-      if (isConnected) {
-        subscribeToExistingUserCommunities();
-        fetchAndCacheCommunities();
-      }
-      return () => {
-        // Unsubscribe logic can still be here if needed
+      const handleNewCommunity = async () => {
+        const newCommunityParam = params.newCommunity; // string | string[] | undefined
+        let newCommunity: Community | undefined;
+  
+        if (newCommunityParam) {
+          if (Array.isArray(newCommunityParam)) {
+            // If it's an array, take the first element and parse (unlikely case)
+            newCommunity = JSON.parse(newCommunityParam[0]) as Community;
+          } else {
+            // If it's a string, parse it
+            newCommunity = JSON.parse(newCommunityParam) as Community;
+          }
+  
+          if (newCommunity) {
+            setMyCommunities((prev) => {
+              if (!prev.some((c) => c.id === newCommunity!.id)) {
+                return [...prev, newCommunity!];
+              }
+              return prev;
+            });
+            // Clear params to avoid re-adding on next focus
+            router.setParams({ newCommunity: undefined });
+          }
+        }
+  
+        if (isConnected) {
+          subscribeToExistingUserCommunities();
+          await fetchAndCacheCommunities(); // Ensure cache is up-to-date
+        }
       };
-    }, [
-      isConnected,
-      subscribeToExistingUserCommunities,
-      fetchAndCacheCommunities,
-    ])
+      handleNewCommunity();
+    }, [params.newCommunity, isConnected, subscribeToExistingUserCommunities, fetchAndCacheCommunities])
   );
 
   // Listen to WebSocket messages for updating last messages
