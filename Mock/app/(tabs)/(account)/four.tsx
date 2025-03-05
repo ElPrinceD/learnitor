@@ -19,29 +19,30 @@ import * as ImagePicker from "expo-image-picker";
 import ApiUrl from "../../../config";
 import Colors from "../../../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../../../constants";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useWebSocket } from "../../../webSocketProvider"; // Add this import
 
 const Profile = () => {
   const { logout, userToken, userInfo, setUserInfo } = useAuth();
+  const { sqliteClear } = useWebSocket(); // Access sqliteClear from context
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
   const handleAccountSettings = () => {
     router.navigate("AccountSettings");
   };
+
   const clearUserDataCache = async () => {
     try {
-      await AsyncStorage.clear();
-      console.log("All AsyncStorage data cleared.");
+      await sqliteClear(); // Replace AsyncStorage.clear with sqliteClear
+      console.log("All SQLite storage data cleared.");
     } catch (e) {
-      console.error("Error clearing AsyncStorage:", e);
+      console.error("Error clearing SQLite storage:", e);
     }
   };
 
   const handleLogout = async () => {
     try {
-      
-      clearUserDataCache();
+      await clearUserDataCache(); // Ensure this is awaited
       logout();
       router.replace("Intro");
     } catch (error) {
@@ -50,12 +51,10 @@ const Profile = () => {
   };
 
   const handleTerms = () => {
-    // Assuming your terms URL is something like this, replace with your actual URL
     Linking.openURL(`${ApiUrl}/terms-and-conditions/`);
   };
 
   const handlePrivacy = () => {
-    // Assuming your privacy policy URL is something like this, replace with your actual URL
     Linking.openURL(`${ApiUrl}/privacy-policy/`);
   };
 
@@ -92,43 +91,41 @@ const Profile = () => {
         Alert.alert("Permission to access media library is required!");
         return;
       }
-  
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 1,
       });
-  
+
       if (!result.canceled) {
         const uri = result.assets[0].uri;
         const formData = new FormData();
-  
+
         const fileName = uri.split("/").pop();
         const fileType = fileName.split(".").pop();
-  
-        
+
         formData.append("profile_picture", {
           uri,
           name: fileName,
           type: `image/${fileType}`,
         } as any);
-  
+
         const config = {
           headers: {
             Authorization: `Token ${userToken?.token}`,
-            'Content-Type': 'multipart/form-data',
+            "Content-Type": "multipart/form-data",
           },
         };
-  
-        console.log("Forms:", formData)
+
+        console.log("Forms:", formData);
         const response = await axios.patch(
           `${ApiUrl}/api/update/user/${userInfo?.user.id}/`,
           formData,
           config
         );
-  
-        // Update user info in frontend state
+
         if (userInfo) {
           setUserInfo({
             ...userInfo,
@@ -148,7 +145,6 @@ const Profile = () => {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      // flexGrow: 1,
       paddingTop: rV(18),
       backgroundColor: themeColors.background,
     },
@@ -200,7 +196,6 @@ const Profile = () => {
     },
     editProfileButtonText: {
       color: themeColors.text,
-
       fontSize: SIZES.medium,
       fontWeight: "bold",
     },

@@ -6,22 +6,25 @@ import CoursesCategories from "../../../components/CoursesCategories";
 import { useAuth } from "../../../components/AuthContext";
 import { Course } from "../../../components/types";
 import { router } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import ErrorMessage from "../../../components/ErrorMessage";
 import { useWebSocket } from "../../../webSocketProvider";
 
 const CoursesScreen: React.FC = () => {
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
-    null
-  );
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const { userToken, userInfo } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { fetchAndCacheCourses, fetchAndCacheCourseCategories } =
-    useWebSocket();
+
+  // Destructure fetch functions and sqliteGetItem from useWebSocket with fallbacks
+  const { fetchAndCacheCourses, fetchAndCacheCourseCategories, sqliteGetItem } =
+    useWebSocket() || {
+      fetchAndCacheCourses: async () => {},
+      fetchAndCacheCourseCategories: async () => {},
+      sqliteGetItem: async () => null,
+    };
 
   useEffect(() => {
     const loadData = async () => {
@@ -30,12 +33,14 @@ const CoursesScreen: React.FC = () => {
         await fetchAndCacheCourses();
         await fetchAndCacheCourseCategories();
 
-        const cachedCourses = await AsyncStorage.getItem("courses");
-        const cachedCategories = await AsyncStorage.getItem("courseCategories");
+     
+        const cachedCourses = await sqliteGetItem("courses");
+        const cachedCategories = await sqliteGetItem("courseCategories");
 
         if (cachedCourses) {
-          setCourses(JSON.parse(cachedCourses));
-          setFilteredCourses(JSON.parse(cachedCourses));
+          const parsedCourses = JSON.parse(cachedCourses);
+          setCourses(parsedCourses);
+          setFilteredCourses(parsedCourses);
         }
         if (cachedCategories) setCategories(JSON.parse(cachedCategories));
       } catch (error) {
@@ -46,14 +51,13 @@ const CoursesScreen: React.FC = () => {
       }
     };
     loadData();
-  }, [fetchAndCacheCourses, fetchAndCacheCourseCategories]);
+  }, [fetchAndCacheCourses, fetchAndCacheCourseCategories, sqliteGetItem]);
 
   const handleSearch = useCallback(
     (query: string) => {
       const filtered = courses.filter((course: Course) =>
         course.title.toLowerCase().includes(query.toLowerCase())
       );
-
       setFilteredCourses(filtered);
     },
     [courses]
@@ -61,15 +65,12 @@ const CoursesScreen: React.FC = () => {
 
   const handleCategoryPress = useCallback(
     (categoryId: number | null) => {
-      const newCategoryId =
-        selectedCategoryId === categoryId ? null : categoryId;
+      const newCategoryId = selectedCategoryId === categoryId ? null : categoryId;
       setSelectedCategoryId(newCategoryId);
 
       const filtered =
         newCategoryId !== null
-          ? courses.filter((course: Course) =>
-              course.category.includes(newCategoryId)
-            )
+          ? courses.filter((course: Course) => course.category.includes(newCategoryId))
           : courses;
 
       setFilteredCourses(filtered);
@@ -79,7 +80,6 @@ const CoursesScreen: React.FC = () => {
 
   const handleCoursePress = useCallback(
     (course: Course) => {
-      // Use push instead of navigate for sending params
       router.push({
         pathname: "CourseDetails",
         params: { course: JSON.stringify(course) },
@@ -92,17 +92,21 @@ const CoursesScreen: React.FC = () => {
     try {
       await fetchAndCacheCourses();
       await fetchAndCacheCourseCategories();
-      const cachedCourses = await AsyncStorage.getItem("courses");
-      const cachedCategories = await AsyncStorage.getItem("courseCategories");
+
+      
+      const cachedCourses = await sqliteGetItem("courses");
+      const cachedCategories = await sqliteGetItem("courseCategories");
+
       if (cachedCourses) {
-        setCourses(JSON.parse(cachedCourses));
-        setFilteredCourses(JSON.parse(cachedCourses));
+        const parsedCourses = JSON.parse(cachedCourses);
+        setCourses(parsedCourses);
+        setFilteredCourses(parsedCourses);
       }
       if (cachedCategories) setCategories(JSON.parse(cachedCategories));
     } catch (error) {
       setErrorMessage("Failed to refresh courses");
     }
-  }, [fetchAndCacheCourses, fetchAndCacheCourseCategories]);
+  }, [fetchAndCacheCourses, fetchAndCacheCourseCategories, sqliteGetItem]);
 
   const styles = StyleSheet.create({
     container: {

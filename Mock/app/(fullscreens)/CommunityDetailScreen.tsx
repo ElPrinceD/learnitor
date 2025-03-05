@@ -14,7 +14,6 @@ import {
   Modal,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons, FontAwesome6 } from "@expo/vector-icons";
 import ImageView from "react-native-image-viewing";
 import { getCommunityDetails, leaveCommunity, getCommunityMessages, getCommunityTimetable } from "../../CommunityApiCalls";
@@ -35,7 +34,19 @@ const CommunityDetailScreen: React.FC = () => {
   const navigation = useNavigation();
   const { userToken, userInfo } = useAuth();
   const user = userInfo?.user;
-  const { unsubscribeFromCommunity } = useWebSocket() || { unsubscribeFromCommunity: () => {} };
+
+  // Extract SQLite utilities from WebSocket context with fallback defaults
+  const {
+    unsubscribeFromCommunity,
+    sqliteGetItem,
+    sqliteSetItem,
+    sqliteRemoveItem,
+  } = useWebSocket() || {
+    unsubscribeFromCommunity: () => { },
+    sqliteGetItem: async () => null,
+    sqliteSetItem: async () => { },
+    sqliteRemoveItem: async () => { },
+  };
 
   const [community, setCommunity] = useState<Community | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,30 +67,35 @@ const CommunityDetailScreen: React.FC = () => {
     return community?.members?.sort((a, b) => a.first_name.localeCompare(b.first_name)) || [];
   }, [community?.members]);
 
+  // SQLite-based caching functions
   const getCachedData = useCallback(async (key: string) => {
-    const data = await AsyncStorage.getItem(key);
+    const data = await sqliteGetItem(key);
     return data ? JSON.parse(data) : null;
-  }, []);
+  }, [sqliteGetItem]);
 
   const setCachedData = useCallback(async (key: string, data: any) => {
-    await AsyncStorage.setItem(key, JSON.stringify(data));
-  }, []);
+    await sqliteSetItem(key, JSON.stringify(data));
+  }, [sqliteSetItem]);
 
   const removeCachedData = useCallback(async (key: string) => {
-    await AsyncStorage.removeItem(key);
-  }, []);
+    await sqliteRemoveItem(key);
+  }, [sqliteRemoveItem]);
 
+  // Fetch community data, load from cache first, then update with fresh data
   const fetchCommunityData = useCallback(async () => {
     try {
       setLoading(true);
+
+      // Load cached data immediately if available
       const cachedCommunity = await getCachedData(`community_${id}`);
       if (cachedCommunity) setCommunity(cachedCommunity);
 
       if (!userToken?.token) throw new Error("User not authenticated.");
 
+      // Fetch fresh data from API
       const data = await getCommunityDetails(id, userToken.token);
       setCommunity(data);
-      await setCachedData(`community_${id}`, data);
+      await setCachedData(`community_${id}`, data); // Save to SQLite for future use
       setIsUserLeader(data?.created_by === user?.email);
 
       const messages = await getCommunityMessages(id, userToken.token);
@@ -169,7 +185,6 @@ const CommunityDetailScreen: React.FC = () => {
         <Text style={[styles.followerCount, { color: themeColors.textSecondary }]}>
           {community?.description || `The official channel of ${community?.name}.`}
         </Text>
-    
       </View>
 
       <View style={styles.communityStats}>
@@ -315,7 +330,7 @@ const CommunityDetailScreen: React.FC = () => {
     profileSection: { alignItems: "center", marginTop: rV(20) },
     channelImage: { width: rMS(80), height: rMS(80), borderRadius: rMS(40), marginBottom: rV(10) },
     channelName: { fontSize: SIZES.large, fontWeight: "bold", marginBottom: rV(4), color: themeColors.text },
-    followerCount: { fontSize: SIZES.medium, color: themeColors.textSecondary, textAlign: "center" }, // Center-aligned description
+    followerCount: { fontSize: SIZES.medium, color: themeColors.textSecondary, textAlign: "center" },
     leaderBadge: { marginTop: rV(4), fontSize: SIZES.medium, fontWeight: "600", color: themeColors.tint },
     communityStats: { flexDirection: "row", marginTop: rV(20), justifyContent: "space-around", width: "100%" },
     statItem: { alignItems: "center", flex: 1 },

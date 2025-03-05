@@ -21,7 +21,6 @@ import { router } from "expo-router";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { useNavigation } from "@react-navigation/native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useWebSocket } from "../../../webSocketProvider";
 
 const CreateCommunity = () => {
@@ -34,7 +33,7 @@ const CreateCommunity = () => {
   const navigation = useNavigation();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
-  const { joinAndSubscribeToCommunity } = useWebSocket(); // Add WebSocket context
+  const { joinAndSubscribeToCommunity, sqliteGetItem, sqliteSetItem } = useWebSocket(); // Updated to include SQLite utilities
 
   const createCommunityMutation = useMutation({
     mutationFn: async ({ communityData, token }) => {
@@ -129,11 +128,14 @@ const CreateCommunity = () => {
 
   const updateCommunityCache = async (newCommunity) => {
     try {
-      let communities = await AsyncStorage.getItem("communities");
-      communities = communities ? JSON.parse(communities) : [];
+      // Retrieve cached communities from SQLite
+      const cachedCommunities = await sqliteGetItem("communities");
+      let communities = cachedCommunities ? JSON.parse(cachedCommunities) : [];
+
+      // Add the new community if it doesn't already exist
       if (!communities.some((c) => c.id === newCommunity.id)) {
         communities.push(newCommunity);
-        await AsyncStorage.setItem("communities", JSON.stringify(communities));
+        await sqliteSetItem("communities", JSON.stringify(communities));
       }
     } catch (error) {
       console.error("Error updating community cache:", error);

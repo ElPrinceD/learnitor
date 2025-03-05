@@ -17,8 +17,8 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "../QueryClient";
-
 import { WebSocketProvider } from "../webSocketProvider"; // Update the import path
+import { SQLiteProvider } from "expo-sqlite"; // Import SQLiteProvider from expo-sqlite
 import {
   configureReanimatedLogger,
   ReanimatedLogLevel,
@@ -26,12 +26,13 @@ import {
 import { TamaguiProvider } from "@tamagui/core";
 import { PortalProvider } from "@tamagui/portal";
 import config from "../tamagui.config";
+
 export { ErrorBoundary } from "expo-router";
 
 // This is the default configuration
 configureReanimatedLogger({
   level: ReanimatedLogLevel.warn,
-  strict: false, // Reanimated runs in strict mode by default
+  strict: false,
 });
 
 SplashScreen.preventAutoHideAsync();
@@ -52,7 +53,7 @@ const RootLayoutNav = () => {
     } else if (!userToken) {
       router.replace("/Intro");
     }
-    setNavigationCompleted(true); // Set navigation completion flag
+    setNavigationCompleted(true);
   }, [isLoading, userToken]);
 
   useEffect(() => {
@@ -68,38 +69,40 @@ const RootLayoutNav = () => {
           <GestureHandlerRootView style={{ flex: 1 }}>
             <SafeAreaProvider>
               <QueryClientProvider client={queryClient}>
-                <WebSocketProvider token={userToken?.token}>
-                  <ThemeProvider
-                    value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-                  >
-                    <Stack>
-                      <Stack.Screen
-                        name="index"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="(verification)"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="(tabs)"
-                        options={{
-                          headerShown: false,
-                          headerShadowVisible: false,
-                        }}
-                      />
-
-                      <Stack.Screen
-                        name="(game)"
-                        options={{ headerShown: false }}
-                      />
-                       <Stack.Screen
-                        name="(fullscreens)"
-                        options={{ headerShown: false }}
-                      />
-                    </Stack>
-                  </ThemeProvider>
-                </WebSocketProvider>
+                {/* Wrap WebSocketProvider with SQLiteProvider */}
+                <SQLiteProvider databaseName="slate.db">
+                  <WebSocketProvider token={userToken?.token}>
+                    <ThemeProvider
+                      value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+                    >
+                      <Stack>
+                        <Stack.Screen
+                          name="index"
+                          options={{ headerShown: false }}
+                        />
+                        <Stack.Screen
+                          name="(verification)"
+                          options={{ headerShown: false }}
+                        />
+                        <Stack.Screen
+                          name="(tabs)"
+                          options={{
+                            headerShown: false,
+                            headerShadowVisible: false,
+                          }}
+                        />
+                        <Stack.Screen
+                          name="(game)"
+                          options={{ headerShown: false }}
+                        />
+                        <Stack.Screen
+                          name="(fullscreens)"
+                          options={{ headerShown: false }}
+                        />
+                      </Stack>
+                    </ThemeProvider>
+                  </WebSocketProvider>
+                </SQLiteProvider>
               </QueryClientProvider>
             </SafeAreaProvider>
           </GestureHandlerRootView>
@@ -118,4 +121,5 @@ const RootLayout = () => {
     </AuthProvider>
   );
 };
+
 export default RootLayout;
