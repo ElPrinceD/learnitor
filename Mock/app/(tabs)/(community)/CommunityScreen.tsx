@@ -21,7 +21,7 @@ import CommunityList from "../../../components/CommunityList";
 import GlobalCommunityList from "../../../components/GlobalCommunityList";
 import { Skeleton } from "moti/skeleton";
 import { useWebSocket } from "../../../webSocketProvider";
-import { searchCommunities } from "../../../CommunityApiCalls";
+import { getCommunityDetails, searchCommunities } from "../../../CommunityApiCalls";
 
 const CommunityScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -170,12 +170,28 @@ const CommunityScreen: React.FC = () => {
     }, [params.newCommunity, isConnected, subscribeToExistingUserCommunities, fetchAndCacheCommunities])
   );
 
+  const handleJoinViaLink = useCallback(async (communityId) => {
+    const communityDetails = await getCommunityDetails(communityId, userToken?.token);
+    setMyCommunities((prev) => {
+      if (!prev.some((c) => c.id === communityId)) {
+        return [...prev, communityDetails];
+      }
+      return prev;
+    });
+  }, [userToken]);
+  
   // Listen to WebSocket messages for updating last messages
   useEffect(() => {
     const onMessage = async (event: MessageEvent) => {
       if (!sqliteSetItem) return; // Guard against undefined SQLite utilities
       try {
         const data = JSON.parse(event.data);
+
+        if (data.type === "join_success") {
+          await handleJoinViaLink(data.community_id);
+        }
+      
+  
 
         if (data.type === "message") {
           const newMessage = {

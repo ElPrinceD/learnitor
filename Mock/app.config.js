@@ -80,6 +80,7 @@ export default {
         projectId: "7fd80734-c8a7-49db-accf-6b9f79c74f9f",
       },
       TWITTER_CLIENT_ID: "RGJSaVBYcFVsaEc2R3NrX1BvZTg6MTpjaQ",
+      API_URL: "http://16.171.33.30/"
     },
     owner: "mandey",
     runtimeVersion: "1.0.0",

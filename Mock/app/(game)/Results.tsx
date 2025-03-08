@@ -7,7 +7,6 @@ import {
   Image,
   useColorScheme,
 } from "react-native";
-import axios from "axios";
 import { router, useLocalSearchParams } from "expo-router";
 import { Player, GameDetailsResponse } from "../../components/types";
 import ApiUrl from "../../config";
@@ -52,7 +51,6 @@ export default function ResultsScreen() {
   const {
     data: gameDetails,
     error: gameDetailsError,
-    refetch: refetchGameDetails,
   } = useQuery<GameDetailsResponse, Error>({
     queryKey: ["gameDetails", gameId, userToken?.token],
     queryFn: () => getGameDetails(gameId, userToken?.token),
@@ -71,12 +69,15 @@ export default function ResultsScreen() {
           id: player.id,
           score: scores[player.id] || "0.0",
           profileName: `${player.first_name} ${player.last_name}`,
-          profile_picture: player.profile_picture,
+          profile_picture:
+            player.id === userInfo?.user.id
+              ? userInfo.user.profile_picture
+              : `${ApiUrl}${player.profile_picture}`,
         }));
         setPlayers(newPlayers);
       }
     }
-  }, [gameId, userToken]);
+  }, [gameDetails, userInfo, scores]);
 
   const handleCreateNewGame = () => {
     router.navigate("GameIntro");

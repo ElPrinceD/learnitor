@@ -128,8 +128,10 @@ const CommunityDetailScreen: React.FC = () => {
 
   const shareCommunity = useCallback(async () => {
     try {
+      const shareableLink = community?.shareable_link; // e.g., myapp://join/sJmnCdcdXRRPHWMzVkh1
       await Share.share({
-        message: `Check out this channel: ${community?.name}\nJoin here: ${community?.shareable_link}`,
+        message: `Check out this channel: ${community?.name}\nJoin here: ${shareableLink}`,
+        url: shareableLink, // Ensures the link is tappable where supported
       });
     } catch (err) {
       console.error("Error sharing community:", err);

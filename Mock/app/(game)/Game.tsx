@@ -118,7 +118,7 @@ export default function Game() {
   useEffect(() => {
     if (!gameCode || webSocket.current) return;
 
-    webSocket.current = new WebSocket(`${WsUrl}/games/${gameCode}/ws/`);
+    webSocket.current = new WebSocket(`${WsUrl}/ws/games/${gameCode}/ws/`);
 
     webSocket.current.onopen = () => {
       console.log("WebSocket connection opened");
@@ -128,7 +128,7 @@ export default function Game() {
       console.error("WebSocket error:", error);
       setTimeout(() => {
         if (!webSocket.current || webSocket.current.readyState === WebSocket.CLOSED) {
-          webSocket.current = new WebSocket(`${WsUrl}/games/${gameCode}/ws/`);
+          webSocket.current = new WebSocket(`${WsUrl}/ws/games/${gameCode}/ws/`);
         }
       }, 5000);
     };

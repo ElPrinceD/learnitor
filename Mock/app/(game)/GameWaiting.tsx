@@ -21,9 +21,8 @@ import Colors from "../../constants/Colors";
 import ApiUrl from "../../config";
 import { Question, Player, GameDetailsResponse } from "../../components/types";
 import { SIZES, rMS, rS, rV } from "../../constants";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { getGameDetails, startGame } from "../../GamesApiCalls";
-import { queryClient } from "../../QueryClient";
+import { useQuery } from "@tanstack/react-query";
+import { getGameDetails } from "../../GamesApiCalls";
 import WsUrl from "../../configWs";
 
 export default function GameWaitingScreen() {
@@ -41,7 +40,6 @@ export default function GameWaitingScreen() {
   const [creatorId, setCreatorId] = useState<number | undefined>();
   const [gameCode, setGameCode] = useState<string>(code || "");
   const [players, setPlayers] = useState<Player[]>([]);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [gameQuestions, setGameQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -94,17 +92,19 @@ export default function GameWaitingScreen() {
   }, [gameQuestions, isCreator, gameId, id, gameCode]);
 
   const connectWebSocket = useCallback(() => {
-    if (!gameCode || ws.current) return; // Prevent multiple connections
+    if (!gameCode || ws.current) return;
 
-    ws.current = new WebSocket(`${WsUrl}/games/${gameCode}/ws/`);
+    // Optional: Add token if using token-based auth
+     ws.current = new WebSocket(`${WsUrl}/ws/games/${gameCode}/ws/?token=${userToken?.token}`);
+    //ws.current = new WebSocket(`${WsUrl}/ws/games/${gameCode}/ws/`);
 
     ws.current.onopen = () => {
       console.log("WebSocket connection opened");
+      ws.current.send(JSON.stringify({ type: "join_game" }));
     };
 
     ws.current.onerror = (error) => {
       console.error("WebSocket error:", error);
-      // Attempt reconnection with a delay
       setTimeout(connectWebSocket, 5000);
     };
 
@@ -145,7 +145,11 @@ export default function GameWaitingScreen() {
 
   useEffect(() => {
     connectWebSocket();
-   
+    return () => {
+      if (ws.current) {
+        ws.current.close();
+      }
+    };
   }, [connectWebSocket]);
 
   const copyToClipboard = async () => {
@@ -161,17 +165,12 @@ export default function GameWaitingScreen() {
     }
   };
 
-  const startGameMutation = useMutation<any, any, any>({
-    mutationFn: ({ gameId, token }) => startGame(id || gameId, token),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["gameDetails", id || gameId] });
-      goToGame();
-    },
-    onError: (error: Error) => setErrorMessage(error.message || "Error starting game"),
-  });
-
   const handleStartGame = () => {
-    startGameMutation.mutate({ gameId: gameId || id, token: userToken?.token });
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      ws.current.send(JSON.stringify({ type: "start_game" }));
+    } else {
+      console.error("WebSocket is not open");
+    }
   };
 
   const styles = StyleSheet.create({

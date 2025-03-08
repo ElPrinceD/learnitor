@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useFonts } from "expo-font";
 import { FontAwesome } from "@expo/vector-icons";
+import DeepLinkHandler from "../DeepLink";
 import {
   ThemeProvider,
   DarkTheme,
@@ -72,6 +73,7 @@ const RootLayoutNav = () => {
                 {/* Wrap WebSocketProvider with SQLiteProvider */}
                 <SQLiteProvider databaseName="slate.db">
                   <WebSocketProvider token={userToken?.token}>
+                    <DeepLinkHandler/>
                     <ThemeProvider
                       value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
                     >
@@ -101,6 +103,7 @@ const RootLayoutNav = () => {
                         />
                       </Stack>
                     </ThemeProvider>
+                    
                   </WebSocketProvider>
                 </SQLiteProvider>
               </QueryClientProvider>
