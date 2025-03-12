@@ -147,7 +147,7 @@ export default function GameWaitingScreen() {
     connectWebSocket();
     return () => {
       if (ws.current) {
-        ws.current.close();
+       // ws.current.close();
       }
     };
   }, [connectWebSocket]);
