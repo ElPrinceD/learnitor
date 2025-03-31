@@ -106,6 +106,7 @@ const CoursesList: React.FC<Props> = ({
 
   const renderItem = useCallback(
     ({ item }: { item: Course }) => (
+      
       <TouchableOpacity
         onPress={() => onCoursePress(item)}
         activeOpacity={0.5}
@@ -114,9 +115,9 @@ const CoursesList: React.FC<Props> = ({
         <View style={styles.courseListContainer}>
           <View style={styles.imageContainer}>
             <Image source={{ uri: item.url }} style={styles.image} />
-            <View style={styles.newLabelContainer}>
+            {/* <View style={styles.newLabelContainer}>
               <Text style={styles.newLabelText}>NEW</Text>
-            </View>
+            </View> */}
           </View>
           <View style={styles.textContainer}>
             <Text style={styles.name} numberOfLines={1}>

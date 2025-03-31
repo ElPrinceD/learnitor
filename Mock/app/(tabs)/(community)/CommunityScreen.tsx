@@ -46,6 +46,8 @@ const CommunityScreen: React.FC = () => {
     subscribeToExistingUserCommunities,
     fetchAndCacheCommunities,
     markMessageAsRead,
+    sqliteGetItem,
+    sqliteSetItem,
   } = useWebSocket() || {
     isConnected: false,
     socket: null,
@@ -68,13 +70,10 @@ const CommunityScreen: React.FC = () => {
       );
   };
 
-  // SQLite utility functions from WebSocketProvider context (assumed available via useWebSocket)
-  const { sqliteGetItem, sqliteSetItem } = useWebSocket();
-
   // Load cached user communities when the screen mounts or when token changes
   useEffect(() => {
     const loadCachedData = async () => {
-      if (!sqliteGetItem) return; // Guard against undefined SQLite utilities
+      if (!sqliteGetItem) return;
       try {
         const cachedCommunities = await sqliteGetItem("communities");
         if (cachedCommunities) {
@@ -84,21 +83,10 @@ const CommunityScreen: React.FC = () => {
             parsedCommunities.map(async (community: Community) => {
               const message = await sqliteGetItem(`last_message_${community.id}`);
               const parsedMessage = message ? JSON.parse(message) : null;
-              console.log(
-                `Status of last message in community ${community.id}: ${
-                  parsedMessage?.status || "no message"
-                }`
-              );
               return [community.id, parsedMessage];
             })
           );
           setLastMessages(Object.fromEntries(messages));
-
-          // Ensure only messages with status other than 'read' show the indicator
-          const unreadIndicatorStatus = Object.fromEntries(
-            messages.map(([id, message]) => [id, message?.status !== "read"])
-          );
-          console.log("Unread status:", unreadIndicatorStatus);
         }
         setLoading(false);
         setInitialLoad(false);
@@ -112,7 +100,7 @@ const CommunityScreen: React.FC = () => {
     loadCachedData();
   }, [userToken, sqliteGetItem]);
 
-  // Fetch global communities only when search query has at least 3 characters
+  // Fetch global communities and filter out user's communities
   useEffect(() => {
     const searchForCommunities = async () => {
       if (searchQuery.length >= 3 && userToken?.token) {
@@ -122,7 +110,11 @@ const CommunityScreen: React.FC = () => {
             searchQuery,
             userToken.token
           );
-          setGlobalCommunities(fetchedCommunities);
+          // Filter out communities that are already in myCommunities
+          const filteredGlobalCommunities = fetchedCommunities.filter(
+            (community) => !myCommunities.some((myCommunity) => myCommunity.id === community.id)
+          );
+          setGlobalCommunities(filteredGlobalCommunities);
         } catch (error) {
           console.error("Error searching for global communities:", error);
           setErrorMessage("Failed to search global communities");
@@ -134,13 +126,13 @@ const CommunityScreen: React.FC = () => {
       }
     };
     searchForCommunities();
-  }, [searchQuery, userToken]);
+  }, [searchQuery, userToken, myCommunities]);
 
   // Use WebSocket for real-time subscriptions
   useFocusEffect(
     useCallback(() => {
       const handleNewCommunity = async () => {
-        const newCommunityParam = params.newCommunity; // string | string[] | undefined
+        const newCommunityParam = params.newCommunity;
         let newCommunity: Community | undefined;
 
         if (newCommunityParam) {
@@ -163,7 +155,7 @@ const CommunityScreen: React.FC = () => {
 
         if (isConnected) {
           await subscribeToExistingUserCommunities();
-          await fetchAndCacheCommunities(); // Ensure cache is up-to-date
+          await fetchAndCacheCommunities();
         }
       };
       handleNewCommunity();
@@ -179,19 +171,17 @@ const CommunityScreen: React.FC = () => {
       return prev;
     });
   }, [userToken]);
-  
+
   // Listen to WebSocket messages for updating last messages
   useEffect(() => {
     const onMessage = async (event: MessageEvent) => {
-      if (!sqliteSetItem) return; // Guard against undefined SQLite utilities
+      if (!sqliteSetItem) return;
       try {
         const data = JSON.parse(event.data);
 
         if (data.type === "join_success") {
           await handleJoinViaLink(data.community_id);
         }
-      
-  
 
         if (data.type === "message") {
           const newMessage = {
@@ -203,11 +193,6 @@ const CommunityScreen: React.FC = () => {
             ...prevState,
             [data.community_id]: newMessage,
           }));
-
-          console.log(
-            `Status of last message in community ${data.community_id}: ${newMessage.status}`
-          );
-          // Cache the new message status
           await sqliteSetItem(
             `last_message_${data.community_id}`,
             JSON.stringify(newMessage)
@@ -220,9 +205,6 @@ const CommunityScreen: React.FC = () => {
               status: data.status,
             },
           }));
-
-          console.log(`Status of message ${data.message_id}: ${data.status}`);
-          // Update cache with new status
           const cachedMessage = lastMessages[data.message_id];
           if (cachedMessage) {
             await sqliteSetItem(
@@ -291,8 +273,6 @@ const CommunityScreen: React.FC = () => {
 
   const handleCommunityPress = useCallback(
     async (community: Community) => {
-      console.log("Community pressed 1:", community.id);
-
       try {
         const isUserCommunity = myCommunities.some(
           (c) => c.id === community.id
@@ -317,7 +297,6 @@ const CommunityScreen: React.FC = () => {
           }));
         }
 
-        console.log("Community pressed:", community.id);
         router.navigate({
           pathname: "ChatScreen",
           params: {
@@ -435,7 +414,7 @@ const CommunityScreen: React.FC = () => {
                 showUnreadIndicator={Object.fromEntries(
                   Object.entries(lastMessages).map(([id, message]) => [
                     id,
-                    message?.status !== "read",
+                    message && message.status !== "read",
                   ])
                 )}
               />
@@ -457,24 +436,11 @@ const CommunityScreen: React.FC = () => {
               showUnreadIndicator={Object.fromEntries(
                 Object.entries(lastMessages).map(([id, message]) => [
                   id,
-                  message?.status !== "read",
+                  message && message.status !== "read",
                 ])
               )}
             />
           )}
-          <TouchableOpacity
-            style={[
-              styles.addButton,
-              { backgroundColor: themeColors.buttonBackground },
-            ]}
-            onPress={handleNavigateCreateCommunity}
-          >
-            <FontAwesome6
-              name="add"
-              size={SIZES.xLarge}
-              color={themeColors.text}
-            />
-          </TouchableOpacity>
         </View>
       )}
 
