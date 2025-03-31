@@ -133,6 +133,7 @@ export interface GameDetailsResponse {
   }[];
   questions: Question[];
   code: string;
+  ended: string;
   duration: number;
 }
 export interface Plan {

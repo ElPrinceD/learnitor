@@ -175,7 +175,7 @@ const Questions: React.FC<QuestionProps> = ({
                 answer.id
               );
               const isCorrect = answer.isRight;
-              console.log(isCorrect);
+             
               const answerStyle = isSelected
                 ? isCorrect
                   ? [styles.answerTouchable, styles.correctAnswer]

@@ -2,12 +2,12 @@ import React, { useState, useCallback } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import CommunityScreen from "./CommunityScreen";
 import CreateCommunity from "./CreateCommunity";
-import CommunityDetailScreen from "./CommunityDetailScreen";
 import EditCommunityScreen from "./EditCommunityScreen";
-import { FontAwesome6, Ionicons } from "@expo/vector-icons";
+import { FontAwesome6, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import Colors from "../../../constants/Colors";
-import { useColorScheme, TouchableOpacity, Text, View } from "react-native";
+import { useColorScheme, TouchableOpacity, Text, View, Pressable } from "react-native";
 import { rMS } from "../../../constants";
+import { router } from "expo-router";
 // Make sure this is the correct path
 
 const Stack = createNativeStackNavigator();
@@ -35,6 +35,18 @@ export default function CommunityLayout() {
         component={CommunityScreen}
         options={{
           title: "My Communities",
+          headerRight: () => (
+            <Pressable onPressIn={() => router.navigate("CreateCommunity")}>
+              {({ pressed }) => (
+                <MaterialCommunityIcons
+                  name="plus-circle"
+                  size={25}
+                  color={Colors[colorScheme ?? "light"].text}
+                  style={{ marginRight: 1, opacity: pressed ? 0.5 : 1 }}
+                />
+              )}
+            </Pressable>
+          ),
         }}
       />
 

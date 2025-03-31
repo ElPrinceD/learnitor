@@ -111,10 +111,18 @@ export default function GameWaitingScreen() {
     ws.current.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === "game.update" || data.type === "game.players") {
+        
+        if (data.type === "game.finished") {
+          console.log("Game finished. Closing connection...");
+          if (ws.current) {
+            ws.current.close();
+          }
+          // Optionally navigate to a summary or results screen instead of the game screen.
+          
+        } else if (data.type === "game.update" || data.type === "game.players") {
           const payload = data.data || data;
           if (payload.players) {
-            const newPlayers = payload.players.map((player: any) => ({
+            const newPlayers = payload.players.map((player) => ({
               id: player.id,
               profileName: `${player.first_name} ${player.last_name}`,
               profile_picture:
@@ -124,18 +132,22 @@ export default function GameWaitingScreen() {
             }));
             setPlayers(newPlayers);
           }
-          if (payload.started) {
+          // Only call goToGame if the game has been started and not ended.
+          if (payload.started && !payload.ended) {
             console.log("Game started via update");
             goToGame();
           }
+          
         } else if (data.type === "game.start") {
           console.log("Received game.start message");
           goToGame();
         }
+        
       } catch (error) {
         console.error("Error parsing WebSocket message:", error);
       }
     };
+    
 
     ws.current.onclose = () => {
       console.log("WebSocket connection closed");

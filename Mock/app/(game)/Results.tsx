@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -19,27 +19,21 @@ import { getGameDetails } from "../../GamesApiCalls";
 
 export default function ResultsScreen() {
   const { userInfo, userToken } = useAuth();
-  const {
-    score: scoreParam,
-    gameId,
-    scores: scoresParam,
-  } = useLocalSearchParams<{
-    score: string;
+  const { gameId, scores: scoresParam } = useLocalSearchParams<{
     gameId: string;
     scores: string;
   }>();
 
-  const score = typeof scoreParam === "string" ? scoreParam : "0";
-  const scores = JSON.parse(
-    typeof scoresParam === "string" ? scoresParam : "{}"
-  );
+  const scores = useMemo(() => {
+    try {
+      return JSON.parse(typeof scoresParam === "string" ? scoresParam : "{}");
+    } catch (e) {
+      console.error("Error parsing scores:", e);
+      return {};
+    }
+  }, [scoresParam]);
 
   console.log(scores);
-
-  const [creator, setCreator] = useState<string | undefined>();
-  const [creatorId, setCreatorId] = useState<number | undefined>();
-  const [gameCode, setGameCode] = useState<string>();
-  const [players, setPlayers] = useState<Player[]>([]);
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -48,36 +42,32 @@ export default function ResultsScreen() {
     return null;
   }
 
-  const {
-    data: gameDetails,
-    error: gameDetailsError,
-  } = useQuery<GameDetailsResponse, Error>({
+  const { data: gameDetails } = useQuery<GameDetailsResponse, Error>({
     queryKey: ["gameDetails", gameId, userToken?.token],
     queryFn: () => getGameDetails(gameId, userToken?.token),
     enabled: !!userToken,
   });
 
-  useEffect(() => {
-    if (gameDetails) {
-      setCreator(gameDetails.creator.first_name);
-      setCreatorId(gameDetails.creator.id);
-      setGameCode(gameDetails.code);
+  // Derive simple values directly
+  const creator = gameDetails?.creator.first_name;
+  const creatorId = gameDetails?.creator.id;
+  const gameCode = gameDetails?.code;
 
-      console.log(gameDetails.players);
-      if (gameDetails.players) {
-        const newPlayers = gameDetails.players.map((player) => ({
-          id: player.id,
-          score: scores[player.id] || "0.0",
-          profileName: `${player.first_name} ${player.last_name}`,
-          profile_picture:
-            player.id === userInfo?.user.id
-              ? userInfo.user.profile_picture
-              : `${ApiUrl}${player.profile_picture}`,
-        }));
-        setPlayers(newPlayers);
-      }
-    }
-  }, [gameDetails, userInfo, scores]);
+  // Compute players with useMemo
+  const players = useMemo(() => {
+    if (!gameDetails?.players) return [];
+    return gameDetails.players.map((player) => ({
+      id: player.id,
+      score: scores[player.id] || "0.0",
+      profileName: `${player.first_name} ${player.last_name}`,
+      profile_picture:
+        player.id === userInfo?.user.id
+          ? userInfo.user.profile_picture
+          : `${player.profile_picture}`,
+    }));
+  }, [gameDetails, scores, userInfo]);
+
+  console.log(gameDetails?.players);
 
   const handleCreateNewGame = () => {
     router.navigate("GameIntro");
@@ -167,7 +157,7 @@ export default function ResultsScreen() {
       <View style={styles.buttonContainer}>
         <GameButton
           title="Replay"
-          //onPress={handleReplayGame}
+          // onPress={handleReplayGame}
           style={styles.button}
         />
         <GameButton
