@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   TextInput,
   StyleSheet,
@@ -7,7 +7,7 @@ import {
   useColorScheme,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import Colors from "../constants/Colors"; // Adjust the import path as necessary
+import Colors from "../constants/Colors";
 import { SIZES, rS, rV } from "../constants";
 import debounce from "lodash.debounce";
 
@@ -20,11 +20,16 @@ const SearchBar: React.FC<Props> = ({ onSearch }) => {
   const themeColors = Colors[colorScheme ?? "light"];
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Debounced search handler
   const debouncedSearch = useCallback(
     debounce((query: string) => onSearch(query), 300),
-    []
+    [onSearch]
   );
+
+  // useEffect(() => {
+  //   return () => {
+  //     debouncedSearch.cancel();
+  //   };
+  // }, [debouncedSearch]);
 
   const handleSearch = useCallback(
     (query: string) => {
@@ -34,20 +39,17 @@ const SearchBar: React.FC<Props> = ({ onSearch }) => {
     [debouncedSearch]
   );
 
-  const themeStyles = useMemo(
-    () => ({
-      searchBarContainer: {
-        backgroundColor: themeColors.background,
-        borderColor: themeColors.border,
-      },
-      searchInput: {
-        color: themeColors.text,
-      },
-      placeholderTextColor: themeColors.placeholder,
-      iconColor: themeColors.icon,
-    }),
-    [themeColors]
-  );
+  const themeStyles = {
+    searchBarContainer: {
+      backgroundColor: themeColors.background,
+      borderColor: themeColors.border,
+    },
+    searchInput: {
+      color: themeColors.text,
+    },
+    placeholderTextColor: themeColors.placeholder,
+    iconColor: themeColors.icon,
+  };
 
   return (
     <View style={styles.container}>
@@ -61,7 +63,7 @@ const SearchBar: React.FC<Props> = ({ onSearch }) => {
         />
         <TouchableOpacity
           style={styles.searchIcon}
-          onPress={() => handleSearch(searchQuery)}
+          onPress={() => onSearch(searchQuery)} // Immediate search on icon press
         >
           <Ionicons name="search" size={24} color={themeStyles.iconColor} />
         </TouchableOpacity>
@@ -72,22 +74,21 @@ const SearchBar: React.FC<Props> = ({ onSearch }) => {
 
 const styles = StyleSheet.create({
   searchBarContainer: {
-    flex: 1,
     flexDirection: "row",
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: rS(12),
     width: "85%",
     marginTop: rV(12),
-    justifyContent: "center",
+    marginBottom: rV(5),
+    height: rV(40), // Explicit height
   },
   container: {
-    flex: 1,
+    height: rV(60),
     alignItems: "center",
   },
   searchIcon: {
     marginLeft: rS(8),
-    height: "100%",
     justifyContent: "center",
   },
   searchInput: {

@@ -15,7 +15,11 @@ import Colors from "../../../constants/Colors";
 import { rMS, rS, rV } from "../../../constants/responsive";
 import { SIZES } from "../../../constants/theme";
 import AnimatedRoundTextInput from "../../../components/AnimatedRoundTextInput.tsx";
-import { deleteTask, updateTask, getCategories } from "../../../TimelineApiCalls.ts";
+import {
+  deleteTask,
+  updateTask,
+  getCategories,
+} from "../../../TimelineApiCalls.ts";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import ErrorMessage from "../../../components/ErrorMessage.tsx";
 import GameButton from "../../../components/GameButton.tsx";
@@ -23,7 +27,6 @@ import CustomPicker from "../../../components/CustomPicker";
 import DateSelector from "../../../components/DateSelector.tsx";
 import CustomDateTimeSelector from "../../../components/CustomDateTimeSelector.tsx";
 import Animated, { FadeInLeft, ReduceMotion } from "react-native-reanimated";
-
 
 interface Category {
   value: number;
@@ -52,7 +55,9 @@ const EditPlan = () => {
   const [description, setDescription] = useState(oldDescription || "");
   const [dueDate, setDueDate] = useState(new Date(oldDate));
   const [dueTime, setDueTime] = useState(new Date(`2000-01-01T${oldTime}`)); // Parse time string to Date
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
+    null
+  );
   const [affectAllRecurring, setAffectAllRecurring] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -64,8 +69,6 @@ const EditPlan = () => {
     queryFn: () => getCategories(userToken?.token),
     enabled: !!userToken?.token,
   });
-
-
 
   const updateTaskMutation = useMutation<any, any, any>({
     mutationFn: async ({ taskId, taskData, token }) => {
@@ -96,8 +99,17 @@ const EditPlan = () => {
   const parseTime = (timeString: string): Date => {
     if (!timeString) return new Date();
     const [hours, minutes] = timeString.split(":").map(Number);
-    if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
-      console.error(`Invalid time string: ${timeString}, Hours: ${hours}, Minutes: ${minutes}`);
+    if (
+      isNaN(hours) ||
+      isNaN(minutes) ||
+      hours < 0 ||
+      hours > 23 ||
+      minutes < 0 ||
+      minutes > 59
+    ) {
+      console.error(
+        `Invalid time string: ${timeString}, Hours: ${hours}, Minutes: ${minutes}`
+      );
       return new Date();
     }
     const newDate = new Date();
@@ -113,7 +125,8 @@ const EditPlan = () => {
   };
 
   const formatDate = (date: Date): string => {
-    if (!(date instanceof Date) || isNaN(date.getTime())) return new Date().toISOString().split("T")[0];
+    if (!(date instanceof Date) || isNaN(date.getTime()))
+      return new Date().toISOString().split("T")[0];
     return date.toISOString().split("T")[0];
   };
 
@@ -123,9 +136,11 @@ const EditPlan = () => {
       description,
       due_date: formatDate(dueDate),
       due_time: formatTime(dueTime),
-      category: selectedCategory?.value || parseInt(params.category_id as string),
+      category:
+        selectedCategory?.value || parseInt(params.category_id as string),
       affect_all_recurring: affectAllRecurring,
     };
+    console.log(dataToSave);
 
     updateTaskMutation.mutate({
       taskId: id,
@@ -196,10 +211,12 @@ const EditPlan = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Task Details Section */}
         <View style={styles.sectionContainer}>
-
           <AnimatedRoundTextInput
             placeholderTextColor={themeColors.textSecondary}
             label="Title"
@@ -216,7 +233,6 @@ const EditPlan = () => {
 
         {/* Time Details Section */}
         <View style={styles.sectionContainer}>
-
           <DateSelector
             onDateChange={(selectedDate: string) => {
               const newDate = new Date(selectedDate);
@@ -247,13 +263,14 @@ const EditPlan = () => {
 
         {/* Other Details Section */}
         <View style={styles.sectionContainer}>
-   
           <CustomPicker
             label="Category"
             options={categoriesData?.map((cat) => cat.label) || []}
             selectedValue={selectedCategory?.label || undefined}
             onValueChange={(value) =>
-              setSelectedCategory(categoriesData?.find((cat) => cat.label === value) || null)
+              setSelectedCategory(
+                categoriesData?.find((cat) => cat.label === value) || null
+              )
             }
           />
           <View style={styles.toggleContainer}>
@@ -262,13 +279,20 @@ const EditPlan = () => {
               value={affectAllRecurring}
               onValueChange={setAffectAllRecurring}
               trackColor={{ false: "#767577", true: themeColors.tint }}
-              thumbColor={affectAllRecurring ? themeColors.background : "#f4f3f4"}
+              thumbColor={
+                affectAllRecurring ? themeColors.background : "#f4f3f4"
+              }
             />
           </View>
         </View>
 
         {/* Save and Delete Buttons */}
-        <View style={[styles.buttonContainer, { flexDirection: "row", justifyContent: "space-between" }]}>
+        <View
+          style={[
+            styles.buttonContainer,
+            { flexDirection: "row", justifyContent: "space-between" },
+          ]}
+        >
           <GameButton
             onPress={handleSaveTime}
             title="Save"

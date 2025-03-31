@@ -6,7 +6,6 @@ import {
   useColorScheme,
   TouchableOpacity,
   ActivityIndicator,
-  Platform,
 } from "react-native";
 import moment from "moment";
 import SearchBar from "../../../components/SearchBar2";
@@ -21,17 +20,19 @@ import CommunityList from "../../../components/CommunityList";
 import GlobalCommunityList from "../../../components/GlobalCommunityList";
 import { Skeleton } from "moti/skeleton";
 import { useWebSocket } from "../../../webSocketProvider";
-import { getCommunityDetails, searchCommunities } from "../../../CommunityApiCalls";
+import {
+  getCommunityDetails,
+  searchCommunities,
+} from "../../../CommunityApiCalls";
 
 const CommunityScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [myCommunities, setMyCommunities] = useState<Community[]>([]);
   const [globalCommunities, setGlobalCommunities] = useState<Community[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isFetching, setIsFetching] = useState(false);
+  const [isFetchingInitial, setIsFetchingInitial] = useState(true); // Only for initial load without cache
+  const [isFetching, setIsFetching] = useState(false); // For search/global fetch
   const [lastMessages, setLastMessages] = useState<Record<string, any>>({});
-  const [initialLoad, setInitialLoad] = useState(true);
   const { userToken } = useAuth();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -46,6 +47,8 @@ const CommunityScreen: React.FC = () => {
     subscribeToExistingUserCommunities,
     fetchAndCacheCommunities,
     markMessageAsRead,
+    sqliteGetItem,
+    sqliteSetItem,
   } = useWebSocket() || {
     isConnected: false,
     socket: null,
@@ -53,10 +56,16 @@ const CommunityScreen: React.FC = () => {
     unsubscribeFromCommunity: () => {},
     subscribeToExistingUserCommunities: () => Promise.resolve(),
     fetchAndCacheCommunities: () => Promise.resolve(),
+    markMessageAsRead: () => {},
+    sqliteGetItem: () => Promise.resolve(null),
+    sqliteSetItem: () => Promise.resolve(),
   };
 
   // Utility function for mapping communities
-  const mapCommunities = (communities: Community[], lastMessages: Record<string, any>) => {
+  const mapCommunities = (
+    communities: Community[],
+    lastMessages: Record<string, any>
+  ) => {
     return communities
       .map((community) => ({
         ...community,
@@ -68,13 +77,10 @@ const CommunityScreen: React.FC = () => {
       );
   };
 
-  // SQLite utility functions from WebSocketProvider context (assumed available via useWebSocket)
-  const { sqliteGetItem, sqliteSetItem } = useWebSocket();
-
-  // Load cached user communities when the screen mounts or when token changes
+  // Load cached data on initial mount
   useEffect(() => {
     const loadCachedData = async () => {
-      if (!sqliteGetItem) return; // Guard against undefined SQLite utilities
+      if (!sqliteGetItem) return;
       try {
         const cachedCommunities = await sqliteGetItem("communities");
         if (cachedCommunities) {
@@ -82,37 +88,102 @@ const CommunityScreen: React.FC = () => {
           setMyCommunities(parsedCommunities);
           const messages = await Promise.all(
             parsedCommunities.map(async (community: Community) => {
-              const message = await sqliteGetItem(`last_message_${community.id}`);
-              const parsedMessage = message ? JSON.parse(message) : null;
-              console.log(
-                `Status of last message in community ${community.id}: ${
-                  parsedMessage?.status || "no message"
-                }`
+              const message = await sqliteGetItem(
+                `last_message_${community.id}`
               );
+              const parsedMessage = message ? JSON.parse(message) : null;
               return [community.id, parsedMessage];
             })
           );
           setLastMessages(Object.fromEntries(messages));
-
-          // Ensure only messages with status other than 'read' show the indicator
-          const unreadIndicatorStatus = Object.fromEntries(
-            messages.map(([id, message]) => [id, message?.status !== "read"])
-          );
-          console.log("Unread status:", unreadIndicatorStatus);
         }
-        setLoading(false);
-        setInitialLoad(false);
       } catch (error) {
         console.error("Error loading cached communities:", error);
-        setErrorMessage("Failed to load communities");
-        setLoading(false);
-        setInitialLoad(false);
+        setErrorMessage("Failed to load cached communities");
+      } finally {
+        setIsFetchingInitial(false); // Done with initial load attempt
       }
     };
     loadCachedData();
-  }, [userToken, sqliteGetItem]);
+  }, [sqliteGetItem]);
 
-  // Fetch global communities only when search query has at least 3 characters
+  // Fetch communities silently when the screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      const fetchCommunitiesOnFocus = async () => {
+        if (!userToken?.token || !isConnected) return;
+
+        try {
+          // Fetch and cache communities silently in the background
+          await fetchAndCacheCommunities();
+          await subscribeToExistingUserCommunities();
+
+          // Update state with fresh data from cache
+          const cachedCommunities = await sqliteGetItem("communities");
+          if (cachedCommunities) {
+            const parsedCommunities = JSON.parse(cachedCommunities);
+            setMyCommunities((prev) => {
+              // Only update if there’s a difference to avoid unnecessary re-renders
+              if (JSON.stringify(prev) !== JSON.stringify(parsedCommunities)) {
+                return parsedCommunities;
+              }
+              return prev;
+            });
+
+            const messages = await Promise.all(
+              parsedCommunities.map(async (community: Community) => {
+                const message = await sqliteGetItem(
+                  `last_message_${community.id}`
+                );
+                const parsedMessage = message ? JSON.parse(message) : null;
+                return [community.id, parsedMessage];
+              })
+            );
+            setLastMessages((prev) => {
+              const newMessages = Object.fromEntries(messages);
+              if (JSON.stringify(prev) !== JSON.stringify(newMessages)) {
+                return newMessages;
+              }
+              return prev;
+            });
+          }
+
+          // Handle new community from params (if any)
+          const newCommunityParam = params.newCommunity;
+          if (newCommunityParam) {
+            let newCommunity: Community;
+            if (Array.isArray(newCommunityParam)) {
+              newCommunity = JSON.parse(newCommunityParam[0]) as Community;
+            } else {
+              newCommunity = JSON.parse(newCommunityParam) as Community;
+            }
+            setMyCommunities((prev) =>
+              prev.some((c) => c.id === newCommunity.id)
+                ? prev
+                : [...prev, newCommunity]
+            );
+            router.setParams({ newCommunity: undefined });
+          }
+
+          setErrorMessage(null);
+        } catch (error) {
+          console.error("Error fetching communities:", error);
+          setErrorMessage("Failed to fetch communities");
+        }
+      };
+
+      fetchCommunitiesOnFocus();
+    }, [
+      userToken,
+      isConnected,
+      fetchAndCacheCommunities,
+      subscribeToExistingUserCommunities,
+      sqliteGetItem,
+      params.newCommunity,
+    ])
+  );
+
+  // Fetch global communities for search
   useEffect(() => {
     const searchForCommunities = async () => {
       if (searchQuery.length >= 3 && userToken?.token) {
@@ -136,62 +207,16 @@ const CommunityScreen: React.FC = () => {
     searchForCommunities();
   }, [searchQuery, userToken]);
 
-  // Use WebSocket for real-time subscriptions
-  useFocusEffect(
-    useCallback(() => {
-      const handleNewCommunity = async () => {
-        const newCommunityParam = params.newCommunity; // string | string[] | undefined
-        let newCommunity: Community | undefined;
-
-        if (newCommunityParam) {
-          if (Array.isArray(newCommunityParam)) {
-            newCommunity = JSON.parse(newCommunityParam[0]) as Community;
-          } else {
-            newCommunity = JSON.parse(newCommunityParam) as Community;
-          }
-
-          if (newCommunity) {
-            setMyCommunities((prev) => {
-              if (!prev.some((c) => c.id === newCommunity!.id)) {
-                return [...prev, newCommunity!];
-              }
-              return prev;
-            });
-            router.setParams({ newCommunity: undefined });
-          }
-        }
-
-        if (isConnected) {
-          await subscribeToExistingUserCommunities();
-          await fetchAndCacheCommunities(); // Ensure cache is up-to-date
-        }
-      };
-      handleNewCommunity();
-    }, [params.newCommunity, isConnected, subscribeToExistingUserCommunities, fetchAndCacheCommunities])
-  );
-
-  const handleJoinViaLink = useCallback(async (communityId) => {
-    const communityDetails = await getCommunityDetails(communityId, userToken?.token);
-    setMyCommunities((prev) => {
-      if (!prev.some((c) => c.id === communityId)) {
-        return [...prev, communityDetails];
-      }
-      return prev;
-    });
-  }, [userToken]);
-  
-  // Listen to WebSocket messages for updating last messages
+  // WebSocket message listener
   useEffect(() => {
     const onMessage = async (event: MessageEvent) => {
-      if (!sqliteSetItem) return; // Guard against undefined SQLite utilities
+      if (!sqliteSetItem) return;
       try {
         const data = JSON.parse(event.data);
 
         if (data.type === "join_success") {
           await handleJoinViaLink(data.community_id);
         }
-      
-  
 
         if (data.type === "message") {
           const newMessage = {
@@ -203,11 +228,6 @@ const CommunityScreen: React.FC = () => {
             ...prevState,
             [data.community_id]: newMessage,
           }));
-
-          console.log(
-            `Status of last message in community ${data.community_id}: ${newMessage.status}`
-          );
-          // Cache the new message status
           await sqliteSetItem(
             `last_message_${data.community_id}`,
             JSON.stringify(newMessage)
@@ -220,9 +240,6 @@ const CommunityScreen: React.FC = () => {
               status: data.status,
             },
           }));
-
-          console.log(`Status of message ${data.message_id}: ${data.status}`);
-          // Update cache with new status
           const cachedMessage = lastMessages[data.message_id];
           if (cachedMessage) {
             await sqliteSetItem(
@@ -250,23 +267,34 @@ const CommunityScreen: React.FC = () => {
     };
   }, [isConnected, socket, lastMessages, sqliteSetItem]);
 
+  const handleJoinViaLink = useCallback(
+    async (communityId) => {
+      const communityDetails = await getCommunityDetails(
+        communityId,
+        userToken?.token
+      );
+      setMyCommunities((prev) =>
+        prev.some((c) => c.id === communityId)
+          ? prev
+          : [...prev, communityDetails]
+      );
+    },
+    [userToken]
+  );
+
   const handleNavigateCreateCommunity = useCallback(() => {
     router.navigate("CreateCommunity");
   }, []);
 
   const getLastMessage = useCallback(
-    (communityId: string) => {
-      return lastMessages[communityId] || null;
-    },
+    (communityId: string) => lastMessages[communityId] || null,
     [lastMessages]
   );
 
-  // Sorting logic for user communities based on the last message's timestamp
   const sortedMyCommunities = useMemo(() => {
     return mapCommunities(myCommunities, lastMessages);
   }, [myCommunities, lastMessages]);
 
-  // Combine and filter communities for search
   const filteredCommunities = useMemo(() => {
     if (searchQuery.length < 3)
       return { user: sortedMyCommunities, global: [] };
@@ -291,13 +319,10 @@ const CommunityScreen: React.FC = () => {
 
   const handleCommunityPress = useCallback(
     async (community: Community) => {
-      console.log("Community pressed 1:", community.id);
-
       try {
         const isUserCommunity = myCommunities.some(
           (c) => c.id === community.id
         );
-
         if (!isUserCommunity && isConnected) {
           await joinAndSubscribeToCommunity(community.id);
           setMyCommunities((prev) => [...prev, community]);
@@ -305,19 +330,14 @@ const CommunityScreen: React.FC = () => {
         }
 
         const lastMessage = getLastMessage(community.id);
-
         if (lastMessage && lastMessage.status !== "read") {
           markMessageAsRead(community.id);
           setLastMessages((prevState) => ({
             ...prevState,
-            [community.id]: {
-              ...prevState[community.id],
-              status: "read",
-            },
+            [community.id]: { ...prevState[community.id], status: "read" },
           }));
         }
 
-        console.log("Community pressed:", community.id);
         router.navigate({
           pathname: "ChatScreen",
           params: {
@@ -352,7 +372,7 @@ const CommunityScreen: React.FC = () => {
     },
     listContainer: {
       flex: 1,
-      paddingTop: 10,
+      paddingTop: 15,
     },
     addButton: {
       position: "absolute",
@@ -395,7 +415,8 @@ const CommunityScreen: React.FC = () => {
         <SearchBar onSearch={handleSearch} />
       </View>
 
-      {initialLoad || loading ? (
+      {isFetchingInitial && myCommunities.length === 0 ? (
+        // Show skeleton only if there's no cached data on initial load
         Array.from({ length: 6 }).map((_, index) => (
           <View key={`skeleton-${index}`} style={styles.skeletonItem}>
             <Skeleton

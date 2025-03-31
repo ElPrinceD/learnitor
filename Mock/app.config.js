@@ -37,6 +37,7 @@ export default {
         backgroundColor: "#ffffff",
       },
       package: "com.cradle.learnitor",
+      // softwareKeyboardLayoutMode: "pan"
       // googleServicesFile: process.env.GOOGLE_SERVICES_JSON
     },
     web: {

@@ -1,12 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, Tabs } from "expo-router";
-import {
-  Pressable,
-  Text,
-  StyleSheet,
-  View,
-  Animated,
-} from "react-native";
+import { Pressable, Text, StyleSheet, View, Animated } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import Colors from "../../constants/Colors";
 import { useColorScheme } from "../../components/useColorScheme";
@@ -96,6 +90,7 @@ export default function TabLayout() {
     <SafeAreaProvider>
       <Tabs
         screenOptions={{
+          tabBarHideOnKeyboard: true,
           tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
           tabBarLabelStyle: { fontSize: 13 },
           tabBarStyle: {
@@ -179,7 +174,9 @@ export default function TabLayout() {
                       { backgroundColor: Colors[colorScheme ?? "light"].tint },
                     ]}
                   >
-                    <Text style={styles.badgeText}>{unreadCommunitiesCount}</Text>
+                    <Text style={styles.badgeText}>
+                      {unreadCommunitiesCount}
+                    </Text>
                   </View>
                 )}
               </View>
@@ -194,7 +191,11 @@ export default function TabLayout() {
           options={{
             title: "To Do",
             tabBarIcon: ({ color, focused }) => (
-              <TabBarIcon name="calendar-clock" color={color} focused={focused} />
+              <TabBarIcon
+                name="calendar-clock"
+                color={color}
+                focused={focused}
+              />
             ),
             headerShadowVisible: false,
             headerShown: false,
