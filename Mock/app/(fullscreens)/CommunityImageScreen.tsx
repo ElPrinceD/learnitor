@@ -1,5 +1,3 @@
-// File: CommunityImagesScreen.tsx
-
 import React from "react";
 import {
   View,
@@ -7,32 +5,29 @@ import {
   TouchableOpacity,
   StyleSheet,
   useColorScheme,
-  Modal,
   Text,
 } from "react-native";
 import { useRoute } from "@react-navigation/native";
 import Colors from "../../constants/Colors";
-import { rMS, rS, rV, SIZES } from "../../constants";
-import ImageView from "react-native-image-viewing";
-import AppImage from "../../components/AppImage"; // Import your custom AppImage component
+import { rMS, rS, rV } from "../../constants";
+import AppImage from "../../components/AppImage"; // Adjust the path as needed
+import FullScreenImageViewer from "../../components/FullScreenImageViewer";
 
 type RouteParams = {
   id: string;
-  images?: string[] | string; 
+  images?: string[] | string;
 };
 
 const CommunityImagesScreen: React.FC = () => {
   const route = useRoute();
   const { id, images } = route.params as RouteParams;
 
-  // Convert images to an array if it's a comma-separated string:
+  // Convert images to an array if it's a comma-separated string
   let imagesToRender: string[] = [];
 
   if (typeof images === "string") {
-    // We have a single string with comma-separated URLs
     imagesToRender = images.split(",").map((url) => url.trim());
   } else if (Array.isArray(images)) {
-    // We already have an array of strings
     imagesToRender = images;
   }
 
@@ -42,7 +37,7 @@ const CommunityImagesScreen: React.FC = () => {
   const [visible, setIsVisible] = React.useState(false);
   const [currentImageIndex, setCurrentImageIndex] = React.useState(0);
 
-  const renderItem = ({ item, index }) => (
+  const renderItem = ({ item, index }: { item: string; index: number }) => (
     <TouchableOpacity
       onPress={() => {
         setCurrentImageIndex(index);
@@ -72,27 +67,15 @@ const CommunityImagesScreen: React.FC = () => {
         numColumns={3}
         contentContainerStyle={styles.listContainer}
       />
-
-      {/* Full-Screen Viewer */}
-      <Modal
+      <FullScreenImageViewer
         visible={visible}
-        transparent={true}
+        images={imagesToRender}
+        currentIndex={currentImageIndex}
         onRequestClose={() => setIsVisible(false)}
-      >
-        <ImageView
-          images={imagesToRender.map((uri) => ({ uri }))}
-          imageIndex={currentImageIndex}
-          visible={visible}
-          onRequestClose={() => setIsVisible(false)}
-          swipeToCloseEnabled={true}
-          doubleTapToZoomEnabled={true}
-        />
-      </Modal>
+      />
     </View>
   );
 };
-
-export default CommunityImagesScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -104,7 +87,9 @@ const styles = StyleSheet.create({
   image: {
     width: rV(100),
     height: rV(100),
-    margin: rS(5),
+    margin: rS(1),
     borderRadius: rMS(5),
   },
 });
+
+export default CommunityImagesScreen;

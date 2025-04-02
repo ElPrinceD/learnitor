@@ -92,7 +92,7 @@ const CommunityDetailScreen: React.FC = () => {
 
       if (!userToken?.token) throw new Error("User not authenticated.");
 
-      // Fetch fresh data from API
+      // Fetch fresh data from APe
       const data = await getCommunityDetails(id, userToken.token);
       setCommunity(data);
       await setCachedData(`community_${id}`, data); // Save to SQLite for future use
@@ -219,33 +219,21 @@ const CommunityDetailScreen: React.FC = () => {
           </View>
           <Ionicons name="chevron-forward-outline" size={24} color={themeColors.text} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.sectionItem}>
-          <Ionicons name="download-outline" size={24} color={themeColors.text} style={styles.icon} />
-          <View style={styles.sectionTextContainer}>
-            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Save to Photos</Text>
-            <Text style={[styles.sectionValue, { color: themeColors.textSecondary }]}>Default</Text>
+        
+        {/* Render "Lock chat" option only if user is leader */}
+        {isUserLeader && (
+          <View style={styles.sectionItem}>
+            <Ionicons name="lock-closed-outline" size={24} color={themeColors.text} style={styles.icon} />
+            <View style={styles.sectionTextContainer}>
+              <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Lock chat</Text>
+            </View>
+            <Switch
+              value={isMuted}
+              onValueChange={() => setIsMuted(prev => !prev)}
+              trackColor={{ true: themeColors.tint, false: "#999" }}
+            />
           </View>
-          <Ionicons name="chevron-forward-outline" size={24} color={themeColors.text} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.sectionItem}>
-          <Ionicons name="timer-outline" size={24} color={themeColors.text} style={styles.icon} />
-          <View style={styles.sectionTextContainer}>
-            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Disappearing messages</Text>
-            <Text style={[styles.sectionValue, { color: themeColors.textSecondary }]}>Off</Text>
-          </View>
-          <Ionicons name="chevron-forward-outline" size={24} color={themeColors.text} />
-        </TouchableOpacity>
-        <View style={styles.sectionItem}>
-          <Ionicons name="lock-closed-outline" size={24} color={themeColors.text} style={styles.icon} />
-          <View style={styles.sectionTextContainer}>
-            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Lock chat</Text>
-          </View>
-          <Switch
-            value={isMuted}
-            onValueChange={() => setIsMuted(prev => !prev)}
-            trackColor={{ true: themeColors.tint, false: "#999" }}
-          />
-        </View>
+        )}
         <TouchableOpacity style={styles.sectionItem}>
           <Ionicons name="lock-closed" size={24} color={themeColors.text} style={styles.icon} />
           <View style={styles.sectionTextContainer}>
@@ -254,7 +242,6 @@ const CommunityDetailScreen: React.FC = () => {
               Messages and calls are end-to-end encrypted.
             </Text>
           </View>
-          <Ionicons name="chevron-forward-outline" size={24} color={themeColors.text} />
         </TouchableOpacity>
       </View>
 
@@ -318,12 +305,15 @@ const CommunityDetailScreen: React.FC = () => {
         <Text style={styles.unfollowButtonText}>Unfollow channel</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.reportButton}
-        onPress={() => Alert.alert("Report", "Report channel functionality.")}
-      >
-        <Text style={styles.reportButtonText}>Delete channel</Text>
-      </TouchableOpacity>
+      {/* Render "Delete channel" option only if user is leader */}
+      {isUserLeader && (
+        <TouchableOpacity
+          style={styles.reportButton}
+          onPress={() => Alert.alert("Report", "Report channel functionality.")}
+        >
+          <Text style={styles.reportButtonText}>Delete channel</Text>
+        </TouchableOpacity>
+      )}
     </>
   ), [community, isUserLeader, themeColors, timetable, handleTimetableItemPress, confirmLeaveCommunity]);
 

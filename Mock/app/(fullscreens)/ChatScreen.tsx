@@ -25,7 +25,6 @@ import * as Clipboard from "expo-clipboard";
 import { useFocusEffect, useRoute } from "@react-navigation/native";
 import axios from "axios";
 import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
-import ImageView from "react-native-image-viewing";
 import { useAuth } from "../../components/AuthContext";
 import { Message } from "../../components/types";
 import {
@@ -50,6 +49,7 @@ import { router } from "expo-router";
 import AppImage from "../../components/AppImage";
 import * as MediaLibrary from "expo-media-library";
 import * as FileSystem from "expo-file-system";
+import FullScreenImageViewer from "../../components/FullScreenImageViewer";
 
 const CommunityChatScreen: React.FC = () => {
   const route = useRoute();
@@ -83,17 +83,13 @@ const CommunityChatScreen: React.FC = () => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const insets = useSafeAreaInsets();
-  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
   const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
-  const [imageViewerImages, setImageViewerImages] = useState<{ uri: string }[]>(
-    []
-  );
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [imageViewerImages, setImageViewerImages] = useState<string[]>([]);
   const [isVideoViewerVisible, setIsVideoViewerVisible] = useState(false);
   const [isDocumentViewerVisible, setIsDocumentViewerVisible] = useState(false);
   const [editingMessage, setEditingMessage] = useState<IMessage | null>(null);
-  const [profileImages, setProfileImages] = useState<Record<string, string>>(
-    {}
-  );
+  const [profileImages, setProfileImages] = useState<Record<string, string>>({});
 
   const normalizeMessage = (data) => {
     if ("message" in data && "sent_at" in data) {
@@ -162,6 +158,11 @@ const CommunityChatScreen: React.FC = () => {
           .filter((msg): msg is IMessage => msg !== null)
           .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
         setMessages(validMessages);
+        // Update imageViewerImages with images from cached messages
+        const imageUris = validMessages
+          .filter((msg) => msg.image)
+          .map((msg) => msg.image);
+        setImageViewerImages(imageUris);
       }
 
       if (isConnected) {
@@ -208,6 +209,11 @@ const CommunityChatScreen: React.FC = () => {
                 `messages_${communityId}`,
                 JSON.stringify(updatedMessages)
               );
+              // Update imageViewerImages with all images from messages
+              const imageUris = updatedMessages
+                .filter((msg) => msg.image)
+                .map((msg) => msg.image);
+              setImageViewerImages(imageUris);
               return updatedMessages;
             });
           } else if (
@@ -220,22 +226,23 @@ const CommunityChatScreen: React.FC = () => {
                 const index = prevMessages.findIndex(
                   (m) => m.tempId && m.tempId === data.temp_id
                 );
+                let updatedMessages;
                 if (index !== -1) {
-                  const updatedMessages = [...prevMessages];
+                  updatedMessages = [...prevMessages];
                   updatedMessages[index] = { ...newMessage, tempId: undefined };
-                  sqliteSetItem(
-                    `messages_${communityId}`,
-                    JSON.stringify(updatedMessages)
-                  );
-                  return updatedMessages;
                 } else {
-                  const updatedMessages = [newMessage, ...prevMessages];
-                  sqliteSetItem(
-                    `messages_${communityId}`,
-                    JSON.stringify(updatedMessages)
-                  );
-                  return updatedMessages;
+                  updatedMessages = [newMessage, ...prevMessages];
                 }
+                sqliteSetItem(
+                  `messages_${communityId}`,
+                  JSON.stringify(updatedMessages)
+                );
+                // Update imageViewerImages with all images
+                const imageUris = updatedMessages
+                  .filter((msg) => msg.image)
+                  .map((msg) => msg.image);
+                setImageViewerImages(imageUris);
+                return updatedMessages;
               });
             }
           } else if (data.type === "message_delete") {
@@ -247,6 +254,11 @@ const CommunityChatScreen: React.FC = () => {
                 `messages_${communityId}`,
                 JSON.stringify(updatedMessages)
               );
+              // Update imageViewerImages after deletion
+              const imageUris = updatedMessages
+                .filter((msg) => msg.image)
+                .map((msg) => msg.image);
+              setImageViewerImages(imageUris);
               return updatedMessages;
             });
           } else if (data.type === "message_edit") {
@@ -260,6 +272,7 @@ const CommunityChatScreen: React.FC = () => {
                 `messages_${communityId}`,
                 JSON.stringify(updatedMessages)
               );
+              // No need to update imageViewerImages since edit doesn't affect images
               return updatedMessages;
             });
           }
@@ -361,6 +374,10 @@ const CommunityChatScreen: React.FC = () => {
       if (!messageIds.has(tempId)) {
         setMessages((prevMessages) => [message, ...prevMessages]);
         setMessageIds(new Set([...messageIds, tempId]));
+        // Update imageViewerImages when a new image is sent
+        if (type === "image") {
+          setImageViewerImages((prev) => [fileUri, ...prev]);
+        }
       }
 
       if (!isConnected) {
@@ -376,7 +393,7 @@ const CommunityChatScreen: React.FC = () => {
         await sqliteSetItem(
           `messages_${communityId}`,
           JSON.stringify([message, ...messages])
-        ); // Persist to message cache
+        );
         const allKeysRaw = await sqliteGetItem("storage_keys") || "[]";
         let keys = [];
         try {
@@ -439,6 +456,10 @@ const CommunityChatScreen: React.FC = () => {
         if (!messageIds.has(tempId)) {
           setMessages((prevMessages) => [tempMessage, ...prevMessages]);
           setMessageIds(new Set([...messageIds, tempId]));
+          // Update imageViewerImages if the message includes an image
+          if (tempMessage.image) {
+            setImageViewerImages((prev) => [tempMessage.image, ...prev]);
+          }
         }
 
         if (!isConnected) {
@@ -455,7 +476,7 @@ const CommunityChatScreen: React.FC = () => {
           await sqliteSetItem(
             `messages_${communityId}`,
             JSON.stringify([tempMessage, ...messages])
-          ); // Persist to message cache
+          );
           const allKeysRaw = await sqliteGetItem("storage_keys") || "[]";
           let keys = [];
           try {
@@ -506,10 +527,8 @@ const CommunityChatScreen: React.FC = () => {
       const blob = await file.blob();
       const reader = new FileReader();
       reader.onloadend = async () => {
-        const base64data = reader.result;
-        const imageBase64 = `data:${blob.type};base64,${
-          base64data.split(",")[1]
-        }`;
+        const base64data = reader.result as string;
+        const imageBase64 = `data:${blob.type};base64,${base64data.split(",")[1]}`;
         await sendMediaMessage(imageBase64, "image");
       };
       reader.readAsDataURL(blob);
@@ -523,10 +542,6 @@ const CommunityChatScreen: React.FC = () => {
       console.error("Document picker error:", error);
     }
   };
-
-  const handleForwardSelected = useCallback(() => {
-    // TODO: Implement forwarding logic
-  }, [selectedMessages]);
 
   const handleCopySelected = useCallback(async () => {
     let textToCopy = selectedMessages.map((msg) => msg.text).join("\n\n");
@@ -1020,58 +1035,34 @@ const CommunityChatScreen: React.FC = () => {
     [profileImages, user?.profile_picture]
   );
 
-  const renderMessageImage = useCallback(
-    (props) => {
-      const currentImageUri = props.currentMessage.image;
-      const imageList = messages
-        .filter((msg) => msg.image)
-        .map((msg) => ({ uri: msg.image }));
+  const openImageViewer = useCallback(
+    (uri: string) => {
+      const index = imageViewerImages.findIndex((img) => img === uri);
+      if (index >= 0) {
+        setCurrentImageIndex(index);
+        setIsImageViewerVisible(true);
+      } else {
+        console.warn("Image not found in imageViewerImages:", uri);
+      }
+    },
+    [imageViewerImages]
+  );
 
+  const renderMessageImage = useCallback(
+    (props: any) => {
       return (
         <TouchableOpacity
-          key={props.currentMessage._id}
-          onPress={() => {
-            setImageViewerImages(imageList);
-            setSelectedImageUri(currentImageUri);
-            setTimeout(() => setIsImageViewerVisible(true), 0);
-          }}
-          style={styles.messageImageContainer}
+          onPress={() => openImageViewer(props.currentMessage.image)}
         >
-          <AppImage uri={currentImageUri} style={styles.whatsappImage} />
+          <AppImage
+            uri={props.currentMessage.image}
+            style={{ width: rS(200), height: rV(200), borderRadius: rMS(10) }}
+          />
         </TouchableOpacity>
       );
     },
-    [messages]
+    [openImageViewer]
   );
-
-  const renderImageViewer = useCallback(() => {
-    const currentIndex = imageViewerImages.findIndex(
-      (img) => img.uri === selectedImageUri
-    );
-    return (
-      <ImageView
-        images={imageViewerImages}
-        imageIndex={currentIndex >= 0 ? currentIndex : 0}
-        visible={isImageViewerVisible}
-        onRequestClose={() => {
-          setIsImageViewerVisible(false);
-          setSelectedImageUri(null);
-        }}
-        swipeToCloseEnabled={true}
-        doubleTapToZoomEnabled={true}
-        FooterComponent={({ imageIndex }) => (
-          <TouchableOpacity
-            style={styles.downloadButton}
-            onPress={() =>
-              saveImageToCameraRoll(imageViewerImages[imageIndex].uri)
-            }
-          >
-            <Ionicons name="download-outline" size={24} color="#fff" />
-          </TouchableOpacity>
-        )}
-      />
-    );
-  }, [imageViewerImages, selectedImageUri, isImageViewerVisible]);
 
   const saveImageToCameraRoll = async (uri: string) => {
     try {
@@ -1135,7 +1126,7 @@ const CommunityChatScreen: React.FC = () => {
   };
 
   const onDocumentPress = (uri: string) => {
-    setSelectedImageUri(uri);
+    // Placeholder for document viewer logic if needed
     setIsDocumentViewerVisible(true);
   };
 
@@ -1559,7 +1550,6 @@ const CommunityChatScreen: React.FC = () => {
           renderSend={renderSend}
           renderInputToolbar={renderInputToolbar}
           renderMessageImage={renderMessageImage}
-
           renderDay={renderDay}
           minInputToolbarHeight={insets.bottom + rV(50)}
           scrollToBottom={true}
@@ -1567,7 +1557,12 @@ const CommunityChatScreen: React.FC = () => {
           inverted={true}
         />
       )}
-      {renderImageViewer()}
+      <FullScreenImageViewer
+        visible={isImageViewerVisible}
+        images={imageViewerImages}
+        currentIndex={currentImageIndex}
+        onRequestClose={() => setIsImageViewerVisible(false)}
+      />
     </View>
   );
 };
