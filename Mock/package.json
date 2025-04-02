@@ -75,6 +75,7 @@
     "expo-system-ui": "~4.0.7",
     "expo-updates": "~0.27.1",
     "expo-web-browser": "~14.0.2",
+    "lodash": "^4.17.21",
     "moti": "^0.29.0",
     "patch-package": "^8.0.0",
     "postinstall-postinstall": "^2.1.0",

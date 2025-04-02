@@ -299,17 +299,18 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
       console.log("Close event reason:", event?.reason);
       setIsConnected(false);
       if (reconnectAttempts > 3) {
-        console.warn("Connection lost. Trying to reconnect...");
+        reconnectWebSocket();
       }
     };
 
     ws.onerror = (error) => {
+      
       console.error("WebSocket error:", error);
       if (error.type === "error" && error.eventPhase === 1006) {
         console.warn("Network error detected. Attempting to reconnect...");
       }
       if (token) {
-        //reconnectWebSocket();
+        reconnectWebSocket();
       }
     };
 
@@ -360,16 +361,17 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
             const json = await sqliteGetItem(key);
             if (json) {
               const message = JSON.parse(json);
+              const content = message.content || {}; // Default to empty object if content is missing
               await sendMessage({
                 type: "send_message",
                 community_id: message.communityId,
-                message: message.content.text,
+                message: content.text || "", // Fallback to empty string if text is undefined
                 sender: message.user.name,
                 sender_id: message.user._id,
                 temp_id: message._id,
                 ...(message.replyTo && { reply_to: message.replyTo }),
-                image: message.content.image,
-                document: message.content.document,
+                image: content.image || undefined,
+                document: content.document || undefined,
               });
               await sqliteRemoveItem(key);
             }
@@ -380,7 +382,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
       };
       resendUnsentMessages();
     }
-  }, [isConnected, sendMessage]);
+  }, [isConnected, sendMessage, sqliteGetAllKeys, sqliteGetItem, sqliteRemoveItem]);
 
   const fetchInitialLastMessages = useCallback(async () => {
     if (!token || !isConnected) return;

@@ -98,7 +98,7 @@ const CommunityChatScreen: React.FC = () => {
   const normalizeMessage = (data) => {
     if ("message" in data && "sent_at" in data) {
       return {
-        _id: data.id,
+        _id: data.id || data.temp_id || Date.now().toString(),
         text: data.message,
         createdAt: new Date(data.sent_at),
         user: {
@@ -120,6 +120,7 @@ const CommunityChatScreen: React.FC = () => {
         image: data.image || null,
         document: data.document || null,
         isEdited: data.is_edited || false,
+        tempId: data.temp_id || undefined,
       };
     } else if ("_id" in data && "createdAt" in data) {
       return {
@@ -138,6 +139,7 @@ const CommunityChatScreen: React.FC = () => {
         image: data.image || null,
         document: data.document || null,
         isEdited: data.isEdited || false,
+        tempId: data.tempId || undefined,
       };
     } else {
       console.warn("Unknown message format received:", data);
@@ -196,7 +198,7 @@ const CommunityChatScreen: React.FC = () => {
 
             setMessages((prevMessages) => {
               const pendingMessages = prevMessages.filter(
-                (m) => m.status === "pending"
+                (m) => m.status === "pending" || m.tempId
               );
               const updatedMessages = [
                 ...pendingMessages,
@@ -220,7 +222,7 @@ const CommunityChatScreen: React.FC = () => {
                 );
                 if (index !== -1) {
                   const updatedMessages = [...prevMessages];
-                  updatedMessages[index] = newMessage;
+                  updatedMessages[index] = { ...newMessage, tempId: undefined };
                   sqliteSetItem(
                     `messages_${communityId}`,
                     JSON.stringify(updatedMessages)
@@ -296,8 +298,18 @@ const CommunityChatScreen: React.FC = () => {
     if (isConnected) {
       const sendUnsentMessages = async () => {
         try {
-          const allKeys = (await sqliteGetItem("storage_keys")) || "[]"; // Assuming a key to track all stored keys
-          const keys = JSON.parse(allKeys);
+          const allKeysRaw = (await sqliteGetItem("storage_keys")) || "[]";
+          let keys = [];
+          try {
+            keys = JSON.parse(allKeysRaw);
+            if (!Array.isArray(keys)) {
+              console.warn("storage_keys is not an array, resetting:", allKeysRaw);
+              keys = [];
+            }
+          } catch (e) {
+            console.error("Failed to parse storage_keys in sendUnsent:", e, "Raw value:", allKeysRaw);
+            keys = [];
+          }
           const unsentKeys = keys.filter((key: string) =>
             key.startsWith("unsent_message_")
           );
@@ -308,13 +320,14 @@ const CommunityChatScreen: React.FC = () => {
               sendMessage({
                 type: "send_message",
                 community_id: message.communityId,
-                message: message.text || "",
+                message: message.content.text || "",
                 sender:
                   user?.first_name + " " + user?.last_name || "Unknown User",
                 sender_id: user?.id || 1,
                 temp_id: message.tempId,
-                image: message.image ? message.image : undefined,
-                document: message.document ? message.document : undefined,
+                image: message.content.image || undefined,
+                document: message.content.document || undefined,
+                ...(message.replyTo && { reply_to: message.replyTo }),
               });
               await sqliteSetItem(key, ""); // Clear the unsent message
               const updatedKeys = keys.filter((k: string) => k !== key);
@@ -331,8 +344,7 @@ const CommunityChatScreen: React.FC = () => {
 
   const sendMediaMessage = useCallback(
     async (fileUri: string, type: "image" | "document") => {
-      const tempId =
-        Date.now().toString() + Math.random().toString(36).substr(2, 5);
+      const tempId = Date.now().toString() + Math.random().toString(36).substr(2, 5);
       const message = {
         _id: tempId,
         tempId,
@@ -355,14 +367,28 @@ const CommunityChatScreen: React.FC = () => {
         const messageToStore = {
           ...message,
           communityId,
-          content: { [type]: fileUri },
+          content: {
+            text: "",
+            [type]: fileUri,
+          },
         };
+        await sqliteSetItem(`unsent_message_${tempId}`, JSON.stringify(messageToStore));
         await sqliteSetItem(
-          `unsent_message_${tempId}`,
-          JSON.stringify(messageToStore)
-        );
-        const allKeys = (await sqliteGetItem("storage_keys")) || "[]";
-        const keys = JSON.parse(allKeys);
+          `messages_${communityId}`,
+          JSON.stringify([message, ...messages])
+        ); // Persist to message cache
+        const allKeysRaw = await sqliteGetItem("storage_keys") || "[]";
+        let keys = [];
+        try {
+          keys = JSON.parse(allKeysRaw);
+          if (!Array.isArray(keys)) {
+            console.warn("storage_keys is not an array, resetting:", allKeysRaw);
+            keys = [];
+          }
+        } catch (e) {
+          console.error("Failed to parse storage_keys in sendMediaMessage:", e, "Raw value:", allKeysRaw);
+          keys = [];
+        }
         if (!keys.includes(`unsent_message_${tempId}`)) {
           keys.push(`unsent_message_${tempId}`);
           await sqliteSetItem("storage_keys", JSON.stringify(keys));
@@ -379,22 +405,13 @@ const CommunityChatScreen: React.FC = () => {
         });
       }
     },
-    [
-      communityId,
-      sendMessage,
-      user,
-      isConnected,
-      messageIds,
-      sqliteSetItem,
-      sqliteGetItem,
-    ]
+    [communityId, sendMessage, user, isConnected, messageIds, sqliteSetItem, sqliteGetItem, messages]
   );
 
   const onSend = useCallback(
-    (newMessages: IMessage[] = []) => {
+    async (newMessages: IMessage[] = []) => {
       for (let message of newMessages) {
-        const tempId =
-          Date.now().toString() + Math.random().toString(36).substr(2, 5);
+        const tempId = Date.now().toString() + Math.random().toString(36).substr(2, 5);
         const tempMessage: IMessage = {
           _id: tempId,
           tempId,
@@ -404,16 +421,16 @@ const CommunityChatScreen: React.FC = () => {
             _id: user?.id || 1,
             name: user?.first_name + " " + user?.last_name || "Unknown User",
           },
-          image:
-            mediaPreview.uri && mediaPreview.type === "image"
-              ? mediaPreview.uri
-              : undefined,
-          document:
-            mediaPreview.uri && mediaPreview.type === "document"
-              ? mediaPreview.uri
-              : undefined,
+          image: mediaPreview.uri && mediaPreview.type === "image" ? mediaPreview.uri : undefined,
+          document: mediaPreview.uri && mediaPreview.type === "document" ? mediaPreview.uri : undefined,
           status: isConnected ? "sending" : "pending",
-          ...(replyToMessage && { replyTo: replyToMessage._id }),
+          ...(replyToMessage && {
+            replyTo: {
+              _id: replyToMessage._id,
+              text: replyToMessage.text || (replyToMessage.image ? "Photo" : replyToMessage.document ? "Document" : ""),
+              user: replyToMessage.user,
+            },
+          }),
         };
 
         setReplyToMessage(null);
@@ -428,16 +445,32 @@ const CommunityChatScreen: React.FC = () => {
           const messageToStore = {
             ...tempMessage,
             communityId,
+            content: {
+              text: tempMessage.text || "",
+              image: tempMessage.image || undefined,
+              document: tempMessage.document || undefined,
+            },
           };
-          sqliteSetItem(
-            `unsent_message_${tempId}`,
-            JSON.stringify(messageToStore)
-          );
-          const allKeys = sqliteGetItem("storage_keys") || "[]";
-          const keys = JSON.parse(allKeys);
+          await sqliteSetItem(`unsent_message_${tempId}`, JSON.stringify(messageToStore));
+          await sqliteSetItem(
+            `messages_${communityId}`,
+            JSON.stringify([tempMessage, ...messages])
+          ); // Persist to message cache
+          const allKeysRaw = await sqliteGetItem("storage_keys") || "[]";
+          let keys = [];
+          try {
+            keys = JSON.parse(allKeysRaw);
+            if (!Array.isArray(keys)) {
+              console.warn("storage_keys is not an array, resetting:", allKeysRaw);
+              keys = [];
+            }
+          } catch (e) {
+            console.error("Failed to parse storage_keys in onSend:", e, "Raw value:", allKeysRaw);
+            keys = [];
+          }
           if (!keys.includes(`unsent_message_${tempId}`)) {
             keys.push(`unsent_message_${tempId}`);
-            sqliteSetItem("storage_keys", JSON.stringify(keys));
+            await sqliteSetItem("storage_keys", JSON.stringify(keys));
           }
         } else {
           sendMessage({
@@ -458,17 +491,7 @@ const CommunityChatScreen: React.FC = () => {
         }
       }
     },
-    [
-      communityId,
-      sendMessage,
-      user,
-      replyToMessage,
-      isConnected,
-      mediaPreview,
-      messageIds,
-      sqliteSetItem,
-      sqliteGetItem,
-    ]
+    [communityId, sendMessage, user, replyToMessage, isConnected, mediaPreview, messageIds, sqliteSetItem, sqliteGetItem, messages]
   );
 
   const pickImage = async () => {
@@ -676,50 +699,52 @@ const CommunityChatScreen: React.FC = () => {
                   name="content-copy"
                   size={SIZES.large}
                   color={themeColors.text}
-                  style={{
-                    marginRight: SIZES.medium,
-                    fontSize: rMS(SIZES.large),
-                  }}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity onPressIn={handleDeselectAll}>
-                <Text
-                  style={{
-                    color: themeColors.text,
-                    fontSize: rMS(SIZES.large),
-                  }}
-                >
-                  {" "}
-                  Deselect ({selectedMessages.length})
-                </Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
-      ),
-      headerTitle: () => (
-        <TouchableOpacity
-          onPressIn={() =>
-            navigation.navigate("CommunityDetailScreen", { id: communityId })
-          }
-          style={{ flexDirection: "row", alignItems: "center" }}
-        >
-          <Text
-            style={{ color: themeColors.text, fontSize: rMS(SIZES.large) }}
-          ></Text>
-        </TouchableOpacity>
-      ),
-    });
-  }, [
-    selectedMessages,
-    navigation,
-    communityId,
-    themeColors,
-    handleCopySelected,
-    handleDeleteMessage,
-    handleEditMessage,
-    canEditDeleteOrReply,
-  ]);
+                    style={{
+                      marginRight: SIZES.medium,
+                      fontSize: rMS(SIZES.large),
+                    }}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity onPressIn={handleDeselectAll}>
+                  <Text
+                    style={{
+                      color: themeColors.text,
+                      fontSize: rMS(SIZES.large),
+                    }}
+                  >
+                    {" "}
+                    Deselect ({selectedMessages.length})
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        ),
+        headerTitle: () => (
+          <TouchableOpacity
+            onPressIn={() =>
+              navigation.navigate("CommunityDetailScreen", { id: communityId })
+            }
+            style={{ flexDirection: "row", alignItems: "center" }}
+          >
+            <Text
+              style={{ color: themeColors.text, fontSize: rMS(SIZES.large) }}
+            ></Text>
+          </TouchableOpacity>
+        ),
+      });
+    },
+    [
+      selectedMessages,
+      navigation,
+      communityId,
+      themeColors,
+      handleCopySelected,
+      handleDeleteMessage,
+      handleEditMessage,
+      canEditDeleteOrReply,
+    ]
+  );
 
   const handlePress = useCallback(
     (message: IMessage) => {
@@ -834,6 +859,8 @@ const CommunityChatScreen: React.FC = () => {
           <Bubble
             {...props}
             text={messageText}
+            onPress={() => handlePress(props.currentMessage)}
+            onLongPress={() => handleLongPress(props.currentMessage)}
             wrapperStyle={{
               ...props.wrapperStyle,
               ...(isSelected && styles.blurBackground),
@@ -892,7 +919,7 @@ const CommunityChatScreen: React.FC = () => {
                     <TouchableOpacity>
                       <View style={styles.replyContainer}>
                         <Text style={styles.replyName}>
-                          {`Replying to ${props.currentMessage.replyTo.user?.name}`}
+                          {`Replying to ${props.currentMessage.replyTo.user?.name || "Unknown User"}`}
                         </Text>
                         <View
                           style={{
@@ -1006,7 +1033,6 @@ const CommunityChatScreen: React.FC = () => {
           onPress={() => {
             setImageViewerImages(imageList);
             setSelectedImageUri(currentImageUri);
-            // Ensure state is set before opening the viewer
             setTimeout(() => setIsImageViewerVisible(true), 0);
           }}
           style={styles.messageImageContainer}
@@ -1015,23 +1041,21 @@ const CommunityChatScreen: React.FC = () => {
         </TouchableOpacity>
       );
     },
-    [messages] // Dependency on messages ensures the list updates
+    [messages]
   );
 
   const renderImageViewer = useCallback(() => {
     const currentIndex = imageViewerImages.findIndex(
       (img) => img.uri === selectedImageUri
     );
-    console.log("Selected URI:", selectedImageUri);
-    console.log("Current Index:", currentIndex);
     return (
       <ImageView
         images={imageViewerImages}
-        imageIndex={currentIndex >= 0 ? currentIndex : 3}
+        imageIndex={currentIndex >= 0 ? currentIndex : 0}
         visible={isImageViewerVisible}
         onRequestClose={() => {
           setIsImageViewerVisible(false);
-          setSelectedImageUri(null); // Reset to avoid stale data
+          setSelectedImageUri(null);
         }}
         swipeToCloseEnabled={true}
         doubleTapToZoomEnabled={true}
@@ -1068,33 +1092,6 @@ const CommunityChatScreen: React.FC = () => {
       ToastAndroid.show("Failed to save image", ToastAndroid.SHORT);
     }
   };
-
-  // const renderImageViewer = useCallback(() => {
-  //   const imageList = messages
-  //     .filter((msg) => msg.image)
-  //     .map((msg) => msg.image);
-  //   const initialIndex = imageList.indexOf(selectedImageUri);
-
-  //   return (
-  //     <Modal
-  //       visible={isImageViewerVisible}
-  //       transparent={true}
-  //       onRequestClose={() => setIsImageViewerVisible(false)}
-  //     >
-  //       <View style={styles.modalContainer}>
-  //         <Image
-  //           source={{ uri: imageList[initialIndex] }}
-  //           style={styles.fullScreenImage}
-  //         />
-  //         <TouchableOpacity
-  //           onPress={() => saveImageToCameraRoll(imageList[initialIndex])}
-  //         >
-  //           <Ionicons name="download-outline" size={24} color="#fff" />
-  //         </TouchableOpacity>
-  //       </View>
-  //     </Modal>
-  //   );
-  // }, [messages, selectedImageUri, isImageViewerVisible]);
 
   const renderDay = (props) => {
     const { currentMessage, previousMessage } = props;
@@ -1246,11 +1243,7 @@ const CommunityChatScreen: React.FC = () => {
               Replying to {replyToMessage.user?.name || "Unknown User"}
             </Text>
             <Text style={styles.replyText}>
-              {replyToMessage.image
-                ? "Photo"
-                : replyToMessage.document
-                ? "Document"
-                : replyToMessage.text}
+              {replyToMessage.text || (replyToMessage.image ? "Photo" : replyToMessage.document ? "Document" : "")}
             </Text>
             <TouchableOpacity
               onPress={() => setReplyToMessage(null)}
@@ -1319,14 +1312,6 @@ const CommunityChatScreen: React.FC = () => {
       alignItems: "center",
       justifyContent: "flex-end",
       marginRight: rS(5),
-    },
-    // timeText: {
-    //   fontSize: SIZES.xSmall,
-    //   color: themeColors.textSecondary,
-    //   marginRight: rS(5),
-    // },
-    statusIconContainer: {
-      flexDirection: "row",
     },
     messageImageContainer: {
       borderRadius: rMS(10),
@@ -1574,7 +1559,7 @@ const CommunityChatScreen: React.FC = () => {
           renderSend={renderSend}
           renderInputToolbar={renderInputToolbar}
           renderMessageImage={renderMessageImage}
-          renderMessageDocument={renderMessageDocument}
+
           renderDay={renderDay}
           minInputToolbarHeight={insets.bottom + rV(50)}
           scrollToBottom={true}
@@ -1583,39 +1568,6 @@ const CommunityChatScreen: React.FC = () => {
         />
       )}
       {renderImageViewer()}
-      {/* <Modal
-        visible={isVideoViewerVisible && selectedImageUri !== null}
-        transparent={true}
-        onRequestClose={() => setIsVideoViewerVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <TouchableOpacity onPress={() => setIsVideoViewerVisible(false)}>
-            {selectedImageUri && (
-              <Video
-                source={{ uri: selectedImageUri }}
-                style={styles.fullScreenVideo}
-                resizeMode="contain"
-                controls
-              />
-            )}
-          </TouchableOpacity>
-        </View>
-      </Modal>
-      <Modal
-        visible={isDocumentViewerVisible && selectedImageUri !== null}
-        transparent={true}
-        onRequestClose={() => setIsDocumentViewerVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <TouchableOpacity onPress={() => setIsDocumentViewerVisible(false)}>
-            {selectedImageUri && (
-              <Text style={styles.documentText}>
-                View Document: {selectedImageUri.split("/").pop()}
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </Modal> */}
     </View>
   );
 };
