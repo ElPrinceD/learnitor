@@ -30,9 +30,10 @@ const CommunityScreen: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [myCommunities, setMyCommunities] = useState<Community[]>([]);
   const [globalCommunities, setGlobalCommunities] = useState<Community[]>([]);
-  const [isFetchingInitial, setIsFetchingInitial] = useState(true); // Only for initial load without cache
-  const [isFetching, setIsFetching] = useState(false); // For search/global fetch
+  const [loading, setLoading] = useState(true);
+  const [isFetching, setIsFetching] = useState(false);
   const [lastMessages, setLastMessages] = useState<Record<string, any>>({});
+  const [initialLoad, setInitialLoad] = useState(true);
   const { userToken } = useAuth();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -56,9 +57,6 @@ const CommunityScreen: React.FC = () => {
     unsubscribeFromCommunity: () => {},
     subscribeToExistingUserCommunities: () => Promise.resolve(),
     fetchAndCacheCommunities: () => Promise.resolve(),
-    markMessageAsRead: () => {},
-    sqliteGetItem: () => Promise.resolve(null),
-    sqliteSetItem: () => Promise.resolve(),
   };
 
   // Utility function for mapping communities
@@ -101,9 +99,9 @@ const CommunityScreen: React.FC = () => {
         setInitialLoad(false);
       } catch (error) {
         console.error("Error loading cached communities:", error);
-        setErrorMessage("Failed to load cached communities");
-      } finally {
-        setIsFetchingInitial(false); // Done with initial load attempt
+        setErrorMessage("Failed to load communities");
+        setLoading(false);
+        setInitialLoad(false);
       }
     };
     loadCachedData();
@@ -255,21 +253,6 @@ const CommunityScreen: React.FC = () => {
     };
   }, [isConnected, socket, lastMessages, sqliteSetItem]);
 
-  const handleJoinViaLink = useCallback(
-    async (communityId) => {
-      const communityDetails = await getCommunityDetails(
-        communityId,
-        userToken?.token
-      );
-      setMyCommunities((prev) =>
-        prev.some((c) => c.id === communityId)
-          ? prev
-          : [...prev, communityDetails]
-      );
-    },
-    [userToken]
-  );
-
   const handleNavigateCreateCommunity = useCallback(() => {
     router.navigate("CreateCommunity");
   }, []);
@@ -403,7 +386,7 @@ const CommunityScreen: React.FC = () => {
         <SearchBar onSearch={handleSearch} />
       </View>
 
-      {isFetchingInitial && myCommunities.length === 0 ? (
+      {initialLoad || loading ? (
         // Show skeleton only if there's no cached data on initial load
         Array.from({ length: 6 }).map((_, index) => (
           <View key={`skeleton-${index}`} style={styles.skeletonItem}>
