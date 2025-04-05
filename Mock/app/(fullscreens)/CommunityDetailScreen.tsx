@@ -230,14 +230,14 @@ const leaveCommunityHandler = useCallback(async () => {
             {community?.members?.length}+ Member
           </Text>
         </View>
-        <TouchableOpacity style={[styles.statItem, styles.statDivider]} onPress={shareCommunity}>
+        <TouchableOpacity style={[styles.statItem, styles.statDivider]} onPressIn={shareCommunity}>
           <FontAwesome6 name="share" size={16} color={themeColors.text} />
           <Text style={[styles.statText, { color: themeColors.textSecondary }]}>Share</Text>
         </TouchableOpacity>
       </View>
 
       <View style={[styles.sectionContainer, { backgroundColor: themeColors.background }]}>
-        <TouchableOpacity style={styles.sectionItem} onPress={() => {
+        <TouchableOpacity style={styles.sectionItem} onPressIn={() => {
           router.push({ pathname: "CommunityImageScreen", params: { id, images: communityImages } });
         }}>
           <Ionicons name="image-outline" size={24} color={themeColors.text} style={styles.icon} />
