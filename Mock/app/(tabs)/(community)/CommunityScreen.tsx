@@ -141,17 +141,17 @@ const CommunityScreen: React.FC = () => {
   // Use WebSocket for real-time subscriptions
   useFocusEffect(
     useCallback(() => {
-      const handleNewCommunity = async () => {
+      const handleCommunityChanges = async () => {
         const newCommunityParam = params.newCommunity;
         let newCommunity: Community | undefined;
-
+  
         if (newCommunityParam) {
           if (Array.isArray(newCommunityParam)) {
             newCommunity = JSON.parse(newCommunityParam[0]) as Community;
           } else {
             newCommunity = JSON.parse(newCommunityParam) as Community;
           }
-
+  
           if (newCommunity) {
             setMyCommunities((prev) => {
               if (!prev.some((c) => c.id === newCommunity!.id)) {
@@ -162,20 +162,31 @@ const CommunityScreen: React.FC = () => {
             router.setParams({ newCommunity: undefined });
           }
         }
-
+  
+        // Handle the leftCommunityId parameter
+        const leftCommunityId = params.leftCommunityId;
+        console.log('Id: ',leftCommunityId)
+        if (leftCommunityId) {
+          setMyCommunities((prev) => prev.filter((c) => c.id !== leftCommunityId));
+          router.setParams({ leftCommunityId: undefined });
+        }
+  
         if (isConnected) {
           await subscribeToExistingUserCommunities();
           await fetchAndCacheCommunities();
         }
       };
-      handleNewCommunity();
+      handleCommunityChanges();
     }, [
       params.newCommunity,
+      params.leftCommunityId, // Add this dependency
       isConnected,
       subscribeToExistingUserCommunities,
       fetchAndCacheCommunities,
     ])
   );
+
+  
 
   const handleJoinViaLink = useCallback(
     async (communityId) => {

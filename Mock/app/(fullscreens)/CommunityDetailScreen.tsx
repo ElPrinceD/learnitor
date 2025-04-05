@@ -138,25 +138,53 @@ const CommunityDetailScreen: React.FC = () => {
     }
   }, [community?.name, community?.shareable_link]);
 
-  const leaveCommunityHandler = useCallback(async () => {
-    try {
-      if (!userToken?.token) throw new Error("User not authenticated.");
-      await leaveCommunity(id, userToken.token);
-      setIsFollowing(false);
-      unsubscribeFromCommunity(id);
-      await removeCachedData(`community_${id}`);
-      const cachedCommunities = await getCachedData("communities");
-      if (cachedCommunities) {
-        const updatedCommunities = cachedCommunities.filter((c: Community) => c.id !== id);
-        await setCachedData("communities", updatedCommunities);
-      }
-      Alert.alert("Success", "You have left the channel.");
-      router.replace("/");
-    } catch (err) {
-      console.error("Error leaving community:", err);
-      Alert.alert("Error", "Failed to leave the channel.");
+  // In your leaveCommunityHandler (CommunityDetailScreen)
+const leaveCommunityHandler = useCallback(async () => {
+  try {
+    if (!userToken?.token) throw new Error("User not authenticated.");
+
+    // Leave the community via API
+    await leaveCommunity(id, userToken.token);
+
+    // Unsubscribe from WebSocket updates
+    unsubscribeFromCommunity(id);
+
+    // Remove all related data from SQLite
+    const dbKeysToRemove = [
+      `community_${id}`,      // Community details
+      `messages_${id}`,       // Community messages
+      `last_message_${id}`,   // Last message cache
+    ];
+    await Promise.all(dbKeysToRemove.map(key => sqliteRemoveItem(key)));
+
+    // Update cached communities list by filtering out the left community
+    const cachedCommunities = await getCachedData("communities");
+    if (cachedCommunities) {
+      const updatedCommunities = cachedCommunities.filter(
+        (c: Community) => c.id.toString() !== id.toString()
+      );
+      await setCachedData("communities", updatedCommunities);
     }
-  }, [id, userToken?.token, unsubscribeFromCommunity, getCachedData, setCachedData, removeCachedData]);
+
+    // Persist the left community ID so that subsequent fetches can filter it out.
+    const storedLeftIds = await sqliteGetItem("leftCommunityIds");
+    const leftCommunityIds = storedLeftIds ? JSON.parse(storedLeftIds) : [];
+    await sqliteSetItem("leftCommunityIds", JSON.stringify([...leftCommunityIds, id.toString()]));
+
+    setIsFollowing(false);
+    Alert.alert("Success", "You have left the channel.");
+
+    router.replace({
+      pathname: "/CommunityScreen",
+      params: { leftCommunityId: id },
+    });
+  } catch (err) {
+    console.error("Error leaving community:", err);
+    Alert.alert("Error", "Failed to leave the channel.");
+  }
+}, [id, userToken?.token, unsubscribeFromCommunity, getCachedData, setCachedData, sqliteRemoveItem, sqliteGetItem, sqliteSetItem]);
+
+  
 
   const confirmLeaveCommunity = useCallback(() => {
     Alert.alert("Leave Channel", "Are you sure you want to leave (unfollow) this channel?", [
