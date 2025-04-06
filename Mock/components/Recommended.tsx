@@ -34,6 +34,11 @@ const RecommendedCoursesList: React.FC<Props> = ({
       alignItems: "flex-start",
       position: "relative",
     },
+    title: {
+      color: themeColors.text,
+      fontSize: SIZES.xLarge,
+      fontWeight: "bold",
+    },
     touchable: {
       flex: 1,
       marginRight: rS(18),
@@ -149,6 +154,7 @@ const RecommendedCoursesList: React.FC<Props> = ({
 
   return (
     <View style={styles.container}>
+      <Text style={styles.title}>Recommended Courses</Text>
       <FlatList
         horizontal
         data={RecommendedCoursesData}

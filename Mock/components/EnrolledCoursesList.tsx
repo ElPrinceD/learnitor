@@ -37,6 +37,11 @@ const EnrolledCoursesList: React.FC<Props> = ({
       alignItems: "flex-start",
       position: "relative",
     },
+    title: {
+      color: themeColors.text,
+      fontSize: SIZES.xLarge,
+      fontWeight: "bold",
+    },
     touchable: {
       borderRadius: 10,
       overflow: "hidden",
@@ -136,17 +141,20 @@ const EnrolledCoursesList: React.FC<Props> = ({
     );
   }
   return (
-    <FlatList
-      horizontal
-      data={enrolledCoursesData}
-      renderItem={renderItem}
-      keyExtractor={keyExtractor}
-      initialNumToRender={5}
-      maxToRenderPerBatch={10}
-      windowSize={10}
-      removeClippedSubviews={true}
-      showsHorizontalScrollIndicator={false}
-    />
+    <>
+      <Text style={styles.title}>Enrolled Courses</Text>
+      <FlatList
+        horizontal
+        data={enrolledCoursesData}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        initialNumToRender={5}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        removeClippedSubviews={true}
+        showsHorizontalScrollIndicator={false}
+      />
+    </>
   );
 };
 

@@ -92,7 +92,7 @@ const TaskList: React.FC<Props> = ({ tasks, categoryNames }) => {
   const categoryName = categoryNames[randomTask.category] || "Unknown Category";
 
   return (
-    <View style={{ flexDirection: "row", marginVertical: rV(1) }}>
+    <View style={{ flexDirection: "row", marginVertical: rV(1), flex: 1 }}>
       <View style={styles.dateView}>
         <Text style={styles.dayOfWeek}>{dayOfWeek}</Text>
         <Text style={styles.dayOfMonth}>{dayOfMonth}</Text>

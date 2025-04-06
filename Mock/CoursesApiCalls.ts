@@ -42,10 +42,10 @@ export const getCourseCategories = async (token) => {
   }
 };
 
-export const getRecommendedCourses = async (token) => {
+export const getRecommendedCourses = async (token, categoryId) => {
 
     try {
-        const response = await apiClient.get('/api/courses/', {
+        const response = await apiClient.get(`/api/courses/?category_id=${categoryId}`, {
             headers: {
                 Authorization: `Token ${token}`,
             },

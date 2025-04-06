@@ -14,6 +14,7 @@ import { getTodayPlans, getCategoryNames } from "../../TimelineApiCalls";
 import {
   getEnrolledCourses,
   getCourseProgress,
+  getRecommendedCourses,
 } from "../../CoursesApiCalls";
 import { getAnnouncements } from "../../companyApiCalls";
 import { useQuery } from "@tanstack/react-query";
@@ -21,6 +22,7 @@ import { queryClient } from "../../QueryClient";
 
 import ErrorMessage from "../../components/ErrorMessage";
 import EnrolledCoursesList from "../../components/EnrolledCoursesList";
+import Recommended from "../../components/Recommended";
 import ReanimatedCarousel from "../../components/ReanimatedCarousel";
 
 const Home: React.FC = () => {
@@ -50,6 +52,16 @@ const Home: React.FC = () => {
     queryFn: () => getEnrolledCourses(userInfo?.user?.id!, userToken?.token!),
     enabled: !!userToken?.token && !!userInfo?.user?.id,
   });
+  // const {
+  //   status: recommendedStatus,
+  //   data: recommendedCoursesData,
+  //   error: recommendedError,
+  // } = useQuery({
+  //   queryKey: ["recommendedCourses", userToken?.token],
+  //   queryFn: () =>
+  //     getRecommendedCourses(userToken?.token!, userInfo?.user.program_of_study),
+  //   enabled: !!userToken?.token && !!userInfo?.user?.id,
+  // });
 
   // Fetch Tasks
   const {
@@ -99,12 +111,14 @@ const Home: React.FC = () => {
   useEffect(() => {
     if (
       enrolledStatus === "error" ||
+      // recommendedStatus === "error" ||
       progressStatus === "error" ||
       tasksStatus === "error" ||
       announcementsStatus === "error"
     ) {
       setErrorMessage(
         enrolledError?.message ||
+          // recommendedError?.message ||
           progressError?.message ||
           tasksError?.message ||
           announcementsError?.message ||
@@ -118,10 +132,21 @@ const Home: React.FC = () => {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await queryClient.invalidateQueries({ queryKey: ["announcements", userToken?.token] });
-      await queryClient.invalidateQueries({ queryKey: ["enrolledCourses", userToken?.token] });
-      await queryClient.invalidateQueries({ queryKey: ["progress", userToken?.token, enrolledCoursesData] });
-      await queryClient.invalidateQueries({ queryKey: ["todayTasks", userToken?.token] });
+      await queryClient.invalidateQueries({
+        queryKey: ["announcements", userToken?.token],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["enrolledCourses", userToken?.token],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["recommendedCourses", userToken?.token],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["progress", userToken?.token, enrolledCoursesData],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["todayTasks", userToken?.token],
+      });
     } finally {
       setRefreshing(false);
       setErrorMessage(null);
@@ -154,12 +179,13 @@ const Home: React.FC = () => {
       flexDirection: "row",
     },
     taskCountContainer: {
-      flex: 1,
+      // flex: 1,
       backgroundColor: "#EF643B",
       marginVertical: rMS(10),
       borderRadius: rMS(10),
       alignItems: "flex-end",
       justifyContent: "center",
+      padding: rMS(28),
     },
     taskCountNumber: {
       fontSize: SIZES.xxxLarge,
@@ -203,6 +229,12 @@ const Home: React.FC = () => {
       >
         <ReanimatedCarousel data={carouselItems} />
         <View style={styles.coursesContainer}>
+          {/* {recommendedCoursesData?.length ? (
+            <Recommended
+              RecommendedCoursesData={recommendedCoursesData}
+              loading={recommendedStatus === "pending"}
+            />
+          ) : null} */}
           {enrolledCoursesData?.length ? (
             <View style={styles.taskAndCoursesRow}>
               <EnrolledCoursesList
@@ -210,6 +242,7 @@ const Home: React.FC = () => {
                 progressMap={progressMap || {}}
                 loading={enrolledStatus === "pending"}
               />
+
               <View style={styles.tasksContainer}>
                 <View style={styles.taskCountContainer}>
                   <Text style={styles.taskCountText}>Tasks Today</Text>

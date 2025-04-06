@@ -22,6 +22,7 @@ interface UserInfo {
     address: Address;
     email: string;
     dob: string;
+    program_of_study: number;
     profile_picture: string;
   };
 }
