@@ -294,6 +294,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     };
 
     ws.onclose = (event: CloseEvent) => {
+      reconnectWebSocket();
       console.log("WebSocket disconnected");
       console.log("Close event code:", event?.code);
       console.log("Close event reason:", event?.reason);
@@ -508,13 +509,24 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   const fetchAndCacheCommunitiesFn = useCallback(async () => {
     if (token && isConnected) {
       try {
+        // Retrieve the list of left community IDs from storage.
+        let leftCommunityIds = await sqliteGetItem("leftCommunityIds");
+        leftCommunityIds = leftCommunityIds ? JSON.parse(leftCommunityIds) : [];
+  
         let cachedCommunities = await sqliteGetItem("communities");
         if (!cachedCommunities || JSON.parse(cachedCommunities).length === 0) {
+          // Fetch communities from the API
           const communities = await getUserCommunities(token);
-          await sqliteSetItem("communities", JSON.stringify(communities));
+          // Filter out left communities
+          const filtered = communities.filter((c: any) => !leftCommunityIds.includes(c.id.toString()));
+          await sqliteSetItem("communities", JSON.stringify(filtered));
           console.log("Communities fetched and cached.");
         } else {
-          console.log("Communities already cached.");
+          // Optionally, update the cached communities by filtering left communities.
+          const communities = JSON.parse(cachedCommunities);
+          const filtered = communities.filter((c: any) => !leftCommunityIds.includes(c.id.toString()));
+          await sqliteSetItem("communities", JSON.stringify(filtered));
+          console.log("Cached communities updated after filtering left communities.");
         }
       } catch (error) {
         console.error("Failed to fetch or cache communities:", error);
@@ -522,7 +534,8 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     } else {
       console.warn("WebSocket not connected, skipping community fetch.");
     }
-  }, [token, isConnected]);
+  }, [token, isConnected, sqliteGetItem, sqliteSetItem]);
+  
 
   // Renamed to fetchAndCacheCoursesFn to avoid duplication errors.
   const fetchAndCacheCoursesFn = useCallback(async () => {

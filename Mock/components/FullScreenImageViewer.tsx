@@ -8,7 +8,12 @@ import {
   Animated,
   TouchableWithoutFeedback,
 } from "react-native";
-import { PinchGestureHandler, PanGestureHandler, State } from "react-native-gesture-handler";
+import {
+  PinchGestureHandler,
+  PanGestureHandler,
+  State,
+  GestureHandlerRootView,
+} from "react-native-gesture-handler";
 import { Ionicons } from "@expo/vector-icons";
 import AppImage from "./AppImage"; // Adjust the path as needed
 
@@ -64,11 +69,16 @@ const FullScreenImageViewer: React.FC<FullScreenImageViewerProps> = ({
     { useNativeDriver: true }
   );
 
-  const onPanStateChange = (event: { nativeEvent: { state: number; translationX: number } }) => {
+  const onPanStateChange = (event: {
+    nativeEvent: { state: number; translationX: number };
+  }) => {
     if (event.nativeEvent.state === State.END) {
       if (event.nativeEvent.translationX > 50 && currentIndex > 0) {
         setCurrentIndex((prev) => prev - 1);
-      } else if (event.nativeEvent.translationX < -50 && currentIndex < images.length - 1) {
+      } else if (
+        event.nativeEvent.translationX < -50 &&
+        currentIndex < images.length - 1
+      ) {
         setCurrentIndex((prev) => prev + 1);
       }
       Animated.spring(pan, { toValue: 0, useNativeDriver: true }).start();
@@ -80,7 +90,9 @@ const FullScreenImageViewer: React.FC<FullScreenImageViewerProps> = ({
     { useNativeDriver: true }
   );
 
-  const onPinchStateChange = (event: { nativeEvent: { oldState: number; scale: number } }) => {
+  const onPinchStateChange = (event: {
+    nativeEvent: { oldState: number; scale: number };
+  }) => {
     if (event.nativeEvent.oldState === State.ACTIVE) {
       lastScale.current *= event.nativeEvent.scale;
       scale.setValue(lastScale.current);
@@ -111,33 +123,35 @@ const FullScreenImageViewer: React.FC<FullScreenImageViewerProps> = ({
 
   return (
     <Modal visible={visible} transparent={true} onRequestClose={onRequestClose}>
-      <View style={styles.container}>
-        <TouchableOpacity style={styles.closeButton} onPress={onRequestClose}>
-          <Ionicons name="close" size={30} color="#fff" />
-        </TouchableOpacity>
-        <PanGestureHandler
-          onGestureEvent={isZoomed ? () => {} : onPanGestureEvent}
-          onHandlerStateChange={isZoomed ? () => {} : onPanStateChange}
-          enabled={!isZoomed} // Only enable pan when not zoomed
-        >
-          <Animated.View style={{ transform: [{ translateX: pan }] }}>
-            <PinchGestureHandler
-              onGestureEvent={onPinchGestureEvent}
-              onHandlerStateChange={onPinchStateChange}
-            >
-              <Animated.View
-                style={{
-                  transform: [{ scale }, { translateX }, { translateY }],
-                }}
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <View style={styles.container}>
+          <TouchableOpacity style={styles.closeButton} onPress={onRequestClose}>
+            <Ionicons name="close" size={30} color="#fff" />
+          </TouchableOpacity>
+          <PanGestureHandler
+            onGestureEvent={isZoomed ? () => {} : onPanGestureEvent}
+            onHandlerStateChange={isZoomed ? () => {} : onPanStateChange}
+            enabled={!isZoomed} // Only enable pan when not zoomed
+          >
+            <Animated.View style={{ transform: [{ translateX: pan }] }}>
+              <PinchGestureHandler
+                onGestureEvent={onPinchGestureEvent}
+                onHandlerStateChange={onPinchStateChange}
               >
-                <TouchableWithoutFeedback onPress={onDoubleTap}>
-                  <AppImage uri={images[currentIndex]} style={styles.fullImage} />
-                </TouchableWithoutFeedback>
-              </Animated.View>
-            </PinchGestureHandler>
-          </Animated.View>
-        </PanGestureHandler>
-      </View>
+                <Animated.View
+                  style={{
+                    transform: [{ scale }, { translateX }, { translateY }],
+                  }}
+                >
+                  <TouchableWithoutFeedback onPress={onDoubleTap}>
+                    <AppImage uri={images[currentIndex]} style={styles.fullImage} />
+                  </TouchableWithoutFeedback>
+                </Animated.View>
+              </PinchGestureHandler>
+            </Animated.View>
+          </PanGestureHandler>
+        </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 };
