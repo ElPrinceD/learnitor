@@ -33,29 +33,20 @@ const FullScreenImageViewer: React.FC<FullScreenImageViewerProps> = ({
   onRequestClose,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
-  const [isZoomed, setIsZoomed] = useState(false); // Track if scale !== 1
-  const pan = useRef(new Animated.Value(0)).current;
+  const [isZoomed, setIsZoomed] = useState(false);
+
+  // Animated values for pinch zoom
   const scale = useRef(new Animated.Value(1)).current;
   const translateX = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(0)).current;
   const lastScale = useRef(1);
   const lastOffset = useRef({ x: 0, y: 0 });
 
-  useEffect(() => {
-    setCurrentIndex(initialIndex);
-    resetZoom();
+  // Animated values for panning (swipe gestures)
+  const panX = useRef(new Animated.Value(0)).current;
+  const panY = useRef(new Animated.Value(0)).current;
 
-    // Add listener to track scale changes
-    const listenerId = scale.addListener(({ value }) => {
-      setIsZoomed(value !== 1);
-    });
-
-    // Cleanup listener on unmount
-    return () => {
-      scale.removeListener(listenerId);
-    };
-  }, [initialIndex]);
-
+  // Reset zoom and pan state
   const resetZoom = () => {
     Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
     Animated.spring(translateX, { toValue: 0, useNativeDriver: true }).start();
@@ -64,24 +55,76 @@ const FullScreenImageViewer: React.FC<FullScreenImageViewerProps> = ({
     lastOffset.current = { x: 0, y: 0 };
   };
 
+  // When the modal becomes visible, set the current index and reset zoom.
+  useEffect(() => {
+    if (visible) {
+      setCurrentIndex(initialIndex);
+      resetZoom();
+    }
+  }, [visible, initialIndex]);
+
+  // Listen to scale changes to set zoom flag.
+  useEffect(() => {
+    const listenerId = scale.addListener(({ value }) => {
+      setIsZoomed(value !== 1);
+    });
+    return () => {
+      scale.removeListener(listenerId);
+    };
+  }, []);
+
+  // Horizontal and vertical pan gestures
   const onPanGestureEvent = Animated.event(
-    [{ nativeEvent: { translationX: pan } }],
+    [{ nativeEvent: { translationX: panX, translationY: panY } }],
     { useNativeDriver: true }
   );
 
   const onPanStateChange = (event: {
-    nativeEvent: { state: number; translationX: number };
+    nativeEvent: {
+      state: number;
+      translationX: number;
+      translationY: number;
+      velocityX: number;
+    };
   }) => {
     if (event.nativeEvent.state === State.END) {
-      if (event.nativeEvent.translationX > 50 && currentIndex > 0) {
-        setCurrentIndex((prev) => prev - 1);
-      } else if (
-        event.nativeEvent.translationX < -50 &&
-        currentIndex < images.length - 1
-      ) {
-        setCurrentIndex((prev) => prev + 1);
+      const { translationX, translationY } = event.nativeEvent;
+      const swipeThreshold = 50;
+      const verticalThreshold = 50;
+
+      // If swiped down sufficiently and not zoomed, dismiss viewer.
+      if (translationY > 100 && !isZoomed) {
+        onRequestClose();
+        return;
       }
-      Animated.spring(pan, { toValue: 0, useNativeDriver: true }).start();
+
+      // If horizontal swipe is significant and vertical movement is minimal.
+      if (Math.abs(translationX) > swipeThreshold && Math.abs(translationY) < verticalThreshold) {
+        if (translationX > swipeThreshold && currentIndex > 0) {
+          Animated.timing(panX, {
+            toValue: width,
+            duration: 200,
+            useNativeDriver: true,
+          }).start(() => {
+            setCurrentIndex((prev) => prev - 1);
+            panX.setValue(0);
+          });
+        } else if (translationX < -swipeThreshold && currentIndex < images.length - 1) {
+          Animated.timing(panX, {
+            toValue: -width,
+            duration: 200,
+            useNativeDriver: true,
+          }).start(() => {
+            setCurrentIndex((prev) => prev + 1);
+            panX.setValue(0);
+          });
+        } else {
+          Animated.spring(panX, { toValue: 0, useNativeDriver: true }).start();
+        }
+      } else {
+        Animated.spring(panX, { toValue: 0, useNativeDriver: true }).start();
+      }
+      Animated.spring(panY, { toValue: 0, useNativeDriver: true }).start();
     }
   };
 
@@ -128,12 +171,17 @@ const FullScreenImageViewer: React.FC<FullScreenImageViewerProps> = ({
           <TouchableOpacity style={styles.closeButton} onPress={onRequestClose}>
             <Ionicons name="close" size={30} color="#fff" />
           </TouchableOpacity>
+
           <PanGestureHandler
             onGestureEvent={isZoomed ? () => {} : onPanGestureEvent}
             onHandlerStateChange={isZoomed ? () => {} : onPanStateChange}
-            enabled={!isZoomed} // Only enable pan when not zoomed
+            enabled={!isZoomed}
           >
-            <Animated.View style={{ transform: [{ translateX: pan }] }}>
+            <Animated.View
+              style={{
+                transform: [{ translateX: panX }, { translateY: panY }],
+              }}
+            >
               <PinchGestureHandler
                 onGestureEvent={onPinchGestureEvent}
                 onHandlerStateChange={onPinchStateChange}
@@ -144,7 +192,10 @@ const FullScreenImageViewer: React.FC<FullScreenImageViewerProps> = ({
                   }}
                 >
                   <TouchableWithoutFeedback onPress={onDoubleTap}>
-                    <AppImage uri={images[currentIndex]} style={styles.fullImage} />
+                    <AppImage
+                      uri={images[currentIndex]}
+                      style={styles.fullImage}
+                    />
                   </TouchableWithoutFeedback>
                 </Animated.View>
               </PinchGestureHandler>

@@ -535,13 +535,7 @@ const CommunityChatScreen: React.FC = () => {
     }
   };
 
-  const pickDocument = async () => {
-    try {
-      // Assuming DocumentPicker is implemented elsewhere if needed
-    } catch (error) {
-      console.error("Document picker error:", error);
-    }
-  };
+
 
   const handleCopySelected = useCallback(async () => {
     const textToCopy = selectedMessages.map((msg) => msg.text).join("\n\n");
@@ -776,10 +770,6 @@ const CommunityChatScreen: React.FC = () => {
     rMS,
   ]);
   
-  
-  
-  
-
   const handlePress = useCallback((message: IMessage) => {
     setSelectedMessages((prevSelected) => {
       // Only proceed if there is an active selection mode
@@ -803,13 +793,10 @@ const CommunityChatScreen: React.FC = () => {
     );
   }, []);
   
-  
-
   useLayoutEffect(() => {
     updateHeader();
   }, [selectedMessages, updateHeader]);
   
-
   const renderBubble = useCallback(
     (props) => {
       const isSelected = selectedMessages.some(
@@ -959,7 +946,6 @@ const CommunityChatScreen: React.FC = () => {
     [selectedMessages, handlePress, handleLongPress, themeColors, user?.id]
   );
   
-
   const renderAvatar = useCallback(
     (props) => {
       const userId = props.currentMessage.user._id;
@@ -1022,26 +1008,6 @@ const CommunityChatScreen: React.FC = () => {
     [openImageViewer]
   );
 
-  const saveImageToCameraRoll = async (uri: string) => {
-    try {
-      let fileUri = uri;
-      if (uri.startsWith("data:image")) {
-        const base64 = uri.split(",")[1];
-        const fileName = `image_${Date.now()}.jpg`;
-        fileUri = `${FileSystem.cacheDirectory}${fileName}`;
-        await FileSystem.writeAsStringAsync(fileUri, base64, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-      }
-      const asset = await MediaLibrary.createAssetAsync(fileUri);
-      await MediaLibrary.createAlbumAsync("MyApp", asset, false);
-      ToastAndroid.show("Image saved to camera roll", ToastAndroid.SHORT);
-    } catch (error) {
-      console.error("Error saving image:", error);
-      ToastAndroid.show("Failed to save image", ToastAndroid.SHORT);
-    }
-  };
-
   const renderDay = (props) => {
     const { currentMessage, previousMessage } = props;
     const isNewDay =
@@ -1083,20 +1049,7 @@ const CommunityChatScreen: React.FC = () => {
     );
   };
 
-  const onDocumentPress = (uri: string) => {
-    // Placeholder for document viewer logic if needed
-    setIsDocumentViewerVisible(true);
-  };
 
-  const renderMessageDocument = (props) => (
-    <TouchableOpacity
-      onPress={() => onDocumentPress(props.currentMessage.document)}
-    >
-      <Text style={styles.documentText}>
-        Document: {props.currentMessage.document.split("/").pop()}
-      </Text>
-    </TouchableOpacity>
-  );
 
   const renderSend = (props) => {
     const hasText = props.text && props.text.trim().length > 0;
@@ -1112,16 +1065,7 @@ const CommunityChatScreen: React.FC = () => {
                 size={SIZES.xLarge}
               />
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={pickDocument}
-              style={styles.attachButton}
-            >
-              <Ionicons
-                name="document-outline"
-                color={themeColors.text}
-                size={SIZES.xLarge}
-              />
-            </TouchableOpacity>
+          
           </View>
         )}
         {hasText && (
