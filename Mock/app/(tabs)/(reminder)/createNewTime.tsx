@@ -19,10 +19,10 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import ErrorMessage from "../../../components/ErrorMessage.tsx";
 import GameButton from "../../../components/GameButton.tsx";
 import CustomPicker from "../../../components/CustomPicker";
-import DateSelector from "../../../components/DateSelector.tsx"; // Use DateSelector
+import DateSelector from "../../../components/DateSelector.tsx";
 import CustomDateTimeSelector from "../../../components/CustomDateTimeSelector.tsx";
 import Animated, { FadeInLeft, ReduceMotion } from "react-native-reanimated";
-
+import { useWebSocket } from "../../../webSocketProvider"; // Import useWebSocket
 
 interface Category {
   value: number;
@@ -44,6 +44,7 @@ interface CreateTaskData {
 
 const CreateNewTime = () => {
   const { userToken, userInfo } = useAuth();
+  const { getCachedTodayPlans, sqliteSetItem } = useWebSocket(); // Added useWebSocket
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState(new Date());
@@ -63,16 +64,26 @@ const CreateNewTime = () => {
     enabled: !!userToken?.token,
   });
 
-
-
   const createTaskMutation = useMutation<any, any, any>({
     mutationFn: async ({ taskData, token }) => {
-      await createTask(taskData, token);
+      return await createTask(taskData, token); // Ensure this returns the created task
     },
-    onSuccess: () => {
-      console.log('success')
-      router.navigate("three");
-      setErrorMessage(null);
+    onSuccess: (createdTask) => {
+      console.log('Task created successfully:', createdTask);
+      const dateString = formatDate(dueDate);
+      const cacheKey = `todayPlans_${dateString}_${selectedCategory?.value?.toString() || "all"}`;
+      
+      getCachedTodayPlans(dueDate, selectedCategory?.value?.toString())
+        .then((cachedPlans) => {
+          const updatedPlans = [...cachedPlans, createdTask];
+          sqliteSetItem(cacheKey, JSON.stringify(updatedPlans));
+          router.navigate("three");
+          setErrorMessage(null);
+        })
+        .catch((error) => {
+          console.error("Error updating cache:", error);
+          setErrorMessage("Task created, but failed to update local data");
+        });
     },
     onError: (error) => {
       setErrorMessage(error.message || "Error creating schedule");
@@ -84,7 +95,7 @@ const CreateNewTime = () => {
     const [hours, minutes] = timeString.split(":").map(Number);
     if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
       console.error(`Invalid time string: ${timeString}, Hours: ${hours}, Minutes: ${minutes}`);
-      return new Date(); // Fallback to current time if invalid
+      return new Date();
     }
     const newDate = new Date();
     newDate.setHours(hours, minutes, 0, 0);
@@ -104,7 +115,6 @@ const CreateNewTime = () => {
   };
 
   const handleSaveTime = () => {
-    console.log()
     const dataToSave: CreateTaskData = {
       title,
       description,
@@ -138,7 +148,6 @@ const CreateNewTime = () => {
     container: {
       flex: 1,
       paddingHorizontal: rMS(20),
-     
       backgroundColor: themeColors.background,
     },
     sectionContainer: {
@@ -165,7 +174,6 @@ const CreateNewTime = () => {
       fontSize: rMS(16),
       color: themeColors.text,
     },
-  
     buttonContainer: {
       alignItems: "center",
       marginVertical: rV(20),
@@ -182,9 +190,7 @@ const CreateNewTime = () => {
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        {/* Task Details Section */}
         <View style={styles.sectionContainer}>
-   
           <AnimatedRoundTextInput
             placeholderTextColor={themeColors.textSecondary}
             label="Title"
@@ -199,9 +205,7 @@ const CreateNewTime = () => {
           />
         </View>
 
-        {/* Time Details Section */}
         <View style={styles.sectionContainer}>
-
           <DateSelector
             onDateChange={(selectedDate: string) => {
               const newDate = new Date(selectedDate);
@@ -244,9 +248,7 @@ const CreateNewTime = () => {
           />
         </View>
 
-        {/* Other Details Section */}
         <View style={styles.sectionContainer}>
-
           <CustomPicker
             label="Category"
             options={categoriesData?.map((cat) => cat.label) || []}
@@ -282,7 +284,6 @@ const CreateNewTime = () => {
           )}
         </View>
 
-        {/* Save Button */}
         <View style={styles.buttonContainer}>
           <GameButton
             onPress={handleSaveTime}

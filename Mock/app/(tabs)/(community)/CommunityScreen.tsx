@@ -384,6 +384,7 @@ const CommunityScreen: React.FC = () => {
     },
   });
 
+  
   const noResultsFound =
     searchQuery.length >= 3 &&
     filteredCommunities.user.length === 0 &&

@@ -79,7 +79,7 @@ export default function GameWaitingScreen() {
   }, [gameDetails, userInfo]);
 
   const goToGame = useCallback(() => {
-    router.navigate({
+    router.push({
       pathname: "Game",
       params: {
         questions: JSON.stringify(gameQuestions),
