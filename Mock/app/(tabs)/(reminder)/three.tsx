@@ -62,9 +62,7 @@ const Timeline = () => {
   };
 
   const [todayPlans, setTodayPlans] = useState<any[]>([]);
-  const [categoryNames, setCategoryNames] = useState<Record<number, string>>(
-    {}
-  );
+  const [categoryNames, setCategoryNames] = useState<Record<number, string>>({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -128,7 +126,7 @@ const Timeline = () => {
       duedate: plan.due_date,
       category_id: String(plan.category),
       duetime: plan.due_time_start,
-      category_name: categoryNames[plan.category], // Now this directly uses the label
+      category_name: categoryNames[plan.category],
     });
   };
 
