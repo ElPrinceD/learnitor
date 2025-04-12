@@ -771,9 +771,10 @@ const CommunityChatScreen: React.FC = () => {
           <View style={{ flexDirection: "row", marginRight: SIZES.xSmall }}>
             {canReply && (
               <TouchableOpacity
-                onPressIn={() => {
-                  setReplyToMessage(selectedMessages[0]);
-                }}
+              onPressIn={() => {
+                setReplyToMessage(selectedMessages[0]);
+                handleDeselectAll();
+              }}
               >
                 <MaterialCommunityIcons
                   name="reply"
@@ -784,7 +785,10 @@ const CommunityChatScreen: React.FC = () => {
             )}
             {canEdit && (
               <TouchableOpacity
-                onPressIn={handleEditMessage}
+              onPressIn={() => {
+                handleEditMessage();
+                handleDeselectAll();
+              }}
                 style={{ marginHorizontal: rS(8) }}
               >
                 <MaterialCommunityIcons
@@ -796,7 +800,10 @@ const CommunityChatScreen: React.FC = () => {
             )}
             {canDelete && (
               <TouchableOpacity
-                onPressIn={handleDeleteMessage}
+              onPressIn={() => {
+                handleDeleteMessage();
+                handleDeselectAll();
+              }}
                 style={{ marginHorizontal: rS(8) }}
               >
                 <MaterialCommunityIcons
@@ -807,7 +814,10 @@ const CommunityChatScreen: React.FC = () => {
               </TouchableOpacity>
             )}
             <TouchableOpacity
-              onPressIn={handleCopySelected}
+              onPressIn={() => {
+                handleCopySelected();
+                handleDeselectAll();
+              }}
               style={{ marginHorizontal: rS(8) }}
             >
               <MaterialCommunityIcons

@@ -106,7 +106,7 @@ const CommunityScreen: React.FC = () => {
           );
           const messagesMap = Object.fromEntries(messages);
           setLastMessages(messagesMap);
-          console.log("Loaded lastMessages from cache:", messagesMap);
+          
         } else {
           console.log("No cached communities found");
         }
@@ -230,7 +230,6 @@ const CommunityScreen: React.FC = () => {
       if (!sqliteSetItem) return;
       try {
         const data = JSON.parse(event.data);
-        console.log("WebSocket message received:", data);
 
         if (data.type === "join_success") {
           await handleJoinViaLink(data.community_id);
@@ -353,7 +352,7 @@ const CommunityScreen: React.FC = () => {
               ...prevState,
               [community.id]: updatedMessage,
             };
-            console.log("Marked message as read:", updated);
+           
             return updated;
           });
           await sqliteSetItem(

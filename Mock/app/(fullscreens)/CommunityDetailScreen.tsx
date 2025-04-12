@@ -128,28 +128,40 @@ const CommunityDetailScreen: React.FC = () => {
   const fetchCommunityData = useCallback(async () => {
     try {
       setLoading(true);
-
-      // Load cached data immediately if available
+  
+      // Load cached data if available
       const cachedCommunity = await getCachedData(`community_${id}`);
-      if (cachedCommunity) setCommunity(cachedCommunity);
-
+      const cachedTimetable = await getCachedData(`timetable_${id}`);
+      const cachedImages = await getCachedData(`images_${id}`);
+  
+      if (cachedCommunity) {
+        setCommunity(cachedCommunity);
+        setIsUserLeader(cachedCommunity?.created_by === user?.email);
+        setTimetable(Array.isArray(cachedTimetable) ? cachedTimetable : []); // Ensure timetable is an array
+        setCommunityImages(Array.isArray(cachedImages) ? cachedImages : []); // Ensure images is an array
+        setLoading(false);
+        return; // Skip API fetch if cached community data exists
+      }
+  
+      // No cached data, proceed with API fetch (first visit)
       if (!userToken?.token) throw new Error("User not authenticated.");
-
-      // Fetch fresh data from API
+  
       const data = await getCommunityDetails(id, userToken.token);
       setCommunity(data);
-      await setCachedData(`community_${id}`, data); // Save to SQLite for future use
+      await setCachedData(`community_${id}`, data); // Cache the community data
       setIsUserLeader(data?.created_by === user?.email);
-
+  
       const messages = await getCommunityMessages(id, userToken.token);
       const images = messages
         .filter((msg) => msg.image)
-        .map((msg) => msg.image);
+        .map((msg) => msg.image) || [];
       setCommunityImages(images);
-
-      const timetableData = await getCommunityTimetable(id, userToken.token);
+      await setCachedData(`images_${id}`, images); // Cache the images
+  
+      const timetableData = await getCommunityTimetable(id, userToken.token) || [];
       setTimetable(timetableData);
-
+      await setCachedData(`timetable_${id}`, timetableData); // Cache the timetable
+  
       const memberImages = data?.members?.reduce((acc, member) => {
         if (member.profile_picture)
           acc[member.id.toString()] = member.profile_picture;
@@ -462,6 +474,8 @@ const CommunityDetailScreen: React.FC = () => {
           </TouchableOpacity>
         );
       }
+      // Check if the current member is the leader
+      const isLeader = item.email === community?.created_by;
       return (
         <View style={styles.memberItem}>
           {renderAvatar(item)}
@@ -469,11 +483,14 @@ const CommunityDetailScreen: React.FC = () => {
             <Text style={[styles.memberName, { color: themeColors.text }]}>
               {item.first_name} {item.last_name}
             </Text>
+            {isLeader && (
+              <Text style={styles.adminText}>Admin</Text>
+            )}
           </View>
         </View>
       );
     },
-    [themeColors, renderAvatar]
+    [themeColors, renderAvatar, community] // Add 'community' to dependencies
   );
 
   // Render footer includes Calendar section, info rows and channel control buttons.
@@ -697,6 +714,17 @@ const CommunityDetailScreen: React.FC = () => {
           borderBottomWidth: rS(1),
           borderBottomColor: themeColors.secondaryBackground,
         },
+        memberInfo: {
+          flex: 1,
+          flexDirection: "row",
+          justifyContent: "space-between", // Ensure "Admin" is pushed to the right
+          alignItems: "center",
+        },
+        adminText: {
+          color: themeColors.tint, // Use a distinct color (e.g., tint)
+          fontSize: SIZES.small,
+          fontWeight: "600",
+        },
         memberPicture: {
           width: rMS(40),
           height: rMS(40),
@@ -707,7 +735,7 @@ const CommunityDetailScreen: React.FC = () => {
           justifyContent: "center",
         },
         initials: { color: themeColors.text, fontSize: SIZES.medium },
-        memberInfo: { flex: 1 },
+       
         memberName: {
           fontSize: SIZES.medium,
           fontWeight: "500",

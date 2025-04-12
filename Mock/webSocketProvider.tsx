@@ -13,12 +13,21 @@ import {
   getUserCommunities,
   getCommunityMessages,
 } from "./CommunityApiCalls";
+import * as Notifications from "expo-notifications";
 import { getCourseCategories, getCourses } from "./CoursesApiCalls";
 import WsUrl from "./configWs";
 import { getCategoryNames, getTodayPlans } from "./TimelineApiCalls";
 import { useAuth } from "./components/AuthContext";
 
 // ----- WebSocket Context Types -----
+
+interface Task {
+  id: number;
+  title: string;
+  due_date: string; // e.g., "2025-04-10"
+  due_time_start: string; // e.g., "09:00"
+}
+
 export interface WebSocketContextType {
   socket: WebSocket | null;
   isConnected: boolean;
@@ -38,6 +47,7 @@ export interface WebSocketContextType {
   getCachedTodayPlans: (date: Date, category?: string) => Promise<any[]>;
   getCachedCategoryNames: () => Promise<Record<number, string>>;
   unreadCommunitiesCount: number;
+  scheduleTaskNotification: (task: any) => Promise<void>;
   markMessageAsRead: (communityId: string) => void;
   sqliteGetItem: (key: string) => Promise<string | null>; // Add this
   sqliteSetItem: (key: string, value: string) => Promise<void>;
@@ -537,6 +547,74 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   }, [token, isConnected, sqliteGetItem, sqliteSetItem]);
   
 
+  const scheduleTaskNotification = useCallback(async (task: Task) => {
+    try {
+      // Combine due_date and due_time_start into a Date object
+      const [year, month, day] = task.due_date.split("-").map(Number);
+      const [hours, minutes] = task.due_time_start.split(":").map(Number);
+      const triggerDate = new Date(year, month - 1, day, hours, minutes);
+
+      // Ensure the trigger is in the future
+      if (triggerDate <= new Date()) {
+        console.log(`Task ${task.id} is in the past, skipping notification`);
+        return;
+      }
+
+      const notificationId = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "Plan Reminder",
+          body: `Your plan "${task.title}" is due now!`,
+          data: { taskId: task.id },
+          sound: "default",
+        },
+        trigger: triggerDate,
+      });
+
+      console.log(`Scheduled notification for task ${task.id} at ${triggerDate.toISOString()}`);
+    } catch (error) {
+      console.error("Failed to schedule notification:", error);
+    }
+  }, []);
+  
+  const scheduleNotificationsForExistingPlans = useCallback(async () => {
+    if (!token) return;
+
+    try {
+      const today = new Date();
+      const dateString = today.toISOString().split("T")[0]; // e.g., "2023-10-25"
+      const cacheKey = `todayPlans_${dateString}_all`;
+
+      // Try to get cached plans
+      const cachedPlans = await sqliteGetItem(cacheKey);
+      let plans: Task[] = cachedPlans ? JSON.parse(cachedPlans) : [];
+
+      // If no cached plans, fetch from API and cache them
+      if (plans.length === 0) {
+        plans = await getTodayPlans(token, today);
+        await sqliteSetItem(cacheKey, JSON.stringify(plans));
+      }
+
+      // Schedule notifications for future plans
+      for (const plan of plans) {
+        const [year, month, day] = plan.due_date.split("-").map(Number);
+        const [hours, minutes] = plan.due_time_start.split(":").map(Number);
+        const dueDate = new Date(year, month - 1, day, hours, minutes);
+
+        if (dueDate > new Date()) {
+          await scheduleTaskNotification(plan);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to schedule notifications for existing plans:", error);
+    }
+  }, [token, scheduleTaskNotification]);
+
+  // Trigger scheduling when the app loads
+  useEffect(() => {
+    if (token && isConnected) {
+      scheduleNotificationsForExistingPlans();
+    }
+  }, [token, isConnected, scheduleNotificationsForExistingPlans]);
   // Renamed to fetchAndCacheCoursesFn to avoid duplication errors.
   const fetchAndCacheCoursesFn = useCallback(async () => {
     if (token && isConnected) {
@@ -714,6 +792,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     fetchAndCacheCommunities,
     fetchAndCacheCourses,
     fetchAndCacheCourseCategories,
+    scheduleTaskNotification,
     fetchAndCacheTodayPlans,
     fetchAndCacheCategoryNames,
     getCachedTodayPlans,

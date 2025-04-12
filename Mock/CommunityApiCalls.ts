@@ -74,6 +74,7 @@ export const getCommunityTimetable = async (communityId: string, token: string) 
     };
 
 export const updateCommunity = async (communityId: string, communityData: any, token: string | null) => {
+    console.log(communityData)
     try {
         const response = await apiClient.put(`${COMMUNITY_API_BASE_URL}/${communityId}/`, communityData, {
             headers: {
