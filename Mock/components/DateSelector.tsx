@@ -14,22 +14,38 @@ interface DateSelectorProps extends SelectProps {
   label: string;
   buttonTitle?: string;
   minDate?: boolean;
+  // Optional prop: If provided, this date will be used as the initial date
+  initialDate?: string;
 }
+
+// Helper function to get today's date in ISO format.
+const getTodayDate = (): string => {
+  const today = new Date();
+  return `${today.getFullYear()}-${(today.getMonth() + 1)
+    .toString()
+    .padStart(2, "0")}-${today.getDate().toString().padStart(2, "0")}`;
+};
 
 const DateSelector: React.FC<DateSelectorProps> = ({
   onDateChange,
   label,
   buttonTitle = "Select a date",
   minDate = false,
+  initialDate,
   ...selectProps
 }) => {
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
-  const [selected, setSelected] = useState("");
+  // If an initialDate is provided, use it. Otherwise, fall back to today's date.
+  const defaultDateStr =
+    initialDate && initialDate.trim() !== "" ? initialDate : getTodayDate();
+  const defaultDate = new Date(defaultDateStr);
+
+  const [selectedDate, setSelectedDate] = useState<Date | null>(defaultDate);
+  const [selected, setSelected] = useState(defaultDateStr);
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
+  // Format date for display in the trigger.
   const formatDate = (date: Date | null) => {
     if (!date) return buttonTitle;
     return date.toLocaleDateString("en-US", {
@@ -40,6 +56,8 @@ const DateSelector: React.FC<DateSelectorProps> = ({
     });
   };
 
+  const [isOpen, setIsOpen] = useState(false);
+
   const handleDateChange = (day: any) => {
     if (!day?.timestamp) return;
     const date = new Date(day.timestamp);
@@ -49,21 +67,12 @@ const DateSelector: React.FC<DateSelectorProps> = ({
     setIsOpen(false);
   };
 
-  const getTodayDate = () => {
-    const today = new Date();
-    return `${today.getFullYear()}-${(today.getMonth() + 1)
-      .toString()
-      .padStart(2, "0")}-${today.getDate().toString().padStart(2, "0")}`;
-  };
-
   const styles = StyleSheet.create({
     container: {
       flexDirection: "row",
       alignItems: "center",
-      // paddingVertical: rV(10),
       justifyContent: "space-between",
-      borderBottomWidth: rMS(1),
-      borderBottomColor: themeColors.textSecondary,
+      // No border here.
     },
     label: {
       fontSize: SIZES.large,
@@ -81,6 +90,8 @@ const DateSelector: React.FC<DateSelectorProps> = ({
       <Text style={styles.label}>{label}</Text>
       <View style={styles.selectContainer}>
         <Select
+          // Remove any default Select border by providing an empty style object.
+          style={{ borderWidth: 0, backgroundColor: "transparent" }}
           value={selected}
           onValueChange={() => {}}
           open={isOpen}
@@ -92,6 +103,7 @@ const DateSelector: React.FC<DateSelectorProps> = ({
             style={{
               backgroundColor: "transparent",
               borderColor: "transparent",
+              borderWidth: 0,
               borderRadius: rMS(6),
               paddingVertical: rV(12),
               paddingHorizontal: rS(16),

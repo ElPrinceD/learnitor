@@ -24,7 +24,6 @@ const CommunityImagesScreen: React.FC = () => {
 
   // Convert images to an array if it's a comma-separated string
   let imagesToRender: string[] = [];
-
   if (typeof images === "string") {
     imagesToRender = images.split(",").map((url) => url.trim());
   } else if (Array.isArray(images)) {
@@ -39,6 +38,7 @@ const CommunityImagesScreen: React.FC = () => {
 
   const renderItem = ({ item, index }: { item: string; index: number }) => (
     <TouchableOpacity
+      activeOpacity={0.8}
       onPress={() => {
         setCurrentImageIndex(index);
         setIsVisible(true);
@@ -51,9 +51,7 @@ const CommunityImagesScreen: React.FC = () => {
   if (!imagesToRender.length) {
     return (
       <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-        <Text style={{ color: themeColors.text, padding: 20 }}>
-          No images available.
-        </Text>
+        <Text style={{ color: themeColors.text, padding: 20 }}>No images available.</Text>
       </View>
     );
   }
@@ -78,12 +76,8 @@ const CommunityImagesScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  listContainer: {
-    padding: rS(5),
-  },
+  container: { flex: 1 },
+  listContainer: { padding: rS(5) },
   image: {
     width: rV(100),
     height: rV(100),

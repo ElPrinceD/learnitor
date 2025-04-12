@@ -11,7 +11,7 @@ export default function GameLayout() {
         <Stack.Screen name="GameTopics" options={{ headerShown: false }} />
         <Stack.Screen name="GameWaiting" options={{ headerShown: false }} />
         <Stack.Screen name="GameLevel" options={{ headerShown: false }} />
-        <Stack.Screen name="Results" options={{ headerShown: false }} />
+        <Stack.Screen name="Results" options={{ headerShown: false, gestureEnabled: false, }} />
         <Stack.Screen name="Game" options={{ headerShown: false }} />
       </Stack>
     </SafeAreaProvider>

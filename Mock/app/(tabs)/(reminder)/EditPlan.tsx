@@ -1,10 +1,10 @@
+// EditPlan.tsx
 import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ActivityIndicator,
-  Platform,
   ScrollView,
   Switch,
   useColorScheme,
@@ -15,11 +15,7 @@ import Colors from "../../../constants/Colors";
 import { rMS, rS, rV } from "../../../constants/responsive";
 import { SIZES } from "../../../constants/theme";
 import AnimatedRoundTextInput from "../../../components/AnimatedRoundTextInput.tsx";
-import {
-  deleteTask,
-  updateTask,
-  getCategories,
-} from "../../../TimelineApiCalls.ts";
+import { deleteTask, updateTask, getCategories } from "../../../TimelineApiCalls.ts";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import ErrorMessage from "../../../components/ErrorMessage.tsx";
 import GameButton from "../../../components/GameButton.tsx";
@@ -27,6 +23,7 @@ import CustomPicker from "../../../components/CustomPicker";
 import DateSelector from "../../../components/DateSelector.tsx";
 import CustomDateTimeSelector from "../../../components/CustomDateTimeSelector.tsx";
 import Animated, { FadeInLeft, ReduceMotion } from "react-native-reanimated";
+import { useWebSocket } from "../../../webSocketProvider";
 
 interface Category {
   value: number;
@@ -37,7 +34,8 @@ interface UpdateTaskData {
   title: string;
   description: string;
   due_date: string;
-  due_time: string; // Renamed from due_time_start for consistency with params
+  due_time_start: string; // Updated to match CreateNewTime
+  due_time_end: string;   // Added for end time
   category?: number | null;
   affect_all_recurring?: boolean;
 }
@@ -47,17 +45,30 @@ const EditPlan = () => {
   const id = params.taskId as string;
   const oldDescription = params.description as string;
   const oldTitle = params.title as string;
-  const oldDate = params.duedate as string;
-  const oldTime = params.duetime as string;
+  const oldDate = params.dueDate as string;       // e.g., "2025-04-10"
+  const oldStartTime = params.dueTimeStart as string; // e.g., "09:00"
+  const oldEndTime = params.dueTimeEnd as string;   // e.g., "10:00"
   const { userToken, userInfo } = useAuth();
+  const { sqliteRemoveItem } = useWebSocket();
+
+  // Initialize dueDate
+  const [dueDate, setDueDate] = useState(new Date(oldDate));
+
+  // Initialize startTime with actual date and time
+  const initialStartTime = new Date(oldDate);
+  const [startHours, startMinutes] = oldStartTime ? oldStartTime.split(":").map(Number) : [0, 0];
+  initialStartTime.setHours(startHours, startMinutes, 0, 0);
+  const [startTime, setStartTime] = useState(initialStartTime);
+
+  // Initialize endTime with actual date and time
+  const initialEndTime = new Date(oldDate);
+  const [endHours, endMinutes] = oldEndTime ? oldEndTime.split(":").map(Number) : [0, 0];
+  initialEndTime.setHours(endHours, endMinutes, 0, 0);
+  const [endTime, setEndTime] = useState(initialEndTime);
 
   const [title, setTitle] = useState(oldTitle || "");
   const [description, setDescription] = useState(oldDescription || "");
-  const [dueDate, setDueDate] = useState(new Date(oldDate));
-  const [dueTime, setDueTime] = useState(new Date(`2000-01-01T${oldTime}`)); // Parse time string to Date
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
-    null
-  );
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [affectAllRecurring, setAffectAllRecurring] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -70,11 +81,45 @@ const EditPlan = () => {
     enabled: !!userToken?.token,
   });
 
+  // Sync start and end times' date with dueDate changes
+  useEffect(() => {
+    const updateTimesWithNewDate = () => {
+      const newStartTime = new Date(dueDate);
+      newStartTime.setHours(startTime.getHours(), startTime.getMinutes(), 0, 0);
+      setStartTime(newStartTime);
+
+      const newEndTime = new Date(dueDate);
+      newEndTime.setHours(endTime.getHours(), endTime.getMinutes(), 0, 0);
+      setEndTime(newEndTime);
+    };
+    updateTimesWithNewDate();
+  }, [dueDate]);
+
   const updateTaskMutation = useMutation<any, any, any>({
     mutationFn: async ({ taskId, taskData, token }) => {
       await updateTask(taskId, taskData, token);
     },
     onSuccess: () => {
+      const oldDateString = new Date(oldDate).toISOString().split("T")[0];
+      const newDateString = formatDate(dueDate);
+      const oldCategoryId = params.category_id as string;
+      const newCategoryId = selectedCategory?.value?.toString() || oldCategoryId;
+
+      sqliteRemoveItem(`todayPlans_${oldDateString}_all`);
+      if (oldCategoryId) {
+        sqliteRemoveItem(`todayPlans_${oldDateString}_${oldCategoryId}`);
+      }
+      if (oldDateString !== newDateString) {
+        sqliteRemoveItem(`todayPlans_${newDateString}_all`);
+        if (newCategoryId) {
+          sqliteRemoveItem(`todayPlans_${newDateString}_${newCategoryId}`);
+        }
+      } else if (oldCategoryId !== newCategoryId) {
+        if (newCategoryId) {
+          sqliteRemoveItem(`todayPlans_${newDateString}_${newCategoryId}`);
+        }
+      }
+
       router.navigate("three");
       setErrorMessage(null);
     },
@@ -88,6 +133,14 @@ const EditPlan = () => {
       await deleteTask(taskId, token);
     },
     onSuccess: () => {
+      const dateString = new Date(oldDate).toISOString().split("T")[0];
+      const categoryId = params.category_id as string;
+
+      sqliteRemoveItem(`todayPlans_${dateString}_all`);
+      if (categoryId) {
+        sqliteRemoveItem(`todayPlans_${dateString}_${categoryId}`);
+      }
+
       router.navigate("three");
       setErrorMessage(null);
     },
@@ -99,20 +152,11 @@ const EditPlan = () => {
   const parseTime = (timeString: string): Date => {
     if (!timeString) return new Date();
     const [hours, minutes] = timeString.split(":").map(Number);
-    if (
-      isNaN(hours) ||
-      isNaN(minutes) ||
-      hours < 0 ||
-      hours > 23 ||
-      minutes < 0 ||
-      minutes > 59
-    ) {
-      console.error(
-        `Invalid time string: ${timeString}, Hours: ${hours}, Minutes: ${minutes}`
-      );
+    if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      console.error(`Invalid time string: ${timeString}`);
       return new Date();
     }
-    const newDate = new Date();
+    const newDate = new Date(dueDate);
     newDate.setHours(hours, minutes, 0, 0);
     return newDate;
   };
@@ -125,8 +169,7 @@ const EditPlan = () => {
   };
 
   const formatDate = (date: Date): string => {
-    if (!(date instanceof Date) || isNaN(date.getTime()))
-      return new Date().toISOString().split("T")[0];
+    if (!(date instanceof Date) || isNaN(date.getTime())) return new Date().toISOString().split("T")[0];
     return date.toISOString().split("T")[0];
   };
 
@@ -135,9 +178,9 @@ const EditPlan = () => {
       title,
       description,
       due_date: formatDate(dueDate),
-      due_time: formatTime(dueTime),
-      category:
-        selectedCategory?.value || parseInt(params.category_id as string),
+      due_time_start: formatTime(startTime),
+      due_time_end: formatTime(endTime),
+      category: selectedCategory?.value || parseInt(params.category_id as string),
       affect_all_recurring: affectAllRecurring,
     };
     console.log(dataToSave);
@@ -168,12 +211,6 @@ const EditPlan = () => {
       padding: rV(15),
       borderRadius: rMS(8),
       marginBottom: rV(15),
-    },
-    sectionHeader: {
-      fontSize: rMS(16),
-      fontWeight: "bold",
-      marginBottom: rV(10),
-      color: themeColors.text,
     },
     toggleContainer: {
       flexDirection: "row",
@@ -211,11 +248,7 @@ const EditPlan = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Task Details Section */}
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.sectionContainer}>
           <AnimatedRoundTextInput
             placeholderTextColor={themeColors.textSecondary}
@@ -231,7 +264,6 @@ const EditPlan = () => {
           />
         </View>
 
-        {/* Time Details Section */}
         <View style={styles.sectionContainer}>
           <DateSelector
             onDateChange={(selectedDate: string) => {
@@ -247,30 +279,41 @@ const EditPlan = () => {
           />
           <CustomDateTimeSelector
             mode="time"
-            label="Due Time"
-            value={formatTime(dueTime)}
+            label="Start Time"
+            value={formatTime(startTime)}
             onTimeChange={(time) => {
               const newTime = parseTime(time);
               if (!isNaN(newTime.getTime())) {
-                setDueTime(newTime);
+                setStartTime(newTime);
               } else {
-                console.error(`Invalid due time: ${time}`);
+                console.error(`Invalid start time: ${time}`);
               }
             }}
-            buttonTitle="Pick Due Time"
+            buttonTitle="Pick Start Time"
+          />
+          <CustomDateTimeSelector
+            mode="time"
+            label="End Time"
+            value={formatTime(endTime)}
+            onTimeChange={(time) => {
+              const newTime = parseTime(time);
+              if (!isNaN(newTime.getTime())) {
+                setEndTime(newTime);
+              } else {
+                console.error(`Invalid end time: ${time}`);
+              }
+            }}
+            buttonTitle="Pick End Time"
           />
         </View>
 
-        {/* Other Details Section */}
         <View style={styles.sectionContainer}>
           <CustomPicker
             label="Category"
             options={categoriesData?.map((cat) => cat.label) || []}
             selectedValue={selectedCategory?.label || undefined}
             onValueChange={(value) =>
-              setSelectedCategory(
-                categoriesData?.find((cat) => cat.label === value) || null
-              )
+              setSelectedCategory(categoriesData?.find((cat) => cat.label === value) || null)
             }
           />
           <View style={styles.toggleContainer}>
@@ -279,20 +322,12 @@ const EditPlan = () => {
               value={affectAllRecurring}
               onValueChange={setAffectAllRecurring}
               trackColor={{ false: "#767577", true: themeColors.tint }}
-              thumbColor={
-                affectAllRecurring ? themeColors.background : "#f4f3f4"
-              }
+              thumbColor={affectAllRecurring ? themeColors.background : "#f4f3f4"}
             />
           </View>
         </View>
 
-        {/* Save and Delete Buttons */}
-        <View
-          style={[
-            styles.buttonContainer,
-            { flexDirection: "row", justifyContent: "space-between" },
-          ]}
-        >
+        <View style={[styles.buttonContainer, { flexDirection: "row", justifyContent: "space-between" }]}>
           <GameButton
             onPress={handleSaveTime}
             title="Save"

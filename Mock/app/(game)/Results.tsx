@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect } from "react"; // Add useEffect
 import {
   View,
   Text,
@@ -6,10 +6,10 @@ import {
   FlatList,
   Image,
   useColorScheme,
+  BackHandler, // Add BackHandler
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Player, GameDetailsResponse } from "../../components/types";
-import ApiUrl from "../../config";
 import { useAuth } from "../../components/AuthContext";
 import Colors from "../../constants/Colors";
 import GameButton from "../../components/GameButton";
@@ -24,6 +24,14 @@ export default function ResultsScreen() {
     scores: string;
   }>();
 
+  // Prevent back navigation on Android
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
+      return true; // Returning true prevents the default back action
+    });
+    return () => backHandler.remove(); // Clean up the event listener
+  }, []);
+
   const scores = useMemo(() => {
     try {
       return JSON.parse(typeof scoresParam === "string" ? scoresParam : "{}");
@@ -32,8 +40,6 @@ export default function ResultsScreen() {
       return {};
     }
   }, [scoresParam]);
-
-  console.log(scores);
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -48,12 +54,10 @@ export default function ResultsScreen() {
     enabled: !!userToken,
   });
 
-  // Derive simple values directly
   const creator = gameDetails?.creator.first_name;
   const creatorId = gameDetails?.creator.id;
   const gameCode = gameDetails?.code;
 
-  // Compute players with useMemo
   const players = useMemo(() => {
     if (!gameDetails?.players) return [];
     return gameDetails.players.map((player) => ({
@@ -66,8 +70,6 @@ export default function ResultsScreen() {
           : `${player.profile_picture}`,
     }));
   }, [gameDetails, scores, userInfo]);
-
-  console.log(gameDetails?.players);
 
   const handleCreateNewGame = () => {
     router.navigate("GameIntro");
