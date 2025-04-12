@@ -1,23 +1,19 @@
-import React, { useEffect } from "react";
-import { Modal, View, StyleSheet, Dimensions, TouchableOpacity } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import React, { useState, useCallback, useEffect } from "react";
 import {
-  GestureHandlerRootView,
-  PanGestureHandler,
-  PinchGestureHandler,
-  TapGestureHandler,
-  type PinchGestureHandlerGestureEvent,
-} from "react-native-gesture-handler";
-import Animated, {
-  useSharedValue,
-  useAnimatedGestureHandler,
-  useAnimatedStyle,
-  withSpring,
-  runOnJS,
-} from "react-native-reanimated";
-import AppImage from "./AppImage"; // Adjust path as needed
-
-const { width, height } = Dimensions.get("window");
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Text,
+  ActivityIndicator,
+  ToastAndroid,
+  useColorScheme,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import ImageViewing from "react-native-image-viewing";
+import * as MediaLibrary from "expo-media-library";
+import * as FileSystem from "expo-file-system";
+import Colors from "../constants/Colors"; // Adjust path as needed
+import { SIZES, rS, rV } from "../constants"; // Adjust path as needed
 
 type FullScreenImageViewerProps = {
   visible: boolean;
@@ -29,162 +25,129 @@ type FullScreenImageViewerProps = {
 const FullScreenImageViewer: React.FC<FullScreenImageViewerProps> = ({
   visible,
   images,
-  currentIndex: initialIndex,
+  currentIndex,
   onRequestClose,
 }) => {
-  // React state for the active image index.
-  const [currentIndexState, setCurrentIndexState] = React.useState(initialIndex);
-  // Shared values for animation and gesture handling.
-  const currentIndex = useSharedValue(initialIndex);
-  const scale = useSharedValue(1);
-  const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
-  const swipeOffsetX = useSharedValue(0);
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
+  const [isSaving, setIsSaving] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(currentIndex);
 
-  // When modal opens, reset all values.
+  // Sync currentImageIndex for save functionality
   useEffect(() => {
-    setCurrentIndexState(initialIndex);
-    currentIndex.value = initialIndex;
-    scale.value = 1;
-    translateX.value = 0;
-    translateY.value = 0;
-    swipeOffsetX.value = 0;
-  }, [visible, initialIndex]);
+    if (visible) {
+      setCurrentImageIndex(currentIndex);
+    }
+  }, [visible, currentIndex]);
 
-  /**
-   * Pan Gesture Handler:
-   * - When zoomed in (scale > 1): allows panning within the zoomed image.
-   * - When not zoomed (scale === 1): handles horizontal swiping between images,
-   *   and a downward vertical swipe (if translationY exceeds threshold) dismisses the viewer.
-   */
-  const panGesture = useAnimatedGestureHandler({
-    onStart: (_, ctx: any) => {
-      // Save start values depending on whether the image is zoomed.
-      ctx.startX = scale.value > 1 ? translateX.value : swipeOffsetX.value;
-      ctx.startY = scale.value > 1 ? translateY.value : 0;
-    },
-    onActive: (event, ctx) => {
-      if (scale.value > 1) {
-        translateX.value = ctx.startX + event.translationX;
-        translateY.value = ctx.startY + event.translationY;
-      } else {
-        swipeOffsetX.value = ctx.startX + event.translationX;
-        // For vertical translation, apply translateY to simulate image dragging.
-        translateY.value = event.translationY;
+  // Save image handler
+  const handleSaveImage = useCallback(async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      const imageUri = images[currentImageIndex];
+      if (!imageUri) {
+        ToastAndroid.show("No image selected", ToastAndroid.SHORT);
+        return;
       }
-    },
-    onEnd: (event) => {
-      if (scale.value > 1) {
-        // When zoomed, allow smooth panning within the limits.
-        translateX.value = withSpring(translateX.value);
-        translateY.value = withSpring(translateY.value);
-      } else {
-        // Check if vertical swipe downward exceeds a threshold.
-        if (event.translationY > 100 && Math.abs(event.translationX) < 50) {
-          // Dismiss the viewer.
-          runOnJS(onRequestClose)();
-          return;
-        }
-        // Otherwise, check for horizontal swipes.
-        if (Math.abs(swipeOffsetX.value) > 50) {
-          let newIndex = currentIndex.value;
-          if (swipeOffsetX.value > 0 && currentIndex.value > 0) {
-            newIndex = currentIndex.value - 1;
-          } else if (swipeOffsetX.value < 0 && currentIndex.value < images.length - 1) {
-            newIndex = currentIndex.value + 1;
-          }
-          // If the index changes, update both the shared value and React state.
-          if (newIndex !== currentIndex.value) {
-            currentIndex.value = newIndex;
-            runOnJS(setCurrentIndexState)(newIndex);
-          }
-        }
-        // Return to initial position for horizontal and vertical translations.
-        swipeOffsetX.value = withSpring(0);
-        translateY.value = withSpring(0);
-      }
-    },
-  });
 
-  /**
-   * Pinch Gesture Handler:
-   * - Allows smooth zooming with limits.
-   */
-  const pinchGesture = useAnimatedGestureHandler<
-    PinchGestureHandlerGestureEvent,
-    { startScale: number }
-  >({
-    onStart: (_, ctx) => {
-      ctx.startScale = scale.value;
-    },
-    onActive: (event, ctx) => {
-      scale.value = ctx.startScale * event.scale;
-    },
-    onEnd: () => {
-      if (scale.value < 1) {
-        scale.value = withSpring(1);
-        translateX.value = withSpring(0);
-        translateY.value = withSpring(0);
-      } else if (scale.value > 5) {
-        scale.value = withSpring(5);
+      let localUri = imageUri;
+      if (imageUri.startsWith("data:image")) {
+        // Handle base64 image
+        const base64Data = imageUri.split(",")[1];
+        const fileName = `image_${Date.now()}.jpg`;
+        const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+        await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        localUri = fileUri;
+      } else if (imageUri.startsWith("http")) {
+        // Handle remote image
+        const fileName = `image_${Date.now()}.jpg`;
+        const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+        const { uri } = await FileSystem.downloadAsync(imageUri, fileUri);
+        localUri = uri;
       }
-    },
-  });
 
-  /**
-   * Double Tap Gesture Handler:
-   * - Toggles between zoomed in and reset.
-   */
-  const doubleTapGesture = useAnimatedGestureHandler({
-    onActive: () => {
-      if (scale.value > 1) {
-        scale.value = withSpring(1);
-        translateX.value = withSpring(0);
-        translateY.value = withSpring(0);
-      } else {
-        scale.value = withSpring(2);
+      await MediaLibrary.saveToLibraryAsync(localUri);
+      ToastAndroid.show("Image saved to gallery", ToastAndroid.SHORT);
+
+      if (localUri !== imageUri) {
+        await FileSystem.deleteAsync(localUri, { idempotent: true });
       }
-    },
-  });
+    } catch (error) {
+      console.error("Error saving image:", error);
+      ToastAndroid.show("Failed to save image", ToastAndroid.SHORT);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [currentImageIndex, images, isSaving]);
 
-  // Animated styles that merge swiping, panning, and scaling transforms.
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { translateX: swipeOffsetX.value + translateX.value },
-        { translateY: translateY.value },
-        { scale: scale.value },
-      ],
-    };
-  });
+  // Map images to library format
+  const formattedImages = images.map((uri) => ({ uri }));
+
+  // Custom header (close button)
+  const renderHeader = ({ imageIndex }: { imageIndex: number }) => (
+    <TouchableOpacity
+      style={styles.closeButton}
+      onPress={onRequestClose}
+      accessibilityLabel="Close image viewer"
+    >
+      <Ionicons name="close" size={rS(30)} color="#fff" />
+    </TouchableOpacity>
+  );
+
+  // Custom footer (save button and index indicator)
+  const renderFooter = ({ imageIndex }: { imageIndex: number }) => (
+    <View style={styles.footer}>
+      <TouchableOpacity
+        style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+        onPress={handleSaveImage}
+        disabled={isSaving}
+        accessibilityLabel="Save image to gallery"
+      >
+        {isSaving ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <Ionicons name="download-outline" size={rS(30)} color="#fff" />
+        )}
+      </TouchableOpacity>
+      <Text style={styles.indexIndicator}>
+        {`${imageIndex + 1}/${images.length}`}
+      </Text>
+    </View>
+  );
+
+  // Handle empty image list
+  if (!images || images.length === 0) {
+    return (
+      <View style={[styles.container, { backgroundColor: "black" }]}>
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={onRequestClose}
+          accessibilityLabel="Close image viewer"
+        >
+          <Ionicons name="close" size={rS(30)} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.errorText}>No images to display</Text>
+      </View>
+    );
+  }
 
   return (
-    <Modal visible={visible} transparent onRequestClose={onRequestClose}>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <View style={styles.container}>
-          {/* Close Button */}
-          <TouchableOpacity style={styles.closeButton} onPress={onRequestClose}>
-            <Ionicons name="close" size={30} color="#fff" />
-          </TouchableOpacity>
-          {/* Pan Gesture Handler wraps the view for swiping and vertical dismissal */}
-          <PanGestureHandler onGestureEvent={panGesture}>
-            <Animated.View style={{ flex: 1 }}>
-              {/* Pinch Gesture Handler for zooming */}
-              <PinchGestureHandler onGestureEvent={pinchGesture}>
-                <Animated.View style={{ flex: 1 }}>
-                  {/* Double Tap Handler for toggling zoom */}
-                  <TapGestureHandler onGestureEvent={doubleTapGesture} numberOfTaps={2}>
-                    <Animated.View style={[styles.imageContainer, animatedStyle]}>
-                      <AppImage uri={images[currentIndexState]} style={styles.fullImage} />
-                    </Animated.View>
-                  </TapGestureHandler>
-                </Animated.View>
-              </PinchGestureHandler>
-            </Animated.View>
-          </PanGestureHandler>
-        </View>
-      </GestureHandlerRootView>
-    </Modal>
+    <ImageViewing
+      images={formattedImages}
+      imageIndex={currentIndex}
+      visible={visible}
+      onRequestClose={onRequestClose}
+      onImageIndexChange={setCurrentImageIndex}
+      HeaderComponent={renderHeader}
+      FooterComponent={renderFooter}
+      backgroundColor="rgba(0, 0, 0, 0.9)"
+      animationType="fade"
+      doubleTapToZoom
+      swipeToCloseEnabled
+    />
   );
 };
 
@@ -193,25 +156,41 @@ export default FullScreenImageViewer;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "black",
     justifyContent: "center",
     alignItems: "center",
-  },
-  imageContainer: {
-    width: width,
-    height: height,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  fullImage: {
-    width: width,
-    height: height,
-    resizeMode: "contain",
   },
   closeButton: {
     position: "absolute",
-    top: 40,
-    right: 20,
+    top: rV(40),
+    right: rS(20),
     zIndex: 2,
+  },
+  footer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: rS(20),
+    paddingVertical: rV(40),
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+  },
+  saveButton: {
+    zIndex: 2,
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
+  },
+  indexIndicator: {
+    color: "#fff",
+    fontSize: SIZES.medium,
+    fontWeight: "bold",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    paddingHorizontal: rS(10),
+    paddingVertical: rV(5),
+    borderRadius: rS(10),
+  },
+  errorText: {
+    color: "#fff",
+    fontSize: SIZES.large,
+    textAlign: "center",
   },
 });

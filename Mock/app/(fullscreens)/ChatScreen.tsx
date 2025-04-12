@@ -1298,7 +1298,6 @@ const CommunityChatScreen: React.FC = () => {
                 placeholderTextColor={themeColors.textSecondary}
                 value={props.text}
                 onChangeText={props.onTextChanged}
-                multiline={true}
               />
               {editingMessage ? (
                 <TouchableOpacity onPress={onEditMessage}>
