@@ -1,6 +1,13 @@
 import "react-native-get-random-values";
 
-import React, { useState, useCallback, useEffect, useRef, useLayoutEffect } from "react";
+import React, {
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  useLayoutEffect,
+  memo,
+} from "react";
 import {
   View,
   StyleSheet,
@@ -51,6 +58,17 @@ import * as MediaLibrary from "expo-media-library";
 import * as FileSystem from "expo-file-system";
 import FullScreenImageViewer from "../../components/FullScreenImageViewer";
 
+// Memoize GiftedChat to prevent unnecessary re-renders
+const MemoizedGiftedChat = memo(GiftedChat, (prevProps, nextProps) => {
+  return (
+    prevProps.messages === nextProps.messages &&
+    prevProps.text === nextProps.text &&
+    prevProps.user === nextProps.user &&
+    prevProps.loadEarlier === nextProps.loadEarlier &&
+    prevProps.isLoadingEarlier === nextProps.isLoadingEarlier
+  );
+});
+
 const CommunityChatScreen: React.FC = () => {
   const route = useRoute();
   const { communityId } = route.params as { communityId: string };
@@ -67,6 +85,11 @@ const CommunityChatScreen: React.FC = () => {
   const navigation = useNavigation();
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [messageIds, setMessageIds] = useState(new Set<string>());
+  const [loadEarlier, setLoadEarlier] = useState(true);
+  const [isLoadingEarlier, setIsLoadingEarlier] = useState(false);
+  const [lastMessageTimestamp, setLastMessageTimestamp] = useState<
+    number | null
+  >(null);
   const { width } = Dimensions.get("window");
   const [messageInput, setMessageInput] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -89,9 +112,11 @@ const CommunityChatScreen: React.FC = () => {
   const [isVideoViewerVisible, setIsVideoViewerVisible] = useState(false);
   const [isDocumentViewerVisible, setIsDocumentViewerVisible] = useState(false);
   const [editingMessage, setEditingMessage] = useState<IMessage | null>(null);
-  const [profileImages, setProfileImages] = useState<Record<string, string>>({});
+  const [profileImages, setProfileImages] = useState<Record<string, string>>(
+    {}
+  );
 
-  const normalizeMessage = (data) => {
+  const normalizeMessage = useCallback((data) => {
     if ("message" in data && "sent_at" in data) {
       return {
         _id: data.id || data.temp_id || Date.now().toString(),
@@ -141,14 +166,14 @@ const CommunityChatScreen: React.FC = () => {
       console.warn("Unknown message format received:", data);
       return null;
     }
-  };
+  }, []);
 
   const backgroundImage =
     colorScheme === "dark"
       ? "https://images.pexels.com/photos/9665185/pexels-photo-9665185.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
       : "https://images.pexels.com/photos/7599590/pexels-photo-7599590.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2";
 
-  const fetchMessageHistory = useCallback(async () => {
+  const fetchInitialMessages = useCallback(async () => {
     try {
       setLoading(true);
       const cachedMessages = await sqliteGetItem(`messages_${communityId}`);
@@ -158,7 +183,11 @@ const CommunityChatScreen: React.FC = () => {
           .filter((msg): msg is IMessage => msg !== null)
           .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
         setMessages(validMessages);
-        // Update imageViewerImages with images from cached messages
+        if (validMessages.length > 0) {
+          setLastMessageTimestamp(
+            validMessages[validMessages.length - 1].createdAt.getTime()
+          );
+        }
         const imageUris = validMessages
           .filter((msg) => msg.image)
           .map((msg) => msg.image);
@@ -166,21 +195,53 @@ const CommunityChatScreen: React.FC = () => {
       }
 
       if (isConnected) {
-        await sendMessage({ type: "fetch_history", community_id: communityId });
+        await sendMessage({
+          type: "fetch_history",
+          community_id: communityId,
+          limit: 20, // Initial batch size
+        });
       }
     } catch (error) {
-      console.error("Error fetching message history:", error);
+      console.error("Error fetching initial messages:", error);
       setError("Failed to load message history");
     } finally {
       setLoading(false);
     }
-  }, [communityId, sendMessage, isConnected, sqliteGetItem]);
+  }, [communityId, sendMessage, isConnected, sqliteGetItem, normalizeMessage]);
+
+  const handleLoadEarlier = useCallback(async () => {
+    if (!loadEarlier || isLoadingEarlier) return;
+
+    setIsLoadingEarlier(true);
+    try {
+      if (isConnected && lastMessageTimestamp) {
+        await sendMessage({
+          type: "fetch_history",
+          community_id: communityId,
+          limit: 20,
+          before: lastMessageTimestamp, // Use timestamp for pagination
+        });
+      }
+    } catch (error) {
+      console.error("Error loading earlier messages:", error);
+      setError("Failed to load earlier messages");
+    } finally {
+      setIsLoadingEarlier(false);
+    }
+  }, [
+    loadEarlier,
+    isLoadingEarlier,
+    isConnected,
+    communityId,
+    lastMessageTimestamp,
+    sendMessage,
+  ]);
 
   useFocusEffect(
     useCallback(() => {
-      fetchMessageHistory();
+      fetchInitialMessages();
       return () => {};
-    }, [fetchMessageHistory])
+    }, [fetchInitialMessages])
   );
 
   useEffect(() => {
@@ -198,23 +259,38 @@ const CommunityChatScreen: React.FC = () => {
               .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
             setMessages((prevMessages) => {
+              const newMessages = transformedMessages.filter(
+                (newMsg) =>
+                  !prevMessages.some((prevMsg) => prevMsg._id === newMsg._id)
+              );
               const pendingMessages = prevMessages.filter(
                 (m) => m.status === "pending" || m.tempId
               );
-              const updatedMessages = [
-                ...pendingMessages,
-                ...transformedMessages,
-              ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+              const updatedMessages = data.before
+                ? [...prevMessages, ...newMessages] // Append for earlier messages
+                : [...pendingMessages, ...transformedMessages]; // Replace for initial fetch
+              const sortedMessages = updatedMessages.sort(
+                (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+              );
               sqliteSetItem(
                 `messages_${communityId}`,
-                JSON.stringify(updatedMessages)
+                JSON.stringify(sortedMessages)
               );
-              // Update imageViewerImages with all images from messages
-              const imageUris = updatedMessages
+              if (newMessages.length > 0 && data.before) {
+                setLastMessageTimestamp(
+                  sortedMessages[sortedMessages.length - 1].createdAt.getTime()
+                );
+              } else if (!data.before && sortedMessages.length > 0) {
+                setLastMessageTimestamp(
+                  sortedMessages[sortedMessages.length - 1].createdAt.getTime()
+                );
+              }
+              setLoadEarlier(newMessages.length === 20); // Enable if more messages might exist
+              const imageUris = sortedMessages
                 .filter((msg) => msg.image)
                 .map((msg) => msg.image);
               setImageViewerImages(imageUris);
-              return updatedMessages;
+              return sortedMessages;
             });
           } else if (
             data.type === "message" &&
@@ -237,7 +313,6 @@ const CommunityChatScreen: React.FC = () => {
                   `messages_${communityId}`,
                   JSON.stringify(updatedMessages)
                 );
-                // Update imageViewerImages with all images
                 const imageUris = updatedMessages
                   .filter((msg) => msg.image)
                   .map((msg) => msg.image);
@@ -254,7 +329,6 @@ const CommunityChatScreen: React.FC = () => {
                 `messages_${communityId}`,
                 JSON.stringify(updatedMessages)
               );
-              // Update imageViewerImages after deletion
               const imageUris = updatedMessages
                 .filter((msg) => msg.image)
                 .map((msg) => msg.image);
@@ -272,7 +346,6 @@ const CommunityChatScreen: React.FC = () => {
                 `messages_${communityId}`,
                 JSON.stringify(updatedMessages)
               );
-              // No need to update imageViewerImages since edit doesn't affect images
               return updatedMessages;
             });
           }
@@ -288,7 +361,7 @@ const CommunityChatScreen: React.FC = () => {
     }
 
     return socketCleanup;
-  }, [socket, communityId, sqliteSetItem]);
+  }, [socket, communityId, sqliteSetItem, normalizeMessage]);
 
   useEffect(() => {
     (async () => {
@@ -316,11 +389,19 @@ const CommunityChatScreen: React.FC = () => {
           try {
             keys = JSON.parse(allKeysRaw);
             if (!Array.isArray(keys)) {
-              console.warn("storage_keys is not an array, resetting:", allKeysRaw);
+              console.warn(
+                "storage_keys is not an array, resetting:",
+                allKeysRaw
+              );
               keys = [];
             }
           } catch (e) {
-            console.error("Failed to parse storage_keys in sendUnsent:", e, "Raw value:", allKeysRaw);
+            console.error(
+              "Failed to parse storage_keys in sendUnsent:",
+              e,
+              "Raw value:",
+              allKeysRaw
+            );
             keys = [];
           }
           const unsentKeys = keys.filter((key: string) =>
@@ -342,7 +423,7 @@ const CommunityChatScreen: React.FC = () => {
                 document: message.content.document || undefined,
                 ...(message.replyTo && { reply_to: message.replyTo }),
               });
-              await sqliteSetItem(key, ""); // Clear the unsent message
+              await sqliteSetItem(key, "");
               const updatedKeys = keys.filter((k: string) => k !== key);
               await sqliteSetItem("storage_keys", JSON.stringify(updatedKeys));
             }
@@ -357,7 +438,8 @@ const CommunityChatScreen: React.FC = () => {
 
   const sendMediaMessage = useCallback(
     async (fileUri: string, type: "image" | "document") => {
-      const tempId = Date.now().toString() + Math.random().toString(36).substr(2, 5);
+      const tempId =
+        Date.now().toString() + Math.random().toString(36).substr(2, 5);
       const message = {
         _id: tempId,
         tempId,
@@ -373,8 +455,7 @@ const CommunityChatScreen: React.FC = () => {
 
       if (!messageIds.has(tempId)) {
         setMessages((prevMessages) => [message, ...prevMessages]);
-        setMessageIds(new Set([...messageIds, tempId]));
-        // Update imageViewerImages when a new image is sent
+        setMessageIds((prev) => new Set([...prev, tempId]));
         if (type === "image") {
           setImageViewerImages((prev) => [fileUri, ...prev]);
         }
@@ -389,23 +470,16 @@ const CommunityChatScreen: React.FC = () => {
             [type]: fileUri,
           },
         };
-        await sqliteSetItem(`unsent_message_${tempId}`, JSON.stringify(messageToStore));
+        await sqliteSetItem(
+          `unsent_message_${tempId}`,
+          JSON.stringify(messageToStore)
+        );
         await sqliteSetItem(
           `messages_${communityId}`,
           JSON.stringify([message, ...messages])
         );
-        const allKeysRaw = await sqliteGetItem("storage_keys") || "[]";
-        let keys = [];
-        try {
-          keys = JSON.parse(allKeysRaw);
-          if (!Array.isArray(keys)) {
-            console.warn("storage_keys is not an array, resetting:", allKeysRaw);
-            keys = [];
-          }
-        } catch (e) {
-          console.error("Failed to parse storage_keys in sendMediaMessage:", e, "Raw value:", allKeysRaw);
-          keys = [];
-        }
+        const allKeysRaw = (await sqliteGetItem("storage_keys")) || "[]";
+        let keys = JSON.parse(allKeysRaw) || [];
         if (!keys.includes(`unsent_message_${tempId}`)) {
           keys.push(`unsent_message_${tempId}`);
           await sqliteSetItem("storage_keys", JSON.stringify(keys));
@@ -422,13 +496,23 @@ const CommunityChatScreen: React.FC = () => {
         });
       }
     },
-    [communityId, sendMessage, user, isConnected, messageIds, sqliteSetItem, sqliteGetItem, messages]
+    [
+      communityId,
+      sendMessage,
+      user,
+      isConnected,
+      messageIds,
+      sqliteSetItem,
+      sqliteGetItem,
+      messages,
+    ]
   );
 
   const onSend = useCallback(
     async (newMessages: IMessage[] = []) => {
       for (let message of newMessages) {
-        const tempId = Date.now().toString() + Math.random().toString(36).substr(2, 5);
+        const tempId =
+          Date.now().toString() + Math.random().toString(36).substr(2, 5);
         const tempMessage: IMessage = {
           _id: tempId,
           tempId,
@@ -438,13 +522,25 @@ const CommunityChatScreen: React.FC = () => {
             _id: user?.id || 1,
             name: user?.first_name + " " + user?.last_name || "Unknown User",
           },
-          image: mediaPreview.uri && mediaPreview.type === "image" ? mediaPreview.uri : undefined,
-          document: mediaPreview.uri && mediaPreview.type === "document" ? mediaPreview.uri : undefined,
+          image:
+            mediaPreview.uri && mediaPreview.type === "image"
+              ? mediaPreview.uri
+              : undefined,
+          document:
+            mediaPreview.uri && mediaPreview.type === "document"
+              ? mediaPreview.uri
+              : undefined,
           status: isConnected ? "sending" : "pending",
           ...(replyToMessage && {
             replyTo: {
               _id: replyToMessage._id,
-              text: replyToMessage.text || (replyToMessage.image ? "Photo" : replyToMessage.document ? "Document" : ""),
+              text:
+                replyToMessage.text ||
+                (replyToMessage.image
+                  ? "Photo"
+                  : replyToMessage.document
+                  ? "Document"
+                  : ""),
               user: replyToMessage.user,
             },
           }),
@@ -455,8 +551,7 @@ const CommunityChatScreen: React.FC = () => {
 
         if (!messageIds.has(tempId)) {
           setMessages((prevMessages) => [tempMessage, ...prevMessages]);
-          setMessageIds(new Set([...messageIds, tempId]));
-          // Update imageViewerImages if the message includes an image
+          setMessageIds((prev) => new Set([...prev, tempId]));
           if (tempMessage.image) {
             setImageViewerImages((prev) => [tempMessage.image, ...prev]);
           }
@@ -472,23 +567,16 @@ const CommunityChatScreen: React.FC = () => {
               document: tempMessage.document || undefined,
             },
           };
-          await sqliteSetItem(`unsent_message_${tempId}`, JSON.stringify(messageToStore));
+          await sqliteSetItem(
+            `unsent_message_${tempId}`,
+            JSON.stringify(messageToStore)
+          );
           await sqliteSetItem(
             `messages_${communityId}`,
             JSON.stringify([tempMessage, ...messages])
           );
-          const allKeysRaw = await sqliteGetItem("storage_keys") || "[]";
-          let keys = [];
-          try {
-            keys = JSON.parse(allKeysRaw);
-            if (!Array.isArray(keys)) {
-              console.warn("storage_keys is not an array, resetting:", allKeysRaw);
-              keys = [];
-            }
-          } catch (e) {
-            console.error("Failed to parse storage_keys in onSend:", e, "Raw value:", allKeysRaw);
-            keys = [];
-          }
+          const allKeysRaw = (await sqliteGetItem("storage_keys")) || "[]";
+          let keys = JSON.parse(allKeysRaw) || [];
           if (!keys.includes(`unsent_message_${tempId}`)) {
             keys.push(`unsent_message_${tempId}`);
             await sqliteSetItem("storage_keys", JSON.stringify(keys));
@@ -512,10 +600,21 @@ const CommunityChatScreen: React.FC = () => {
         }
       }
     },
-    [communityId, sendMessage, user, replyToMessage, isConnected, mediaPreview, messageIds, sqliteSetItem, sqliteGetItem, messages]
+    [
+      communityId,
+      sendMessage,
+      user,
+      replyToMessage,
+      isConnected,
+      mediaPreview,
+      messageIds,
+      sqliteSetItem,
+      sqliteGetItem,
+      messages,
+    ]
   );
 
-  const pickImage = async () => {
+  const pickImage = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: false,
@@ -528,21 +627,20 @@ const CommunityChatScreen: React.FC = () => {
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64data = reader.result as string;
-        const imageBase64 = `data:${blob.type};base64,${base64data.split(",")[1]}`;
+        const imageBase64 = `data:${blob.type};base64,${
+          base64data.split(",")[1]
+        }`;
         await sendMediaMessage(imageBase64, "image");
       };
       reader.readAsDataURL(blob);
     }
-  };
-
-
+  }, [sendMediaMessage]);
 
   const handleCopySelected = useCallback(async () => {
     const textToCopy = selectedMessages.map((msg) => msg.text).join("\n\n");
     await Clipboard.setStringAsync(textToCopy);
     ToastAndroid.show("Messages copied to clipboard", ToastAndroid.SHORT);
   }, [selectedMessages]);
-  
 
   const handleLongPress = useCallback((message: IMessage) => {
     setSelectedMessages((prevSelected) => {
@@ -551,25 +649,19 @@ const CommunityChatScreen: React.FC = () => {
       }
       return prevSelected;
     });
-  
     setMessages((prevMessages) =>
       prevMessages.map((m) =>
         m._id === message._id ? { ...m, isSelected: true } : m
       )
     );
   }, []);
-  
-  
-  
 
   const handleDeselectAll = useCallback(() => {
     setSelectedMessages([]);
-    // Remove visual selection indicator from all messages
     setMessages((prevMessages) =>
       prevMessages.map((m) => ({ ...m, isSelected: false }))
     );
   }, []);
-  
 
   const canEditDeleteOrReply = useCallback(() => {
     const userMessages = selectedMessages.filter(
@@ -664,7 +756,10 @@ const CommunityChatScreen: React.FC = () => {
       navigation.setOptions({
         headerTitle: `${selectedMessages.length} Selected`,
         headerLeft: () => (
-          <TouchableOpacity onPress={handleDeselectAll} style={{ marginLeft: SIZES.xSmall }}>
+          <TouchableOpacity
+            onPress={handleDeselectAll}
+            style={{ marginLeft: SIZES.xSmall }}
+          >
             <MaterialCommunityIcons
               name="close"
               size={SIZES.large}
@@ -688,7 +783,10 @@ const CommunityChatScreen: React.FC = () => {
               </TouchableOpacity>
             )}
             {canEdit && (
-              <TouchableOpacity onPress={handleEditMessage} style={{ marginHorizontal: rS(8) }}>
+              <TouchableOpacity
+                onPressIn={handleEditMessage}
+                style={{ marginHorizontal: rS(8) }}
+              >
                 <MaterialCommunityIcons
                   name="pencil"
                   size={rS(24)}
@@ -697,7 +795,10 @@ const CommunityChatScreen: React.FC = () => {
               </TouchableOpacity>
             )}
             {canDelete && (
-              <TouchableOpacity onPress={handleDeleteMessage} style={{ marginHorizontal: rS(8) }}>
+              <TouchableOpacity
+                onPressIn={handleDeleteMessage}
+                style={{ marginHorizontal: rS(8) }}
+              >
                 <MaterialCommunityIcons
                   name="delete"
                   size={rS(24)}
@@ -705,7 +806,10 @@ const CommunityChatScreen: React.FC = () => {
                 />
               </TouchableOpacity>
             )}
-            <TouchableOpacity onPress={handleCopySelected} style={{ marginHorizontal: rS(8) }}>
+            <TouchableOpacity
+              onPressIn={handleCopySelected}
+              style={{ marginHorizontal: rS(8) }}
+            >
               <MaterialCommunityIcons
                 name="content-copy"
                 size={rS(24)}
@@ -716,7 +820,6 @@ const CommunityChatScreen: React.FC = () => {
         ),
       });
     } else {
-      // Default header when no messages are selected
       navigation.setOptions({
         headerTitle: () => (
           <TouchableOpacity
@@ -737,13 +840,18 @@ const CommunityChatScreen: React.FC = () => {
                 borderRadius: rMS(20),
               }}
             />
-            <Text style={{ color: themeColors.text, fontSize: rMS(SIZES.large) }}>
+            <Text
+              style={{ color: themeColors.text, fontSize: rMS(SIZES.large) }}
+            >
               {route.params?.name ?? "Chat"}
             </Text>
           </TouchableOpacity>
         ),
         headerLeft: () => (
-          <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginLeft: SIZES.xSmall }}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{ marginLeft: SIZES.xSmall }}
+          >
             <MaterialCommunityIcons
               name="arrow-left"
               size={SIZES.large}
@@ -769,34 +877,30 @@ const CommunityChatScreen: React.FC = () => {
     rS,
     rMS,
   ]);
-  
+
   const handlePress = useCallback((message: IMessage) => {
     setSelectedMessages((prevSelected) => {
-      // Only proceed if there is an active selection mode
       if (prevSelected.length > 0) {
         const isSelected = prevSelected.some((m) => m._id === message._id);
         if (isSelected) {
-          // Deselect the message
           return prevSelected.filter((m) => m._id !== message._id);
         } else {
-          // Select the message
           return [...prevSelected, message];
         }
       }
       return prevSelected;
     });
-  
     setMessages((prevMessages) =>
       prevMessages.map((m) =>
         m._id === message._id ? { ...m, isSelected: !m.isSelected } : m
       )
     );
   }, []);
-  
+
   useLayoutEffect(() => {
     updateHeader();
   }, [selectedMessages, updateHeader]);
-  
+
   const renderBubble = useCallback(
     (props) => {
       const isSelected = selectedMessages.some(
@@ -812,7 +916,7 @@ const CommunityChatScreen: React.FC = () => {
           props.previousMessage?.createdAt &&
           props.currentMessage.createdAt.toDateString() !==
             props.previousMessage.createdAt.toDateString());
-  
+
       const messageText = props.currentMessage.text
         ? props.currentMessage.text
         : props.currentMessage.image
@@ -820,7 +924,7 @@ const CommunityChatScreen: React.FC = () => {
         : props.currentMessage.document
         ? "Document"
         : "";
-  
+
       return (
         <TouchableOpacity
           onPress={() => handlePress(props.currentMessage)}
@@ -895,10 +999,13 @@ const CommunityChatScreen: React.FC = () => {
                       <View style={styles.replyContainer}>
                         <Text style={styles.replyName}>
                           {`Replying to ${
-                            props.currentMessage.replyTo.user?.name || "Unknown User"
+                            props.currentMessage.replyTo.user?.name ||
+                            "Unknown User"
                           }`}
                         </Text>
-                        <View style={{ flexDirection: "row", alignItems: "center" }}>
+                        <View
+                          style={{ flexDirection: "row", alignItems: "center" }}
+                        >
                           {props.currentMessage.replyTo.text == null ? (
                             <>
                               <MaterialCommunityIcons
@@ -920,8 +1027,11 @@ const CommunityChatScreen: React.FC = () => {
                       </View>
                     </TouchableOpacity>
                   )}
-                {((isOtherUser && isFirstMessageOfBlock) || (isOtherUser && isNewDay)) && (
-                  <Text style={styles.username}>{props.currentMessage.user.name}</Text>
+                {((isOtherUser && isFirstMessageOfBlock) ||
+                  (isOtherUser && isNewDay)) && (
+                  <Text style={styles.username}>
+                    {props.currentMessage.user.name}
+                  </Text>
                 )}
               </>
             )}
@@ -934,7 +1044,10 @@ const CommunityChatScreen: React.FC = () => {
             <Text
               style={[
                 styles.editedText,
-                { alignSelf: props.position === "left" ? "flex-start" : "flex-end" },
+                {
+                  alignSelf:
+                    props.position === "left" ? "flex-start" : "flex-end",
+                },
               ]}
             >
               Edited
@@ -945,7 +1058,7 @@ const CommunityChatScreen: React.FC = () => {
     },
     [selectedMessages, handlePress, handleLongPress, themeColors, user?.id]
   );
-  
+
   const renderAvatar = useCallback(
     (props) => {
       const userId = props.currentMessage.user._id;
@@ -1008,78 +1121,85 @@ const CommunityChatScreen: React.FC = () => {
     [openImageViewer]
   );
 
-  const renderDay = (props) => {
-    const { currentMessage, previousMessage } = props;
-    const isNewDay =
-      !previousMessage ||
-      (currentMessage?.createdAt &&
-        previousMessage?.createdAt &&
-        currentMessage.createdAt.toDateString() !==
-          previousMessage.createdAt.toDateString());
+  const renderDay = useCallback(
+    (props) => {
+      const { currentMessage, previousMessage } = props;
+      const isNewDay =
+        !previousMessage ||
+        (currentMessage?.createdAt &&
+          previousMessage?.createdAt &&
+          currentMessage.createdAt.toDateString() !==
+            previousMessage.createdAt.toDateString());
 
-    if (!isNewDay) return null;
+      if (!isNewDay) return null;
 
-    const formatDate = (date: Date) => {
-      const today = new Date();
-      const yesterday = new Date(today);
-      yesterday.setDate(today.getDate() - 1);
+      const formatDate = (date: Date) => {
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
 
-      if (date.toDateString() === today.toDateString()) {
-        return "Today";
-      } else if (date.toDateString() === yesterday.toDateString()) {
-        return "Yesterday";
-      } else {
-        return date.toDateString();
-      }
-    };
+        if (date.toDateString() === today.toDateString()) {
+          return "Today";
+        } else if (date.toDateString() === yesterday.toDateString()) {
+          return "Yesterday";
+        } else {
+          return date.toDateString();
+        }
+      };
 
-    return (
-      <View
-        style={[
-          styles.dateContainer,
-          { backgroundColor: themeColors.background },
-        ]}
-      >
-        <Text style={styles.dateText}>
-          {currentMessage.createdAt
-            ? formatDate(currentMessage.createdAt)
-            : "Unknown Date"}
-        </Text>
-      </View>
-    );
-  };
+      return (
+        <View
+          style={[
+            styles.dateContainer,
+            { backgroundColor: themeColors.background },
+          ]}
+        >
+          <Text style={styles.dateText}>
+            {currentMessage.createdAt
+              ? formatDate(currentMessage.createdAt)
+              : "Unknown Date"}
+          </Text>
+        </View>
+      );
+    },
+    [themeColors]
+  );
 
+  const renderSend = useCallback(
+    (props) => {
+      const hasText = props.text && props.text.trim().length > 0;
 
+      return (
+        <View>
+          {!hasText && (
+            <View style={styles.attachButtonContainer}>
+              <TouchableOpacity onPress={pickImage} style={styles.attachButton}>
+                <Ionicons
+                  name="image-outline"
+                  color={themeColors.text}
+                  size={SIZES.xLarge}
+                />
+              </TouchableOpacity>
+            </View>
+          )}
+          {hasText && (
+            <View style={styles.sendContainer}>
+              <Send
+                {...props}
+                containerStyle={styles.sendButton}
+                alwaysShowSend
+              >
+                <Ionicons name="send" color="#ffffff" size={SIZES.large} />
+              </Send>
+            </View>
+          )}
+        </View>
+      );
+    },
+    [pickImage, themeColors]
+  );
 
-  const renderSend = (props) => {
-    const hasText = props.text && props.text.trim().length > 0;
-
-    return (
-      <View>
-        {!hasText && (
-          <View style={styles.attachButtonContainer}>
-            <TouchableOpacity onPress={pickImage} style={styles.attachButton}>
-              <Ionicons
-                name="image-outline"
-                color={themeColors.text}
-                size={SIZES.xLarge}
-              />
-            </TouchableOpacity>
-          
-          </View>
-        )}
-        {hasText && (
-          <View style={styles.sendContainer}>
-            <Send {...props} containerStyle={styles.sendButton} alwaysShowSend>
-              <Ionicons name="send" color="#ffffff" size={SIZES.large} />
-            </Send>
-          </View>
-        )}
-      </View>
-    );
-  };
-
-  const renderMediaPreview = () => {
+  const renderMediaPreview = useCallback(() => {
     if (mediaPreview.uri) {
       return (
         <View style={styles.replyContainer}>
@@ -1107,89 +1227,105 @@ const CommunityChatScreen: React.FC = () => {
       );
     }
     return null;
-  };
+  }, [mediaPreview, themeColors]);
 
-  const renderInputToolbar = (props) => {
-    return (
-      <View>
-        {renderMediaPreview()}
-        {editingMessage && (
-          <View style={styles.replyContainer}>
-            <Text style={styles.replyName}>
-              Editing Message by {editingMessage.user.name}
-            </Text>
-            <TouchableOpacity
-              onPress={() => setEditingMessage(null)}
-              style={styles.closeReplyButton}
-            >
-              <Ionicons
-                name="close"
-                color={themeColors.text}
-                size={SIZES.medium}
-              />
-            </TouchableOpacity>
-          </View>
-        )}
-        {replyToMessage && (
-          <View style={styles.replyContainer}>
-            <Text style={styles.replyName}>
-              Replying to {replyToMessage.user?.name || "Unknown User"}
-            </Text>
-            <Text style={styles.replyText}>
-              {replyToMessage.text || (replyToMessage.image ? "Photo" : replyToMessage.document ? "Document" : "")}
-            </Text>
-            <TouchableOpacity
-              onPress={() => setReplyToMessage(null)}
-              style={styles.closeReplyButton}
-            >
-              <Ionicons
-                name="close"
-                color={themeColors.text}
-                size={SIZES.medium}
-              />
-            </TouchableOpacity>
-          </View>
-        )}
-        <InputToolbar
-          {...props}
-          containerStyle={[
-            styles.inputToolbar,
-            (editingMessage || replyToMessage || mediaPreview.uri) && {
-              marginTop: rV(0),
-            },
-          ]}
-          primaryStyle={{ alignItems: "center", flexDirection: "row" }}
-          renderComposer={() => (
-            <View style={styles.inputField}>
-              <TextInput
-                style={styles.textInput}
-                placeholder={
-                  editingMessage
-                    ? "Edit message"
-                    : replyToMessage
-                    ? "Reply to message"
-                    : "Message"
-                }
-                placeholderTextColor={themeColors.textSecondary}
-                value={props.text}
-                onChangeText={props.onTextChanged}
-              />
-              {editingMessage ? (
-                <TouchableOpacity onPress={onEditMessage}>
-                  <Ionicons
-                    name="checkmark"
-                    color={themeColors.text}
-                    size={SIZES.large}
-                    style={styles.attachIcon}
-                  />
-                </TouchableOpacity>
-              ) : null}
+  const renderInputToolbar = useCallback(
+    (props) => {
+      return (
+        <View>
+          {renderMediaPreview()}
+          {editingMessage && (
+            <View style={styles.replyContainer}>
+              <Text style={styles.replyName}>
+                Editing Message by {editingMessage.user.name}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setEditingMessage(null)}
+                style={styles.closeReplyButton}
+              >
+                <Ionicons
+                  name="close"
+                  color={themeColors.text}
+                  size={SIZES.medium}
+                />
+              </TouchableOpacity>
             </View>
           )}
-        />
-      </View>
-    );
-  };
+          {replyToMessage && (
+            <View style={styles.replyContainer}>
+              <Text style={styles.replyName}>
+                Replying to {replyToMessage.user?.name || "Unknown User"}
+              </Text>
+              <Text style={styles.replyText}>
+                {replyToMessage.text ||
+                  (replyToMessage.image
+                    ? "Photo"
+                    : replyToMessage.document
+                    ? "Document"
+                    : "")}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setReplyToMessage(null)}
+                style={styles.closeReplyButton}
+              >
+                <Ionicons
+                  name="close"
+                  color={themeColors.text}
+                  size={SIZES.medium}
+                />
+              </TouchableOpacity>
+            </View>
+          )}
+          <InputToolbar
+            {...props}
+            containerStyle={[
+              styles.inputToolbar,
+              (editingMessage || replyToMessage || mediaPreview.uri) && {
+                marginTop: rV(0),
+              },
+            ]}
+            primaryStyle={{ alignItems: "center", flexDirection: "row" }}
+            renderComposer={() => (
+              <View style={styles.inputField}>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder={
+                    editingMessage
+                      ? "Edit message"
+                      : replyToMessage
+                      ? "Reply to message"
+                      : "Message"
+                  }
+                  placeholderTextColor={themeColors.textSecondary}
+                  value={props.text}
+                  onChangeText={props.onTextChanged}
+                  multiline
+                />
+                {editingMessage ? (
+                  <TouchableOpacity onPress={onEditMessage}>
+                    <Ionicons
+                      name="checkmark"
+                      color={themeColors.text}
+                      size={SIZES.large}
+                      style={styles.attachIcon}
+                    />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            )}
+          />
+        </View>
+      );
+    },
+    [
+      editingMessage,
+      replyToMessage,
+      mediaPreview,
+      themeColors,
+      onEditMessage,
+      renderMediaPreview,
+    ]
+  );
 
   const styles = StyleSheet.create({
     container: {
@@ -1435,7 +1571,7 @@ const CommunityChatScreen: React.FC = () => {
           <ActivityIndicator size="large" color={themeColors.tint} />
         </View>
       ) : (
-        <GiftedChat
+        <MemoizedGiftedChat
           messages={messages}
           onSend={onSend}
           user={{ _id: user?.id || 1 }}
@@ -1457,6 +1593,18 @@ const CommunityChatScreen: React.FC = () => {
           scrollToBottom={true}
           isTyping={false}
           inverted={true}
+          loadEarlier={loadEarlier}
+          onLoadEarlier={handleLoadEarlier}
+          isLoadingEarlier={isLoadingEarlier}
+          listViewProps={{
+            scrollEventThrottle: 400,
+            onScroll: ({ nativeEvent }) => {
+              const isCloseToTop = nativeEvent.contentOffset.y <= 100;
+              if (isCloseToTop && loadEarlier && !isLoadingEarlier) {
+                handleLoadEarlier();
+              }
+            },
+          }}
         />
       )}
       <FullScreenImageViewer
