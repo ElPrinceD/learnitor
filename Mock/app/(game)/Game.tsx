@@ -31,10 +31,12 @@ export default function Game() {
   const [doubleDipUsed, setDoubleDipUsed] = useState(false);
   const [askTheAIUsed, setAskTheAIUsed] = useState(false);
   const [gameEnded, setGameEnded] = useState(false);
-  const [redirected, setRedirected] = useState(false); // Prevents multiple navigations
+  const [redirected, setRedirected] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<number>(questionDuration); // Added timeLeft state
 
   const webSocket = useRef<WebSocket | null>(null);
   const handleMessageRef = useRef<(event: MessageEvent) => void>(() => {});
+  const startTimeRef = useRef<number>(0); // Added startTimeRef
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
@@ -50,7 +52,7 @@ export default function Game() {
     if (gameDetails) {
       setGameQuestions(gameDetails.questions || []);
       setQuestionDuration((gameDetails.duration || 20) * 1000);
-      if (gameDetails.ended) setGameEnded(true); // Respect backend game status
+      if (gameDetails.ended) setGameEnded(true);
       if (gameDetails.questions) {
         const fetchAllAnswers = async () => {
           const answersPromises = gameDetails.questions.map((question: Question) =>
@@ -73,9 +75,24 @@ export default function Game() {
     setQuestionsWithMultipleCorrectAnswers(multiCorrect);
   }, [gameQuestions, gameAnswers]);
 
-  // Timer to auto-progress questions or submit at the end
+  // Timer with countdown display
   useEffect(() => {
     if (gameQuestions.length === 0 || gameEnded) return;
+
+    startTimeRef.current = Date.now();
+    setTimeLeft(questionDuration);
+
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTimeRef.current;
+      const remaining = questionDuration - elapsed;
+      if (remaining <= 0) {
+        setTimeLeft(0);
+        clearInterval(interval);
+      } else {
+        setTimeLeft(remaining);
+      }
+    }, 1000);
+
     const timer = setTimeout(() => {
       if (!gameEnded) {
         if (currentQuestion < gameQuestions.length - 1) {
@@ -85,7 +102,11 @@ export default function Game() {
         }
       }
     }, questionDuration);
-    return () => clearTimeout(timer);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timer);
+    };
   }, [currentQuestion, questionDuration, gameQuestions, gameEnded]);
 
   // Reset power-ups when question changes
@@ -99,7 +120,7 @@ export default function Game() {
   // Handle WebSocket messages
   useEffect(() => {
     handleMessageRef.current = (event) => {
-      if (gameEnded) return; // Ignore messages after game ends
+      if (gameEnded) return;
       const message = JSON.parse(event.data);
       console.log(`Player ${userInfo?.user.id} received:`, message);
 
@@ -107,22 +128,20 @@ export default function Game() {
         message.type === "question.attempted" &&
         message.question_id === gameQuestions[currentQuestion]?.id
       ) {
-        // Progress to next question or submit if last
         if (currentQuestion < gameQuestions.length - 1) {
           setCurrentQuestion((prev) => prev + 1);
         } else {
           handleSubmit();
         }
       } else if (message.type === "all_scores_submitted") {
-        // Process scores and end game
         const scoresObject = message.scores.reduce((acc: any, score: any) => {
           acc[score.user_id] = score.score;
           return acc;
         }, {});
         setAllScores(scoresObject);
-        setGameEnded(true); // Stop local game
+        setGameEnded(true);
         if (webSocket.current) {
-          webSocket.current.close(); // Close WebSocket connection
+          webSocket.current.close();
           console.log("WebSocket closed due to game end.");
         }
         if (!redirected) {
@@ -130,7 +149,7 @@ export default function Game() {
           router.replace({
             pathname: "Results",
             params: { scores: JSON.stringify(scoresObject), gameId },
-          }); // Navigate to Results page
+          });
         }
       }
     };
@@ -140,9 +159,9 @@ export default function Game() {
   useEffect(() => {
     if (gameEnded && Object.keys(allScores).length > 0 && !redirected) {
       setRedirected(true);
-      if (webSocket.current){ 
+      if (webSocket.current) {
         console.log("Closing websocket");
-         webSocket.current.close();
+        webSocket.current.close();
       }
       router.push({
         pathname: "Results",
@@ -332,6 +351,11 @@ export default function Game() {
             <Text>The Prince thinks the correct answer is:</Text>
             <Text>{gameAnswers.find((ans) => ans.id === aiPrediction)?.text}</Text>
           </View>
+        )}
+        {!gameEnded && gameQuestions.length > 0 && (
+          <Text style={{ fontSize: SIZES.large, color: themeColors.text, textAlign: 'center', marginVertical: rV(10) }}>
+             {Math.ceil(timeLeft / 1000)} seconds
+          </Text>
         )}
         {gameQuestions.length > 0 && (
           <Questions

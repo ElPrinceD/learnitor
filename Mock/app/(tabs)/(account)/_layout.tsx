@@ -54,9 +54,9 @@ export default function Tab2Layout() {
               backgroundColor: themeColors.background,
             },
             headerTitleAlign: "center",
-
+            headerBackTitle: "Back",
             headerShadowVisible: false,
-            presentation: "modal",
+            presentation: "card",
           }}
         />
         <Stack.Screen

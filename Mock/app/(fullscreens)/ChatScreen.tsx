@@ -1229,103 +1229,93 @@ const CommunityChatScreen: React.FC = () => {
     return null;
   }, [mediaPreview, themeColors]);
 
-  const renderInputToolbar = useCallback(
-    (props) => {
-      return (
-        <View>
-          {renderMediaPreview()}
-          {editingMessage && (
-            <View style={styles.replyContainer}>
-              <Text style={styles.replyName}>
-                Editing Message by {editingMessage.user.name}
-              </Text>
-              <TouchableOpacity
-                onPress={() => setEditingMessage(null)}
-                style={styles.closeReplyButton}
-              >
-                <Ionicons
-                  name="close"
-                  color={themeColors.text}
-                  size={SIZES.medium}
-                />
-              </TouchableOpacity>
+  const renderInputToolbar = (props) => {
+    return (
+      <View>
+        {renderMediaPreview()}
+        {editingMessage && (
+          <View style={styles.replyContainer}>
+            <Text style={styles.replyName}>
+              Editing Message by {editingMessage.user.name}
+            </Text>
+            <TouchableOpacity
+              onPress={() => setEditingMessage(null)}
+              style={styles.closeReplyButton}
+            >
+              <Ionicons
+                name="close"
+                color={themeColors.text}
+                size={SIZES.medium}
+              />
+            </TouchableOpacity>
+          </View>
+        )}
+        {replyToMessage && (
+          <View style={styles.replyContainer}>
+            <Text style={styles.replyName}>
+              Replying to {replyToMessage.user?.name || "Unknown User"}
+            </Text>
+            <Text style={styles.replyText}>
+              {replyToMessage.text ||
+                (replyToMessage.image
+                  ? "Photo"
+                  : replyToMessage.document
+                  ? "Document"
+                  : "")}
+            </Text>
+            <TouchableOpacity
+              onPress={() => setReplyToMessage(null)}
+              style={styles.closeReplyButton}
+            >
+              <Ionicons
+                name="close"
+                color={themeColors.text}
+                size={SIZES.medium}
+              />
+            </TouchableOpacity>
+          </View>
+        )}
+        <InputToolbar
+          {...props}
+          containerStyle={[
+            styles.inputToolbar,
+            (editingMessage || replyToMessage || mediaPreview.uri) && {
+              marginTop: rV(0),
+            },
+          ]}
+          primaryStyle={{ alignItems: "center", flexDirection: "row" }}
+          renderComposer={() => (
+            <View style={styles.inputField}>
+              <TextInput
+                style={styles.textInput}
+                placeholder={
+                  editingMessage
+                    ? "Edit message"
+                    : replyToMessage
+                    ? "Reply to message"
+                    : "Message"
+                }
+                placeholderTextColor={themeColors.textSecondary}
+                value={props.text}
+                onChangeText={props.onTextChanged}
+                multiline={true}
+              />
+              {editingMessage ? (
+                <TouchableOpacity onPress={onEditMessage}>
+                  <Ionicons
+                    name="checkmark"
+                    color={themeColors.text}
+                    size={SIZES.large}
+                    style={styles.attachIcon}
+                  />
+                </TouchableOpacity>
+              ) : null}
             </View>
           )}
-          {replyToMessage && (
-            <View style={styles.replyContainer}>
-              <Text style={styles.replyName}>
-                Replying to {replyToMessage.user?.name || "Unknown User"}
-              </Text>
-              <Text style={styles.replyText}>
-                {replyToMessage.text ||
-                  (replyToMessage.image
-                    ? "Photo"
-                    : replyToMessage.document
-                    ? "Document"
-                    : "")}
-              </Text>
-              <TouchableOpacity
-                onPress={() => setReplyToMessage(null)}
-                style={styles.closeReplyButton}
-              >
-                <Ionicons
-                  name="close"
-                  color={themeColors.text}
-                  size={SIZES.medium}
-                />
-              </TouchableOpacity>
-            </View>
-          )}
-          <InputToolbar
-            {...props}
-            containerStyle={[
-              styles.inputToolbar,
-              (editingMessage || replyToMessage || mediaPreview.uri) && {
-                marginTop: rV(0),
-              },
-            ]}
-            primaryStyle={{ alignItems: "center", flexDirection: "row" }}
-            renderComposer={() => (
-              <View style={styles.inputField}>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder={
-                    editingMessage
-                      ? "Edit message"
-                      : replyToMessage
-                      ? "Reply to message"
-                      : "Message"
-                  }
-                  placeholderTextColor={themeColors.textSecondary}
-                  value={props.text}
-                  onChangeText={props.onTextChanged}
-                  multiline
-                />
-                {editingMessage ? (
-                  <TouchableOpacity onPress={onEditMessage}>
-                    <Ionicons
-                      name="checkmark"
-                      color={themeColors.text}
-                      size={SIZES.large}
-                      style={styles.attachIcon}
-                    />
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-            )}
-          />
-        </View>
-      );
-    },
-    [
-      editingMessage,
-      replyToMessage,
-      mediaPreview,
-      themeColors,
-      onEditMessage,
-      renderMediaPreview,
-    ]
-  );
+        />
+      </View>
+    );
+  };
 
   const styles = StyleSheet.create({
     container: {

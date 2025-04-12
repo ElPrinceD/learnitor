@@ -9,6 +9,8 @@ import {
   Alert,
   ActivityIndicator,
   useColorScheme,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../../components/AuthContext";
@@ -16,6 +18,8 @@ import ApiUrl from "../../../config";
 import axios from "axios";
 import Colors from "../../../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../../../constants";
+import DateSelector from "../../../components/DateSelector"; // DateSelector component import
+import { router } from "expo-router"; // Import the router from Expo Router
 
 const AccountSettings = () => {
   const { userInfo, userToken, setUserInfo } = useAuth();
@@ -37,7 +41,7 @@ const AccountSettings = () => {
 
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (name, value) => {
+  const handleChange = (name: string, value: string) => {
     setFormData({
       ...formData,
       [name]: value,
@@ -63,17 +67,6 @@ const AccountSettings = () => {
         config
       );
 
-      await axios.put(
-        `${ApiUrl}/api/update/user/address/`,
-        {
-          street_1: formData.street1,
-          street_2: formData.street2,
-          city: formData.city,
-          region: formData.region,
-          country: formData.country,
-        },
-        config
-      );
       if (userInfo) {
         setUserInfo({
           ...userInfo,
@@ -94,7 +87,14 @@ const AccountSettings = () => {
           },
         });
       }
-      Alert.alert("Success", "Your information has been updated.");
+      Alert.alert("Success", "Your information has been updated.", [
+        {
+          text: "OK",
+          onPress: () => {
+            router.back();
+          },
+        },
+      ]);
     } catch (error) {
       console.error("Error updating information:", error);
       Alert.alert("Error", "There was an error updating your information.");
@@ -104,20 +104,30 @@ const AccountSettings = () => {
   };
 
   const styles = StyleSheet.create({
-    scrollViewContainer: {
-      flexGrow: 1,
-    },
     container: {
       flex: 1,
+      backgroundColor: themeColors.background,
+    },
+    scrollContainer: {
+      flexGrow: 1,
       paddingHorizontal: rS(20),
       paddingTop: rV(20),
-      backgroundColor: themeColors.background,
+      alignItems: "center",
     },
     title: {
       fontSize: SIZES.xLarge,
       fontWeight: "bold",
       color: themeColors.text,
       marginBottom: rV(20),
+      alignSelf: "flex-start",
+    },
+    row: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      width: "100%",
+    },
+    halfWidth: {
+      width: "45%",
     },
     inputContainer: {
       flexDirection: "row",
@@ -126,14 +136,9 @@ const AccountSettings = () => {
       borderRadius: rMS(10),
       paddingHorizontal: rS(10),
       marginBottom: rV(15),
-
       borderColor: themeColors.text,
-
-     
       backgroundColor: themeColors.reverseText,
-      color: themeColors.text,
-      justifyContent: "center",
-      flex: 1,
+      width: "100%",
     },
     icon: {
       marginRight: rS(10),
@@ -150,22 +155,19 @@ const AccountSettings = () => {
       color: themeColors.text,
       marginTop: rV(20),
       marginBottom: rV(10),
+      alignSelf: "flex-start",
     },
-    row: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-    },
-    halfWidth: {
-      flex: 1,
-      marginRight: rS(10),
+    footer: {
+      paddingHorizontal: rS(20),
+      paddingVertical: rV(10),
+      backgroundColor: themeColors.background,
     },
     button: {
       borderRadius: rMS(10),
       paddingVertical: rV(10),
       alignItems: "center",
-      marginVertical: rV(20),
       backgroundColor: themeColors.buttonBackground,
+      width: "100%",
     },
     buttonText: {
       color: "#fff",
@@ -175,8 +177,12 @@ const AccountSettings = () => {
   });
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollViewContainer}>
-      <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      {/* Form fields scroll area */}
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
         <Text style={styles.title}>Personal Info</Text>
         <View style={styles.row}>
           <View style={styles.halfWidth}>
@@ -212,20 +218,21 @@ const AccountSettings = () => {
             </View>
           </View>
         </View>
+
+        {/* Replace DOB TextInput with DateSelector */}
         <View style={styles.inputContainer}>
           <Ionicons
             name="calendar-outline"
             size={rMS(18)}
             style={styles.icon}
           />
-          <TextInput
-            style={styles.input}
-            placeholder="Date of Birth"
-            value={formData.dob}
-            onChangeText={(value) => handleChange("dob", value)}
-            placeholderTextColor={themeColors.textSecondary}
+          <DateSelector
+            label="Date of Birth"
+            initialDate={formData.dob}
+            onDateChange={(selectedDate) => handleChange("dob", selectedDate)}
           />
         </View>
+
         <View style={styles.inputContainer}>
           <Ionicons name="mail-outline" size={rMS(18)} style={styles.icon} />
           <TextInput
@@ -236,89 +243,7 @@ const AccountSettings = () => {
             placeholderTextColor={themeColors.textSecondary}
           />
         </View>
-        <Text style={styles.subTitle}>Address</Text>
-        <View style={styles.row}>
-          <View style={styles.halfWidth}>
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="location-outline"
-                size={rMS(18)}
-                style={styles.icon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Street 1"
-                value={formData.street1}
-                onChangeText={(value) => handleChange("street1", value)}
-                placeholderTextColor={themeColors.textSecondary}
-              />
-            </View>
-          </View>
-          <View style={styles.halfWidth}>
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="location-outline"
-                size={rMS(18)}
-                style={styles.icon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Street 2"
-                value={formData.street2}
-                onChangeText={(value) => handleChange("street2", value)}
-                placeholderTextColor={themeColors.textSecondary}
-              />
-            </View>
-          </View>
-        </View>
-        <View style={styles.row}>
-          <View style={styles.halfWidth}>
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="location-outline"
-                size={rMS(18)}
-                style={styles.icon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="City"
-                value={formData.city}
-                onChangeText={(value) => handleChange("city", value)}
-                placeholderTextColor={themeColors.textSecondary}
-              />
-            </View>
-          </View>
-          <View style={styles.halfWidth}>
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="location-outline"
-                size={rMS(18)}
-                style={styles.icon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Region"
-                value={formData.region}
-                onChangeText={(value) => handleChange("region", value)}
-                placeholderTextColor={themeColors.textSecondary}
-              />
-            </View>
-          </View>
-        </View>
-        <View style={styles.inputContainer}>
-          <Ionicons
-            name="location-outline"
-            size={rMS(18)}
-            style={styles.icon}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Country"
-            value={formData.country}
-            onChangeText={(value) => handleChange("country", value)}
-            placeholderTextColor={themeColors.textSecondary}
-          />
-        </View>
+
         <Text style={styles.subTitle}>Institution Info</Text>
         <View style={styles.inputContainer}>
           <Ionicons name="school-outline" size={rMS(18)} style={styles.icon} />
@@ -330,6 +255,10 @@ const AccountSettings = () => {
             placeholderTextColor={themeColors.textSecondary}
           />
         </View>
+      </ScrollView>
+
+      {/* Sticky footer containing the update button */}
+      <View style={styles.footer}>
         <TouchableOpacity
           style={styles.button}
           onPress={handleUpdateInfo}
@@ -338,11 +267,11 @@ const AccountSettings = () => {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>Update Personal Info</Text>
+            <Text style={styles.buttonText}>Update</Text>
           )}
         </TouchableOpacity>
       </View>
-    </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 

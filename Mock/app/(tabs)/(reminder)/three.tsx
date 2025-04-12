@@ -1,8 +1,8 @@
+// Timeline.tsx
 import React, {
   useState,
   useMemo,
   useRef,
-  useEffect,
   useCallback,
 } from "react";
 import {
@@ -30,13 +30,13 @@ const Timeline = () => {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [todayPlans, setTodayPlans] = useState<any[]>([]);
+  const [categoryNames, setCategoryNames] = useState<Record<number, string>>({});
 
   const { userToken } = useAuth();
   const {
     fetchAndCacheTodayPlans,
     fetchAndCacheCategoryNames,
-    getCachedTodayPlans,
-    getCachedCategoryNames,
   } = useWebSocket();
 
   const colorScheme = useColorScheme();
@@ -61,60 +61,32 @@ const Timeline = () => {
     }
   };
 
-  const [todayPlans, setTodayPlans] = useState<any[]>([]);
-  const [categoryNames, setCategoryNames] = useState<Record<number, string>>({});
-
-  useEffect(() => {
-    const fetchData = async () => {
-      if (userToken) {
-        setIsLoading(true);
-        try {
-          const newPlans = await fetchAndCacheTodayPlans(
-            userToken.token,
-            selectedDate,
-            selectedCategory
-          );
-          const newCategoryNames = await fetchAndCacheCategoryNames(
-            userToken.token
-          );
-
-          setTodayPlans(newPlans);
-          setCategoryNames(newCategoryNames);
-          setErrorMessage(null);
-        } catch (error) {
-          setErrorMessage("Failed to fetch data");
-        } finally {
-          setIsLoading(false);
-        }
-      }
-    };
-    fetchData();
-  }, [userToken, selectedDate, selectedCategory]);
-
   useFocusEffect(
     useCallback(() => {
       const fetchDataOnFocus = async () => {
         if (userToken) {
           setIsLoading(true);
           try {
-            const newPlans = await getCachedTodayPlans(
+            const normalizedCategory = selectedCategory || "all";
+            const newPlans = await fetchAndCacheTodayPlans(
+              userToken.token,
               selectedDate,
-              selectedCategory
+              normalizedCategory
             );
-            const newCategoryNames = await getCachedCategoryNames();
+            const newCategoryNames = await fetchAndCacheCategoryNames(userToken.token);
 
             setTodayPlans(newPlans);
             setCategoryNames(newCategoryNames);
             setErrorMessage(null);
           } catch (error) {
-            setErrorMessage("Failed to fetch cached data");
+            setErrorMessage("Failed to fetch data");
           } finally {
             setIsLoading(false);
           }
         }
       };
       fetchDataOnFocus();
-    }, [userToken, selectedDate, selectedCategory])
+    }, [userToken, selectedDate, selectedCategory, fetchAndCacheTodayPlans, fetchAndCacheCategoryNames])
   );
 
   const handleEditPlan = (plan: any) => {
@@ -191,7 +163,6 @@ const Timeline = () => {
         selectedDate={selectedDate}
         setSelectedDate={setSelectedDate}
       />
-
       <BottomSheet
         ref={BottomSheetRef}
         snapPoints={snapPoints}

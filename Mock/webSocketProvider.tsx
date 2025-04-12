@@ -581,12 +581,13 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
       if (token && isConnected) {
         try {
           const dateString = date.toISOString().split("T")[0];
-          const cacheKey = `todayPlans_${dateString}_${category || "all"}`;
+          const normalizedCategory = category || "all"; // Normalize undefined, null, or "" to "all"
+          const cacheKey = `todayPlans_${dateString}_${normalizedCategory}`;
           const cachedPlans = await sqliteGetItem(cacheKey);
           if (cachedPlans) {
             return JSON.parse(cachedPlans);
           }
-          const plans = await getTodayPlans(token, date, category);
+          const plans = await getTodayPlans(token, date, normalizedCategory === "all" ? undefined : normalizedCategory);
           await sqliteSetItem(cacheKey, JSON.stringify(plans));
           return plans;
         } catch (error) {
@@ -595,7 +596,18 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
         }
       }
     },
-    [isConnected]
+    [isConnected, sqliteGetItem, sqliteSetItem]
+  );
+  
+  const getCachedTodayPlans = useCallback(
+    async (date: Date, category?: string) => {
+      const dateString = date.toISOString().split("T")[0];
+      const normalizedCategory = category || "all"; // Normalize undefined, null, or "" to "all"
+      const cacheKey = `todayPlans_${dateString}_${normalizedCategory}`;
+      const cachedData = await sqliteGetItem(cacheKey);
+      return cachedData ? JSON.parse(cachedData) : [];
+    },
+    [sqliteGetItem]
   );
 
   const fetchAndCacheCategoryNames = useCallback(
@@ -618,15 +630,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     [isConnected]
   );
 
-  const getCachedTodayPlans = useCallback(
-    async (date: Date, category?: string) => {
-      const dateString = date.toISOString().split("T")[0];
-      const cacheKey = `todayPlans_${dateString}_${category || "all"}`;
-      const cachedData = await sqliteGetItem(cacheKey);
-      return cachedData ? JSON.parse(cachedData) : [];
-    },
-    []
-  );
+
 
   const getCachedCategoryNames = useCallback(async (): Promise<Record<number, string>> => {
     const cachedData = await sqliteGetItem("categoryNames");

@@ -1,10 +1,10 @@
+// CreateNewTime.tsx
 import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ActivityIndicator,
-  Platform,
   ScrollView,
   useColorScheme,
 } from "react-native";
@@ -22,7 +22,7 @@ import CustomPicker from "../../../components/CustomPicker";
 import DateSelector from "../../../components/DateSelector.tsx";
 import CustomDateTimeSelector from "../../../components/CustomDateTimeSelector.tsx";
 import Animated, { FadeInLeft, ReduceMotion } from "react-native-reanimated";
-import { useWebSocket } from "../../../webSocketProvider"; // Import useWebSocket
+import { useWebSocket } from "../../../webSocketProvider";
 
 interface Category {
   value: number;
@@ -44,7 +44,7 @@ interface CreateTaskData {
 
 const CreateNewTime = () => {
   const { userToken, userInfo } = useAuth();
-  const { getCachedTodayPlans, sqliteSetItem } = useWebSocket(); // Added useWebSocket
+  const { sqliteRemoveItem } = useWebSocket();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState(new Date());
@@ -66,24 +66,21 @@ const CreateNewTime = () => {
 
   const createTaskMutation = useMutation<any, any, any>({
     mutationFn: async ({ taskData, token }) => {
-      return await createTask(taskData, token); // Ensure this returns the created task
+      return await createTask(taskData, token);
     },
     onSuccess: (createdTask) => {
       console.log('Task created successfully:', createdTask);
       const dateString = formatDate(dueDate);
-      const cacheKey = `todayPlans_${dateString}_${selectedCategory?.value?.toString() || "all"}`;
-      
-      getCachedTodayPlans(dueDate, selectedCategory?.value?.toString())
-        .then((cachedPlans) => {
-          const updatedPlans = [...cachedPlans, createdTask];
-          sqliteSetItem(cacheKey, JSON.stringify(updatedPlans));
-          router.navigate("three");
-          setErrorMessage(null);
-        })
-        .catch((error) => {
-          console.error("Error updating cache:", error);
-          setErrorMessage("Task created, but failed to update local data");
-        });
+      const categoryId = selectedCategory?.value?.toString();
+
+      // Invalidate caches
+      sqliteRemoveItem(`todayPlans_${dateString}_all`);
+      if (categoryId) {
+        sqliteRemoveItem(`todayPlans_${dateString}_${categoryId}`);
+      }
+
+      router.navigate("three");
+      setErrorMessage(null);
     },
     onError: (error) => {
       setErrorMessage(error.message || "Error creating schedule");
