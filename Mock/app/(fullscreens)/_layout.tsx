@@ -8,6 +8,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../components/AuthContext";
 import CommunityDetailScreen from "./CommunityDetailScreen";
 import CommunityImagesScreen from "./CommunityImageScreen";
+import EditCommunityScreen from "./EditCommunityScreen";
 
 export default function ChatScreenLayout() {
   const colorScheme = useColorScheme();
@@ -75,7 +76,7 @@ export default function ChatScreenLayout() {
               title: "Squad Info",
               headerBackTitle: "Back",
               headerRight: () => (
-                isCreator ? (
+               
                   <TouchableOpacity
                     onPress={() =>
                       navigation.navigate("EditCommunityScreen", {
@@ -85,8 +86,8 @@ export default function ChatScreenLayout() {
                   >
                     <Ionicons name="settings-outline" size={24} color={themeColors.text} />
                   </TouchableOpacity>
-                ) : null
-              ),
+                ) 
+              
             };
           }}
         />
@@ -106,6 +107,28 @@ export default function ChatScreenLayout() {
             headerBackTitle: "Back",
           }}
         />
+          <Stack.Screen
+        name="EditCommunityScreen"
+       
+        options={({ navigation }) => ({
+          title: "Edit Community",
+          presentation: "modal",
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <Text style={{ color: themeColors.text, marginLeft: 5, fontSize: rMS(19) }}>
+                Cancel
+              </Text>
+            </TouchableOpacity>
+          ),
+          headerRight: () => (
+            <TouchableOpacity onPress={() => {/* Save changes logic */}}>
+              <Text style={{ color: themeColors.errorText, marginRight: 5, fontSize: rMS(19) }}>
+                Done
+              </Text>
+            </TouchableOpacity>
+          ),
+        })}
+      />
       </Stack>
     </SafeAreaProvider>
   );

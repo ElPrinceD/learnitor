@@ -10,12 +10,12 @@ import {
   useColorScheme,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
-import { getCommunityDetails, updateCommunity } from "../../../CommunityApiCalls";
-import { useAuth } from "../../../components/AuthContext";
-import Colors from "../../../constants/Colors";
-import { Community } from "../../../components/types";
+import { getCommunityDetails, updateCommunity } from "../../CommunityApiCalls";
+import { useAuth } from "../../components/AuthContext";
+import Colors from "../../constants/Colors";
+import { Community } from "../../components/types";
 import * as ImagePicker from "expo-image-picker";
-import { rMS } from "../../../constants";
+import { rMS } from "../../constants";
 
 type RouteParams = {
   id: string; // Community ID

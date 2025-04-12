@@ -2,7 +2,6 @@ import React, { useState, useCallback } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import CommunityScreen from "./CommunityScreen";
 import CreateCommunity from "./CreateCommunity";
-import EditCommunityScreen from "./EditCommunityScreen";
 import { FontAwesome6, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import Colors from "../../../constants/Colors";
 import { useColorScheme, TouchableOpacity, Text, View, Pressable } from "react-native";
@@ -63,28 +62,7 @@ export default function CommunityLayout() {
         }}
       />
       
-      <Stack.Screen
-        name="EditCommunityScreen"
-        component={EditCommunityScreen}
-        options={({ navigation }) => ({
-          title: "Edit Community",
-          presentation: "modal",
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Text style={{ color: themeColors.text, marginLeft: 5, fontSize: rMS(19) }}>
-                Cancel
-              </Text>
-            </TouchableOpacity>
-          ),
-          headerRight: () => (
-            <TouchableOpacity onPress={() => {/* Save changes logic */}}>
-              <Text style={{ color: themeColors.errorText, marginRight: 5, fontSize: rMS(19) }}>
-                Done
-              </Text>
-            </TouchableOpacity>
-          ),
-        })}
-      />
+   
     </Stack.Navigator>
   );
 }
