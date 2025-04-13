@@ -1,5 +1,4 @@
 import "react-native-get-random-values";
-
 import React, {
   useState,
   useCallback,
@@ -25,6 +24,7 @@ import {
   Platform,
   Alert,
   Dimensions,
+  FlatList,
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
@@ -45,6 +45,8 @@ import {
 import { Swipeable } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system";
+import * as MediaLibrary from "expo-media-library";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import Video from "react-native-video";
 import { useNavigation } from "@react-navigation/native";
@@ -54,9 +56,8 @@ import Colors from "../../constants/Colors";
 import { FONT } from "../../constants";
 import { router } from "expo-router";
 import AppImage from "../../components/AppImage";
-import * as MediaLibrary from "expo-media-library";
-import * as FileSystem from "expo-file-system";
 import FullScreenImageViewer from "../../components/FullScreenImageViewer";
+import ImagePreviewModal from "../../components/ImagePreviewModal";
 
 // Memoize GiftedChat to prevent unnecessary re-renders
 const MemoizedGiftedChat = memo(GiftedChat, (prevProps, nextProps) => {
@@ -115,8 +116,13 @@ const CommunityChatScreen: React.FC = () => {
   const [profileImages, setProfileImages] = useState<Record<string, string>>(
     {}
   );
+  const [selectedImagesForPreview, setSelectedImagesForPreview] = useState<
+    { uri: string; type: string; id: string }[]
+  >([]);
+  const [isImagePreviewVisible, setIsImagePreviewVisible] = useState(false);
 
   const normalizeMessage = useCallback((data) => {
+    console.log("Normalizing message:", data);
     if ("message" in data && "sent_at" in data) {
       return {
         _id: data.id || data.temp_id || Date.now().toString(),
@@ -198,7 +204,7 @@ const CommunityChatScreen: React.FC = () => {
         await sendMessage({
           type: "fetch_history",
           community_id: communityId,
-          limit: 20, // Initial batch size
+          limit: 20,
         });
       }
     } catch (error) {
@@ -219,7 +225,7 @@ const CommunityChatScreen: React.FC = () => {
           type: "fetch_history",
           community_id: communityId,
           limit: 20,
-          before: lastMessageTimestamp, // Use timestamp for pagination
+          before: lastMessageTimestamp,
         });
       }
     } catch (error) {
@@ -251,6 +257,7 @@ const CommunityChatScreen: React.FC = () => {
       const onMessage = (event: MessageEvent) => {
         try {
           const data = JSON.parse(event.data);
+          console.log("WebSocket received message:", data);
 
           if (data.type === "history" && data.community_id === communityId) {
             const transformedMessages = data.messages
@@ -267,8 +274,8 @@ const CommunityChatScreen: React.FC = () => {
                 (m) => m.status === "pending" || m.tempId
               );
               const updatedMessages = data.before
-                ? [...prevMessages, ...newMessages] // Append for earlier messages
-                : [...pendingMessages, ...transformedMessages]; // Replace for initial fetch
+                ? [...prevMessages, ...newMessages]
+                : [...pendingMessages, ...transformedMessages];
               const sortedMessages = updatedMessages.sort(
                 (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
               );
@@ -285,7 +292,7 @@ const CommunityChatScreen: React.FC = () => {
                   sortedMessages[sortedMessages.length - 1].createdAt.getTime()
                 );
               }
-              setLoadEarlier(newMessages.length === 20); // Enable if more messages might exist
+              setLoadEarlier(newMessages.length === 20);
               const imageUris = sortedMessages
                 .filter((msg) => msg.image)
                 .map((msg) => msg.image);
@@ -297,6 +304,7 @@ const CommunityChatScreen: React.FC = () => {
             data.community_id === communityId
           ) {
             const newMessage = normalizeMessage(data);
+            console.log("New message processed:", newMessage);
             if (newMessage) {
               setMessages((prevMessages) => {
                 const index = prevMessages.findIndex(
@@ -411,6 +419,7 @@ const CommunityChatScreen: React.FC = () => {
             const messageStr = await sqliteGetItem(key);
             if (messageStr) {
               const message = JSON.parse(messageStr);
+              console.log("Sending unsent message:", message);
               sendMessage({
                 type: "send_message",
                 community_id: message.communityId,
@@ -438,62 +447,94 @@ const CommunityChatScreen: React.FC = () => {
 
   const sendMediaMessage = useCallback(
     async (fileUri: string, type: "image" | "document") => {
-      const tempId =
-        Date.now().toString() + Math.random().toString(36).substr(2, 5);
-      const message = {
-        _id: tempId,
-        tempId,
-        text: "",
-        createdAt: new Date(),
-        user: {
-          _id: user?.id || 1,
-          name: user?.first_name + " " + user?.last_name || "Unknown User",
-        },
-        [type]: fileUri,
-        status: isConnected ? "sending" : "pending",
-      };
+      try {
+        console.log("sendMediaMessage called with:", { fileUri, type });
+        console.log("WebSocket isConnected:", isConnected);
 
-      if (!messageIds.has(tempId)) {
-        setMessages((prevMessages) => [message, ...prevMessages]);
-        setMessageIds((prev) => new Set([...prev, tempId]));
+        // Convert image URI to base64
+        let mediaData = fileUri;
         if (type === "image") {
-          setImageViewerImages((prev) => [fileUri, ...prev]);
+          const base64 = await FileSystem.readAsStringAsync(fileUri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          mediaData = `data:image/jpeg;base64,${base64}`;
+          console.log("Image converted to base64, length:", mediaData.length);
         }
-      }
 
-      if (!isConnected) {
-        const messageToStore = {
-          ...message,
-          communityId,
-          content: {
-            text: "",
-            [type]: fileUri,
+        const tempId =
+          Date.now().toString() + Math.random().toString(36).substr(2, 5);
+        const message = {
+          _id: tempId,
+          tempId,
+          text: "",
+          createdAt: new Date(),
+          user: {
+            _id: user?.id || 1,
+            name: user?.first_name + " " + user?.last_name || "Unknown User",
           },
+          [type]: mediaData,
+          status: isConnected ? "sending" : "pending",
         };
-        await sqliteSetItem(
-          `unsent_message_${tempId}`,
-          JSON.stringify(messageToStore)
-        );
-        await sqliteSetItem(
-          `messages_${communityId}`,
-          JSON.stringify([message, ...messages])
-        );
-        const allKeysRaw = (await sqliteGetItem("storage_keys")) || "[]";
-        let keys = JSON.parse(allKeysRaw) || [];
-        if (!keys.includes(`unsent_message_${tempId}`)) {
-          keys.push(`unsent_message_${tempId}`);
-          await sqliteSetItem("storage_keys", JSON.stringify(keys));
+
+        if (!messageIds.has(tempId)) {
+          setMessages((prevMessages) => [message, ...prevMessages]);
+          setMessageIds((prev) => new Set([...prev, tempId]));
+          if (type === "image") {
+            setImageViewerImages((prev) => [mediaData, ...prev]);
+          }
         }
-      } else {
-        sendMessage({
-          type: "send_message",
-          community_id: communityId,
-          message: "",
-          sender: user?.first_name + " " + user?.last_name || "Unknown User",
-          sender_id: user?.id || 1,
-          temp_id: tempId,
-          [type]: fileUri,
-        });
+
+        if (!isConnected) {
+          console.log("WebSocket disconnected, queuing message locally");
+          const messageToStore = {
+            ...message,
+            communityId,
+            content: {
+              text: "",
+              [type]: mediaData,
+            },
+          };
+          await sqliteSetItem(
+            `unsent_message_${tempId}`,
+            JSON.stringify(messageToStore)
+          );
+          await sqliteSetItem(
+            `messages_${communityId}`,
+            JSON.stringify([message, ...messages])
+          );
+          const allKeysRaw = (await sqliteGetItem("storage_keys")) || "[]";
+          let keys = JSON.parse(allKeysRaw) || [];
+          if (!keys.includes(`unsent_message_${tempId}`)) {
+            keys.push(`unsent_message_${tempId}`);
+            await sqliteSetItem("storage_keys", JSON.stringify(keys));
+          }
+          ToastAndroid.show(
+            "No connection, image queued for sending",
+            ToastAndroid.SHORT
+          );
+        } else {
+          console.log("Sending message via WebSocket:", {
+            type: "send_message",
+            community_id: communityId,
+            message: "",
+            sender: user?.first_name + " " + user?.last_name || "Unknown User",
+            sender_id: user?.id || 1,
+            temp_id: tempId,
+            [type]: mediaData,
+          });
+          await sendMessage({
+            type: "send_message",
+            community_id: communityId,
+            message: "",
+            sender: user?.first_name + " " + user?.last_name || "Unknown User",
+            sender_id: user?.id || 1,
+            temp_id: tempId,
+            [type]: mediaData,
+          });
+        }
+      } catch (error) {
+        console.error("sendMediaMessage error:", error);
+        throw error;
       }
     },
     [
@@ -617,24 +658,40 @@ const CommunityChatScreen: React.FC = () => {
   const pickImage = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: false,
+      allowsMultipleSelection: false,
+      quality: 1,
+      allowsEditing: true,
     });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      const asset = result.assets[0];
-      const file = await fetch(asset.uri);
-      const blob = await file.blob();
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64data = reader.result as string;
-        const imageBase64 = `data:${blob.type};base64,${
-          base64data.split(",")[1]
-        }`;
-        await sendMediaMessage(imageBase64, "image");
-      };
-      reader.readAsDataURL(blob);
+      const selectedImages = result.assets;
+      const newImages = selectedImages.map((asset) => ({
+        uri: asset.uri,
+        type: "image",
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+      }));
+      console.log("Selected images:", newImages);
+      setSelectedImagesForPreview(newImages);
+      setIsImagePreviewVisible(true);
+    } else {
+      console.log("Image picker canceled or no assets:", result);
     }
-  }, [sendMediaMessage]);
+  }, []);
+
+  const handleSendImage = useCallback(
+    async (uri: string) => {
+      console.log("handleSendImage called with URI:", uri);
+      try {
+        await sendMediaMessage(uri, "image");
+        setSelectedImagesForPreview([]);
+        // Toast moved to ImagePreviewModal
+      } catch (error) {
+        console.error("handleSendImage error:", error);
+        throw error;
+      }
+    },
+    [sendMediaMessage]
+  );
 
   const handleCopySelected = useCallback(async () => {
     const textToCopy = selectedMessages.map((msg) => msg.text).join("\n\n");
@@ -771,10 +828,10 @@ const CommunityChatScreen: React.FC = () => {
           <View style={{ flexDirection: "row", marginRight: SIZES.xSmall }}>
             {canReply && (
               <TouchableOpacity
-              onPressIn={() => {
-                setReplyToMessage(selectedMessages[0]);
-                handleDeselectAll();
-              }}
+                onPressIn={() => {
+                  setReplyToMessage(selectedMessages[0]);
+                  handleDeselectAll();
+                }}
               >
                 <MaterialCommunityIcons
                   name="reply"
@@ -785,10 +842,10 @@ const CommunityChatScreen: React.FC = () => {
             )}
             {canEdit && (
               <TouchableOpacity
-              onPressIn={() => {
-                handleEditMessage();
-                handleDeselectAll();
-              }}
+                onPressIn={() => {
+                  handleEditMessage();
+                  handleDeselectAll();
+                }}
                 style={{ marginHorizontal: rS(8) }}
               >
                 <MaterialCommunityIcons
@@ -800,10 +857,10 @@ const CommunityChatScreen: React.FC = () => {
             )}
             {canDelete && (
               <TouchableOpacity
-              onPressIn={() => {
-                handleDeleteMessage();
-                handleDeselectAll();
-              }}
+                onPressIn={() => {
+                  handleDeleteMessage();
+                  handleDeselectAll();
+                }}
                 style={{ marginHorizontal: rS(8) }}
               >
                 <MaterialCommunityIcons
@@ -1183,7 +1240,10 @@ const CommunityChatScreen: React.FC = () => {
         <View>
           {!hasText && (
             <View style={styles.attachButtonContainer}>
-              <TouchableOpacity onPress={pickImage} style={styles.attachButton}>
+              <TouchableOpacity
+                onPressIn={pickImage}
+                style={styles.attachButton}
+              >
                 <Ionicons
                   name="image-outline"
                   color={themeColors.text}
@@ -1493,7 +1553,7 @@ const CommunityChatScreen: React.FC = () => {
     },
     previewImage: {
       width: "100%",
-      height: rV(200),
+      height: rV(150),
       marginBottom: rV(10),
     },
     previewDocument: {
@@ -1556,6 +1616,94 @@ const CommunityChatScreen: React.FC = () => {
       padding: rS(10),
       borderRadius: rMS(20),
     },
+    previewModalContainer: {
+      flex: 142,
+      backgroundColor: themeColors.background,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: rS(10),
+      backgroundColor: themeColors.secondaryBackground,
+      borderBottomWidth: 1,
+      borderBottomColor: themeColors.textSecondary + "33",
+    },
+    previewModalTitle: {
+      fontSize: rMS(18),
+      fontWeight: "600",
+      marginLeft: rS(10),
+      color: themeColors.text,
+    },
+    previewImageContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: rS(10),
+    },
+    previewImage: {
+      width: width - rS(20),
+      height: (width - rS(20)) * 1.5,
+      maxHeight: Dimensions.get("window").height * 0.6,
+    },
+    previewButtonContainer: {
+      flexDirection: "row",
+      justifyContent: "center",
+      padding: rS(10),
+      backgroundColor: themeColors.secondaryBackground,
+      borderTopWidth: 1,
+      borderTopColor: themeColors.textSecondary + "33",
+    },
+    previewButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: themeColors.tint,
+      paddingVertical: rV(8),
+      paddingHorizontal: rS(12),
+      borderRadius: rMS(8),
+      marginHorizontal: rS(10),
+    },
+    previewButtonText: {
+      color: "#fff",
+      fontSize: rMS(14),
+      fontWeight: "500",
+      marginLeft: rS(6),
+    },
+    previewActionContainer: {
+      flexDirection: "row",
+      justifyContent: "space-around",
+      padding: rS(10),
+      backgroundColor: themeColors.secondaryBackground,
+      borderTopWidth: 1,
+      borderTopColor: themeColors.textSecondary + "33",
+    },
+    previewActionButton: {
+      paddingVertical: rV(12),
+      borderRadius: rMS(10),
+      flex: 1,
+      marginHorizontal: rS(5),
+      alignItems: "center",
+    },
+    previewActionText: {
+      color: "#fff",
+      fontSize: rMS(16),
+      fontWeight: "600",
+    },
+    noImagesText: {
+      color: themeColors.textSecondary,
+      fontSize: rMS(16),
+      textAlign: "center",
+      marginTop: rV(20),
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    loadingText: {
+      marginTop: rV(10),
+      color: themeColors.text,
+      fontSize: rMS(16),
+    },
   });
 
   return (
@@ -1611,6 +1759,13 @@ const CommunityChatScreen: React.FC = () => {
         images={imageViewerImages}
         currentIndex={currentImageIndex}
         onRequestClose={() => setIsImageViewerVisible(false)}
+      />
+      <ImagePreviewModal
+        visible={isImagePreviewVisible}
+        images={selectedImagesForPreview}
+        themeColors={themeColors}
+        onClose={() => setIsImagePreviewVisible(false)}
+        onSend={handleSendImage}
       />
     </View>
   );

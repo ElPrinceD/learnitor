@@ -18,17 +18,19 @@ export default function ChatScreenLayout() {
 
   return (
     <SafeAreaProvider>
-      <Stack screenOptions={{
-        headerStyle: {
-          backgroundColor: themeColors.background,
-        },
-        headerTintColor: themeColors.text,
-        headerTitleStyle: {
-          fontWeight: "bold",
-        },
-        headerTitleAlign: "center",
-        headerShadowVisible: false,
-      }}>
+      <Stack
+        screenOptions={{
+          headerStyle: {
+            backgroundColor: themeColors.background,
+          },
+          headerTintColor: themeColors.text,
+          headerTitleStyle: {
+            fontWeight: "bold",
+          },
+          headerTitleAlign: "center",
+          headerShadowVisible: false,
+        }}
+      >
         <Stack.Screen
           name="ChatScreen"
           options={({ route, navigation }) => ({
@@ -41,11 +43,16 @@ export default function ChatScreenLayout() {
                     id: route.params?.communityId,
                   })
                 }
-                style={{ flexDirection: 'row', alignItems: 'center' }}
+                style={{ flexDirection: "row", alignItems: "center" }}
               >
-                <Image 
-                  source={{ uri: route.params?.image }} 
-                  style={{ width: rS(30), height: rV(30), marginRight: SIZES.small, borderRadius: rMS(SIZES.xSmall) }}
+                <Image
+                  source={{ uri: route.params?.image }}
+                  style={{
+                    width: rS(30),
+                    height: rV(30),
+                    marginRight: SIZES.small,
+                    borderRadius: rMS(SIZES.xSmall),
+                  }}
                 />
                 <Text
                   style={{
@@ -76,59 +83,74 @@ export default function ChatScreenLayout() {
               title: "Squad Info",
               headerBackTitle: "Back",
               headerRight: () => (
-               
-                  <TouchableOpacity
-                    onPress={() =>
-                      navigation.navigate("EditCommunityScreen", {
-                        id: route.params?.id,
-                      })
-                    }
-                  >
-                    <Ionicons name="settings-outline" size={24} color={themeColors.text} />
-                  </TouchableOpacity>
-                ) 
-              
+                <TouchableOpacity
+                  onPressIn={() =>
+                    navigation.navigate("EditCommunityScreen", {
+                      id: route.params?.id,
+                    })
+                  }
+                >
+                  <Ionicons
+                    name="settings-outline"
+                    size={24}
+                    color={themeColors.text}
+                  />
+                </TouchableOpacity>
+              ),
             };
           }}
         />
-         <Stack.Screen
+        <Stack.Screen
           name="CommunityImageScreen"
-          
           options={{
             title: "Photos",
             headerBackTitle: "Back",
           }}
         />
-         <Stack.Screen
+        <Stack.Screen
           name="ImagePreviewScreen"
-          
           options={{
             title: "Photos",
             headerBackTitle: "Back",
           }}
         />
-          <Stack.Screen
-        name="EditCommunityScreen"
-       
-        options={({ navigation }) => ({
-          title: "Edit Community",
-          presentation: "modal",
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Text style={{ color: themeColors.text, marginLeft: 5, fontSize: rMS(19) }}>
-                Cancel
-              </Text>
-            </TouchableOpacity>
-          ),
-          headerRight: () => (
-            <TouchableOpacity onPress={() => {/* Save changes logic */}}>
-              <Text style={{ color: themeColors.errorText, marginRight: 5, fontSize: rMS(19) }}>
-                Done
-              </Text>
-            </TouchableOpacity>
-          ),
-        })}
-      />
+        <Stack.Screen
+          name="EditCommunityScreen"
+          options={({ navigation }) => ({
+            title: "Edit Community",
+            presentation: "modal",
+            headerLeft: () => (
+              <TouchableOpacity onPress={() => navigation.goBack()}>
+                <Text
+                  style={{
+                    color: themeColors.text,
+                    marginLeft: 5,
+                    fontSize: rMS(19),
+                  }}
+                >
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+            ),
+            headerRight: () => (
+              <TouchableOpacity
+                onPress={() => {
+                  /* Save changes logic */
+                }}
+              >
+                <Text
+                  style={{
+                    color: themeColors.errorText,
+                    marginRight: 5,
+                    fontSize: rMS(19),
+                  }}
+                >
+                  Done
+                </Text>
+              </TouchableOpacity>
+            ),
+          })}
+        />
       </Stack>
     </SafeAreaProvider>
   );

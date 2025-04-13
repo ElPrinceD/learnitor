@@ -118,22 +118,6 @@ const FullScreenImageViewer: React.FC<FullScreenImageViewerProps> = ({
     </View>
   );
 
-  // Handle empty image list
-  if (!images || images.length === 0) {
-    return (
-      <View style={[styles.container, { backgroundColor: "black" }]}>
-        <TouchableOpacity
-          style={styles.closeButton}
-          onPress={onRequestClose}
-          accessibilityLabel="Close image viewer"
-        >
-          <Ionicons name="close" size={rS(30)} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.errorText}>No images to display</Text>
-      </View>
-    );
-  }
-
   return (
     <ImageViewing
       images={formattedImages}
@@ -145,7 +129,7 @@ const FullScreenImageViewer: React.FC<FullScreenImageViewerProps> = ({
       FooterComponent={renderFooter}
       backgroundColor="rgba(0, 0, 0, 0.9)"
       animationType="fade"
-      doubleTapToZoom
+      doubleTapToZoomEnabled
       swipeToCloseEnabled
     />
   );
