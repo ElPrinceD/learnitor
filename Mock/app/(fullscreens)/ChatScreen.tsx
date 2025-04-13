@@ -25,6 +25,7 @@ import {
   Platform,
   Alert,
   Dimensions,
+  Linking,
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
@@ -45,6 +46,7 @@ import {
 import { Swipeable } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import Video from "react-native-video";
 import { useNavigation } from "@react-navigation/native";
@@ -198,7 +200,7 @@ const CommunityChatScreen: React.FC = () => {
         await sendMessage({
           type: "fetch_history",
           community_id: communityId,
-          limit: 20, // Initial batch size
+          limit: 20,
         });
       }
     } catch (error) {
@@ -219,7 +221,7 @@ const CommunityChatScreen: React.FC = () => {
           type: "fetch_history",
           community_id: communityId,
           limit: 20,
-          before: lastMessageTimestamp, // Use timestamp for pagination
+          before: lastMessageTimestamp,
         });
       }
     } catch (error) {
@@ -267,8 +269,8 @@ const CommunityChatScreen: React.FC = () => {
                 (m) => m.status === "pending" || m.tempId
               );
               const updatedMessages = data.before
-                ? [...prevMessages, ...newMessages] // Append for earlier messages
-                : [...pendingMessages, ...transformedMessages]; // Replace for initial fetch
+                ? [...prevMessages, ...newMessages]
+                : [...pendingMessages, ...transformedMessages];
               const sortedMessages = updatedMessages.sort(
                 (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
               );
@@ -285,8 +287,8 @@ const CommunityChatScreen: React.FC = () => {
                   sortedMessages[sortedMessages.length - 1].createdAt.getTime()
                 );
               }
-              setLoadEarlier(newMessages.length === 20); // Enable if more messages might exist
-              const imageUris = sortedMessages
+              setLoadEarlier(newMessages.length === 20);
+              const imageUris = transformedMessages
                 .filter((msg) => msg.image)
                 .map((msg) => msg.image);
               setImageViewerImages(imageUris);
@@ -461,13 +463,35 @@ const CommunityChatScreen: React.FC = () => {
         }
       }
 
+      let payloadUri = fileUri;
+      if (type === "document") {
+        console.log('here');
+        try {
+          const fileContent = await FileSystem.readAsStringAsync(fileUri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          let mimeType = "application/octet-stream";
+          const extension = fileUri.split(".").pop()?.toLowerCase();
+          if (extension === "pdf") mimeType = "application/pdf";
+          else if (extension === "doc" || extension === "docx")
+            mimeType = "application/msword";
+          else if (extension === "txt") mimeType = "text/plain";
+          payloadUri = `data:${mimeType};base64,${fileContent}`;
+        } catch (error) {
+          console.error("Error encoding document to base64:", error);
+          ToastAndroid.show("Failed to send document", ToastAndroid.SHORT);
+          return;
+        }
+      }
+
       if (!isConnected) {
+        console.log('There')
         const messageToStore = {
           ...message,
           communityId,
           content: {
             text: "",
-            [type]: fileUri,
+            [type]: payloadUri,
           },
         };
         await sqliteSetItem(
@@ -485,6 +509,7 @@ const CommunityChatScreen: React.FC = () => {
           await sqliteSetItem("storage_keys", JSON.stringify(keys));
         }
       } else {
+        console.log('Players')
         sendMessage({
           type: "send_message",
           community_id: communityId,
@@ -492,7 +517,7 @@ const CommunityChatScreen: React.FC = () => {
           sender: user?.first_name + " " + user?.last_name || "Unknown User",
           sender_id: user?.id || 1,
           temp_id: tempId,
-          [type]: fileUri,
+          [type]: payloadUri,
         });
       }
     },
@@ -507,6 +532,26 @@ const CommunityChatScreen: React.FC = () => {
       messages,
     ]
   );
+
+  const pickDocument = useCallback(async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "*/*",
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        
+        await sendMediaMessage(asset.uri, "document");
+      } else {
+        console.log("Document picking canceled");
+      }
+    } catch (error) {
+      console.error("Error picking document:", error);
+      ToastAndroid.show("Failed to pick document", ToastAndroid.SHORT);
+    }
+  }, [sendMediaMessage]);
 
   const onSend = useCallback(
     async (newMessages: IMessage[] = []) => {
@@ -559,7 +604,7 @@ const CommunityChatScreen: React.FC = () => {
 
         if (!isConnected) {
           const messageToStore = {
-            ...tempMessage,
+            ...message,
             communityId,
             content: {
               text: tempMessage.text || "",
@@ -637,7 +682,10 @@ const CommunityChatScreen: React.FC = () => {
   }, [sendMediaMessage]);
 
   const handleCopySelected = useCallback(async () => {
-    const textToCopy = selectedMessages.map((msg) => msg.text).join("\n\n");
+    const textToCopy = selectedMessages
+      .map((msg) => msg.text)
+      .filter((text) => text)
+      .join("\n\n");
     await Clipboard.setStringAsync(textToCopy);
     ToastAndroid.show("Messages copied to clipboard", ToastAndroid.SHORT);
   }, [selectedMessages]);
@@ -771,10 +819,10 @@ const CommunityChatScreen: React.FC = () => {
           <View style={{ flexDirection: "row", marginRight: SIZES.xSmall }}>
             {canReply && (
               <TouchableOpacity
-              onPressIn={() => {
-                setReplyToMessage(selectedMessages[0]);
-                handleDeselectAll();
-              }}
+                onPressIn={() => {
+                  setReplyToMessage(selectedMessages[0]);
+                  handleDeselectAll();
+                }}
               >
                 <MaterialCommunityIcons
                   name="reply"
@@ -785,10 +833,10 @@ const CommunityChatScreen: React.FC = () => {
             )}
             {canEdit && (
               <TouchableOpacity
-              onPressIn={() => {
-                handleEditMessage();
-                handleDeselectAll();
-              }}
+                onPressIn={() => {
+                  handleEditMessage();
+                  handleDeselectAll();
+                }}
                 style={{ marginHorizontal: rS(8) }}
               >
                 <MaterialCommunityIcons
@@ -800,10 +848,10 @@ const CommunityChatScreen: React.FC = () => {
             )}
             {canDelete && (
               <TouchableOpacity
-              onPressIn={() => {
-                handleDeleteMessage();
-                handleDeselectAll();
-              }}
+                onPressIn={() => {
+                  handleDeleteMessage();
+                  handleDeselectAll();
+                }}
                 style={{ marginHorizontal: rS(8) }}
               >
                 <MaterialCommunityIcons
@@ -935,6 +983,113 @@ const CommunityChatScreen: React.FC = () => {
         ? "Document"
         : "";
 
+      // Create a custom view for reply messages and document cards.
+      const renderCustomContent = () => {
+        return (
+          <>
+            {/* Render reply preview if exists */}
+            {props.currentMessage.replyTo &&
+              props.currentMessage.replyTo._id !== null && (
+                <TouchableOpacity>
+                  <View style={styles.replyContainer}>
+                    <Text style={styles.replyName}>
+                      {`Replying to ${
+                        props.currentMessage.replyTo.user?.name || "Unknown User"
+                      }`}
+                    </Text>
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      {props.currentMessage.replyTo.text == null ? (
+                        <>
+                          <MaterialCommunityIcons
+                            name={
+                              props.currentMessage.replyTo.image
+                                ? "image"
+                                : "file-document-outline"
+                            }
+                            size={SIZES.medium}
+                            color={themeColors.textSecondary}
+                            style={{ marginRight: 4 }}
+                          />
+                          <Text style={styles.replyText}>
+                            {props.currentMessage.replyTo.image
+                              ? "Photo"
+                              : "Document"}
+                          </Text>
+                        </>
+                      ) : (
+                        <Text style={styles.replyText}>
+                          {props.currentMessage.replyTo.text || ""}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              )}
+
+            {/* Render document preview if there is a document */}
+            {props.currentMessage.document && (
+              <TouchableOpacity
+                onPress={() => {
+                  Linking.openURL(props.currentMessage.document);
+                }}
+                style={[
+                  styles.documentContainer,
+                  {
+                    backgroundColor:
+                      props.position === "right"
+                        ? themeColors.tint
+                        : themeColors.secondaryBackground,
+                    borderRadius: rMS(10),
+                    padding: rS(10),
+                    marginVertical: rV(4),
+                    maxWidth: rS(250),
+                  },
+                ]}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <MaterialCommunityIcons
+                    name="file-document-outline"
+                    size={SIZES.large}
+                    color={props.position === "right" ? "#fff" : "#007aff"}
+                    style={{ marginRight: rS(8) }}
+                  />
+                  <View>
+                    <Text
+                      style={{
+                        color:
+                          props.position === "right"
+                            ? "#fff"
+                            : themeColors.text,
+                        fontSize: SIZES.medium,
+                        fontWeight: "600",
+                        maxWidth: rS(180),
+                      }}
+                      numberOfLines={1}
+                    >
+                      {decodeURIComponent(
+                        props.currentMessage.document.split("/").pop() ||
+                          "Document"
+                      )}
+                    </Text>
+                    <Text
+                      style={{
+                        color:
+                          props.position === "right"
+                            ? "rgba(255,255,255,0.7)"
+                            : themeColors.textSecondary,
+                        fontSize: SIZES.small,
+                      }}
+                    >
+                      Document
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            )}
+          </>
+        );
+      };
+
       return (
         <TouchableOpacity
           onPress={() => handlePress(props.currentMessage)}
@@ -1001,50 +1156,7 @@ const CommunityChatScreen: React.FC = () => {
                 )}
               </View>
             )}
-            renderCustomView={() => (
-              <>
-                {props.currentMessage.replyTo &&
-                  props.currentMessage.replyTo._id !== null && (
-                    <TouchableOpacity>
-                      <View style={styles.replyContainer}>
-                        <Text style={styles.replyName}>
-                          {`Replying to ${
-                            props.currentMessage.replyTo.user?.name ||
-                            "Unknown User"
-                          }`}
-                        </Text>
-                        <View
-                          style={{ flexDirection: "row", alignItems: "center" }}
-                        >
-                          {props.currentMessage.replyTo.text == null ? (
-                            <>
-                              <MaterialCommunityIcons
-                                name="image"
-                                size={SIZES.medium}
-                                color={themeColors.textSecondary}
-                                style={{ marginRight: 4 }}
-                              />
-                              <Text style={styles.replyText}>Photo</Text>
-                            </>
-                          ) : (
-                            <Text style={styles.replyText}>
-                              {props.currentMessage.replyTo.document
-                                ? "Document"
-                                : props.currentMessage.replyTo.text || ""}
-                            </Text>
-                          )}
-                        </View>
-                      </View>
-                    </TouchableOpacity>
-                  )}
-                {((isOtherUser && isFirstMessageOfBlock) ||
-                  (isOtherUser && isNewDay)) && (
-                  <Text style={styles.username}>
-                    {props.currentMessage.user.name}
-                  </Text>
-                )}
-              </>
-            )}
+            renderCustomView={renderCustomContent}
             textStyle={{
               right: { color: "white" },
               left: { color: themeColors.text },
@@ -1180,9 +1292,9 @@ const CommunityChatScreen: React.FC = () => {
       const hasText = props.text && props.text.trim().length > 0;
 
       return (
-        <View>
+        <View style={styles.attachButtonContainer}>
           {!hasText && (
-            <View style={styles.attachButtonContainer}>
+            <>
               <TouchableOpacity onPress={pickImage} style={styles.attachButton}>
                 <Ionicons
                   name="image-outline"
@@ -1190,7 +1302,17 @@ const CommunityChatScreen: React.FC = () => {
                   size={SIZES.xLarge}
                 />
               </TouchableOpacity>
-            </View>
+              <TouchableOpacity
+                onPress={pickDocument}
+                style={styles.attachButton}
+              >
+                <MaterialCommunityIcons
+                  name="paperclip"
+                  color={themeColors.text}
+                  size={SIZES.xLarge}
+                />
+              </TouchableOpacity>
+            </>
           )}
           {hasText && (
             <View style={styles.sendContainer}>
@@ -1206,7 +1328,7 @@ const CommunityChatScreen: React.FC = () => {
         </View>
       );
     },
-    [pickImage, themeColors]
+    [pickImage, pickDocument, themeColors]
   );
 
   const renderMediaPreview = useCallback(() => {
@@ -1219,9 +1341,19 @@ const CommunityChatScreen: React.FC = () => {
               style={[styles.previewImage, { width: "100%", height: rV(150) }]}
             />
           ) : (
-            <Text style={styles.previewDocument}>
-              {mediaPreview.uri.split("/").pop()}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <MaterialCommunityIcons
+                name="file-document-outline"
+                size={SIZES.medium}
+                color={themeColors.text}
+                style={{ marginRight: rS(8) }}
+              />
+              <Text style={styles.previewDocument}>
+                {decodeURIComponent(
+                  mediaPreview.uri.split("/").pop() || "Document"
+                )}
+              </Text>
+            </View>
           )}
           <TouchableOpacity
             style={styles.closeReplyButton}
@@ -1239,92 +1371,102 @@ const CommunityChatScreen: React.FC = () => {
     return null;
   }, [mediaPreview, themeColors]);
 
-  const renderInputToolbar = (props) => {
-    return (
-      <View>
-        {renderMediaPreview()}
-        {editingMessage && (
-          <View style={styles.replyContainer}>
-            <Text style={styles.replyName}>
-              Editing Message by {editingMessage.user.name}
-            </Text>
-            <TouchableOpacity
-              onPress={() => setEditingMessage(null)}
-              style={styles.closeReplyButton}
-            >
-              <Ionicons
-                name="close"
-                color={themeColors.text}
-                size={SIZES.medium}
-              />
-            </TouchableOpacity>
-          </View>
-        )}
-        {replyToMessage && (
-          <View style={styles.replyContainer}>
-            <Text style={styles.replyName}>
-              Replying to {replyToMessage.user?.name || "Unknown User"}
-            </Text>
-            <Text style={styles.replyText}>
-              {replyToMessage.text ||
-                (replyToMessage.image
-                  ? "Photo"
-                  : replyToMessage.document
-                  ? "Document"
-                  : "")}
-            </Text>
-            <TouchableOpacity
-              onPress={() => setReplyToMessage(null)}
-              style={styles.closeReplyButton}
-            >
-              <Ionicons
-                name="close"
-                color={themeColors.text}
-                size={SIZES.medium}
-              />
-            </TouchableOpacity>
-          </View>
-        )}
-        <InputToolbar
-          {...props}
-          containerStyle={[
-            styles.inputToolbar,
-            (editingMessage || replyToMessage || mediaPreview.uri) && {
-              marginTop: rV(0),
-            },
-          ]}
-          primaryStyle={{ alignItems: "center", flexDirection: "row" }}
-          renderComposer={() => (
-            <View style={styles.inputField}>
-              <TextInput
-                style={styles.textInput}
-                placeholder={
-                  editingMessage
-                    ? "Edit message"
-                    : replyToMessage
-                    ? "Reply to message"
-                    : "Message"
-                }
-                placeholderTextColor={themeColors.textSecondary}
-                value={props.text}
-                onChangeText={props.onTextChanged}
-              />
-              {editingMessage ? (
-                <TouchableOpacity onPress={onEditMessage}>
-                  <Ionicons
-                    name="checkmark"
-                    color={themeColors.text}
-                    size={SIZES.large}
-                    style={styles.attachIcon}
-                  />
-                </TouchableOpacity>
-              ) : null}
+  const renderInputToolbar = useCallback(
+    (props) => {
+      return (
+        <View>
+          {renderMediaPreview()}
+          {editingMessage && (
+            <View style={styles.replyContainer}>
+              <Text style={styles.replyName}>
+                Editing Message by {editingMessage.user.name}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setEditingMessage(null)}
+                style={styles.closeReplyButton}
+              >
+                <Ionicons
+                  name="close"
+                  color={themeColors.text}
+                  size={SIZES.medium}
+                />
+              </TouchableOpacity>
             </View>
           )}
-        />
-      </View>
-    );
-  };
+          {replyToMessage && (
+            <View style={styles.replyContainer}>
+              <Text style={styles.replyName}>
+                Replying to {replyToMessage.user?.name || "Unknown User"}
+              </Text>
+              <Text style={styles.replyText}>
+                {replyToMessage.text ||
+                  (replyToMessage.image
+                    ? "Photo"
+                    : replyToMessage.document
+                    ? "Document"
+                    : "")}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setReplyToMessage(null)}
+                style={styles.closeReplyButton}
+              >
+                <Ionicons
+                  name="close"
+                  color={themeColors.text}
+                  size={SIZES.medium}
+                />
+              </TouchableOpacity>
+            </View>
+          )}
+          <InputToolbar
+            {...props}
+            containerStyle={[
+              styles.inputToolbar,
+              (editingMessage || replyToMessage || mediaPreview.uri) && {
+                marginTop: rV(0),
+              },
+            ]}
+            primaryStyle={{ alignItems: "center", flexDirection: "row" }}
+            renderComposer={() => (
+              <View style={styles.inputField}>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder={
+                    editingMessage
+                      ? "Edit message"
+                      : replyToMessage
+                      ? "Reply to message"
+                      : "Message"
+                  }
+                  placeholderTextColor={themeColors.textSecondary}
+                  value={props.text}
+                  onChangeText={props.onTextChanged}
+                />
+                {editingMessage ? (
+                  <TouchableOpacity onPress={onEditMessage}>
+                    <Ionicons
+                      name="checkmark"
+                      color={themeColors.text}
+                      size={SIZES.large}
+                      style={styles.attachIcon}
+                    />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            )}
+          />
+        </View>
+      );
+    },
+    [
+      renderMediaPreview,
+      editingMessage,
+      replyToMessage,
+      mediaPreview.uri,
+      themeColors,
+      onEditMessage,
+    ]
+  );
 
   const styles = StyleSheet.create({
     container: {
@@ -1482,18 +1624,31 @@ const CommunityChatScreen: React.FC = () => {
       right: rS(10),
       top: rV(10),
     },
-    documentText: {
+    documentContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: rS(10),
+      borderRadius: rMS(8),
+      maxWidth: rS(250),
+      marginVertical: rV(4),
+    },
+    documentTextContainer: {
+      flexDirection: "column",
+      flexShrink: 1,
+    },
+    documentName: {
+      fontWeight: "600",
+      fontSize: SIZES.medium,
+      marginBottom: rV(2),
       color: themeColors.text,
+    },
+    documentLabel: {
       fontSize: SIZES.small,
-      padding: rMS(10),
-      borderWidth: rS(1),
-      borderColor: themeColors.textSecondary,
-      borderRadius: rMS(5),
-      marginVertical: rV(10),
+      color: themeColors.textSecondary,
     },
     previewImage: {
       width: "100%",
-      height: rV(200),
+      height: rV(150),
       marginBottom: rV(10),
     },
     previewDocument: {

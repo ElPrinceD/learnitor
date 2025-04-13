@@ -1,4 +1,3 @@
-// EditPlan.tsx
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -22,7 +21,7 @@ import GameButton from "../../../components/GameButton.tsx";
 import CustomPicker from "../../../components/CustomPicker";
 import DateSelector from "../../../components/DateSelector.tsx";
 import CustomDateTimeSelector from "../../../components/CustomDateTimeSelector.tsx";
-import Animated, { FadeInLeft, ReduceMotion } from "react-native-reanimated";
+import Animated, { FadeInLeft, FadeInRight, FadeOutRight, ReduceMotion } from "react-native-reanimated";
 import { useWebSocket } from "../../../webSocketProvider";
 
 interface Category {
@@ -31,55 +30,88 @@ interface Category {
 }
 
 interface UpdateTaskData {
-  title: string;
-  description: string;
-  due_date: string;
-  due_time_start: string; // Updated to match CreateNewTime
-  due_time_end: string;   // Added for end time
+  title?: string;
+  description?: string;
+  due_date?: string;
+  due_time_start?: string;
+  due_time_end?: string;
   category?: number | null;
+  is_recurring?: boolean;
+  recurrence_interval?: string | null;
+  recurrence_end_date?: string | null;
   affect_all_recurring?: boolean;
 }
 
 const EditPlan = () => {
   const params = useLocalSearchParams();
   const id = params.taskId as string;
-  const oldDescription = params.description as string;
   const oldTitle = params.title as string;
-  const oldDate = params.dueDate as string;       // e.g., "2025-04-10"
+  const oldDescription = params.description as string;
+  const oldDate = params.dueDate as string; // e.g., "2025-04-10"
   const oldStartTime = params.dueTimeStart as string; // e.g., "09:00"
-  const oldEndTime = params.dueTimeEnd as string;   // e.g., "10:00"
+  const oldEndTime = params.dueTimeEnd as string; // e.g., "10:00"
+  const oldCategoryId = params.category_id as string;
+  const oldIsRecurring = params.is_recurring === "true"; // Convert string to boolean
+  const oldRecurrenceInterval = (params.recurrence_interval as string) || null;
+  const oldRecurrenceEndDate = (params.recurrence_end_date as string) || null;
+
   const { userToken, userInfo } = useAuth();
   const { sqliteRemoveItem } = useWebSocket();
 
-  // Initialize dueDate
-  const [dueDate, setDueDate] = useState(new Date(oldDate));
-
-  // Initialize startTime with actual date and time
-  const initialStartTime = new Date(oldDate);
-  const [startHours, startMinutes] = oldStartTime ? oldStartTime.split(":").map(Number) : [0, 0];
-  initialStartTime.setHours(startHours, startMinutes, 0, 0);
-  const [startTime, setStartTime] = useState(initialStartTime);
-
-  // Initialize endTime with actual date and time
-  const initialEndTime = new Date(oldDate);
-  const [endHours, endMinutes] = oldEndTime ? oldEndTime.split(":").map(Number) : [0, 0];
-  initialEndTime.setHours(endHours, endMinutes, 0, 0);
-  const [endTime, setEndTime] = useState(initialEndTime);
-
+  // State for form inputs
+  const [dueDate, setDueDate] = useState(() => {
+    const date = new Date(oldDate);
+    return isNaN(date.getTime()) ? new Date() : date;
+  });
+  const [startTime, setStartTime] = useState(() => {
+    const date = new Date(oldDate);
+    const [hours, minutes] = oldStartTime ? oldStartTime.split(":").map(Number) : [12, 0];
+    if (isNaN(hours) || isNaN(minutes)) {
+      date.setHours(12, 0, 0, 0);
+    } else {
+      date.setHours(hours, minutes, 0, 0);
+    }
+    return date;
+  });
+  const [endTime, setEndTime] = useState(() => {
+    const date = new Date(oldDate);
+    const [hours, minutes] = oldEndTime ? oldEndTime.split(":").map(Number) : [13, 0];
+    if (isNaN(hours) || isNaN(minutes)) {
+      date.setHours(13, 0, 0, 0);
+    } else {
+      date.setHours(hours, minutes, 0, 0);
+    }
+    return date;
+  });
   const [title, setTitle] = useState(oldTitle || "");
   const [description, setDescription] = useState(oldDescription || "");
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [isRecurring, setIsRecurring] = useState(oldIsRecurring);
+  const [recurrenceOption, setRecurrenceOption] = useState(
+    oldRecurrenceInterval ? oldRecurrenceInterval.charAt(0).toUpperCase() + oldRecurrenceInterval.slice(1) : "Does not repeat"
+  );
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState(
+    oldRecurrenceEndDate ? new Date(oldRecurrenceEndDate) : new Date()
+  );
   const [affectAllRecurring, setAffectAllRecurring] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
+  // Fetch categories and set initial selected category
   const { status: categoriesStatus, data: categoriesData } = useQuery({
     queryKey: ["taskCategories", userToken?.token],
     queryFn: () => getCategories(userToken?.token),
     enabled: !!userToken?.token,
   });
+
+  useEffect(() => {
+    if (categoriesData && oldCategoryId) {
+      const category = categoriesData.find((cat) => cat.value.toString() === oldCategoryId);
+      if (category) setSelectedCategory(category);
+    }
+  }, [categoriesData, oldCategoryId]);
 
   // Sync start and end times' date with dueDate changes
   useEffect(() => {
@@ -97,12 +129,11 @@ const EditPlan = () => {
 
   const updateTaskMutation = useMutation<any, any, any>({
     mutationFn: async ({ taskId, taskData, token }) => {
-      await updateTask(taskId, taskData, token);
+      return await updateTask(taskId, taskData, token);
     },
     onSuccess: () => {
       const oldDateString = new Date(oldDate).toISOString().split("T")[0];
       const newDateString = formatDate(dueDate);
-      const oldCategoryId = params.category_id as string;
       const newCategoryId = selectedCategory?.value?.toString() || oldCategoryId;
 
       sqliteRemoveItem(`todayPlans_${oldDateString}_all`);
@@ -150,11 +181,17 @@ const EditPlan = () => {
   });
 
   const parseTime = (timeString: string): Date => {
-    if (!timeString) return new Date();
+    if (!timeString) {
+      const defaultDate = new Date(dueDate);
+      defaultDate.setHours(12, 0, 0, 0);
+      return defaultDate;
+    }
     const [hours, minutes] = timeString.split(":").map(Number);
     if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
       console.error(`Invalid time string: ${timeString}`);
-      return new Date();
+      const defaultDate = new Date(dueDate);
+      defaultDate.setHours(12, 0, 0, 0);
+      return defaultDate;
     }
     const newDate = new Date(dueDate);
     newDate.setHours(hours, minutes, 0, 0);
@@ -174,22 +211,38 @@ const EditPlan = () => {
   };
 
   const handleSaveTime = () => {
-    const dataToSave: UpdateTaskData = {
-      title,
-      description,
-      due_date: formatDate(dueDate),
-      due_time_start: formatTime(startTime),
-      due_time_end: formatTime(endTime),
-      category: selectedCategory?.value || parseInt(params.category_id as string),
-      affect_all_recurring: affectAllRecurring,
-    };
-    console.log(dataToSave);
+    // Compare with original values to send only changed fields
+    const dataToSave: UpdateTaskData = {};
 
-    updateTaskMutation.mutate({
-      taskId: id,
-      taskData: dataToSave,
-      token: userToken?.token!,
-    });
+    if (title !== oldTitle) dataToSave.title = title;
+    if (description !== oldDescription) dataToSave.description = description;
+    if (formatDate(dueDate) !== oldDate) dataToSave.due_date = formatDate(dueDate);
+    if (formatTime(startTime) !== oldStartTime) dataToSave.due_time_start = formatTime(startTime);
+    if (formatTime(endTime) !== oldEndTime && formatTime(endTime) !== "00:00") {
+      dataToSave.due_time_end = formatTime(endTime);
+    }
+    if (selectedCategory?.value?.toString() !== oldCategoryId && selectedCategory !== null) {
+      dataToSave.category = selectedCategory?.value || null;
+    }
+    if (isRecurring !== oldIsRecurring) dataToSave.is_recurring = isRecurring;
+    if (recurrenceOption !== "Does not repeat" && recurrenceOption.toLowerCase() !== oldRecurrenceInterval) {
+      dataToSave.recurrence_interval = recurrenceOption.toLowerCase();
+    }
+    if (recurrenceOption !== "Does not repeat" && formatDate(recurrenceEndDate) !== oldRecurrenceEndDate) {
+      dataToSave.recurrence_end_date = formatDate(recurrenceEndDate);
+    }
+    if (affectAllRecurring && isRecurring) dataToSave.affect_all_recurring = affectAllRecurring;
+
+    // Only proceed if there are changes
+    if (Object.keys(dataToSave).length > 0) {
+      updateTaskMutation.mutate({
+        taskId: id,
+        taskData: dataToSave,
+        token: userToken?.token!,
+      });
+    } else {
+      setErrorMessage("No changes to save.");
+    }
   };
 
   const handleDeletePlan = () => {
@@ -198,6 +251,13 @@ const EditPlan = () => {
       token: userToken?.token!,
     });
   };
+
+  const recurrenceOptions = [
+    { label: "Does not repeat", value: "Does not repeat" },
+    { label: "Daily", value: "Daily" },
+    { label: "Weekly", value: "Weekly" },
+  ];
+  const simplifiedRecurrenceOptions = recurrenceOptions.map((option) => option.value);
 
   const styles = StyleSheet.create({
     container: {
@@ -250,18 +310,22 @@ const EditPlan = () => {
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.sectionContainer}>
-          <AnimatedRoundTextInput
-            placeholderTextColor={themeColors.textSecondary}
-            label="Title"
-            value={title}
-            onChangeText={setTitle}
-          />
-          <AnimatedRoundTextInput
-            placeholderTextColor={themeColors.textSecondary}
-            label="Description"
-            value={description}
-            onChangeText={setDescription}
-          />
+          <Animated.View key={`title-${title}`} entering={FadeInRight} exiting={FadeOutRight}>
+            <AnimatedRoundTextInput
+              placeholderTextColor={themeColors.textSecondary}
+              label="Title"
+              value={title}
+              onChangeText={setTitle}
+            />
+          </Animated.View>
+          <Animated.View key={`description-${description}`} entering={FadeInRight} exiting={FadeOutRight}>
+            <AnimatedRoundTextInput
+              placeholderTextColor={themeColors.textSecondary}
+              label="Description"
+              value={description}
+              onChangeText={setDescription}
+            />
+          </Animated.View>
         </View>
 
         <View style={styles.sectionContainer}>
@@ -275,12 +339,14 @@ const EditPlan = () => {
               }
             }}
             label="Due Date"
+            initialDate={oldDate}
             minDate={true}
           />
           <CustomDateTimeSelector
             mode="time"
             label="Start Time"
-            value={formatTime(startTime)}
+            value={oldStartTime || formatTime(startTime)}
+            initialValue={oldStartTime}
             onTimeChange={(time) => {
               const newTime = parseTime(time);
               if (!isNaN(newTime.getTime())) {
@@ -294,7 +360,8 @@ const EditPlan = () => {
           <CustomDateTimeSelector
             mode="time"
             label="End Time"
-            value={formatTime(endTime)}
+            value={oldEndTime || formatTime(endTime)}
+            initialValue={oldEndTime}
             onTimeChange={(time) => {
               const newTime = parseTime(time);
               if (!isNaN(newTime.getTime())) {
@@ -316,15 +383,46 @@ const EditPlan = () => {
               setSelectedCategory(categoriesData?.find((cat) => cat.label === value) || null)
             }
           />
-          <View style={styles.toggleContainer}>
-            <Text style={styles.toggleLabel}>Affect All Recurring Tasks</Text>
-            <Switch
-              value={affectAllRecurring}
-              onValueChange={setAffectAllRecurring}
-              trackColor={{ false: "#767577", true: themeColors.tint }}
-              thumbColor={affectAllRecurring ? themeColors.background : "#f4f3f4"}
-            />
-          </View>
+          <CustomPicker
+            label="Recurrence"
+            options={simplifiedRecurrenceOptions}
+            selectedValue={recurrenceOption}
+            onValueChange={(value) => {
+              setRecurrenceOption(value);
+              setIsRecurring(value !== "Does not repeat");
+            }}
+          />
+          {recurrenceOption !== "Does not repeat" && (
+            <Animated.View
+              entering={FadeInLeft.delay(200).randomDelay().reduceMotion(ReduceMotion.Never)}
+              style={{ marginTop: rV(10) }}
+            >
+              <DateSelector
+                onDateChange={(selectedDate: string) => {
+                  const newDate = new Date(selectedDate);
+                  if (!isNaN(newDate.getTime())) {
+                    setRecurrenceEndDate(newDate);
+                  } else {
+                    console.error(`Invalid recurrence end date: ${selectedDate}`);
+                  }
+                }}
+                label="End Date for Recurrence"
+                initialDate={oldRecurrenceEndDate}
+                minDate={true}
+              />
+            </Animated.View>
+          )}
+          {isRecurring && (
+            <View style={styles.toggleContainer}>
+              <Text style={styles.toggleLabel}>Affect All Recurring Tasks</Text>
+              <Switch
+                value={affectAllRecurring}
+                onValueChange={setAffectAllRecurring}
+                trackColor={{ false: "#767577", true: themeColors.tint }}
+                thumbColor={affectAllRecurring ? themeColors.background : "#f4f3f4"}
+              />
+            </View>
+          )}
         </View>
 
         <View style={[styles.buttonContainer, { flexDirection: "row", justifyContent: "space-between" }]}>

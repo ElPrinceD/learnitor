@@ -92,65 +92,50 @@ export const getCategories = async (token) => {
   }
 };
   
- export const createTask = async (taskData, token) => {
-  console.log(taskData)
-  try{
-    const response = await apiClient.post('/api/learner/task/create/',
-      taskData,
-      {
-        headers: {
-          Authorization: `Token ${token}`,
-        },
-      }
-    );
+export const createTask = async (taskData, token) => {
+  try {
+    const response = await apiClient.post('/tasks/', taskData, {
+      headers: {
+        Authorization: `Token ${token}`,
+      },
+    });
     return response.data;
-    
-   }
-   catch (error)
-   {  console.error('Error creating schedule:', error);
+  } catch (error) {
+    console.error('Error creating task:', error);
     throw error;
-   }
-
+  }
 };
-  
+
 export const updateTask = async (taskId, taskData, token) => {
-  try{
-    const response = await apiClient.put(`/api/learner/tasks/update/${taskId}/`,
-      taskData,
-      {
-        headers: {
-          Authorization: `Token ${token}`,
-        },
-      }
-    );
+  console.log(taskId)
+  console.log(taskData)
+  try {
+    const response = await apiClient.put(`/tasks/${taskId}/`, taskData, {
+      headers: {
+        Authorization: `Token ${token}`,
+      },
+    });
     return response.data;
-    
-   }
-   catch (error)
-   {  console.error('Error updating schedule:', error);
+  } catch (error) {
+    console.error('Error updating task:', error);
     throw error;
-   }
-
+  }
 };
+
 export const deleteTask = async (taskId, token) => {
-
-  try{
-    const response = await apiClient.delete(`/api/tasks/${taskId}/delete/`,
-      {
-        headers: {
-          Authorization: `Token ${token}`,
-        },
-      }
-    );
+  try {
+    const response = await apiClient.delete(`/tasks/${taskId}/`, {
+      headers: {
+        Authorization: `Token ${token}`,
+      },
+    });
     return response.data;
-    
-   }
-   catch (error)
-   {  console.error('Error deleting schedule:', error);
+  } catch (error) {
+    console.error('Error deleting task:', error);
     throw error;
-    }
-
+  }
 };
+
   
 export const createTimetable = async (timetableData, token) => {
   console.log(timetableData)
