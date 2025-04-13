@@ -302,6 +302,7 @@ const CommunityScreen: React.FC = () => {
 
   const getLastMessage = useCallback(
     (communityId: string) => lastMessages[communityId] || null,
+    
     [lastMessages]
   );
 

@@ -152,27 +152,30 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
           ) : (
             showLastMessage && lastMessage && (
               <View style={styles.lastMessageContainer}>
-                {lastMessage.image ? (
+                {lastMessage.image || lastMessage.document ? (
                   <>
-                    {truncatedSenderName() && <Text style={styles.lastMessage}>{`${truncatedSenderName()}: `}</Text>}
+                    {truncatedSenderName() && (
+                      <Text style={styles.lastMessage}>{`${truncatedSenderName()}: `}</Text>
+                    )}
                     <MaterialCommunityIcons
-                      name="image"
+                      name={lastMessage.image ? "image" : "file-document"}
                       size={SIZES.small}
                       color={themeColors.textSecondary}
                       style={styles.photoIcon}
                     />
-                    <Text style={styles.lastMessage}>Photo</Text>
-                  </>
-                ) : (
-                  lastMessage.message !== undefined && (
                     <Text style={styles.lastMessage}>
-                      {truncatedSenderName() ? `${truncatedSenderName()}: ` : ""}
-                      {truncatedMessage(lastMessage.message)}
+                      {lastMessage.image ? "Photo" : "Document"}
                     </Text>
-                  )
+                  </>
+                ) : lastMessage.message !== undefined && (
+                  <Text style={styles.lastMessage}>
+                    {truncatedSenderName() ? `${truncatedSenderName()}: ` : ""}
+                    {truncatedMessage(lastMessage.message)}
+                  </Text>
                 )}
               </View>
             )
+            
           )}
         </View>
         {isGlobal ? (

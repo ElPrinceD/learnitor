@@ -1,21 +1,36 @@
 import React from "react";
-import { View, ActivityIndicator, StyleSheet } from "react-native";
+import {
+  View,
+  ActivityIndicator,
+  StyleSheet,
+  TouchableOpacity,
+  GestureResponderEvent,
+  StyleProp,
+  ViewStyle,
+} from "react-native";
 import { Image } from "react-native-expo-image-cache";
 
 interface AppImageProps {
   uri?: string | null;
-  style?: object;
+  style?: StyleProp<ViewStyle>;
+  onPress?: (event: GestureResponderEvent) => void;
 }
 
-const AppImage: React.FC<AppImageProps> = ({ uri, style }) => {
+const AppImage: React.FC<AppImageProps> = ({ uri, style, onPress }) => {
+  const Wrapper = onPress ? TouchableOpacity : View;
+
   return (
-    <View style={[styles.container, style]}>
+    <Wrapper
+      style={[styles.container, style]}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
       {uri ? (
         <Image uri={uri} style={[styles.image, style]} />
       ) : (
         <ActivityIndicator size="small" color="#888" style={styles.loader} />
       )}
-    </View>
+    </Wrapper>
   );
 };
 

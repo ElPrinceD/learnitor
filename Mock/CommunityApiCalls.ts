@@ -80,6 +80,7 @@ export const updateCommunity = async (communityId: string, communityData: any, t
         const response = await apiClient.patch(`${COMMUNITY_API_BASE_URL}/${communityId}/`, communityData, {
             headers: {
                 Authorization: `Token ${token}`,
+                'Content-Type': 'multipart/form-data',
             },
         });
         return response.data;

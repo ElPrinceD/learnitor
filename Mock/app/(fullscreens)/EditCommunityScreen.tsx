@@ -8,17 +8,19 @@ import {
   TouchableOpacity,
   ScrollView,
   useColorScheme,
+  Alert,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { getCommunityDetails, updateCommunity } from "../../CommunityApiCalls";
 import { useAuth } from "../../components/AuthContext";
+import { useWebSocket } from "../../webSocketProvider";
 import Colors from "../../constants/Colors";
 import { Community } from "../../components/types";
 import * as ImagePicker from "expo-image-picker";
 import { rMS } from "../../constants";
 
 type RouteParams = {
-  id: string; // Community ID
+  id: string;
 };
 
 const EditCommunityScreen: React.FC = () => {
@@ -26,9 +28,10 @@ const EditCommunityScreen: React.FC = () => {
   const navigation = useNavigation();
   const { id } = route.params as RouteParams;
   const { userToken } = useAuth();
+  const { sqliteSetItem, sqliteGetItem } = useWebSocket();
   const [community, setCommunity] = useState<Community | null>(null);
-  const [name, setName] = useState<string>('');
-  const [description, setDescription] = useState<string>('');
+  const [name, setName] = useState<string>("");
+  const [description, setDescription] = useState<string>("");
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -41,7 +44,7 @@ const EditCommunityScreen: React.FC = () => {
           setCommunity(data);
           setName(data.name);
           setDescription(data.description);
-          setProfilePicture(data.image_url); // Set the current image URL
+          setProfilePicture(data.image_url);
         }
       } catch (error) {
         console.error("Failed to load community details:", error);
@@ -52,12 +55,59 @@ const EditCommunityScreen: React.FC = () => {
   }, [id, userToken]);
 
   const handleSave = async () => {
-    if (userToken) {
+    if (userToken && community) {
       try {
-        await updateCommunity(id, { name, description, image_url: profilePicture }, userToken.token);
-        navigation.goBack(); // Go back to the previous screen after saving
+        const updateData: any = { name, description };
+
+        // Handle image upload
+        let finalImageUrl = profilePicture;
+        if (profilePicture && !profilePicture.startsWith("http")) {
+          const uriParts = profilePicture.split(".");
+          const fileType = uriParts[uriParts.length - 1];
+          updateData.image_url = {
+            uri: profilePicture,
+            name: `photo.${fileType}`,
+            type: `image/${fileType}`,
+          };
+        }
+
+        const formData = new FormData();
+        Object.entries(updateData).forEach(([key, value]) => {
+          formData.append(key, value);
+        });
+
+        // Update community via API (server broadcasts community_updated)
+        const response = await updateCommunity(id, formData, userToken.token);
+
+        // Construct updated community object
+        const updatedCommunity = {
+          ...community,
+          id: community.id || parseInt(id),
+          name,
+          description,
+          image_url: response.image_url || finalImageUrl || community.image_url,
+          created_by: community.created_by,
+          created_at: community.created_at,
+          members: community.members || [],
+          shareable_link: community.shareable_link,
+        };
+
+        // Update local caches for the editing user
+        await sqliteSetItem(`community_${id}`, JSON.stringify(updatedCommunity));
+        const cachedCommunitiesRaw = await sqliteGetItem("communities");
+        let cachedCommunities = cachedCommunitiesRaw ? JSON.parse(cachedCommunitiesRaw) : [];
+        const communityIndex = cachedCommunities.findIndex((comm: Community) => comm.id.toString() === id);
+        if (communityIndex !== -1) {
+          cachedCommunities[communityIndex] = updatedCommunity;
+        } else {
+          cachedCommunities.push(updatedCommunity);
+        }
+        await sqliteSetItem("communities", JSON.stringify(cachedCommunities));
+
+        navigation.goBack();
       } catch (error) {
         console.error("Failed to update community details:", error);
+        Alert.alert("Error", "Failed to save changes.");
       }
     }
   };
@@ -69,7 +119,7 @@ const EditCommunityScreen: React.FC = () => {
     });
 
     if (!result.canceled && result.assets) {
-      setProfilePicture(result.assets[0].uri); // Set the selected image URI
+      setProfilePicture(result.assets[0].uri);
     }
   };
 
@@ -96,10 +146,7 @@ const EditCommunityScreen: React.FC = () => {
             source={{ uri: profilePicture || 'https://img.freepik.com/free-vector/gradient-golden-linear-background_23-2148944136.jpg' }}
             style={[styles.profilePicture, { borderColor: themeColors.border }]}
           />
-          <TouchableOpacity
-            style={[styles.selectImageButton]}
-            onPress={pickImage}
-          >
+          <TouchableOpacity style={[styles.selectImageButton]} onPress={pickImage}>
             <Text style={[styles.selectImageButtonText, { color: themeColors.tint }]}>Change Picture</Text>
           </TouchableOpacity>
         </View>
