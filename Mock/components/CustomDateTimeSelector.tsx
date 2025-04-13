@@ -17,6 +17,7 @@ interface CustomDateTimeSelectorProps extends SelectProps {
   mode: "date" | "time";
   minDate?: string;
   maxDate?: string;
+  initialValue?: string; // Added to support initial date or time
 }
 
 const CustomDateTimeSelector: React.FC<CustomDateTimeSelectorProps> = ({
@@ -27,10 +28,16 @@ const CustomDateTimeSelector: React.FC<CustomDateTimeSelectorProps> = ({
   mode,
   minDate,
   maxDate,
+  initialValue,
   ...selectProps
 }) => {
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  // Initialize state with initialValue if provided, otherwise null
+  const [selectedDate, setSelectedDate] = useState<string | null>(
+    mode === "date" && initialValue ? initialValue : null
+  );
+  const [selectedTime, setSelectedTime] = useState<string | null>(
+    mode === "time" && initialValue ? initialValue : null
+  );
   const [isOpen, setIsOpen] = useState(false);
 
   const colorScheme = useColorScheme();
@@ -63,9 +70,8 @@ const CustomDateTimeSelector: React.FC<CustomDateTimeSelectorProps> = ({
 
   const styles = StyleSheet.create({
     container: {
-      flexDirection: "row", // Change to row
+      flexDirection: "row",
       alignItems: "center",
-      // paddingVertical: rV(10),
       justifyContent: "space-between",
       borderBottomWidth: rMS(1),
       borderBottomColor: themeColors.textSecondary,
@@ -137,7 +143,7 @@ const CustomDateTimeSelector: React.FC<CustomDateTimeSelectorProps> = ({
                   <Adapt.Contents />
                   {mode === "date" ? (
                     <DatePicker
-                      selected={selectedDate || undefined}
+                      selected={selectedDate || initialValue || undefined}
                       onSelectedChange={handleDateChange}
                       options={{
                         backgroundColor: themeColors.background,
@@ -149,7 +155,7 @@ const CustomDateTimeSelector: React.FC<CustomDateTimeSelectorProps> = ({
                   ) : (
                     <DatePicker
                       mode="time"
-                      selected={selectedTime || undefined}
+                      selected={selectedTime || initialValue || undefined}
                       onTimeChange={handleTimeChange}
                       options={{
                         backgroundColor: themeColors.background,

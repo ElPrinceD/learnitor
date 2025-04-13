@@ -702,7 +702,7 @@ const CommunityDetailScreen: React.FC = () => {
           color: themeColors.text,
         },
         viewAllText: {
-          fontSize: SIZES.small,
+          fontSize: SIZES.medium,
           fontWeight: "600",
           color: themeColors.tint,
         },
