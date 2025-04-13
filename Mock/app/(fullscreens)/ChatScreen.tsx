@@ -1763,7 +1763,6 @@ const CommunityChatScreen: React.FC = () => {
       <ImagePreviewModal
         visible={isImagePreviewVisible}
         images={selectedImagesForPreview}
-        themeColors={themeColors}
         onClose={() => setIsImagePreviewVisible(false)}
         onSend={handleSendImage}
       />
