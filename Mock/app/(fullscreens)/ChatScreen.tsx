@@ -59,7 +59,7 @@ import { FONT } from "../../constants";
 import { router } from "expo-router";
 import AppImage from "../../components/AppImage";
 import FullScreenImageViewer from "../../components/FullScreenImageViewer";
-import FileViewer from "react-native-file-viewer"; 
+import FileViewer from "react-native-file-viewer";
 import ImagePreviewModal from "../../components/ImagePreviewModal";
 
 // Memoize GiftedChat to prevent unnecessary re-renders
@@ -454,18 +454,41 @@ const CommunityChatScreen: React.FC = () => {
         console.log("sendMediaMessage called with:", { fileUri, type });
         console.log("WebSocket isConnected:", isConnected);
 
-        // Convert image URI to base64
         let mediaData = fileUri;
+        let payloadUri = fileUri;
+
+        // Convert to base64 based on type
         if (type === "image") {
           const base64 = await FileSystem.readAsStringAsync(fileUri, {
             encoding: FileSystem.EncodingType.Base64,
           });
           mediaData = `data:image/jpeg;base64,${base64}`;
+          payloadUri = mediaData;
           console.log("Image converted to base64, length:", mediaData.length);
+        } else if (type === "document") {
+          try {
+            const fileContent = await FileSystem.readAsStringAsync(fileUri, {
+              encoding: FileSystem.EncodingType.Base64,
+            });
+
+            const extension = fileUri.split(".").pop()?.toLowerCase();
+            let mimeType = "application/octet-stream";
+            if (extension === "pdf") mimeType = "application/pdf";
+            else if (["doc", "docx"].includes(extension || ""))
+              mimeType = "application/msword";
+            else if (extension === "txt") mimeType = "text/plain";
+
+            payloadUri = `data:${mimeType};base64,${fileContent}`;
+          } catch (error) {
+            console.error("Error encoding document to base64:", error);
+            ToastAndroid.show("Failed to send document", ToastAndroid.SHORT);
+            return;
+          }
         }
 
         const tempId =
           Date.now().toString() + Math.random().toString(36).substr(2, 5);
+
         const message = {
           _id: tempId,
           tempId,
@@ -479,77 +502,61 @@ const CommunityChatScreen: React.FC = () => {
           status: isConnected ? "sending" : "pending",
         };
 
+        // Avoid duplicates
         if (!messageIds.has(tempId)) {
-          setMessages((prevMessages) => [message, ...prevMessages]);
+          setMessages((prev) => [message, ...prev]);
           setMessageIds((prev) => new Set([...prev, tempId]));
+
           if (type === "image") {
-            setImageViewerImages((prev) => [mediaData, ...prev]);
+            // Use original URI for viewer
+            setImageViewerImages((prev) => [fileUri, ...prev]);
           }
         }
-      if (!messageIds.has(tempId)) {
-        setMessages((prevMessages) => [message, ...prevMessages]);
-        setMessageIds((prev) => new Set([...prev, tempId]));
-        if (type === "image") {
-          setImageViewerImages((prev) => [fileUri, ...prev]);
-        }
-      }
 
-      let payloadUri = fileUri;
-      if (type === "document") {
-        console.log('here');
-        try {
-          const fileContent = await FileSystem.readAsStringAsync(fileUri, {
-            encoding: FileSystem.EncodingType.Base64,
-          });
-          let mimeType = "application/octet-stream";
-          const extension = fileUri.split(".").pop()?.toLowerCase();
-          if (extension === "pdf") mimeType = "application/pdf";
-          else if (extension === "doc" || extension === "docx")
-            mimeType = "application/msword";
-          else if (extension === "txt") mimeType = "text/plain";
-          payloadUri = `data:${mimeType};base64,${fileContent}`;
-        } catch (error) {
-          console.error("Error encoding document to base64:", error);
-          ToastAndroid.show("Failed to send document", ToastAndroid.SHORT);
-          return;
-        }
-      }
+        if (!isConnected) {
+          const offlineMessage = {
+            ...message,
+            communityId,
+            content: {
+              text: "",
+              [type]: payloadUri,
+            },
+          };
 
-      if (!isConnected) {
-        console.log('There')
-        const messageToStore = {
-          ...message,
-          communityId,
-          content: {
-            text: "",
+          await sqliteSetItem(
+            `unsent_message_${tempId}`,
+            JSON.stringify(offlineMessage)
+          );
+          await sqliteSetItem(
+            `messages_${communityId}`,
+            JSON.stringify([message, ...messages])
+          );
+
+          const allKeysRaw = (await sqliteGetItem("storage_keys")) || "[]";
+          const keys = JSON.parse(allKeysRaw) || [];
+
+          if (!keys.includes(`unsent_message_${tempId}`)) {
+            keys.push(`unsent_message_${tempId}`);
+            await sqliteSetItem("storage_keys", JSON.stringify(keys));
+          }
+
+          console.log("Message saved locally for later send.");
+        } else {
+          sendMessage({
+            type: "send_message",
+            community_id: communityId,
+            message: "",
+            sender: user?.first_name + " " + user?.last_name || "Unknown User",
+            sender_id: user?.id || 1,
+            temp_id: tempId,
             [type]: payloadUri,
-          },
-        };
-        await sqliteSetItem(
-          `unsent_message_${tempId}`,
-          JSON.stringify(messageToStore)
-        );
-        await sqliteSetItem(
-          `messages_${communityId}`,
-          JSON.stringify([message, ...messages])
-        );
-        const allKeysRaw = (await sqliteGetItem("storage_keys")) || "[]";
-        let keys = JSON.parse(allKeysRaw) || [];
-        if (!keys.includes(`unsent_message_${tempId}`)) {
-          keys.push(`unsent_message_${tempId}`);
-          await sqliteSetItem("storage_keys", JSON.stringify(keys));
+          });
+
+          console.log("Message sent via WebSocket.");
         }
-      } else {
-        
-        sendMessage({
-          type: "send_message",
-          community_id: communityId,
-          message: "",
-          sender: user?.first_name + " " + user?.last_name || "Unknown User",
-          sender_id: user?.id || 1,
-          temp_id: tempId,
-          [type]: payloadUri,
-        });
+      } catch (error) {
+        console.error("Failed to send media message:", error);
+        ToastAndroid.show("Error sending media", ToastAndroid.SHORT);
       }
     },
     [
@@ -558,9 +565,9 @@ const CommunityChatScreen: React.FC = () => {
       user,
       isConnected,
       messageIds,
+      messages,
       sqliteSetItem,
       sqliteGetItem,
-      messages,
     ]
   );
 
@@ -573,7 +580,7 @@ const CommunityChatScreen: React.FC = () => {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
-        
+
         await sendMediaMessage(asset.uri, "document");
       } else {
         console.log("Document picking canceled");
@@ -866,10 +873,10 @@ const CommunityChatScreen: React.FC = () => {
           <View style={{ flexDirection: "row", marginRight: SIZES.xSmall }}>
             {canReply && (
               <TouchableOpacity
-              onPressIn={() => {
-                setReplyToMessage(selectedMessages[0]);
-                handleDeselectAll();
-              }}
+                onPressIn={() => {
+                  setReplyToMessage(selectedMessages[0]);
+                  handleDeselectAll();
+                }}
               >
                 <MaterialCommunityIcons
                   name="reply"
@@ -880,10 +887,10 @@ const CommunityChatScreen: React.FC = () => {
             )}
             {canEdit && (
               <TouchableOpacity
-              onPressIn={() => {
-                handleEditMessage();
-                handleDeselectAll();
-              }}
+                onPressIn={() => {
+                  handleEditMessage();
+                  handleDeselectAll();
+                }}
                 style={{ marginHorizontal: rS(8) }}
               >
                 <MaterialCommunityIcons
@@ -895,10 +902,10 @@ const CommunityChatScreen: React.FC = () => {
             )}
             {canDelete && (
               <TouchableOpacity
-              onPressIn={() => {
-                handleDeleteMessage();
-                handleDeselectAll();
-              }}
+                onPressIn={() => {
+                  handleDeleteMessage();
+                  handleDeselectAll();
+                }}
                 style={{ marginHorizontal: rS(8) }}
               >
                 <MaterialCommunityIcons
@@ -1041,10 +1048,13 @@ const CommunityChatScreen: React.FC = () => {
                   <View style={styles.replyContainer}>
                     <Text style={styles.replyName}>
                       {`Replying to ${
-                        props.currentMessage.replyTo.user?.name || "Unknown User"
+                        props.currentMessage.replyTo.user?.name ||
+                        "Unknown User"
                       }`}
                     </Text>
-                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <View
+                      style={{ flexDirection: "row", alignItems: "center" }}
+                    >
                       {props.currentMessage.replyTo.text == null ? (
                         <>
                           <MaterialCommunityIcons
@@ -1071,16 +1081,13 @@ const CommunityChatScreen: React.FC = () => {
                     </View>
                   </View>
                 </TouchableOpacity>
-                
               )}
-   {((isOtherUser && isFirstMessageOfBlock) ||
-                  (isOtherUser && isNewDay)) && (
-                  <Text style={styles.username}>
-                    {props.currentMessage.user.name}
-                  </Text>
-                )}
-            
-           
+            {((isOtherUser && isFirstMessageOfBlock) ||
+              (isOtherUser && isNewDay)) && (
+              <Text style={styles.username}>
+                {props.currentMessage.user.name}
+              </Text>
+            )}
 
             {/* Render document preview if there is a document */}
             {props.currentMessage.document && (
@@ -1212,9 +1219,7 @@ const CommunityChatScreen: React.FC = () => {
                 )}
               </View>
             )}
-            
             renderCustomView={renderCustomContent}
-            
             textStyle={{
               right: { color: "white" },
               left: { color: themeColors.text },
@@ -1289,9 +1294,8 @@ const CommunityChatScreen: React.FC = () => {
     (props: any) => {
       return (
         <TouchableOpacity
-        onPress={() => handlePress(props.currentMessage)}
+          onPress={() => handlePress(props.currentMessage)}
           onLongPress={() => handleLongPress(props.currentMessage)}
-          
         >
           <AppImage
             uri={props.currentMessage.image}
@@ -1351,7 +1355,7 @@ const CommunityChatScreen: React.FC = () => {
   const renderSend = useCallback(
     (props) => {
       const hasText = props.text && props.text.trim().length > 0;
-  
+
       return (
         <View style={styles.attachButtonContainer}>
           {!hasText && !editingMessage ? (
@@ -1363,7 +1367,10 @@ const CommunityChatScreen: React.FC = () => {
                   size={SIZES.xLarge}
                 />
               </TouchableOpacity>
-              <TouchableOpacity onPress={pickDocument} style={styles.attachButton}>
+              <TouchableOpacity
+                onPress={pickDocument}
+                style={styles.attachButton}
+              >
                 <MaterialCommunityIcons
                   name="paperclip"
                   color={themeColors.text}
@@ -1398,8 +1405,6 @@ const CommunityChatScreen: React.FC = () => {
     },
     [pickImage, pickDocument, themeColors, editingMessage, onEditMessage]
   );
-  
-
 
   const renderMediaPreview = useCallback(() => {
     if (mediaPreview.uri) {
