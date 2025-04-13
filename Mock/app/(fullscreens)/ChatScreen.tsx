@@ -59,6 +59,7 @@ import AppImage from "../../components/AppImage";
 import * as MediaLibrary from "expo-media-library";
 import * as FileSystem from "expo-file-system";
 import FullScreenImageViewer from "../../components/FullScreenImageViewer";
+import FileViewer from "react-native-file-viewer"; 
 
 // Memoize GiftedChat to prevent unnecessary re-renders
 const MemoizedGiftedChat = memo(GiftedChat, (prevProps, nextProps) => {
@@ -1024,7 +1025,16 @@ const CommunityChatScreen: React.FC = () => {
                     </View>
                   </View>
                 </TouchableOpacity>
+                
               )}
+   {((isOtherUser && isFirstMessageOfBlock) ||
+                  (isOtherUser && isNewDay)) && (
+                  <Text style={styles.username}>
+                    {props.currentMessage.user.name}
+                  </Text>
+                )}
+            
+           
 
             {/* Render document preview if there is a document */}
             {props.currentMessage.document && (
@@ -1156,7 +1166,9 @@ const CommunityChatScreen: React.FC = () => {
                 )}
               </View>
             )}
+            
             renderCustomView={renderCustomContent}
+            
             textStyle={{
               right: { color: "white" },
               left: { color: themeColors.text },
@@ -1231,11 +1243,14 @@ const CommunityChatScreen: React.FC = () => {
     (props: any) => {
       return (
         <TouchableOpacity
-          onPress={() => openImageViewer(props.currentMessage.image)}
+        onPress={() => handlePress(props.currentMessage)}
+          onLongPress={() => handleLongPress(props.currentMessage)}
+          
         >
           <AppImage
             uri={props.currentMessage.image}
             style={{ width: rS(200), height: rV(200), borderRadius: rMS(10) }}
+            onPress={() => openImageViewer(props.currentMessage.image)}
           />
         </TouchableOpacity>
       );
@@ -1290,10 +1305,10 @@ const CommunityChatScreen: React.FC = () => {
   const renderSend = useCallback(
     (props) => {
       const hasText = props.text && props.text.trim().length > 0;
-
+  
       return (
         <View style={styles.attachButtonContainer}>
-          {!hasText && (
+          {!hasText && !editingMessage ? (
             <>
               <TouchableOpacity onPress={pickImage} style={styles.attachButton}>
                 <Ionicons
@@ -1302,10 +1317,7 @@ const CommunityChatScreen: React.FC = () => {
                   size={SIZES.xLarge}
                 />
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={pickDocument}
-                style={styles.attachButton}
-              >
+              <TouchableOpacity onPress={pickDocument} style={styles.attachButton}>
                 <MaterialCommunityIcons
                   name="paperclip"
                   color={themeColors.text}
@@ -1313,23 +1325,35 @@ const CommunityChatScreen: React.FC = () => {
                 />
               </TouchableOpacity>
             </>
-          )}
-          {hasText && (
+          ) : (
             <View style={styles.sendContainer}>
               <Send
                 {...props}
                 containerStyle={styles.sendButton}
                 alwaysShowSend
+                onSend={() => {
+                  if (editingMessage) {
+                    onEditMessage();
+                  } else {
+                    props.onSend({ text: props.text.trim() }, true);
+                  }
+                }}
               >
-                <Ionicons name="send" color="#ffffff" size={SIZES.large} />
+                <Ionicons
+                  name={editingMessage ? "checkmark" : "send"}
+                  color="#ffffff"
+                  size={SIZES.large}
+                />
               </Send>
             </View>
           )}
         </View>
       );
     },
-    [pickImage, pickDocument, themeColors]
+    [pickImage, pickDocument, themeColors, editingMessage, onEditMessage]
   );
+  
+
 
   const renderMediaPreview = useCallback(() => {
     if (mediaPreview.uri) {
@@ -1442,16 +1466,6 @@ const CommunityChatScreen: React.FC = () => {
                   value={props.text}
                   onChangeText={props.onTextChanged}
                 />
-                {editingMessage ? (
-                  <TouchableOpacity onPress={onEditMessage}>
-                    <Ionicons
-                      name="checkmark"
-                      color={themeColors.text}
-                      size={SIZES.large}
-                      style={styles.attachIcon}
-                    />
-                  </TouchableOpacity>
-                ) : null}
               </View>
             )}
           />
@@ -1464,7 +1478,6 @@ const CommunityChatScreen: React.FC = () => {
       replyToMessage,
       mediaPreview.uri,
       themeColors,
-      onEditMessage,
     ]
   );
 

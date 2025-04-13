@@ -19,13 +19,11 @@ import WsUrl from "./configWs";
 import { getCategoryNames, getTodayPlans } from "./TimelineApiCalls";
 import { useAuth } from "./components/AuthContext";
 
-// ----- WebSocket Context Types -----
-
 interface Task {
   id: number;
   title: string;
-  due_date: string; // e.g., "2025-04-10"
-  due_time_start: string; // e.g., "09:00"
+  due_date: string;
+  due_time_start: string;
 }
 
 export interface WebSocketContextType {
@@ -49,7 +47,7 @@ export interface WebSocketContextType {
   unreadCommunitiesCount: number;
   scheduleTaskNotification: (task: any) => Promise<void>;
   markMessageAsRead: (communityId: string) => void;
-  sqliteGetItem: (key: string) => Promise<string | null>; // Add this
+  sqliteGetItem: (key: string) => Promise<string | null>;
   sqliteSetItem: (key: string, value: string) => Promise<void>;
   sqliteRemoveItem: (key: string) => Promise<void>;
   sqliteClear: () => Promise<void>;
@@ -62,7 +60,6 @@ interface WebSocketProviderProps {
   token?: string | null;
 }
 
-// ----- WebSocketProvider Component -----
 export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token }) => {
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -72,10 +69,8 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   const userId = userInfo?.user?.id;
   const messageQueue: any[] = [];
 
-  // Get the SQLite database instance from the context.
   const db: SQLiteDatabase = useSQLiteContext();
 
-  // Initialize our key–value storage table on mount.
   useEffect(() => {
     db.execAsync(`
       CREATE TABLE IF NOT EXISTS storage (
@@ -85,7 +80,6 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     `).catch(console.error);
   }, [db]);
 
-  // ----- SQLite Helper Functions -----
   const sqliteSetItem = useCallback(
     async (key: string, value: string): Promise<void> => {
       await db.runAsync("INSERT OR REPLACE INTO storage (key, value) VALUES (?, ?);", [key, value]);
@@ -132,7 +126,6 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     [sqliteGetItem]
   );
 
-  // ----- WebSocket Connection and Message Handling -----
   const connectWebSocket = useCallback(() => {
     if (!token) return;
 
@@ -297,8 +290,33 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
           }
           break;
         }
+        case "community_updated": {
+          const updatedCommunity = data.community;
+          if (!updatedCommunity?.id) {
+            console.error("Invalid community_updated message: missing id");
+            break;
+          }
+          const communityId = updatedCommunity.id.toString();
+          // Update individual community cache
+          await sqliteSetItem(`community_${communityId}`, JSON.stringify(updatedCommunity));
+          // Update communities list cache
+          const cachedCommunitiesRaw = await sqliteGetItem("communities");
+          let cachedCommunities = cachedCommunitiesRaw ? JSON.parse(cachedCommunitiesRaw) : [];
+          const communityIndex = cachedCommunities.findIndex((comm: any) => comm.id.toString() === communityId);
+          if (communityIndex !== -1) {
+            cachedCommunities[communityIndex] = updatedCommunity;
+          } else {
+            cachedCommunities.push(updatedCommunity);
+          }
+          await sqliteSetItem("communities", JSON.stringify(cachedCommunities));
+          console.log(`Updated cache for community ${communityId}`);
+          break;
+        }
+        case "error": {
+          console.error("WebSocket error from server:", data.message);
+          break;
+        }
         case "join_success":
-          // Optionally handle join success events here.
           break;
       }
     };
@@ -315,7 +333,6 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     };
 
     ws.onerror = (error) => {
-      
       console.error("WebSocket error:", error);
       if (error.type === "error" && error.eventPhase === 1006) {
         console.warn("Network error detected. Attempting to reconnect...");
@@ -337,8 +354,8 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   }, [token, connectWebSocket]);
 
   const reconnectWebSocket = useCallback(() => {
-    const initialBackoffMs = 1000; // 1 second
-    const maxBackoffMs = 300000; // 5 minutes
+    const initialBackoffMs = 1000;
+    const maxBackoffMs = 300000;
     const backoffMultiplier = 1.5;
     const attempt = reconnectAttempts;
     let backoff = Math.min(maxBackoffMs, initialBackoffMs * Math.pow(backoffMultiplier, attempt));
@@ -372,11 +389,11 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
             const json = await sqliteGetItem(key);
             if (json) {
               const message = JSON.parse(json);
-              const content = message.content || {}; // Default to empty object if content is missing
+              const content = message.content || {};
               await sendMessage({
                 type: "send_message",
                 community_id: message.communityId,
-                message: content.text || "", // Fallback to empty string if text is undefined
+                message: content.text || "",
                 sender: message.user.name,
                 sender_id: message.user._id,
                 temp_id: message._id,
@@ -423,7 +440,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
       if (messages) {
         const parsedMessages = JSON.parse(messages);
         if (parsedMessages.some((msg: any) => msg._id === messageId)) {
-          return key.split("_")[1]; // Extract community_id from the key
+          return key.split("_")[1];
         }
       }
     }
@@ -498,7 +515,6 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     [socket, isConnected, sendMessage]
   );
 
-  // Renamed to updateCachedCommunitiesFn to avoid duplication errors.
   const updateCachedCommunitiesFn = async (communityId: string | number) => {
     if (token && isConnected) {
       try {
@@ -515,24 +531,19 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     }
   };
 
-  // Renamed to fetchAndCacheCommunitiesFn to avoid duplication errors.
   const fetchAndCacheCommunitiesFn = useCallback(async () => {
     if (token && isConnected) {
       try {
-        // Retrieve the list of left community IDs from storage.
         let leftCommunityIds = await sqliteGetItem("leftCommunityIds");
         leftCommunityIds = leftCommunityIds ? JSON.parse(leftCommunityIds) : [];
   
         let cachedCommunities = await sqliteGetItem("communities");
         if (!cachedCommunities || JSON.parse(cachedCommunities).length === 0) {
-          // Fetch communities from the API
           const communities = await getUserCommunities(token);
-          // Filter out left communities
           const filtered = communities.filter((c: any) => !leftCommunityIds.includes(c.id.toString()));
           await sqliteSetItem("communities", JSON.stringify(filtered));
           console.log("Communities fetched and cached.");
         } else {
-          // Optionally, update the cached communities by filtering left communities.
           const communities = JSON.parse(cachedCommunities);
           const filtered = communities.filter((c: any) => !leftCommunityIds.includes(c.id.toString()));
           await sqliteSetItem("communities", JSON.stringify(filtered));
@@ -545,16 +556,13 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
       console.warn("WebSocket not connected, skipping community fetch.");
     }
   }, [token, isConnected, sqliteGetItem, sqliteSetItem]);
-  
 
   const scheduleTaskNotification = useCallback(async (task: Task) => {
     try {
-      // Combine due_date and due_time_start into a Date object
       const [year, month, day] = task.due_date.split("-").map(Number);
       const [hours, minutes] = task.due_time_start.split(":").map(Number);
       const triggerDate = new Date(year, month - 1, day, hours, minutes);
 
-      // Ensure the trigger is in the future
       if (triggerDate <= new Date()) {
         console.log(`Task ${task.id} is in the past, skipping notification`);
         return;
@@ -575,26 +583,23 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
       console.error("Failed to schedule notification:", error);
     }
   }, []);
-  
+
   const scheduleNotificationsForExistingPlans = useCallback(async () => {
     if (!token) return;
 
     try {
       const today = new Date();
-      const dateString = today.toISOString().split("T")[0]; // e.g., "2023-10-25"
+      const dateString = today.toISOString().split("T")[0];
       const cacheKey = `todayPlans_${dateString}_all`;
 
-      // Try to get cached plans
       const cachedPlans = await sqliteGetItem(cacheKey);
       let plans: Task[] = cachedPlans ? JSON.parse(cachedPlans) : [];
 
-      // If no cached plans, fetch from API and cache them
       if (plans.length === 0) {
         plans = await getTodayPlans(token, today);
         await sqliteSetItem(cacheKey, JSON.stringify(plans));
       }
 
-      // Schedule notifications for future plans
       for (const plan of plans) {
         const [year, month, day] = plan.due_date.split("-").map(Number);
         const [hours, minutes] = plan.due_time_start.split(":").map(Number);
@@ -609,13 +614,12 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     }
   }, [token, scheduleTaskNotification]);
 
-  // Trigger scheduling when the app loads
   useEffect(() => {
     if (token && isConnected) {
       scheduleNotificationsForExistingPlans();
     }
   }, [token, isConnected, scheduleNotificationsForExistingPlans]);
-  // Renamed to fetchAndCacheCoursesFn to avoid duplication errors.
+
   const fetchAndCacheCoursesFn = useCallback(async () => {
     if (token && isConnected) {
       try {
@@ -659,7 +663,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
       if (token && isConnected) {
         try {
           const dateString = date.toISOString().split("T")[0];
-          const normalizedCategory = category || "all"; // Normalize undefined, null, or "" to "all"
+          const normalizedCategory = category || "all";
           const cacheKey = `todayPlans_${dateString}_${normalizedCategory}`;
           const cachedPlans = await sqliteGetItem(cacheKey);
           if (cachedPlans) {
@@ -676,11 +680,11 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     },
     [isConnected, sqliteGetItem, sqliteSetItem]
   );
-  
+
   const getCachedTodayPlans = useCallback(
     async (date: Date, category?: string) => {
       const dateString = date.toISOString().split("T")[0];
-      const normalizedCategory = category || "all"; // Normalize undefined, null, or "" to "all"
+      const normalizedCategory = category || "all";
       const cacheKey = `todayPlans_${dateString}_${normalizedCategory}`;
       const cachedData = await sqliteGetItem(cacheKey);
       return cachedData ? JSON.parse(cachedData) : [];
@@ -708,8 +712,6 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     [isConnected]
   );
 
-
-
   const getCachedCategoryNames = useCallback(async (): Promise<Record<number, string>> => {
     const cachedData = await sqliteGetItem("categoryNames");
     return cachedData ? JSON.parse(cachedData) : {};
@@ -718,9 +720,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   const subscribeToExistingUserCommunities = useCallback(async () => {
     if (socket && isConnected && token) {
       try {
-        
         const communities = await getUserCommunities(token);
-       
         for (const community of communities) {
           await subscribeToExistingCommunity(community.id);
         }
@@ -747,8 +747,8 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     [socket, isConnected, sendMessage]
   );
 
-  const fetchAndCacheCommunities = fetchAndCacheCommunitiesFn; // alias for context
-  const fetchAndCacheCourses = fetchAndCacheCoursesFn; // alias for context
+  const fetchAndCacheCommunities = fetchAndCacheCommunitiesFn;
+  const fetchAndCacheCourses = fetchAndCacheCoursesFn;
 
   useEffect(() => {
     const loadAndCacheData = async () => {
@@ -799,7 +799,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     getCachedCategoryNames,
     unreadCommunitiesCount,
     markMessageAsRead,
-    sqliteGetItem, // Add this
+    sqliteGetItem,
     sqliteSetItem,
     sqliteRemoveItem,
     sqliteClear,
