@@ -509,7 +509,7 @@ const CommunityChatScreen: React.FC = () => {
           await sqliteSetItem("storage_keys", JSON.stringify(keys));
         }
       } else {
-        console.log('Players')
+        
         sendMessage({
           type: "send_message",
           community_id: communityId,
