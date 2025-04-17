@@ -57,7 +57,7 @@ const Intro = () => {
     loginLink: {
       marginTop: rV(2),
       backgroundColor: "transparent",
-      color: themeColors.text
+      color: themeColors.text,
     },
     loginText: {
       color: themeColors.text,
@@ -86,7 +86,7 @@ const Intro = () => {
         <VerificationButton
           style={styles.button}
           onPress={handleSignUp}
-          title="Sign Up"
+          title="Create an account"
         ></VerificationButton>
         <VerificationButton
           style={styles.loginLink}
