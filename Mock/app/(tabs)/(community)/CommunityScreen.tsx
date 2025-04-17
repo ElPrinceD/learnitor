@@ -4,7 +4,6 @@ import {
   StyleSheet,
   Text,
   useColorScheme,
-  TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
 import moment from "moment";
@@ -13,7 +12,6 @@ import Colors from "../../../constants/Colors";
 import { useAuth } from "../../../components/AuthContext";
 import ErrorMessage from "../../../components/ErrorMessage";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { FontAwesome6 } from "@expo/vector-icons";
 import { SIZES, rS, rV } from "../../../constants";
 import { Community } from "../../../components/types";
 import CommunityList from "../../../components/CommunityList";
@@ -34,7 +32,8 @@ const CommunityScreen: React.FC = () => {
   const [isFetching, setIsFetching] = useState(false);
   const [lastMessages, setLastMessages] = useState<Record<string, any>>({});
   const [initialLoad, setInitialLoad] = useState(true);
-  const { userToken } = useAuth();
+  const { userToken, userInfo } = useAuth();
+  const userId = userInfo?.user?.id;
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const colorMode = colorScheme === "dark" ? "dark" : "light";
@@ -81,46 +80,46 @@ const CommunityScreen: React.FC = () => {
   };
 
   // Load cached user communities
-  useEffect(() => {
-    const loadCachedData = async () => {
-      if (!sqliteGetItem) return;
-      try {
-        const cachedCommunities = await sqliteGetItem("communities");
-        if (cachedCommunities) {
-          const parsedCommunities = JSON.parse(cachedCommunities);
-          setMyCommunities(parsedCommunities);
-          const messages = await Promise.all(
-            parsedCommunities.map(async (community: Community) => {
-              const message = await sqliteGetItem(
-                `last_message_${community.id}`
-              );
-              let parsedMessage = message ? JSON.parse(message) : null;
-              if (
-                parsedMessage &&
-                !["sent", "delivered", "read"].includes(parsedMessage.status)
-              ) {
-                parsedMessage = { ...parsedMessage, status: "read" };
-              }
-              return [community.id.toString(), parsedMessage];
-            })
-          );
-          const messagesMap = Object.fromEntries(messages);
-          setLastMessages(messagesMap);
-          
-        } else {
-          console.log("No cached communities found");
-        }
-        setLoading(false);
-        setInitialLoad(false);
-      } catch (error) {
-        console.error("Error loading cached communities:", error);
-        setErrorMessage("Failed to load communities");
-        setLoading(false);
-        setInitialLoad(false);
+  const loadCachedData = useCallback(async () => {
+    if (!sqliteGetItem) return;
+    try {
+      const cachedCommunities = await sqliteGetItem("communities");
+      if (cachedCommunities) {
+        const parsedCommunities = JSON.parse(cachedCommunities);
+        setMyCommunities(parsedCommunities);
+        const messages = await Promise.all(
+          parsedCommunities.map(async (community: Community) => {
+            const message = await sqliteGetItem(`last_message_${community.id}`);
+            let parsedMessage = message ? JSON.parse(message) : null;
+            if (
+              parsedMessage &&
+              !["sent", "delivered", "read"].includes(parsedMessage.status)
+            ) {
+              parsedMessage = { ...parsedMessage, status: "read" };
+            }
+            return [community.id.toString(), parsedMessage];
+          })
+        );
+        const messagesMap = Object.fromEntries(messages);
+        setLastMessages(messagesMap);
+      } else {
+        console.log("No cached communities found");
       }
-    };
-    loadCachedData();
-  }, [userToken, sqliteGetItem]);
+      setLoading(false);
+      setInitialLoad(false);
+    } catch (error) {
+      console.error("Error loading cached communities:", error);
+      setErrorMessage("Failed to load communities");
+      setLoading(false);
+      setInitialLoad(false);
+    }
+  }, [sqliteGetItem]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadCachedData();
+    }, [loadCachedData])
+  );
 
   // Fetch global communities
   useEffect(() => {
@@ -152,149 +151,206 @@ const CommunityScreen: React.FC = () => {
     searchForCommunities();
   }, [searchQuery, userToken, myCommunities]);
 
-  // Handle community changes
+  // WebSocket message handler
+  useEffect(() => {
+    let socketCleanup = () => {};
+
+    if (socket && isConnected && userToken) {
+      const onMessage = async (event: MessageEvent) => {
+        try {
+          const data = JSON.parse(event.data);
+
+          if (data.type === "community_updated" && data.community) {
+            const communityId = data.community.id?.toString();
+            if (!communityId) {
+              console.warn("Received community_updated with missing community ID");
+              return;
+            }
+            setMyCommunities((prev) => {
+              const exists = prev.some((c) => c.id.toString() === communityId);
+              let updatedCommunities;
+              if (exists) {
+                // Update existing community
+                updatedCommunities = prev.map((c) =>
+                  c.id.toString() === communityId
+                    ? { ...c, ...data.community, id: parseInt(communityId) }
+                    : c
+                );
+              } else {
+                // Add new community
+                updatedCommunities = [
+                  ...prev,
+                  { ...data.community, id: parseInt(communityId) },
+                ];
+              }
+              // Update cache
+              sqliteSetItem("communities", JSON.stringify(updatedCommunities));
+              // Update individual community cache
+              sqliteSetItem(
+                `community_${communityId}`,
+                JSON.stringify({ ...data.community, id: parseInt(communityId) })
+              );
+              return updatedCommunities;
+            });
+          } else if (data.type === "join_success" && data.community_id) {
+            const communityId = data.community_id.toString();
+            // Fetch full community details
+            const communityDetails = await getCommunityDetails(
+              communityId,
+              userToken.token
+            );
+            if (communityDetails) {
+              setMyCommunities((prev) => {
+                if (!prev.some((c) => c.id.toString() === communityId)) {
+                  const updatedCommunities = [
+                    ...prev,
+                    { ...communityDetails, id: parseInt(communityId) },
+                  ];
+                  // Update cache
+                  sqliteSetItem("communities", JSON.stringify(updatedCommunities));
+                  sqliteSetItem(
+                    `community_${communityId}`,
+                    JSON.stringify({
+                      ...communityDetails,
+                      id: parseInt(communityId),
+                    })
+                  );
+                  return updatedCommunities;
+                }
+                return prev;
+              });
+            }
+          } else if (data.type === "leave_community" && data.community_id) {
+            const communityId = data.community_id.toString();
+            setMyCommunities((prev) => {
+              const updatedCommunities = prev.filter(
+                (c) => c.id.toString() !== communityId
+              );
+              // Update cache
+              sqliteSetItem("communities", JSON.stringify(updatedCommunities));
+              return updatedCommunities;
+            });
+            setLastMessages((prev) => {
+              const { [communityId]: _, ...rest } = prev;
+              return rest;
+            });
+            await Promise.all([
+              sqliteRemoveItem(`last_message_${communityId}`),
+              sqliteRemoveItem(`community_${communityId}`),
+              sqliteRemoveItem(`messages_${communityId}`),
+              sqliteRemoveItem(`timetable_${communityId}`),
+              sqliteRemoveItem(`images_${communityId}`),
+            ]);
+          } else if (data.type === "message") {
+            const communityId = data.community_id?.toString();
+            if (!communityId) {
+              console.warn("Received message with missing community_id");
+              return;
+            }
+            const newMessage = {
+              ...data,
+              status: "sent",
+              sent_at: new Date(data.sent_at).toISOString(),
+              community_id: parseInt(communityId),
+            };
+            setLastMessages((prev) => {
+              const updated = { ...prev, [communityId]: newMessage };
+              sqliteSetItem(
+                `last_message_${communityId}`,
+                JSON.stringify(newMessage)
+              );
+              return updated;
+            });
+          } else if (data.type === "message_status") {
+            const messageId = data.message_id;
+            const communityId =
+              data.community_id?.toString() ||
+              Object.keys(lastMessages).find(
+                (key) => lastMessages[key].id === messageId
+              )?.toString();
+            if (!communityId) {
+              console.warn("Received message_status with unknown community_id");
+              return;
+            }
+            setLastMessages((prev) => {
+              const updatedMessage = {
+                ...prev[communityId],
+                status: data.status,
+                community_id: parseInt(communityId),
+              };
+              const updated = { ...prev, [communityId]: updatedMessage };
+              sqliteSetItem(
+                `last_message_${communityId}`,
+                JSON.stringify(updatedMessage)
+              );
+              return updated;
+            });
+          }
+        } catch (error) {
+          console.error("Error processing WebSocket message:", error);
+        }
+      };
+
+      socket.addEventListener("message", onMessage);
+      socketCleanup = () => {
+        socket.removeEventListener("message", onMessage);
+      };
+    }
+
+    return socketCleanup;
+  }, [socket, isConnected, userToken, sqliteGetItem, sqliteSetItem, sqliteRemoveItem, lastMessages]);
+
+  // Handle community changes via navigation params
   useFocusEffect(
     useCallback(() => {
       const handleCommunityChanges = async () => {
         const newCommunityParam = params.newCommunity;
         let newCommunity: Community | undefined;
-
-        if (newCommunityParam) {
-          if (Array.isArray(newCommunityParam)) {
-            newCommunity = JSON.parse(newCommunityParam[0]) as Community;
-          } else {
+  
+        // Parse newCommunity from params if available
+        if (newCommunityParam && typeof newCommunityParam === "string") {
+          try {
             newCommunity = JSON.parse(newCommunityParam) as Community;
-          }
-
-          if (newCommunity) {
-            setMyCommunities((prev) => {
-              if (!prev.some((c) => c.id === newCommunity!.id)) {
-                return [...prev, newCommunity!];
-              }
-              return prev;
-            });
-            router.setParams({ newCommunity: undefined });
+          } catch (error) {
+            console.error("Error parsing newCommunity param:", error);
           }
         }
-
-        const leftCommunityId = params.leftCommunityId;
-        if (leftCommunityId) {
-          setMyCommunities((prev) =>
-            prev.filter((c) => c.id.toString() !== leftCommunityId.toString())
-          );
-          // Remove from lastMessages and cache
-          setLastMessages((prev) => {
-            const { [leftCommunityId]: _, ...rest } = prev;
-            console.log("Removed lastMessage for community:", leftCommunityId);
-            return rest;
+  
+        // Add new community to list if it doesn't exist already
+        if (newCommunity && newCommunity.id) {
+          setMyCommunities((prev) => {
+            const alreadyExists = prev.some((c) => c.id === newCommunity!.id);
+            if (!alreadyExists) {
+              const updated = [...prev, newCommunity!];
+              sqliteSetItem("communities", JSON.stringify(updated));
+              return updated;
+            }
+            return prev;
           });
-          await sqliteRemoveItem(`last_message_${leftCommunityId}`);
-          router.setParams({ leftCommunityId: undefined });
         }
-
-        if (isConnected) {
-          await subscribeToExistingUserCommunities();
-          await fetchAndCacheCommunities();
+  
+        // Optionally refresh last messages from cache
+        if (sqliteGetItem && myCommunities.length > 0) {
+          const messages = await Promise.all(
+            myCommunities.map(async (community: Community) => {
+              const message = await sqliteGetItem(`last_message_${community.id}`);
+              return [
+                community.id.toString(),
+                message ? JSON.parse(message) : null,
+              ];
+            })
+          );
+          setLastMessages(Object.fromEntries(messages));
         }
+  
+        // Clear navigation param to avoid reprocessing
+        router.setParams({ newCommunity: undefined });
       };
+  
       handleCommunityChanges();
-    }, [
-      params.newCommunity,
-      params.leftCommunityId,
-      isConnected,
-      subscribeToExistingUserCommunities,
-      fetchAndCacheCommunities,
-      sqliteRemoveItem,
-    ])
+    }, [params.newCommunity, myCommunities, sqliteGetItem])
   );
-
-  const handleJoinViaLink = useCallback(
-    async (communityId) => {
-      const communityDetails = await getCommunityDetails(
-        communityId,
-        userToken?.token
-      );
-      setMyCommunities((prev) => {
-        if (!prev.some((c) => c.id === communityId)) {
-          return [...prev, communityDetails];
-        }
-        return prev;
-      });
-    },
-    [userToken]
-  );
-
-  // WebSocket message handler
-  useEffect(() => {
-    const onMessage = async (event: MessageEvent) => {
-      if (!sqliteSetItem) return;
-      try {
-        const data = JSON.parse(event.data);
-
-        if (data.type === "join_success") {
-          await handleJoinViaLink(data.community_id);
-        }
-
-        if (data.type === "message") {
-          const newMessage = {
-            ...data,
-            status: "sent",
-            sent_at: new Date(data.sent_at).toISOString(),
-          };
-          setLastMessages((prevState) => {
-            const updated = {
-              ...prevState,
-              [data.community_id]: newMessage,
-            };
-            console.log("Updated lastMessages with new message:", updated);
-            return updated;
-          });
-          await sqliteSetItem(
-            `last_message_${data.community_id}`,
-            JSON.stringify(newMessage)
-          );
-        } else if (data.type === "message_status") {
-          setLastMessages((prevState) => {
-            const communityId =
-              data.community_id || prevState[data.message_id]?.community_id;
-            if (!communityId) return prevState;
-            const updatedMessage = {
-              ...prevState[communityId],
-              status: data.status,
-            };
-            const updated = {
-              ...prevState,
-              [communityId]: updatedMessage,
-            };
-            console.log("Updated lastMessages with status:", updated);
-            return updated;
-          });
-          const cachedMessage = lastMessages[data.community_id];
-          if (cachedMessage) {
-            await sqliteSetItem(
-              `last_message_${data.community_id}`,
-              JSON.stringify({
-                ...cachedMessage,
-                status: data.status,
-              })
-            );
-          }
-        }
-      } catch (error) {
-        console.error("Error processing WebSocket message:", error);
-      }
-    };
-
-    if (isConnected && socket) {
-      socket.addEventListener("message", onMessage);
-    }
-
-    return () => {
-      if (isConnected && socket) {
-        socket.removeEventListener("message", onMessage);
-      }
-    };
-  }, [isConnected, socket, lastMessages, sqliteSetItem, handleJoinViaLink]);
+  
 
   const handleNavigateCreateCommunity = useCallback(() => {
     router.navigate("CreateCommunity");
@@ -302,7 +358,6 @@ const CommunityScreen: React.FC = () => {
 
   const getLastMessage = useCallback(
     (communityId: string) => lastMessages[communityId] || null,
-    
     [lastMessages]
   );
 
@@ -332,58 +387,37 @@ const CommunityScreen: React.FC = () => {
     setSearchQuery(query);
   }, []);
 
-  const handleCommunityPress = useCallback(
-    async (community: Community) => {
-      try {
-        const isUserCommunity = myCommunities.some(
-          (c) => c.id === community.id
-        );
-        if (!isUserCommunity && isConnected) {
-          await joinAndSubscribeToCommunity(community.id);
-          setMyCommunities((prev) => [...prev, community]);
-          await fetchAndCacheCommunities();
-        }
-
-        const lastMessage = getLastMessage(community.id);
-        if (lastMessage && lastMessage.status !== "read") {
-          markMessageAsRead(community.id);
-          const updatedMessage = { ...lastMessage, status: "read" };
-          setLastMessages((prevState) => {
-            const updated = {
-              ...prevState,
-              [community.id]: updatedMessage,
-            };
-           
-            return updated;
-          });
-          await sqliteSetItem(
-            `last_message_${community.id}`,
-            JSON.stringify(updatedMessage)
-          );
-        }
-
-        router.navigate({
-          pathname: "ChatScreen",
-          params: {
-            communityId: community.id,
-            name: community.name,
-            image: community.image_url,
-          },
+  const handleCommunityPress = useCallback(async (community: Community) => {
+    try {
+      const isUserCommunity = myCommunities.some((c) => c.id === community.id);
+      if (!isUserCommunity && isConnected) {
+        await joinAndSubscribeToCommunity(community.id);
+        setMyCommunities((prev) => {
+          const updatedCommunities = [...prev, community];
+          sqliteSetItem("communities", JSON.stringify(updatedCommunities));
+          return updatedCommunities;
         });
-      } catch (error) {
-        console.error("Error in handleCommunityPress:", error);
       }
-    },
-    [
-      myCommunities,
-      isConnected,
-      joinAndSubscribeToCommunity,
-      fetchAndCacheCommunities,
-      getLastMessage,
-      markMessageAsRead,
-      sqliteSetItem,
-    ]
-  );
+
+      const lastMessage = getLastMessage(community.id.toString());
+      if (lastMessage && lastMessage.sender_id !== userId && lastMessage.status !== "read") {
+        markMessageAsRead(community.id.toString());
+        setLastMessages((prev) => ({
+          ...prev,
+          [community.id.toString()]: { ...lastMessage, status: "read" },
+        }));
+      }
+
+      router.navigate({
+        pathname: "ChatScreen",
+        params: { communityId: community.id, name: community.name, image: community.image_url },
+      });
+      setSearchQuery("");
+    } catch (error) {
+      console.error("Error in handleCommunityPress:", error);
+      setErrorMessage("Failed to join or navigate to community");
+    }
+  }, [myCommunities, isConnected, joinAndSubscribeToCommunity, getLastMessage, markMessageAsRead, userId]);
 
   const styles = StyleSheet.create({
     container: {
@@ -459,7 +493,7 @@ const CommunityScreen: React.FC = () => {
       ) : (
         <View style={styles.listContainer}>
           {searchQuery.length >= 3 ? (
-            <React.Fragment>
+            <>
               <CommunityList
                 title="My Communities"
                 data={filteredCommunities.user}
@@ -469,7 +503,7 @@ const CommunityScreen: React.FC = () => {
                 showUnreadIndicator={Object.fromEntries(
                   Object.entries(lastMessages).map(([id, message]) => [
                     id,
-                    message && message.status !== "read",
+                    message && message.sender_id !== userId && message.status !== "read",
                   ])
                 )}
               />
@@ -480,7 +514,7 @@ const CommunityScreen: React.FC = () => {
                   onCommunityPress={handleCommunityPress}
                 />
               )}
-            </React.Fragment>
+            </>
           ) : (
             <CommunityList
               title="My Communities"
@@ -491,7 +525,7 @@ const CommunityScreen: React.FC = () => {
               showUnreadIndicator={Object.fromEntries(
                 Object.entries(lastMessages).map(([id, message]) => [
                   id,
-                  message && message.status !== "read",
+                  message && message.sender_id !== userId && message.status !== "read",
                 ])
               )}
             />

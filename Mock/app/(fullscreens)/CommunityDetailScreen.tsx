@@ -13,7 +13,9 @@ import {
   FlatList,
   Modal,
 } from "react-native";
-import { useRoute, useNavigation } from "@react-navigation/native";
+import Swipeable from "react-native-gesture-handler/Swipeable";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { useRoute, useNavigation, useFocusEffect } from "@react-navigation/native";
 import { Ionicons, FontAwesome6 } from "@expo/vector-icons";
 import ImageView from "react-native-image-viewing";
 import {
@@ -21,6 +23,7 @@ import {
   leaveCommunity,
   getCommunityMessages,
   getCommunityTimetable,
+  removeCommunityMember,
 } from "../../CommunityApiCalls";
 import { useAuth } from "../../components/AuthContext";
 import { useWebSocket } from "../../webSocketProvider";
@@ -40,13 +43,14 @@ const CommunityDetailScreen: React.FC = () => {
   const { userToken, userInfo } = useAuth();
   const user = userInfo?.user;
 
-  // Extract SQLite utilities from WebSocket context with fallback defaults
   const {
+    socket,
     unsubscribeFromCommunity,
     sqliteGetItem,
     sqliteSetItem,
     sqliteRemoveItem,
   } = useWebSocket() || {
+    socket: null,
     unsubscribeFromCommunity: () => {},
     sqliteGetItem: async () => null,
     sqliteSetItem: async () => {},
@@ -63,17 +67,13 @@ const CommunityDetailScreen: React.FC = () => {
   const [isUserLeader, setIsUserLeader] = useState(false);
   const [visible, setIsVisible] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [profileImages, setProfileImages] = useState<Record<string, string>>(
-    {}
-  );
-  // States to control showing all members or all calendar items
+  const [profileImages, setProfileImages] = useState<Record<string, string>>({});
   const [showAllMembers, setShowAllMembers] = useState(false);
   const [showAllCalendar, setShowAllCalendar] = useState(false);
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
-  // Sorted members memo
   const sortedMembers = useMemo(() => {
     return (
       community?.members?.sort((a, b) =>
@@ -82,7 +82,6 @@ const CommunityDetailScreen: React.FC = () => {
     );
   }, [community?.members]);
 
-  // Limit members list with "View All" extra item if needed.
   const memberData = useMemo(() => {
     const members = sortedMembers || [];
     let displayed = showAllMembers ? members : members.slice(0, 5);
@@ -92,7 +91,6 @@ const CommunityDetailScreen: React.FC = () => {
     return displayed;
   }, [sortedMembers, showAllMembers]);
 
-  // Limit calendar items list with "View All" extra item if needed.
   const limitedTimetable = useMemo(() => {
     let items = showAllCalendar ? timetable : timetable.slice(0, 5);
     if (!showAllCalendar && timetable.length > 5) {
@@ -101,7 +99,6 @@ const CommunityDetailScreen: React.FC = () => {
     return items;
   }, [timetable, showAllCalendar]);
 
-  // SQLite-based caching functions
   const getCachedData = useCallback(
     async (key: string) => {
       const data = await sqliteGetItem(key);
@@ -124,44 +121,41 @@ const CommunityDetailScreen: React.FC = () => {
     [sqliteRemoveItem]
   );
 
-  // Fetch community data, load from cache first, then update with fresh data
   const fetchCommunityData = useCallback(async () => {
     try {
       setLoading(true);
-  
-      // Load cached data if available
       const cachedCommunity = await getCachedData(`community_${id}`);
       const cachedTimetable = await getCachedData(`timetable_${id}`);
       const cachedImages = await getCachedData(`images_${id}`);
-  
-      if (cachedCommunity) {
+
+      if (cachedCommunity && cachedImages && cachedTimetable) {
         setCommunity(cachedCommunity);
         setIsUserLeader(cachedCommunity?.created_by === user?.email);
-        setTimetable(Array.isArray(cachedTimetable) ? cachedTimetable : []); // Ensure timetable is an array
-        setCommunityImages(Array.isArray(cachedImages) ? cachedImages : []); // Ensure images is an array
+        setTimetable(Array.isArray(cachedTimetable) ? cachedTimetable : []);
+        setCommunityImages(Array.isArray(cachedImages) ? cachedImages : []);
         setLoading(false);
-        return; // Skip API fetch if cached community data exists
+        return;
       }
-  
-      // No cached data, proceed with API fetch (first visit)
+
       if (!userToken?.token) throw new Error("User not authenticated.");
-  
+
       const data = await getCommunityDetails(id, userToken.token);
       setCommunity(data);
-      await setCachedData(`community_${id}`, data); // Cache the community data
+      await setCachedData(`community_${id}`, data);
       setIsUserLeader(data?.created_by === user?.email);
-  
+
       const messages = await getCommunityMessages(id, userToken.token);
       const images = messages
         .filter((msg) => msg.image)
         .map((msg) => msg.image) || [];
       setCommunityImages(images);
-      await setCachedData(`images_${id}`, images); // Cache the images
-  
+      await setCachedData(`images_${id}`, images);
+
       const timetableData = await getCommunityTimetable(id, userToken.token) || [];
+      console.log(timetableData)
       setTimetable(timetableData);
-      await setCachedData(`timetable_${id}`, timetableData); // Cache the timetable
-  
+      await setCachedData(`timetable_${id}`, timetableData);
+
       const memberImages = data?.members?.reduce((acc, member) => {
         if (member.profile_picture)
           acc[member.id.toString()] = member.profile_picture;
@@ -177,9 +171,168 @@ const CommunityDetailScreen: React.FC = () => {
     }
   }, [id, userToken?.token, user?.email, getCachedData, setCachedData]);
 
+  useFocusEffect(
+    useCallback(() => {
+      if (id) {
+        fetchCommunityData();
+      }
+    }, [id, fetchCommunityData])
+  );
+
   useEffect(() => {
-    if (id) fetchCommunityData();
-  }, [id, fetchCommunityData]);
+    let socketCleanup = () => {};
+
+    if (socket) {
+      const onMessage = (event: MessageEvent) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "community_updated" && data.community?.id.toString() === id) {
+            setCommunity((prev) => ({
+              ...prev,
+              ...data.community,
+              members: data.community.members || prev?.members || [],
+            }));
+          } else if (data.type === "member_removed" && data.community_id.toString() === id) {
+            setCommunity((prev) => {
+              if (!prev) return prev;
+              const updatedMembers = prev.members.filter(
+                (member) => member.id !== data.user_id
+              );
+              const updatedCommunity = { ...prev, members: updatedMembers };
+              setCachedData(`community_${id}`, updatedCommunity);
+              return updatedCommunity;
+            });
+          }
+        } catch (error) {
+          console.error("Error processing WebSocket message:", error);
+        }
+      };
+
+      socket.addEventListener("message", onMessage);
+      socketCleanup = () => {
+        socket.removeEventListener("message", onMessage);
+      };
+    }
+
+    return socketCleanup;
+  }, [socket, id, setCachedData]);
+
+  const handleRemoveMember = useCallback(
+    async (userId: number) => {
+      try {
+        if (!userToken?.token) throw new Error("User not authenticated.");
+        await removeCommunityMember(id, userId, userToken.token);
+        Alert.alert("Success", "Member removed from the channel.");
+      } catch (err) {
+        console.error("Error removing member:", err);
+        Alert.alert("Error", "Failed to remove member.");
+      }
+    },
+    [id, userToken?.token]
+  );
+
+  const renderRightActions = useCallback(
+    (userId: number) => (
+      <TouchableOpacity
+        style={[styles.removeAction, { backgroundColor: themeColors.errorText }]}
+        onPress={() => {
+          Alert.alert(
+            "Remove Member",
+            "Are you sure you want to remove this member from the channel?",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Remove",
+                style: "destructive",
+                onPress: () => handleRemoveMember(userId),
+              },
+            ]
+          );
+        }}
+      >
+        <Text style={styles.removeActionText}>Remove</Text>
+      </TouchableOpacity>
+    ),
+    [handleRemoveMember, themeColors.errorText]
+  );
+
+  const renderAvatar = useCallback(
+    (member) => {
+      const userId = member.id.toString();
+      const avatarUrl = profileImages[userId] || member.profile_picture;
+      return avatarUrl ? (
+        <AppImage uri={avatarUrl} style={styles.memberPicture} />
+      ) : (
+        <View style={styles.memberPicture}>
+          <Text style={styles.initials}>
+            {member.first_name.charAt(0).toUpperCase()}
+          </Text>
+        </View>
+      );
+    },
+    [profileImages]
+  );
+
+  const renderMemberItem = useCallback(
+    ({ item }) => {
+      if (item.type === "no-members") {
+        return (
+          <Text
+            style={{
+              color: themeColors.textSecondary,
+              marginLeft: rV(16),
+              marginBottom: rV(10),
+            }}
+          >
+            No members yet.
+          </Text>
+        );
+      }
+      if (item.type === "view-all") {
+        return (
+          <TouchableOpacity
+            style={{
+              marginLeft: rS(16),
+              marginVertical: rV(8),
+            }}
+            onPress={() => setShowAllMembers(true)}
+          >
+            <Text style={{ color: themeColors.tint }}>View all members</Text>
+          </TouchableOpacity>
+        );
+      }
+      const isLeader = item.email === community?.created_by;
+      const memberItem = (
+        <View style={styles.memberItem}>
+          {renderAvatar(item)}
+          <View style={styles.memberInfo}>
+            <Text style={[styles.memberName, { color: themeColors.text }]}>
+              {item.first_name} {item.last_name}
+            </Text>
+            {isLeader && (
+              <Text style={styles.adminText}>Admin</Text>
+            )}
+          </View>
+        </View>
+      );
+
+      if (isUserLeader && !isLeader) {
+        return (
+          <Swipeable renderRightActions={() => renderRightActions(item.id)}>
+            {memberItem}
+          </Swipeable>
+        );
+      }
+      return memberItem;
+    },
+    [
+      themeColors,
+      renderAvatar,
+      community?.created_by,
+      isUserLeader,
+      renderRightActions,
+    ]
+  );
 
   const handleTimetableItemPress = useCallback(
     (item) => {
@@ -193,36 +346,30 @@ const CommunityDetailScreen: React.FC = () => {
 
   const shareCommunity = useCallback(async () => {
     try {
-      const shareableLink = community?.shareable_link; // e.g., myapp://join/sJmnCdcdXRRPHWMzVkh1
+      const shareableLink = community?.shareable_link;
       await Share.share({
         message: `Check out this channel: ${community?.name}\nJoin here: ${shareableLink}`,
-        url: shareableLink, // Ensures the link is tappable where supported
+        url: shareableLink,
       });
     } catch (err) {
       console.error("Error sharing community:", err);
     }
   }, [community?.name, community?.shareable_link]);
 
-  // In your leaveCommunityHandler
   const leaveCommunityHandler = useCallback(async () => {
     try {
       if (!userToken?.token) throw new Error("User not authenticated.");
 
-      // Leave the community via API
       await leaveCommunity(id, userToken.token);
-
-      // Unsubscribe from WebSocket updates
       unsubscribeFromCommunity(id);
 
-      // Remove all related data from SQLite
       const dbKeysToRemove = [
-        `community_${id}`, // Community details
-        `messages_${id}`, // Community messages
-        `last_message_${id}`, // Last message cache
+        `community_${id}`,
+        `messages_${id}`,
+        `last_message_${id}`,
       ];
       await Promise.all(dbKeysToRemove.map((key) => sqliteRemoveItem(key)));
 
-      // Update cached communities list by filtering out the left community
       const cachedCommunities = await getCachedData("communities");
       if (cachedCommunities) {
         const updatedCommunities = cachedCommunities.filter(
@@ -231,7 +378,6 @@ const CommunityDetailScreen: React.FC = () => {
         await setCachedData("communities", updatedCommunities);
       }
 
-      // Persist the left community ID so that subsequent fetches can filter it out.
       const storedLeftIds = await sqliteGetItem("leftCommunityIds");
       const leftCommunityIds = storedLeftIds ? JSON.parse(storedLeftIds) : [];
       await sqliteSetItem(
@@ -271,23 +417,6 @@ const CommunityDetailScreen: React.FC = () => {
       ]
     );
   }, [leaveCommunityHandler]);
-
-  const renderAvatar = useCallback(
-    (member) => {
-      const userId = member.id.toString();
-      const avatarUrl = profileImages[userId] || member.profile_picture;
-      return avatarUrl ? (
-        <AppImage uri={avatarUrl} style={styles.memberPicture} />
-      ) : (
-        <View style={styles.memberPicture}>
-          <Text style={styles.initials}>
-            {member.first_name.charAt(0).toUpperCase()}
-          </Text>
-        </View>
-      );
-    },
-    [profileImages]
-  );
 
   const renderHeader = useCallback(
     () => (
@@ -383,7 +512,6 @@ const CommunityDetailScreen: React.FC = () => {
             />
           </TouchableOpacity>
 
-          {/* Render "Lock chat" option only if user is leader */}
           {isUserLeader && (
             <View style={styles.sectionItem}>
               <Ionicons
@@ -436,64 +564,9 @@ const CommunityDetailScreen: React.FC = () => {
         </View>
       </>
     ),
-    [
-      community,
-      isUserLeader,
-      themeColors,
-      communityImages,
-      isMuted,
-      shareCommunity,
-    ]
+    [community, isUserLeader, themeColors, communityImages, isMuted, shareCommunity]
   );
 
-  const renderMemberItem = useCallback(
-    ({ item }) => {
-      if (item.type === "no-members") {
-        return (
-          <Text
-            style={{
-              color: themeColors.textSecondary,
-              marginLeft: rV(16),
-              marginBottom: rV(10),
-            }}
-          >
-            No members yet.
-          </Text>
-        );
-      }
-      if (item.type === "view-all") {
-        return (
-          <TouchableOpacity
-            style={{
-              marginLeft: rS(16),
-              marginVertical: rV(8),
-            }}
-            onPress={() => setShowAllMembers(true)}
-          >
-            <Text style={{ color: themeColors.tint }}>View all members</Text>
-          </TouchableOpacity>
-        );
-      }
-      // Check if the current member is the leader
-      const isLeader = item.email === community?.created_by;
-      return (
-        <View style={styles.memberItem}>
-          {renderAvatar(item)}
-          <View style={styles.memberInfo}>
-            <Text style={[styles.memberName, { color: themeColors.text }]}>
-              {item.first_name} {item.last_name}
-            </Text>
-            {isLeader && (
-              <Text style={styles.adminText}>Admin</Text>
-            )}
-          </View>
-        </View>
-      );
-    },
-    [themeColors, renderAvatar, community] // Add 'community' to dependencies
-  );
-
-  // Render footer includes Calendar section, info rows and channel control buttons.
   const renderFooter = useCallback(
     () => (
       <>
@@ -605,7 +678,6 @@ const CommunityDetailScreen: React.FC = () => {
           <Text style={styles.unfollowButtonText}>Unfollow channel</Text>
         </TouchableOpacity>
 
-        {/* Render "Delete channel" option only if user is leader */}
         {isUserLeader && (
           <TouchableOpacity
             style={styles.reportButton}
@@ -649,12 +721,6 @@ const CommunityDetailScreen: React.FC = () => {
           fontSize: SIZES.medium,
           color: themeColors.textSecondary,
           textAlign: "center",
-        },
-        leaderBadge: {
-          marginTop: rV(4),
-          fontSize: SIZES.medium,
-          fontWeight: "600",
-          color: themeColors.tint,
         },
         communityStats: {
           flexDirection: "row",
@@ -717,11 +783,11 @@ const CommunityDetailScreen: React.FC = () => {
         memberInfo: {
           flex: 1,
           flexDirection: "row",
-          justifyContent: "space-between", // Ensure "Admin" is pushed to the right
+          justifyContent: "space-between",
           alignItems: "center",
         },
         adminText: {
-          color: themeColors.tint, // Use a distinct color (e.g., tint)
+          color: themeColors.tint,
           fontSize: SIZES.small,
           fontWeight: "600",
         },
@@ -735,7 +801,6 @@ const CommunityDetailScreen: React.FC = () => {
           justifyContent: "center",
         },
         initials: { color: themeColors.text, fontSize: SIZES.medium },
-       
         memberName: {
           fontSize: SIZES.medium,
           fontWeight: "500",
@@ -791,11 +856,23 @@ const CommunityDetailScreen: React.FC = () => {
           fontWeight: "600",
           color: themeColors.background,
         },
+        removeAction: {
+          backgroundColor: themeColors.errorText,
+          justifyContent: "center",
+          alignItems: "center",
+          width: rS(80),
+          height: "100%",
+        },
+        removeActionText: {
+          color: themeColors.background,
+          fontSize: SIZES.medium,
+          fontWeight: "600",
+        },
       }),
     [themeColors]
   );
 
-  const data = memberData; // Members data for the FlatList
+  const data = memberData;
 
   if (loading) {
     return (
@@ -820,7 +897,7 @@ const CommunityDetailScreen: React.FC = () => {
   }
 
   return (
-    <View
+    <GestureHandlerRootView
       style={[styles.container, { backgroundColor: themeColors.background }]}
     >
       <FlatList
@@ -832,7 +909,7 @@ const CommunityDetailScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
         initialNumToRender={5}
         maxToRenderPerBatch={5}
-        contentContainerStyle={{ paddingBottom: 100 }} // Ensure the last buttons are always visible
+        contentContainerStyle={{ paddingBottom: 100 }}
       />
       <Modal
         visible={visible}
@@ -846,7 +923,7 @@ const CommunityDetailScreen: React.FC = () => {
           onRequestClose={() => setIsVisible(false)}
         />
       </Modal>
-    </View>
+    </GestureHandlerRootView>
   );
 };
 

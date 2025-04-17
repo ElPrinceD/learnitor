@@ -110,7 +110,7 @@ export const updateTask = async (taskId, taskData, token) => {
   console.log(taskId)
   console.log(taskData)
   try {
-    const response = await apiClient.put(`/tasks/${taskId}/`, taskData, {
+    const response = await apiClient.patch(`/tasks/${taskId}/`, taskData, {
       headers: {
         Authorization: `Token ${token}`,
       },

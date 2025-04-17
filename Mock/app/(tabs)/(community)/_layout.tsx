@@ -54,7 +54,7 @@ export default function CommunityLayout() {
         component={CreateCommunity}
         options={{
           title: "Create Community",
-          presentation: "modal",
+          presentation: "containedModal",
           animation: "fade_from_bottom",
           headerTitleAlign: "center",
           headerBackTitle: "Cancel",

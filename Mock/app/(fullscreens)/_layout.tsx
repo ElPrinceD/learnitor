@@ -76,12 +76,14 @@ export default function ChatScreenLayout() {
         <Stack.Screen
           name="CommunityDetailScreen"
           options={({ route, navigation }) => {
+            
             const communityName = route.params?.name ?? "Community";
             const isCreator = route.params?.created_by === user?.email; // Assume userEmail is passed or stored in navigation state
 
             return {
               title: "Squad Info",
               headerBackTitle: "Back",
+              
               headerRight: () => (
                 <TouchableOpacity
                   onPressIn={() =>
@@ -112,6 +114,73 @@ export default function ChatScreenLayout() {
           options={{
             title: "Photos",
             headerBackTitle: "Back",
+          }}
+        />
+            <Stack.Screen
+          name="TimeTableList"
+          options={{
+            headerStyle: {
+              backgroundColor: themeColors.background,
+            },
+            headerTitle: "TimeTable",
+            headerTitleAlign: "center",
+            headerTitleStyle: {
+              fontWeight: "bold",
+            },
+            headerShadowVisible: false,
+            headerBackTitle: "Back",
+          }}
+        />
+        <Stack.Screen
+          name="TimeTableDetails"
+          options={{
+            headerShown: true,
+            presentation: "containedModal",
+            headerBackTitle: "Back",
+            headerStyle: {
+              backgroundColor: themeColors.background,
+            },
+            headerTitle: "Timetable",
+            headerTitleAlign: "center",
+            headerTitleStyle: {
+              fontWeight: "bold",
+            },
+            headerShadowVisible: false,
+            
+          }}
+        />
+        <Stack.Screen
+          name="EditPeriods"
+          options={{
+            headerShown: true,
+            presentation: "containedModal",
+            headerBackTitle: "Back",
+            headerStyle: {
+              backgroundColor: themeColors.background,
+            },
+            headerTitle: "Edit Periods",
+            headerTitleAlign: "center",
+            headerTitleStyle: {
+              fontWeight: "bold",
+            },
+            headerShadowVisible: false,
+          }}
+        />
+         <Stack.Screen
+          name="TimeTable"
+          options={{
+            headerShown: true,
+            presentation: "card",
+            headerStyle: {
+              backgroundColor: themeColors.background,
+            },
+            // animation: "slide_from_bottom",
+            headerTitle: "Create a TimeTable",
+            headerTitleAlign: "center",
+            headerShadowVisible: false,
+            headerTitleStyle: {
+              fontWeight: "bold",
+            },
           }}
         />
         <Stack.Screen

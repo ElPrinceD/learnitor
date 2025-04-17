@@ -76,12 +76,14 @@ const MemoizedGiftedChat = memo(GiftedChat, (prevProps, nextProps) => {
 const CommunityChatScreen: React.FC = () => {
   const route = useRoute();
   const { communityId } = route.params as { communityId: string };
+  console.log(communityId)
   const { userToken, userInfo } = useAuth();
   const user = userInfo?.user;
   const {
     socket,
     isConnected,
     sendMessage,
+    setCurrentCommunity,
     markMessageAsRead,
     sqliteGetItem,
     sqliteSetItem,
@@ -123,9 +125,9 @@ const CommunityChatScreen: React.FC = () => {
     { uri: string; type: string; id: string }[]
   >([]);
   const [isImagePreviewVisible, setIsImagePreviewVisible] = useState(false);
+  const [community, setCommunity] = useState<{ id: string; name: string; image_url: string } | null>(null);
 
   const normalizeMessage = useCallback((data) => {
-    console.log("Normalizing message:", data);
     if ("message" in data && "sent_at" in data) {
       return {
         _id: data.id || data.temp_id || Date.now().toString(),
@@ -181,6 +183,22 @@ const CommunityChatScreen: React.FC = () => {
     colorScheme === "dark"
       ? "https://images.pexels.com/photos/9665185/pexels-photo-9665185.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
       : "https://images.pexels.com/photos/7599590/pexels-photo-7599590.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2";
+
+  // Fetch community data from cache
+  const fetchCommunityData = useCallback(async () => {
+    try {
+      const cachedCommunity = await sqliteGetItem(`community_${communityId}`);
+      if (cachedCommunity) {
+        setCommunity(JSON.parse(cachedCommunity));
+      }
+    } catch (error) {
+      console.error("Error fetching community data:", error);
+    }
+  }, [communityId, sqliteGetItem]);
+
+  useEffect(() => {
+    fetchCommunityData();
+  }, [fetchCommunityData]);
 
   const fetchInitialMessages = useCallback(async () => {
     try {
@@ -248,6 +266,8 @@ const CommunityChatScreen: React.FC = () => {
 
   useFocusEffect(
     useCallback(() => {
+      setCurrentCommunity(communityId);
+      markMessageAsRead(communityId);
       fetchInitialMessages();
       return () => {};
     }, [fetchInitialMessages])
@@ -260,7 +280,11 @@ const CommunityChatScreen: React.FC = () => {
       const onMessage = (event: MessageEvent) => {
         try {
           const data = JSON.parse(event.data);
-          console.log("WebSocket received message:", data);
+          
+
+          if (data.type === "community_updated" && data.community?.id === communityId) {
+            setCommunity(data.community);
+          }
 
           if (data.type === "history" && data.community_id === communityId) {
             const transformedMessages = data.messages
@@ -925,1008 +949,1001 @@ const CommunityChatScreen: React.FC = () => {
               <MaterialCommunityIcons
                 name="content-copy"
                 size={rS(24)}
+                  color={themeColors.text}
+                />
+              </TouchableOpacity>
+            </View>
+          ),
+        });
+      } else {
+        navigation.setOptions({
+          headerTitle: () => (
+            <TouchableOpacity
+              onPressIn={() =>
+                router.push({
+                  pathname: "CommunityDetailScreen",
+                  params: { id: communityId },
+                })
+              }
+              style={{ flexDirection: "row", alignItems: "center" }}
+            >
+              <Image
+                source={{ uri: community?.image_url }}
+                style={{
+                  width: rS(33),
+                  height: rS(30),
+                  marginRight: rS(8),
+                  borderRadius: rMS(20),
+                }}
+              />
+              <Text
+                style={{ color: themeColors.text, fontSize: rMS(SIZES.large) }}
+              >
+                {community?.name ?? "Chat"}
+              </Text>
+            </TouchableOpacity>
+          ),
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={{ marginLeft: SIZES.xSmall }}
+            >
+              <MaterialCommunityIcons
+                name="arrow-left"
+                size={SIZES.large}
                 color={themeColors.text}
               />
             </TouchableOpacity>
-          </View>
-        ),
-      });
-    } else {
-      navigation.setOptions({
-        headerTitle: () => (
-          <TouchableOpacity
-            onPressIn={() =>
-              router.push({
-                pathname: "CommunityDetailScreen",
-                params: { id: communityId },
-              })
-            }
-            style={{ flexDirection: "row", alignItems: "center" }}
-          >
-            <Image
-              source={{ uri: route.params?.image }}
-              style={{
-                width: rS(33),
-                height: rS(30),
-                marginRight: rS(8),
-                borderRadius: rMS(20),
-              }}
-            />
-            <Text
-              style={{ color: themeColors.text, fontSize: rMS(SIZES.large) }}
-            >
-              {route.params?.name ?? "Chat"}
-            </Text>
-          </TouchableOpacity>
-        ),
-        headerLeft: () => (
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={{ marginLeft: SIZES.xSmall }}
-          >
-            <MaterialCommunityIcons
-              name="arrow-left"
-              size={SIZES.large}
-              color={themeColors.text}
-            />
-          </TouchableOpacity>
-        ),
-        headerRight: () => null,
-      });
-    }
-  }, [
-    selectedMessages,
-    navigation,
-    communityId,
-    themeColors,
-    handleCopySelected,
-    handleDeleteMessage,
-    handleEditMessage,
-    canEditDeleteOrReply,
-    handleDeselectAll,
-    router,
-    route,
-    rS,
-    rMS,
-  ]);
-
-  const handlePress = useCallback((message: IMessage) => {
-    setSelectedMessages((prevSelected) => {
-      if (prevSelected.length > 0) {
-        const isSelected = prevSelected.some((m) => m._id === message._id);
-        if (isSelected) {
-          return prevSelected.filter((m) => m._id !== message._id);
-        } else {
-          return [...prevSelected, message];
-        }
+          ),
+          headerRight: () => null,
+        });
       }
-      return prevSelected;
-    });
-    setMessages((prevMessages) =>
-      prevMessages.map((m) =>
-        m._id === message._id ? { ...m, isSelected: !m.isSelected } : m
-      )
-    );
-  }, []);
+    }, [
+      selectedMessages,
+      navigation,
+      communityId,
+      themeColors,
+      handleCopySelected,
+      handleDeleteMessage,
+      handleEditMessage,
+      canEditDeleteOrReply,
+      handleDeselectAll,
+      router,
+      community,
+    ]);
 
-  useLayoutEffect(() => {
-    updateHeader();
-  }, [selectedMessages, updateHeader]);
-
-  const renderBubble = useCallback(
-    (props) => {
-      const isSelected = selectedMessages.some(
-        (m) => m._id === props.currentMessage._id
+    const handlePress = useCallback((message: IMessage) => {
+      setSelectedMessages((prevSelected) => {
+        if (prevSelected.length > 0) {
+          const isSelected = prevSelected.some((m) => m._id === message._id);
+          if (isSelected) {
+            return prevSelected.filter((m) => m._id !== message._id);
+          } else {
+            return [...prevSelected, message];
+          }
+        }
+        return prevSelected;
+      });
+      setMessages((prevMessages) =>
+        prevMessages.map((m) =>
+          m._id === message._id ? { ...m, isSelected: !m.isSelected } : m
+        )
       );
-      const isFirstMessageOfBlock =
-        !props.previousMessage ||
-        props.previousMessage?.user?._id !== props.currentMessage.user._id;
-      const isOtherUser = props.currentMessage.user._id !== user?.id;
-      const isNewDay =
-        !props.previousMessage ||
-        (props.currentMessage?.createdAt &&
-          props.previousMessage?.createdAt &&
-          props.currentMessage.createdAt.toDateString() !==
-            props.previousMessage.createdAt.toDateString());
+    }, []);
 
-      const messageText = props.currentMessage.text
-        ? props.currentMessage.text
-        : props.currentMessage.image
-        ? "Photo"
-        : props.currentMessage.document
-        ? "Document"
-        : "";
+    useLayoutEffect(() => {
+      updateHeader();
+    }, [selectedMessages, updateHeader]);
 
-      // Create a custom view for reply messages and document cards.
-      const renderCustomContent = () => {
-        return (
-          <>
-            {/* Render reply preview if exists */}
-            {props.currentMessage.replyTo &&
-              props.currentMessage.replyTo._id !== null && (
-                <TouchableOpacity>
-                  <View style={styles.replyContainer}>
-                    <Text style={styles.replyName}>
-                      {`Replying to ${
-                        props.currentMessage.replyTo.user?.name ||
-                        "Unknown User"
-                      }`}
-                    </Text>
-                    <View
-                      style={{ flexDirection: "row", alignItems: "center" }}
-                    >
-                      {props.currentMessage.replyTo.text == null ? (
-                        <>
-                          <MaterialCommunityIcons
-                            name={
-                              props.currentMessage.replyTo.image
-                                ? "image"
-                                : "file-document-outline"
-                            }
-                            size={SIZES.medium}
-                            color={themeColors.textSecondary}
-                            style={{ marginRight: 4 }}
-                          />
+    const renderBubble = useCallback(
+      (props) => {
+        const isSelected = selectedMessages.some(
+          (m) => m._id === props.currentMessage._id
+        );
+        const isFirstMessageOfBlock =
+          !props.previousMessage ||
+          props.previousMessage?.user?._id !== props.currentMessage.user._id;
+        const isOtherUser = props.currentMessage.user._id !== user?.id;
+        const isNewDay =
+          !props.previousMessage ||
+          (props.currentMessage?.createdAt &&
+            props.previousMessage?.createdAt &&
+            props.currentMessage.createdAt.toDateString() !==
+              props.previousMessage.createdAt.toDateString());
+
+        const messageText = props.currentMessage.text
+          ? props.currentMessage.text
+          : props.currentMessage.image
+          ? "Photo"
+          : props.currentMessage.document
+          ? "Document"
+          : "";
+
+        // Create a custom view for reply messages and document cards.
+        const renderCustomContent = () => {
+          return (
+            <>
+              {/* Render reply preview if exists */}
+              {props.currentMessage.replyTo &&
+                props.currentMessage.replyTo._id !== null && (
+                  <TouchableOpacity>
+                    <View style={styles.replyContainer}>
+                      <Text style={styles.replyName}>
+                        {`Replying to ${
+                          props.currentMessage.replyTo.user?.name ||
+                          "Unknown User"
+                        }`}
+                      </Text>
+                      <View
+                        style={{ flexDirection: "row", alignItems: "center" }}
+                      >
+                        {props.currentMessage.replyTo.text == null ? (
+                          <>
+                            <MaterialCommunityIcons
+                              name={
+                                props.currentMessage.replyTo.image
+                                  ? "image"
+                                  : "file-document-outline"
+                              }
+                              size={SIZES.medium}
+                              color={themeColors.textSecondary}
+                              style={{ marginRight: 4 }}
+                            />
+                            <Text style={styles.replyText}>
+                              {props.currentMessage.replyTo.image
+                                ? "Photo"
+                                : "Document"}
+                            </Text>
+                          </>
+                        ) : (
                           <Text style={styles.replyText}>
-                            {props.currentMessage.replyTo.image
-                              ? "Photo"
-                              : "Document"}
+                            {props.currentMessage.replyTo.text || ""}
                           </Text>
-                        </>
-                      ) : (
-                        <Text style={styles.replyText}>
-                          {props.currentMessage.replyTo.text || ""}
-                        </Text>
-                      )}
+                        )}
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                )}
+              {((isOtherUser && isFirstMessageOfBlock) ||
+                (isOtherUser && isNewDay)) && (
+                <Text style={styles.username}>
+                  {props.currentMessage.user.name}
+                </Text>
+              )}
+
+              {/* Render document preview if there is a document */}
+              {props.currentMessage.document && (
+                <TouchableOpacity
+                  onPress={() => {
+                    Linking.openURL(props.currentMessage.document);
+                  }}
+                  style={[
+                    styles.documentContainer,
+                    {
+                      backgroundColor:
+                        props.position === "right"
+                          ? themeColors.tint
+                          : themeColors.secondaryBackground,
+                      borderRadius: rMS(10),
+                      padding: rS(10),
+                      marginVertical: rV(4),
+                      maxWidth: rS(250),
+                    },
+                  ]}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <MaterialCommunityIcons
+                      name="file-document-outline"
+                      size={SIZES.large}
+                      color={props.position === "right" ? "#fff" : "#007aff"}
+                      style={{ marginRight: rS(8) }}
+                    />
+                    <View>
+                      <Text
+                        style={{
+                          color:
+                            props.position === "right"
+                              ? "#fff"
+                              : themeColors.text,
+                          fontSize: SIZES.medium,
+                          fontWeight: "600",
+                          maxWidth: rS(180),
+                        }}
+                        numberOfLines={1}
+                      >
+                        {decodeURIComponent(
+                          props.currentMessage.document.split("/").pop() ||
+                            "Document"
+                        )}
+                      </Text>
+                      <Text
+                        style={{
+                          color:
+                            props.position === "right"
+                              ? "rgba(255,255,255,0.7)"
+                              : themeColors.textSecondary,
+                          fontSize: SIZES.small,
+                        }}
+                      >
+                        Document
+                      </Text>
                     </View>
                   </View>
                 </TouchableOpacity>
               )}
-            {((isOtherUser && isFirstMessageOfBlock) ||
-              (isOtherUser && isNewDay)) && (
-              <Text style={styles.username}>
-                {props.currentMessage.user.name}
-              </Text>
-            )}
+            </>
+          );
+        };
 
-            {/* Render document preview if there is a document */}
-            {props.currentMessage.document && (
-              <TouchableOpacity
-                onPress={() => {
-                  Linking.openURL(props.currentMessage.document);
-                }}
+        return (
+          <TouchableOpacity
+            onPress={() => handlePress(props.currentMessage)}
+            onLongPress={() => handleLongPress(props.currentMessage)}
+            style={
+              isSelected
+                ? [props.containerStyle, styles.blurBackground]
+                : props.containerStyle
+            }
+          >
+            <Bubble
+              {...props}
+              text={messageText}
+              onPress={() => handlePress(props.currentMessage)}
+              onLongPress={() => handleLongPress(props.currentMessage)}
+              wrapperStyle={{
+                ...props.wrapperStyle,
+                left: { backgroundColor: themeColors.secondaryBackground },
+                right: { backgroundColor: themeColors.tint },
+                ...(isSelected && styles.blurBackground),
+              }}
+              containerStyle={{
+                marginVertical: isFirstMessageOfBlock ? 5 : 0,
+              }}
+              renderTime={() => (
+                <View style={styles.timeContainer}>
+                  <Text style={styles.timeText}>
+                    {props.currentMessage.createdAt?.toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </Text>
+                  {!isOtherUser && (
+                    <View style={styles.statusIcon}>
+                      {props.currentMessage.status === "pending" && (
+                        <MaterialCommunityIcons
+                          name="clock-outline"
+                          size={SIZES.small}
+                          color={themeColors.textSecondary}
+                        />
+                      )}
+                      {props.currentMessage.status === "sending" && (
+                        <MaterialCommunityIcons
+                          name="sync"
+                          size={SIZES.small}
+                          color={themeColors.textSecondary}
+                        />
+                      )}
+                      {props.currentMessage.status === "sent" && (
+                        <MaterialCommunityIcons
+                          name="check"
+                          size={SIZES.small}
+                          color={themeColors.textSecondary}
+                        />
+                      )}
+                      {props.currentMessage.status === "read" && (
+                        <MaterialCommunityIcons
+                          name="check-all"
+                          size={SIZES.small}
+                          color={themeColors.textSecondary}
+                        />
+                      )}
+                    </View>
+                  )}
+                </View>
+              )}
+              renderCustomView={renderCustomContent}
+              textStyle={{
+                right: { color: "white" },
+                left: { color: themeColors.text },
+              }}
+            />
+            {props.currentMessage.isEdited && (
+              <Text
                 style={[
-                  styles.documentContainer,
+                  styles.editedText,
                   {
-                    backgroundColor:
-                      props.position === "right"
-                        ? themeColors.tint
-                        : themeColors.secondaryBackground,
-                    borderRadius: rMS(10),
-                    padding: rS(10),
-                    marginVertical: rV(4),
-                    maxWidth: rS(250),
+                    alignSelf:
+                      props.position === "left" ? "flex-start" : "flex-end",
                   },
                 ]}
               >
-                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <MaterialCommunityIcons
-                    name="file-document-outline"
-                    size={SIZES.large}
-                    color={props.position === "right" ? "#fff" : "#007aff"}
-                    style={{ marginRight: rS(8) }}
-                  />
-                  <View>
-                    <Text
-                      style={{
-                        color:
-                          props.position === "right"
-                            ? "#fff"
-                            : themeColors.text,
-                        fontSize: SIZES.medium,
-                        fontWeight: "600",
-                        maxWidth: rS(180),
-                      }}
-                      numberOfLines={1}
-                    >
-                      {decodeURIComponent(
-                        props.currentMessage.document.split("/").pop() ||
-                          "Document"
-                      )}
-                    </Text>
-                    <Text
-                      style={{
-                        color:
-                          props.position === "right"
-                            ? "rgba(255,255,255,0.7)"
-                            : themeColors.textSecondary,
-                        fontSize: SIZES.small,
-                      }}
-                    >
-                      Document
-                    </Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
+                Edited
+              </Text>
             )}
-          </>
+          </TouchableOpacity>
         );
-      };
+      },
+      [selectedMessages, handlePress, handleLongPress, themeColors, user?.id]
+    );
 
-      return (
-        <TouchableOpacity
-          onPress={() => handlePress(props.currentMessage)}
-          onLongPress={() => handleLongPress(props.currentMessage)}
-          style={
-            isSelected
-              ? [props.containerStyle, styles.blurBackground]
-              : props.containerStyle
+    const renderAvatar = useCallback(
+      (props) => {
+        const userId = props.currentMessage.user._id;
+        const avatarUrl =
+          profileImages[userId] ||
+          props.currentMessage.user.avatar ||
+          user?.profile_picture;
+
+        useEffect(() => {
+          if (!profileImages[userId] && avatarUrl) {
+            setProfileImages((prev) => ({ ...prev, [userId]: avatarUrl }));
           }
-        >
-          <Bubble
-            {...props}
-            text={messageText}
+        }, [userId, avatarUrl]);
+
+        if (avatarUrl) {
+          return (
+            <View style={styles.avatarContainer}>
+              <AppImage uri={avatarUrl} style={styles.avatar} />
+            </View>
+          );
+        } else {
+          return (
+            <View style={styles.avatarContainer}>
+              <Text style={styles.initials}>
+                {props.currentMessage.user.name.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          );
+        }
+      },
+      [profileImages, user?.profile_picture]
+    );
+
+    const openImageViewer = useCallback(
+      (uri: string) => {
+        const index = imageViewerImages.findIndex((img) => img === uri);
+        if (index >= 0) {
+          setCurrentImageIndex(index);
+          setIsImageViewerVisible(true);
+        } else {
+          console.warn("Image not found in imageViewerImages:", uri);
+        }
+      },
+      [imageViewerImages]
+    );
+
+    const renderMessageImage = useCallback(
+      (props: any) => {
+        return (
+          <TouchableOpacity
             onPress={() => handlePress(props.currentMessage)}
             onLongPress={() => handleLongPress(props.currentMessage)}
-            wrapperStyle={{
-              ...props.wrapperStyle,
-              left: { backgroundColor: themeColors.secondaryBackground },
-              right: { backgroundColor: themeColors.tint },
-              ...(isSelected && styles.blurBackground),
-            }}
-            containerStyle={{
-              marginVertical: isFirstMessageOfBlock ? 5 : 0,
-            }}
-            renderTime={() => (
-              <View style={styles.timeContainer}>
-                <Text style={styles.timeText}>
-                  {props.currentMessage.createdAt?.toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </Text>
-                {!isOtherUser && (
-                  <View style={styles.statusIcon}>
-                    {props.currentMessage.status === "pending" && (
-                      <MaterialCommunityIcons
-                        name="clock-outline"
-                        size={SIZES.small}
-                        color={themeColors.textSecondary}
-                      />
-                    )}
-                    {props.currentMessage.status === "sending" && (
-                      <MaterialCommunityIcons
-                        name="sync"
-                        size={SIZES.small}
-                        color={themeColors.textSecondary}
-                      />
-                    )}
-                    {props.currentMessage.status === "sent" && (
-                      <MaterialCommunityIcons
-                        name="check"
-                        size={SIZES.small}
-                        color={themeColors.textSecondary}
-                      />
-                    )}
-                    {props.currentMessage.status === "read" && (
-                      <MaterialCommunityIcons
-                        name="check-all"
-                        size={SIZES.small}
-                        color={themeColors.textSecondary}
-                      />
-                    )}
-                  </View>
-                )}
-              </View>
-            )}
-            renderCustomView={renderCustomContent}
-            textStyle={{
-              right: { color: "white" },
-              left: { color: themeColors.text },
-            }}
-          />
-          {props.currentMessage.isEdited && (
-            <Text
-              style={[
-                styles.editedText,
-                {
-                  alignSelf:
-                    props.position === "left" ? "flex-start" : "flex-end",
-                },
-              ]}
-            >
-              Edited
-            </Text>
-          )}
-        </TouchableOpacity>
-      );
-    },
-    [selectedMessages, handlePress, handleLongPress, themeColors, user?.id]
-  );
-
-  const renderAvatar = useCallback(
-    (props) => {
-      const userId = props.currentMessage.user._id;
-      const avatarUrl =
-        profileImages[userId] ||
-        props.currentMessage.user.avatar ||
-        user?.profile_picture;
-
-      useEffect(() => {
-        if (!profileImages[userId] && avatarUrl) {
-          setProfileImages((prev) => ({ ...prev, [userId]: avatarUrl }));
-        }
-      }, [userId, avatarUrl]);
-
-      if (avatarUrl) {
-        return (
-          <View style={styles.avatarContainer}>
-            <AppImage uri={avatarUrl} style={styles.avatar} />
-          </View>
-        );
-      } else {
-        return (
-          <View style={styles.avatarContainer}>
-            <Text style={styles.initials}>
-              {props.currentMessage.user.name.charAt(0).toUpperCase()}
-            </Text>
-          </View>
-        );
-      }
-    },
-    [profileImages, user?.profile_picture]
-  );
-
-  const openImageViewer = useCallback(
-    (uri: string) => {
-      const index = imageViewerImages.findIndex((img) => img === uri);
-      if (index >= 0) {
-        setCurrentImageIndex(index);
-        setIsImageViewerVisible(true);
-      } else {
-        console.warn("Image not found in imageViewerImages:", uri);
-      }
-    },
-    [imageViewerImages]
-  );
-
-  const renderMessageImage = useCallback(
-    (props: any) => {
-      return (
-        <TouchableOpacity
-          onPress={() => handlePress(props.currentMessage)}
-          onLongPress={() => handleLongPress(props.currentMessage)}
-        >
-          <AppImage
-            uri={props.currentMessage.image}
-            style={{ width: rS(200), height: rV(200), borderRadius: rMS(10) }}
-            onPress={() => openImageViewer(props.currentMessage.image)}
-          />
-        </TouchableOpacity>
-      );
-    },
-    [openImageViewer]
-  );
-
-  const renderDay = useCallback(
-    (props) => {
-      const { currentMessage, previousMessage } = props;
-      const isNewDay =
-        !previousMessage ||
-        (currentMessage?.createdAt &&
-          previousMessage?.createdAt &&
-          currentMessage.createdAt.toDateString() !==
-            previousMessage.createdAt.toDateString());
-
-      if (!isNewDay) return null;
-
-      const formatDate = (date: Date) => {
-        const today = new Date();
-        const yesterday = new Date(today);
-        yesterday.setDate(today.getDate() - 1);
-
-        if (date.toDateString() === today.toDateString()) {
-          return "Today";
-        } else if (date.toDateString() === yesterday.toDateString()) {
-          return "Yesterday";
-        } else {
-          return date.toDateString();
-        }
-      };
-
-      return (
-        <View
-          style={[
-            styles.dateContainer,
-            { backgroundColor: themeColors.background },
-          ]}
-        >
-          <Text style={styles.dateText}>
-            {currentMessage.createdAt
-              ? formatDate(currentMessage.createdAt)
-              : "Unknown Date"}
-          </Text>
-        </View>
-      );
-    },
-    [themeColors]
-  );
-
-  const renderSend = useCallback(
-    (props) => {
-      const hasText = props.text && props.text.trim().length > 0;
-
-      return (
-        <View style={styles.attachButtonContainer}>
-          {!hasText && !editingMessage ? (
-            <>
-              <TouchableOpacity onPress={pickImage} style={styles.attachButton}>
-                <Ionicons
-                  name="image-outline"
-                  color={themeColors.text}
-                  size={SIZES.xLarge}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={pickDocument}
-                style={styles.attachButton}
-              >
-                <MaterialCommunityIcons
-                  name="paperclip"
-                  color={themeColors.text}
-                  size={SIZES.xLarge}
-                />
-              </TouchableOpacity>
-            </>
-          ) : (
-            <View style={styles.sendContainer}>
-              <Send
-                {...props}
-                containerStyle={styles.sendButton}
-                alwaysShowSend
-                onSend={() => {
-                  if (editingMessage) {
-                    onEditMessage();
-                  } else {
-                    props.onSend({ text: props.text.trim() }, true);
-                  }
-                }}
-              >
-                <Ionicons
-                  name={editingMessage ? "checkmark" : "send"}
-                  color="#ffffff"
-                  size={SIZES.large}
-                />
-              </Send>
-            </View>
-          )}
-        </View>
-      );
-    },
-    [pickImage, pickDocument, themeColors, editingMessage, onEditMessage]
-  );
-
-  const renderMediaPreview = useCallback(() => {
-    if (mediaPreview.uri) {
-      return (
-        <View style={styles.replyContainer}>
-          {mediaPreview.type === "image" ? (
-            <Image
-              source={{ uri: mediaPreview.uri }}
-              style={[styles.previewImage, { width: "100%", height: rV(150) }]}
-            />
-          ) : (
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <MaterialCommunityIcons
-                name="file-document-outline"
-                size={SIZES.medium}
-                color={themeColors.text}
-                style={{ marginRight: rS(8) }}
-              />
-              <Text style={styles.previewDocument}>
-                {decodeURIComponent(
-                  mediaPreview.uri.split("/").pop() || "Document"
-                )}
-              </Text>
-            </View>
-          )}
-          <TouchableOpacity
-            style={styles.closeReplyButton}
-            onPress={() => setMediaPreview({ type: null, uri: null })}
           >
-            <Ionicons
-              name="close"
-              color={themeColors.text}
-              size={SIZES.medium}
+            <AppImage
+              uri={props.currentMessage.image}
+              style={{ width: rS(200), height: rV(200), borderRadius: rMS(10) }}
+              onPress={() => openImageViewer(props.currentMessage.image)}
             />
           </TouchableOpacity>
-        </View>
-      );
-    }
-    return null;
-  }, [mediaPreview, themeColors]);
+        );
+      },
+      [openImageViewer]
+    );
 
-  const renderInputToolbar = useCallback(
-    (props) => {
-      return (
-        <View>
-          {renderMediaPreview()}
-          {editingMessage && (
-            <View style={styles.replyContainer}>
-              <Text style={styles.replyName}>
-                Editing Message by {editingMessage.user.name}
-              </Text>
-              <TouchableOpacity
-                onPress={() => setEditingMessage(null)}
-                style={styles.closeReplyButton}
-              >
-                <Ionicons
-                  name="close"
-                  color={themeColors.text}
-                  size={SIZES.medium}
-                />
-              </TouchableOpacity>
-            </View>
-          )}
-          {replyToMessage && (
-            <View style={styles.replyContainer}>
-              <Text style={styles.replyName}>
-                Replying to {replyToMessage.user?.name || "Unknown User"}
-              </Text>
-              <Text style={styles.replyText}>
-                {replyToMessage.text ||
-                  (replyToMessage.image
-                    ? "Photo"
-                    : replyToMessage.document
-                    ? "Document"
-                    : "")}
-              </Text>
-              <TouchableOpacity
-                onPress={() => setReplyToMessage(null)}
-                style={styles.closeReplyButton}
-              >
-                <Ionicons
-                  name="close"
-                  color={themeColors.text}
-                  size={SIZES.medium}
-                />
-              </TouchableOpacity>
-            </View>
-          )}
-          <InputToolbar
-            {...props}
-            containerStyle={[
-              styles.inputToolbar,
-              (editingMessage || replyToMessage || mediaPreview.uri) && {
-                marginTop: rV(0),
-              },
+    const renderDay = useCallback(
+      (props) => {
+        const { currentMessage, previousMessage } = props;
+        const isNewDay =
+          !previousMessage ||
+          (currentMessage?.createdAt &&
+            previousMessage?.createdAt &&
+            currentMessage.createdAt.toDateString() !==
+              previousMessage.createdAt.toDateString());
+
+        if (!isNewDay) return null;
+
+        const formatDate = (date: Date) => {
+          const today = new Date();
+          const yesterday = new Date(today);
+          yesterday.setDate(today.getDate() - 1);
+
+          if (date.toDateString() === today.toDateString()) {
+            return "Today";
+          } else if (date.toDateString() === yesterday.toDateString()) {
+            return "Yesterday";
+          } else {
+            return date.toDateString();
+          }
+        };
+
+        return (
+          <View
+            style={[
+              styles.dateContainer,
+              { backgroundColor: themeColors.background },
             ]}
-            primaryStyle={{ alignItems: "center", flexDirection: "row" }}
-            renderComposer={() => (
-              <View style={styles.inputField}>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder={
-                    editingMessage
-                      ? "Edit message"
-                      : replyToMessage
-                      ? "Reply to message"
-                      : "Message"
-                  }
-                  placeholderTextColor={themeColors.textSecondary}
-                  value={props.text}
-                  onChangeText={props.onTextChanged}
-                />
+          >
+            <Text style={styles.dateText}>
+              {currentMessage.createdAt
+                ? formatDate(currentMessage.createdAt)
+                : "Unknown Date"}
+            </Text>
+          </View>
+        );
+      },
+      [themeColors]
+    );
+
+    const renderSend = useCallback(
+      (props) => {
+        const hasText = props.text && props.text.trim().length > 0;
+
+        return (
+          <View style={styles.attachButtonContainer}>
+            {!hasText && !editingMessage ? (
+              <>
+                <TouchableOpacity onPress={pickImage} style={styles.attachButton}>
+                  <Ionicons
+                    name="image-outline"
+                    color={themeColors.text}
+                    size={SIZES.xLarge}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={pickDocument}
+                  style={styles.attachButton}
+                >
+                  <MaterialCommunityIcons
+                    name="paperclip"
+                    color={themeColors.text}
+                    size={SIZES.xLarge}
+                  />
+                </TouchableOpacity>
+              </>
+            ) : (
+              <View style={styles.sendContainer}>
+                <Send
+                  {...props}
+                  containerStyle={styles.sendButton}
+                  alwaysShowSend
+                  onSend={() => {
+                    if (editingMessage) {
+                      onEditMessage();
+                    } else {
+                      props.onSend({ text: props.text.trim() }, true);
+                    }
+                  }}
+                >
+                  <Ionicons
+                    name={editingMessage ? "checkmark" : "send"}
+                    color="#ffffff"
+                    size={SIZES.large}
+                  />
+                </Send>
               </View>
             )}
-          />
-        </View>
-      );
-    },
-    [
-      renderMediaPreview,
-      editingMessage,
-      replyToMessage,
-      mediaPreview.uri,
-      themeColors,
-    ]
-  );
+          </View>
+        );
+      },
+      [pickImage, pickDocument, themeColors, editingMessage, onEditMessage]
+    );
 
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      padding: rMS(10),
-    },
-    statusContainer: {
-      alignSelf: "flex-end",
-      marginTop: 5,
-    },
-    statusTimeContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "flex-end",
-      marginRight: rS(5),
-    },
-    messageImageContainer: {
-      borderRadius: rMS(10),
-      overflow: "hidden",
-      marginVertical: rV(0),
-      paddingHorizontal: rS(2),
-      paddingVertical: rV(0),
-    },
-    whatsappImage: {
-      width: rS(150),
-      height: rV(150),
-      resizeMode: "cover",
-    },
-    statusText: {
-      fontSize: SIZES.xSmall,
-      color: themeColors.textSecondary,
-      textAlign: "right",
-      paddingRight: rS(8),
-    },
-    username: {
-      fontSize: SIZES.small,
-      color: themeColors.textSecondary,
-      fontWeight: "bold",
-      marginBottom: rV(1),
-      marginLeft: rS(10),
-      paddingRight: rS(12),
-    },
-    avatarContainer: {
-      width: rS(36),
-      height: rS(36),
-      borderRadius: rMS(18),
-      overflow: "hidden",
-      backgroundColor: "#ccc",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    avatar: {
-      width: "100%",
-      height: "100%",
-    },
-    initials: {
-      color: "#fff",
-      fontSize: SIZES.medium,
-    },
-    dateContainer: {
-      paddingVertical: rV(4),
-      paddingHorizontal: rS(8),
-      borderRadius: rMS(10),
-      alignSelf: "center",
-      marginVertical: rV(10),
-    },
-    dateText: {
-      color: themeColors.textSecondary,
-      fontSize: SIZES.small,
-      fontWeight: "bold",
-    },
-    messageImage: {
-      width: rS(300),
-      height: rV(200),
-      borderRadius: rMS(10),
-      margin: rMS(10),
-    },
-    messageVideo: {
-      width: rS(200),
-      height: rV(200),
-      borderRadius: rMS(10),
-      margin: rMS(10),
-    },
-    inputToolbar: {
-      backgroundColor: themeColors.background,
-      borderTopWidth: 0,
-      paddingHorizontal: rS(10),
-      paddingBottom: insets.bottom + rV(5),
-      paddingTop: rV(10),
-      opacity: 0.9,
-    },
-    inputField: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: themeColors.reverseText,
-      borderRadius: rMS(20),
-      flex: 1,
-      paddingVertical: rV(8),
-      paddingHorizontal: rS(10),
-      marginRight: rS(10),
-    },
-    textInput: {
-      flex: 1,
-      color: themeColors.text,
-      fontSize: SIZES.medium,
-      fontFamily: FONT.regular,
-    },
-    attachButtonContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      marginRight: rS(10),
-    },
-    attachButton: {
-      padding: rS(5),
-    },
-    attachIcon: {
-      color: themeColors.text,
-      fontSize: SIZES.large,
-    },
-    sendContainer: {
-      height: rV(30),
-      width: rS(35),
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: themeColors.tint,
-      borderRadius: rMS(20),
-    },
-    sendButton: {
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    replyContainer: {
-      flexDirection: "column",
-      justifyContent: "flex-start",
-      alignItems: "flex-start",
-      backgroundColor: themeColors.secondaryBackground,
-      padding: rMS(10),
-      borderRadius: rMS(5),
-      borderLeftWidth: rS(4),
-      borderLeftColor: "#007AFF",
-      marginRight: rS(4),
-      width: "100%",
-    },
-    replyText: {
-      color: themeColors.text,
-      fontSize: SIZES.small,
-    },
-    replyName: {
-      color: themeColors.text,
-      fontSize: SIZES.small,
-      fontWeight: "bold",
-    },
-    closeReplyButton: {
-      position: "absolute",
-      right: rS(10),
-      top: rV(10),
-    },
-    documentContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      padding: rS(10),
-      borderRadius: rMS(8),
-      maxWidth: rS(250),
-      marginVertical: rV(4),
-    },
-    documentTextContainer: {
-      flexDirection: "column",
-      flexShrink: 1,
-    },
-    documentName: {
-      fontWeight: "600",
-      fontSize: SIZES.medium,
-      marginBottom: rV(2),
-      color: themeColors.text,
-    },
-    documentLabel: {
-      fontSize: SIZES.small,
-      color: themeColors.textSecondary,
-    },
-    previewImage: {
-      width: "100%",
-      height: rV(200),
-      marginBottom: rV(10),
-    },
-    previewDocument: {
-      color: themeColors.text,
-      fontSize: SIZES.medium,
-      marginBottom: rV(10),
-    },
-    modalContainer: {
-      flex: 1,
-      backgroundColor: "rgba(0, 0, 0, 0.9)",
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    fullScreenImage: {
-      width: "100%",
-      height: "100%",
-      resizeMode: "contain",
-    },
-    fullScreenVideo: {
-      width: "100%",
-      height: "100%",
-    },
-    blurBackground: {
-      opacity: 0.7,
-      backgroundColor: themeColors.tint,
-      width: "100%",
-    },
-    editedText: {
-      fontSize: SIZES.xSmall,
-      color: themeColors.textSecondary,
-      marginTop: rV(2),
-    },
-    lastMessagePreview: {
-      fontSize: SIZES.small,
-      color: themeColors.textSecondary,
-      marginTop: rV(2),
-      alignSelf: "center",
-    },
-    timeContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "flex-end",
-      marginRight: rS(8),
-      marginBottom: rV(4),
-    },
-    timeText: {
-      fontSize: SIZES.small,
-      color: themeColors.textSecondary,
-      marginRight: rS(4),
-      marginLeft: rS(9),
-    },
-    statusIcon: {
-      marginLeft: rS(2),
-    },
-    downloadButton: {
-      position: "absolute",
-      bottom: 20,
-      right: 20,
-      backgroundColor: "rgba(0, 0, 0, 0.5)",
-      padding: rS(10),
-      borderRadius: rMS(20),
-    },
-    previewModalContainer: {
-      flex: 142,
-      backgroundColor: themeColors.background,
-    },
-    modalHeader: {
-      flexDirection: "row",
-      alignItems: "center",
-      padding: rS(10),
-      backgroundColor: themeColors.secondaryBackground,
-      borderBottomWidth: 1,
-      borderBottomColor: themeColors.textSecondary + "33",
-    },
-    previewModalTitle: {
-      fontSize: rMS(18),
-      fontWeight: "600",
-      marginLeft: rS(10),
-      color: themeColors.text,
-    },
-    previewImageContainer: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      padding: rS(10),
-    },
-    previewImage: {
-      width: width - rS(20),
-      height: (width - rS(20)) * 1.5,
-      maxHeight: Dimensions.get("window").height * 0.6,
-    },
-    previewButtonContainer: {
-      flexDirection: "row",
-      justifyContent: "center",
-      padding: rS(10),
-      backgroundColor: themeColors.secondaryBackground,
-      borderTopWidth: 1,
-      borderTopColor: themeColors.textSecondary + "33",
-    },
-    previewButton: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: themeColors.tint,
-      paddingVertical: rV(8),
-      paddingHorizontal: rS(12),
-      borderRadius: rMS(8),
-      marginHorizontal: rS(10),
-    },
-    previewButtonText: {
-      color: "#fff",
-      fontSize: rMS(14),
-      fontWeight: "500",
-      marginLeft: rS(6),
-    },
-    previewActionContainer: {
-      flexDirection: "row",
-      justifyContent: "space-around",
-      padding: rS(10),
-      backgroundColor: themeColors.secondaryBackground,
-      borderTopWidth: 1,
-      borderTopColor: themeColors.textSecondary + "33",
-    },
-    previewActionButton: {
-      paddingVertical: rV(12),
-      borderRadius: rMS(10),
-      flex: 1,
-      marginHorizontal: rS(5),
-      alignItems: "center",
-    },
-    previewActionText: {
-      color: "#fff",
-      fontSize: rMS(16),
-      fontWeight: "600",
-    },
-    noImagesText: {
-      color: themeColors.textSecondary,
-      fontSize: rMS(16),
-      textAlign: "center",
-      marginTop: rV(20),
-    },
-    loadingContainer: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    loadingText: {
-      marginTop: rV(10),
-      color: themeColors.text,
-      fontSize: rMS(16),
-    },
-  });
+    const renderMediaPreview = useCallback(() => {
+      if (mediaPreview.uri) {
+        return (
+          <View style={styles.replyContainer}>
+            {mediaPreview.type === "image" ? (
+              <Image
+                source={{ uri: mediaPreview.uri }}
+                style={[styles.previewImage, { width: "100%", height: rV(150) }]}
+              />
+            ) : (
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <MaterialCommunityIcons
+                  name="file-document-outline"
+                  size={SIZES.medium}
+                  color={themeColors.text}
+                  style={{ marginRight: rS(8) }}
+                />
+                <Text style={styles.previewDocument}>
+                  {decodeURIComponent(
+                    mediaPreview.uri.split("/").pop() || "Document"
+                  )}
+                </Text>
+              </View>
+            )}
+            <TouchableOpacity
+              style={styles.closeReplyButton}
+              onPress={() => setMediaPreview({ type: null, uri: null })}
+            >
+              <Ionicons
+                name="close"
+                color={themeColors.text}
+                size={SIZES.medium}
+              />
+            </TouchableOpacity>
+          </View>
+        );
+      }
+      return null;
+    }, [mediaPreview, themeColors]);
 
-  return (
-    <View style={{ flex: 1, paddingTop: rV(1) }}>
-      {loading && messages.length === 0 ? (
-        <View
-          style={[
-            styles.container,
-            { justifyContent: "center", alignItems: "center" },
-          ]}
-        >
-          <ActivityIndicator size="large" color={themeColors.tint} />
-        </View>
-      ) : (
-        <MemoizedGiftedChat
-          messages={messages}
-          onSend={onSend}
-          user={{ _id: user?.id || 1 }}
-          text={messageInput}
-          onInputTextChanged={(text) => setMessageInput(text)}
-          renderSystemMessage={(props) => (
-            <SystemMessage
+    const renderInputToolbar = useCallback(
+      (props) => {
+        return (
+          <View>
+            {renderMediaPreview()}
+            {editingMessage && (
+              <View style={styles.replyContainer}>
+                <Text style={styles.replyName}>
+                  Editing Message by {editingMessage.user.name}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setEditingMessage(null)}
+                  style={styles.closeReplyButton}
+                >
+                  <Ionicons
+                    name="close"
+                    color={themeColors.text}
+                    size={SIZES.medium}
+                  />
+                </TouchableOpacity>
+              </View>
+            )}
+            {replyToMessage && (
+              <View style={styles.replyContainer}>
+                <Text style={styles.replyName}>
+                  Replying to {replyToMessage.user?.name || "Unknown User"}
+                </Text>
+                <Text style={styles.replyText}>
+                  {replyToMessage.text ||
+                    (replyToMessage.image
+                      ? "Photo"
+                      : replyToMessage.document
+                      ? "Document"
+                      : "")}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setReplyToMessage(null)}
+                  style={styles.closeReplyButton}
+                >
+                  <Ionicons
+                    name="close"
+                    color={themeColors.text}
+                    size={SIZES.medium}
+                  />
+                </TouchableOpacity>
+              </View>
+            )}
+            <InputToolbar
               {...props}
-              textStyle={{ color: themeColors.textSecondary }}
+              containerStyle={[
+                styles.inputToolbar,
+                (editingMessage || replyToMessage || mediaPreview.uri) && {
+                  marginTop: rV(0),
+                },
+              ]}
+              primaryStyle={{ alignItems: "center", flexDirection: "row" }}
+              renderComposer={() => (
+                <View style={styles.inputField}>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder={
+                      editingMessage
+                        ? "Edit message"
+                        : replyToMessage
+                        ? "Reply to message"
+                        : "Message"
+                    }
+                    placeholderTextColor={themeColors.textSecondary}
+                    value={props.text}
+                    onChangeText={props.onTextChanged}
+                  />
+                </View>
+              )}
             />
-          )}
-          renderAvatar={renderAvatar}
-          renderBubble={renderBubble}
-          renderSend={renderSend}
-          renderInputToolbar={renderInputToolbar}
-          renderMessageImage={renderMessageImage}
-          renderDay={renderDay}
-          minInputToolbarHeight={insets.bottom + rV(50)}
-          scrollToBottom={true}
-          isTyping={false}
-          inverted={true}
-          loadEarlier={loadEarlier}
-          onLoadEarlier={handleLoadEarlier}
-          isLoadingEarlier={isLoadingEarlier}
-          listViewProps={{
-            scrollEventThrottle: 400,
-            onScroll: ({ nativeEvent }) => {
-              const isCloseToTop = nativeEvent.contentOffset.y <= 100;
-              if (isCloseToTop && loadEarlier && !isLoadingEarlier) {
-                handleLoadEarlier();
-              }
-            },
-          }}
+          </View>
+        );
+      },
+      [
+        renderMediaPreview,
+        editingMessage,
+        replyToMessage,
+        mediaPreview.uri,
+        themeColors,
+      ]
+    );
+
+    const styles = StyleSheet.create({
+      container: {
+        flex: 1,
+        padding: rMS(10),
+      },
+      statusContainer: {
+        alignSelf: "flex-end",
+        marginTop: 5,
+      },
+      statusTimeContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "flex-end",
+        marginRight: rS(5),
+      },
+      messageImageContainer: {
+        borderRadius: rMS(10),
+        overflow: "hidden",
+        marginVertical: rV(0),
+        paddingHorizontal: rS(2),
+        paddingVertical: rV(0),
+      },
+      whatsappImage: {
+        width: rS(150),
+        height: rV(150),
+        resizeMode: "cover",
+      },
+      statusText: {
+        fontSize: SIZES.xSmall,
+        color: themeColors.textSecondary,
+        textAlign: "right",
+        paddingRight: rS(8),
+      },
+      username: {
+        fontSize: SIZES.small,
+        color: themeColors.textSecondary,
+        fontWeight: "bold",
+        marginBottom: rV(1),
+        marginLeft: rS(10),
+        paddingRight: rS(12),
+      },
+      avatarContainer: {
+        width: rS(36),
+        height: rS(36),
+        borderRadius: rMS(18),
+        overflow: "hidden",
+        backgroundColor: "#ccc",
+        alignItems: "center",
+        justifyContent: "center",
+      },
+      avatar: {
+        width: "100%",
+        height: "100%",
+      },
+      initials: {
+        color: "#fff",
+        fontSize: SIZES.medium,
+      },
+      dateContainer: {
+        paddingVertical: rV(4),
+        paddingHorizontal: rS(8),
+        borderRadius: rMS(10),
+        alignSelf: "center",
+        marginVertical: rV(10),
+      },
+      dateText: {
+        color: themeColors.textSecondary,
+        fontSize: SIZES.small,
+        fontWeight: "bold",
+      },
+      messageImage: {
+        width: rS(300),
+        height: rV(200),
+        borderRadius: rMS(10),
+        margin: rMS(10),
+      },
+      messageVideo: {
+        width: rS(200),
+        height: rV(200),
+        borderRadius: rMS(10),
+        margin: rMS(10),
+      },
+      inputToolbar: {
+        backgroundColor: themeColors.background,
+        borderTopWidth: 0,
+        paddingHorizontal: rS(10),
+        paddingBottom: insets.bottom + rV(5),
+        paddingTop: rV(10),
+        opacity: 0.9,
+      },
+      inputField: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: themeColors.reverseText,
+        borderRadius: rMS(20),
+        flex: 1,
+        paddingVertical: rV(8),
+        paddingHorizontal: rS(10),
+        marginRight: rS(10),
+      },
+      textInput: {
+        flex: 1,
+        color: themeColors.text,
+        fontSize: SIZES.medium,
+        fontFamily: FONT.regular,
+      },
+      attachButtonContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginRight: rS(10),
+      },
+      attachButton: {
+        padding: rS(5),
+      },
+      attachIcon: {
+        color: themeColors.text,
+        fontSize: SIZES.large,
+      },
+      sendContainer: {
+        height: rV(30),
+        width: rS(35),
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: themeColors.tint,
+        borderRadius: rMS(20),
+      },
+      sendButton: {
+        justifyContent: "center",
+        alignItems: "center",
+      },
+      replyContainer: {
+        flexDirection: "column",
+        justifyContent: "flex-start",
+        alignItems: "flex-start",
+        backgroundColor: themeColors.secondaryBackground,
+        padding: rMS(10),
+        borderRadius: rMS(5),
+        borderLeftWidth: rS(4),
+        borderLeftColor: "#007AFF",
+        marginRight: rS(4),
+        width: "100%",
+      },
+      replyText: {
+        color: themeColors.text,
+        fontSize: SIZES.small,
+      },
+      replyName: {
+        color: themeColors.text,
+        fontSize: SIZES.small,
+        fontWeight: "bold",
+      },
+      closeReplyButton: {
+        position: "absolute",
+        right: rS(10),
+        top: rV(10),
+      },
+      documentContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        padding: rS(10),
+        borderRadius: rMS(8),
+        maxWidth: rS(250),
+        marginVertical: rV(4),
+      },
+      documentTextContainer: {
+        flexDirection: "column",
+        flexShrink: 1,
+      },
+      documentName: {
+        fontWeight: "600",
+        fontSize: SIZES.medium,
+        marginBottom: rV(2),
+        color: themeColors.text,
+      },
+      documentLabel: {
+        fontSize: SIZES.small,
+        color: themeColors.textSecondary,
+      },
+      previewImage: {
+        width: "100%",
+        height: rV(200),
+        marginBottom: rV(10),
+      },
+      previewDocument: {
+        color: themeColors.text,
+        fontSize: SIZES.medium,
+        marginBottom: rV(10),
+      },
+      modalContainer: {
+        flex: 1,
+        backgroundColor: "rgba(0, 0, 0, 0.9)",
+        justifyContent: "center",
+        alignItems: "center",
+      },
+      fullScreenImage: {
+        width: "100%",
+        height: "100%",
+        resizeMode: "contain",
+      },
+      fullScreenVideo: {
+        width: "100%",
+        height: "100%",
+      },
+      blurBackground: {
+        opacity: 0.7,
+        backgroundColor: themeColors.tint,
+        width: "100%",
+      },
+      editedText: {
+        fontSize: SIZES.xSmall,
+        color: themeColors.textSecondary,
+        marginTop: rV(2),
+      },
+      lastMessagePreview: {
+        fontSize: SIZES.small,
+        color: themeColors.textSecondary,
+        marginTop: rV(2),
+        alignSelf: "center",
+      },
+      timeContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "flex-end",
+        marginRight: rS(8),
+        marginBottom: rV(4),
+      },
+      timeText: {
+        fontSize: SIZES.small,
+        color: themeColors.textSecondary,
+        marginRight: rS(4),
+        marginLeft: rS(9),
+      },
+      statusIcon: {
+        marginLeft: rS(2),
+      },
+      downloadButton: {
+        position: "absolute",
+        bottom: 20,
+        right: 20,
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        padding: rS(10),
+        borderRadius: rMS(20),
+      },
+      previewModalContainer: {
+        flex: 142,
+        backgroundColor: themeColors.background,
+      },
+      modalHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        padding: rS(10),
+        backgroundColor: themeColors.secondaryBackground,
+        borderBottomWidth: 1,
+        borderBottomColor: themeColors.textSecondary + "33",
+      },
+      previewModalTitle: {
+        fontSize: rMS(18),
+        fontWeight: "600",
+        marginLeft: rS(10),
+        color: themeColors.text,
+      },
+      previewImageContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        padding: rS(10),
+      },
+      previewButtonContainer: {
+        flexDirection: "row",
+        justifyContent: "center",
+        padding: rS(10),
+        backgroundColor: themeColors.secondaryBackground,
+        borderTopWidth: 1,
+        borderTopColor: themeColors.textSecondary + "33",
+      },
+      previewButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: themeColors.tint,
+        paddingVertical: rV(8),
+        paddingHorizontal: rS(12),
+        borderRadius: rMS(8),
+        marginHorizontal: rS(10),
+      },
+      previewButtonText: {
+        color: "#fff",
+        fontSize: rMS(14),
+        fontWeight: "500",
+        marginLeft: rS(6),
+      },
+      previewActionContainer: {
+        flexDirection: "row",
+        justifyContent: "space-around",
+        padding: rS(10),
+        backgroundColor: themeColors.secondaryBackground,
+        borderTopWidth: 1,
+        borderTopColor: themeColors.textSecondary + "33",
+      },
+      previewActionButton: {
+        paddingVertical: rV(12),
+        borderRadius: rMS(10),
+        flex: 1,
+        marginHorizontal: rS(5),
+        alignItems: "center",
+      },
+      previewActionText: {
+        color: "#fff",
+        fontSize: rMS(16),
+        fontWeight: "600",
+      },
+      noImagesText: {
+        color: themeColors.textSecondary,
+        fontSize: rMS(16),
+        textAlign: "center",
+        marginTop: rV(20),
+      },
+      loadingContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+      },
+      loadingText: {
+        marginTop: rV(10),
+        color: themeColors.text,
+        fontSize: rMS(16),
+      },
+    });
+
+    return (
+      <View style={{ flex: 1, paddingTop: rV(1) }}>
+        {loading && messages.length === 0 ? (
+          <View
+            style={[
+              styles.container,
+              { justifyContent: "center", alignItems: "center" },
+            ]}
+          >
+            <ActivityIndicator size="large" color={themeColors.tint} />
+          </View>
+        ) : (
+          <MemoizedGiftedChat
+            messages={messages}
+            onSend={onSend}
+            user={{ _id: user?.id || 1 }}
+            text={messageInput}
+            onInputTextChanged={(text) => setMessageInput(text)}
+            renderSystemMessage={(props) => (
+              <SystemMessage
+                {...props}
+                textStyle={{ color: themeColors.textSecondary }}
+              />
+            )}
+            renderAvatar={renderAvatar}
+            renderBubble={renderBubble}
+            renderSend={renderSend}
+            renderInputToolbar={renderInputToolbar}
+            renderMessageImage={renderMessageImage}
+            renderDay={renderDay}
+            minInputToolbarHeight={insets.bottom + rV(50)}
+            scrollToBottom={true}
+            isTyping={false}
+            inverted={true}
+            loadEarlier={loadEarlier}
+            onLoadEarlier={handleLoadEarlier}
+            isLoadingEarlier={isLoadingEarlier}
+            listViewProps={{
+              scrollEventThrottle: 400,
+              onScroll: ({ nativeEvent }) => {
+                const isCloseToTop = nativeEvent.contentOffset.y <= 100;
+                if (isCloseToTop && loadEarlier && !isLoadingEarlier) {
+                  handleLoadEarlier();
+                }
+              },
+            }}
+          />
+        )}
+        <FullScreenImageViewer
+          visible={isImageViewerVisible}
+          images={imageViewerImages}
+          currentIndex={currentImageIndex}
+          onRequestClose={() => setIsImageViewerVisible(false)}
         />
-      )}
-      <FullScreenImageViewer
-        visible={isImageViewerVisible}
-        images={imageViewerImages}
-        currentIndex={currentImageIndex}
-        onRequestClose={() => setIsImageViewerVisible(false)}
-      />
-      <ImagePreviewModal
-        visible={isImagePreviewVisible}
-        images={selectedImagesForPreview}
-        onClose={() => setIsImagePreviewVisible(false)}
-        onSend={handleSendImage}
-      />
-    </View>
-  );
+        <ImagePreviewModal
+          visible={isImagePreviewVisible}
+          images={selectedImagesForPreview}
+          onClose={() => setIsImagePreviewVisible(false)}
+          onSend={handleSendImage}
+        />
+      </View>
+    );
 };
 
 export default CommunityChatScreen;

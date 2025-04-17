@@ -8,14 +8,14 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "../../../components/AuthContext";
-import { getTimetable } from "../../../TimelineApiCalls";
-import Colors from "../../../constants/Colors";
-import TimetableDisplay from "../../../components/TimetableDisplay";
+import { useAuth } from "../../components/AuthContext";
+import { getTimetable } from "../../TimelineApiCalls";
+import Colors from "../../constants/Colors";
+import TimetableDisplay from "../../components/TimetableDisplay";
 import { router, useLocalSearchParams } from "expo-router";
-import { rMS, rS, rV, SIZES } from "../../../constants";
-import ErrorMessage from "../../../components/ErrorMessage"; // Assuming you have this component
-import GameButton from "../../../components/GameButton";
+import { rMS, rS, rV, SIZES } from "../../constants";
+import ErrorMessage from "../../components/ErrorMessage"; // Assuming you have this component
+import GameButton from "../../components/GameButton";
 import { FontAwesome6 } from "@expo/vector-icons";
 
 interface Period {

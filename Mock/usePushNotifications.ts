@@ -78,112 +78,123 @@ export const usePushNotifications = (): PushNotificationState => {
     }
   }
 
- // Set up a notification handler once when the component mounts
-useEffect(() => {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: true,
-    }),
-  });
-}, []);
+  // Set up notification handler
+  useEffect(() => {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+      }),
+    });
+  }, []);
 
-// Update presentForegroundNotification to use scheduleNotificationAsync
-async function presentForegroundNotification(notification: Notifications.Notification) {
-  if (!notification) return;
+  // Handle foreground notifications
+  async function presentForegroundNotification(notification: Notifications.Notification) {
+    if (!notification) return;
 
-  const data = notification.request.content.data || {};
-  console.log("Data: ",data)
-  const imageUrl = data.community_image || null;
-  
-  if (Platform.OS === 'ios') {
-    await Notifications.setNotificationCategoryAsync('default', [
-      {
-        identifier: 'default',
-        buttonTitle: 'Open',
-        options: { opensAppToForeground: true },
-      },
-    ]);
+    const data = notification.request.content.data || {};
+    const imageUrl = data.community_image || null;
+    // Determine content type for notification body
+    let notificationBody = notification.request.content.body || "";
+    if (data.image && !data.message) {
+      notificationBody = "Photo";
+    } else if (data.document && !data.message) {
+      notificationBody = "Document";
+    }
+
+    if (Platform.OS === "ios") {
+      await Notifications.setNotificationCategoryAsync("default", [
+        {
+          identifier: "default",
+          buttonTitle: "Open",
+          options: { opensAppToForeground: true },
+        },
+      ]);
+    }
+
+    // Construct notification content
+    const notificationContent: Notifications.NotificationContentInput = {
+      title: notification.request.content.title,
+      body: notificationBody,
+      data: notification.request.content.data,
+      subtitle: notification.request.content.subtitle || undefined,
+      sound: notification.request.content.sound || "default",
+      // Only include attachments if imageUrl is valid
+      attachments: imageUrl ? [{ url: imageUrl }] : [],
+      badge: notification.request.content.badge || undefined,
+      categoryIdentifier: notification.request.content.categoryIdentifier || "default",
+      threadIdentifier: notification.request.content.threadIdentifier || "",
+    };
+
+    try {
+      // Schedule notification to display immediately
+      await Notifications.scheduleNotificationAsync({
+        content: notificationContent,
+        trigger: null, // Immediate display
+      });
+    } catch (error) {
+      console.error("Error scheduling foreground notification:", error);
+    }
   }
-
-  // Construct the notification content
-  const notificationContent = {
-    title: notification.request.content.title,
-    body: notification.request.content.body,
-    data: notification.request.content.data,
-    subtitle: notification.request.content.subtitle || null,
-    sound: notification.request.content.sound || "default",
-    attachments: imageUrl
-      ? [{ uri: imageUrl }] // Attach the image if available
-      : [],
-    launchImageName: notification.request.content.launchImageName || "",
-    badge: SLATE,
-    categoryIdentifier: notification.request.content.categoryIdentifier || "",
-    threadIdentifier: notification.request.content.threadIdentifier || "",
-    targetContentIdentifier: notification.request.content.targetContentIdentifier || null,
-    interruptionLevel: notification.request.content.interruptionLevel || "active",
-  };
-
-  // Use scheduleNotificationAsync with null trigger to present immediately
-  await Notifications.scheduleNotificationAsync({
-    content: notificationContent,
-    trigger: null, // null trigger means the notification should be displayed immediately
-  });
-}
 
   useEffect(() => {
-  if (!userToken?.token) {
-    console.log("Waiting for user token...");
-    return;
-  }
-
-  registerForPushNotificationsAsync().then((token) => {
-    if (token) {
-      setExpoPushToken(token);
-
-      // Check if token has changed before sending it again
-      AsyncStorage.getItem("savedPushToken").then((storedToken) => {
-        if (storedToken !== token.data) {
-          saveTokenToBackend(token.data, userToken.token);
-          AsyncStorage.setItem("savedPushToken", token.data);
-        }
-      });
+    if (!userToken?.token) {
+      console.log("Waiting for user token...");
+      return;
     }
-  });
 
-  if (!notificationListener.current) {
-    notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
-      console.log("Notification received:", notification);
-      setNotification(notification);
-    });
-  }
+    // Register for push notifications
+    registerForPushNotificationsAsync().then((token) => {
+      if (token) {
+        setExpoPushToken(token);
 
-  if (!responseListener.current) {
-    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
-      console.log("Notification response:", response);
-      const { data } = response.notification.request.content;
-      if (data && data.community_id) {
-        router.push({
-          pathname: "ChatScreen",
-          params: { communityId: data.community_id, name: data.community_name, image: data.community_image },
+        // Save token if it has changed
+        AsyncStorage.getItem("savedPushToken").then((storedToken) => {
+          if (storedToken !== token.data) {
+            saveTokenToBackend(token.data, userToken.token);
+            AsyncStorage.setItem("savedPushToken", token.data);
+          }
         });
       }
     });
-  }
 
-  return () => {
-    if (notificationListener.current) {
-      Notifications.removeNotificationSubscription(notificationListener.current);
-      notificationListener.current = undefined;
+    // Handle foreground notifications
+    if (!notificationListener.current) {
+      notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
+        console.log("Notification received:", notification);
+        setNotification(notification);
+        // Present notification in foreground
+        presentForegroundNotification(notification);
+      });
     }
-    if (responseListener.current) {
-      Notifications.removeNotificationSubscription(responseListener.current);
-      responseListener.current = undefined;
-    }
-  };
-}, [userToken]);
 
+    // Handle notification interactions
+    if (!responseListener.current) {
+      responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
+        console.log("Notification response:", response);
+        const { data } = response.notification.request.content;
+        if (data && data.community_id) {
+          router.push({
+            pathname: "ChatScreen",
+            params: { communityId: data.community_id, name: data.community_name, image: data.community_image },
+          });
+        }
+      });
+    }
+
+    // Cleanup listeners
+    return () => {
+      if (notificationListener.current) {
+        Notifications.removeNotificationSubscription(notificationListener.current);
+        notificationListener.current = undefined;
+      }
+      if (responseListener.current) {
+        Notifications.removeNotificationSubscription(responseListener.current);
+        responseListener.current = undefined;
+      }
+    };
+  }, [userToken]);
 
   return {
     expoPushToken,

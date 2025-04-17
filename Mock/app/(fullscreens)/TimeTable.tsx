@@ -12,14 +12,14 @@ import {
 } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
-import { createPeriod, createTimetable, updateTimetable } from "../../../TimelineApiCalls";
-import { useAuth } from "../../../components/AuthContext";
+import { createPeriod, createTimetable, updateTimetable } from "../../TimelineApiCalls";
+import { useAuth } from "../../components/AuthContext";
 import { router, useLocalSearchParams, useNavigation } from "expo-router";
-import Colors from "../../../constants/Colors";
-import { rS, rV, rMS } from "../../../constants";
-import AnimatedRoundTextInput from "../../../components/AnimatedRoundTextInput";
-import GameButton from "../../../components/GameButton";
-import CustomDateTimeSelector from "../../../components/CustomDateTimeSelector";
+import Colors from "../../constants/Colors";
+import { rS, rV, rMS } from "../../constants";
+import AnimatedRoundTextInput from "../../components/AnimatedRoundTextInput";
+import GameButton from "../../components/GameButton";
+import CustomDateTimeSelector from "../../components/CustomDateTimeSelector";
 import { useRoute } from "@react-navigation/native";
 
 interface Period {

@@ -1,4 +1,3 @@
-// CreateNewTime.tsx
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -44,7 +43,7 @@ interface CreateTaskData {
 
 const CreateNewTime = () => {
   const { userToken, userInfo } = useAuth();
-  const { sqliteRemoveItem } = useWebSocket();
+  const { sqliteRemoveItem, scheduleTaskNotification, storeNotificationId } = useWebSocket();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState(new Date());
@@ -68,18 +67,28 @@ const CreateNewTime = () => {
     mutationFn: async ({ taskData, token }) => {
       return await createTask(taskData, token);
     },
-    onSuccess: (createdTask) => {
-      console.log('Task created successfully:', createdTask);
+    onSuccess: async (createdTask) => {
+      console.log("Task created successfully:", createdTask);
       const dateString = formatDate(dueDate);
       const categoryId = selectedCategory?.value?.toString();
 
       // Invalidate caches
-      sqliteRemoveItem(`todayPlans_${dateString}_all`);
+      await sqliteRemoveItem(`todayPlans_${dateString}_all`);
       if (categoryId) {
-        sqliteRemoveItem(`todayPlans_${dateString}_${categoryId}`);
+        await sqliteRemoveItem(`todayPlans_${dateString}_${categoryId}`);
       }
 
-      router.navigate("three");
+      // Schedule notification for the created task
+      try {
+        const notificationId = await scheduleTaskNotification(createdTask);
+        if (notificationId) {
+          await storeNotificationId(createdTask.id, notificationId);
+        }
+      } catch (error) {
+        console.error("Error scheduling notification:", error);
+      }
+
+      router.dismiss(1);
       setErrorMessage(null);
     },
     onError: (error) => {
@@ -123,9 +132,7 @@ const CreateNewTime = () => {
       is_recurring: recurrenceOption !== "Does not repeat",
       recurrence_interval: recurrenceOption !== "Does not repeat" ? recurrenceOption.toLowerCase() : null,
       recurrence_end_date:
-        recurrenceOption !== "Does not repeat"
-          ? formatDate(recurrenceEndDate)
-          : null,
+        recurrenceOption !== "Does not repeat" ? formatDate(recurrenceEndDate) : null,
     };
 
     createTaskMutation.mutate({

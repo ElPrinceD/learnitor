@@ -26,10 +26,10 @@ export default function Tab3Layout() {
               fontWeight: "bold",
             },
             headerRight: () => (
-              <Pressable onPressIn={() => router.navigate("TimeTableList")}>
+              <Pressable onPressIn={() => router.navigate("createNewTime")}>
                 {({ pressed }) => (
                   <MaterialCommunityIcons
-                    name="timetable"
+                    name="plus-circle"
                     size={25}
                     color={Colors[colorScheme ?? "light"].text}
                     style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
@@ -43,7 +43,7 @@ export default function Tab3Layout() {
           name="EditPlan"
           options={{
             headerShown: true,
-            presentation: "modal",
+            presentation: "containedModal",
             animation: "slide_from_right",
             headerStyle: {
               backgroundColor: themeColors.background,
@@ -56,23 +56,7 @@ export default function Tab3Layout() {
             headerShadowVisible: false,
           }}
         />
-        <Stack.Screen
-          name="TimeTable"
-          options={{
-            headerShown: true,
-            presentation: "card",
-            headerStyle: {
-              backgroundColor: themeColors.background,
-            },
-            // animation: "slide_from_bottom",
-            headerTitle: "Create a TimeTable",
-            headerTitleAlign: "center",
-            headerShadowVisible: false,
-            headerTitleStyle: {
-              fontWeight: "bold",
-            },
-          }}
-        />
+       
         <Stack.Screen
           name="createNewTime"
           options={{
@@ -91,56 +75,7 @@ export default function Tab3Layout() {
             headerShadowVisible: false,
           }}
         />
-        <Stack.Screen
-          name="TimeTableList"
-          options={{
-            headerStyle: {
-              backgroundColor: themeColors.background,
-            },
-            headerTitle: "TimeTable",
-            headerTitleAlign: "center",
-            headerTitleStyle: {
-              fontWeight: "bold",
-            },
-            headerShadowVisible: false,
-            headerBackTitle: "Back",
-          }}
-        />
-        <Stack.Screen
-          name="TimeTableDetails"
-          options={{
-            headerShown: true,
-            presentation: "containedModal",
-            headerBackTitle: "Back",
-            headerStyle: {
-              backgroundColor: themeColors.background,
-            },
-            headerTitle: "Timetable",
-            headerTitleAlign: "center",
-            headerTitleStyle: {
-              fontWeight: "bold",
-            },
-            headerShadowVisible: false,
-            
-          }}
-        />
-        <Stack.Screen
-          name="EditPeriods"
-          options={{
-            headerShown: true,
-            presentation: "containedModal",
-            headerBackTitle: "Back",
-            headerStyle: {
-              backgroundColor: themeColors.background,
-            },
-            headerTitle: "Edit Periods",
-            headerTitleAlign: "center",
-            headerTitleStyle: {
-              fontWeight: "bold",
-            },
-            headerShadowVisible: false,
-          }}
-        />
+    
       </Stack>
     </SafeAreaProvider>
   );

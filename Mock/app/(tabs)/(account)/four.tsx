@@ -20,6 +20,7 @@ import ApiUrl from "../../../config";
 import Colors from "../../../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../../../constants";
 import { useWebSocket } from "../../../webSocketProvider"; // Add this import
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const Profile = () => {
   const { logout, userToken, userInfo, setUserInfo } = useAuth();
@@ -34,15 +35,24 @@ const Profile = () => {
   const clearUserDataCache = async () => {
     try {
       await sqliteClear(); // Replace AsyncStorage.clear with sqliteClear
+      
       console.log("All SQLite storage data cleared.");
     } catch (e) {
       console.error("Error clearing SQLite storage:", e);
     }
   };
-
+  const clearUserTokenDataCache = async () => {
+    try {
+       await AsyncStorage.multiRemove(["token", "user"]);
+      console.log("All AsyncStorage data cleared.");
+    } catch (e) {
+      console.error("Error clearing AsyncStorage:", e);
+    }
+  };
   const handleLogout = async () => {
     try {
       await clearUserDataCache(); // Ensure this is awaited
+      await clearUserTokenDataCache();
       logout();
       router.replace("Intro");
     } catch (error) {

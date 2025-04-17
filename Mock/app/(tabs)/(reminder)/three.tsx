@@ -97,7 +97,8 @@ const Timeline = () => {
       description: plan.description,
       duedate: plan.due_date,
       category_id: String(plan.category),
-      duetime: plan.due_time_start,
+      dueTimeStart: plan.due_time_start,
+      dueTimeEnd: plan.due_time_end,
       category_name: categoryNames[plan.category],
     });
   };
@@ -196,12 +197,7 @@ const Timeline = () => {
           </View>
         </BottomSheetScrollView>
       </BottomSheet>
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={handleNavigateCreateTask}
-      >
-        <FontAwesome6 name="add" size={SIZES.xLarge} color={themeColors.text} />
-      </TouchableOpacity>
+     
       {errorMessage && (
         <ErrorMessage
           message={errorMessage}

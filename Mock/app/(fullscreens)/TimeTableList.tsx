@@ -11,7 +11,7 @@ import {
   Modal,
 } from "react-native";
 import { useMutation, useQueries, useQuery } from "@tanstack/react-query";
-import { useAuth } from "../../../components/AuthContext";
+import { useAuth } from "../../components/AuthContext";
 import {
   createPeriod,
   createTimetable,
@@ -19,17 +19,17 @@ import {
   getTimetables,
   getUserDetails,
   updateTimetable,
-} from "../../../TimelineApiCalls";
-import Colors from "../../../constants/Colors";
-import { rMS, rS, rV, SIZES } from "../../../constants";
+} from "../../TimelineApiCalls";
+import Colors from "../../constants/Colors";
+import { rMS, rS, rV, SIZES } from "../../constants";
 import Icon from "react-native-vector-icons/Ionicons";
-import ErrorMessage from "../../../components/ErrorMessage";
+import ErrorMessage from "../../components/ErrorMessage";
 import { router } from "expo-router";
-import GameButton from "../../../components/GameButton";
+import GameButton from "../../components/GameButton";
 import { Skeleton } from "moti/skeleton";
-import { User } from "../../../components/types";
+import { User } from "../../components/types";
 import { FontAwesome6 } from "@expo/vector-icons";
-import AnimatedTextInput from "../../../components/AnimatedTextInput";
+import AnimatedTextInput from "../../components/AnimatedTextInput";
 
 interface Timetable {
   id: number;

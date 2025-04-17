@@ -118,6 +118,28 @@ export const getUserCommunities = async (token: string) => {
     }
 };
 
+export const removeCommunityMember = async (
+    communityId: string | number,
+    userId: string | number,
+    token: string
+) => {
+    try {
+        const response = await apiClient.post(
+            `${COMMUNITY_API_BASE_URL}/${communityId}/remove_member/`,
+            { user_id: userId },
+            {
+                headers: {
+                    Authorization: `Token ${token}`,
+                },
+            }
+        );
+        return response.data;
+    } catch (error) {
+        console.error('Error removing community member:', error);
+        throw error;
+    }
+};
+
 
 
 

@@ -45,12 +45,18 @@ export interface WebSocketContextType {
   getCachedTodayPlans: (date: Date, category?: string) => Promise<any[]>;
   getCachedCategoryNames: () => Promise<Record<number, string>>;
   unreadCommunitiesCount: number;
-  scheduleTaskNotification: (task: any) => Promise<void>;
+  scheduleTaskNotification: (task: any) => Promise<string | null>;
+  cancelTaskNotification: (taskId: string) => Promise<void>;
+  storeNotificationId: (taskId: string | number, notificationId: string) => Promise<void>;
+  getNotificationId: (taskId: string | number) => Promise<string | null>;
   markMessageAsRead: (communityId: string) => void;
   sqliteGetItem: (key: string) => Promise<string | null>;
   sqliteSetItem: (key: string, value: string) => Promise<void>;
   sqliteRemoveItem: (key: string) => Promise<void>;
   sqliteClear: () => Promise<void>;
+  setCurrentCommunity: (communityId: string | null) => void;
+  
+  
 }
 
 const WebSocketContext = createContext<WebSocketContextType | null>(null);
@@ -65,8 +71,10 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [unreadCommunityMessages, setUnreadCommunityMessages] = useState<Record<string, any>>({});
+  const [currentCommunityId, setCurrentCommunityId] = useState<string | null>(null);
   const { userToken, userInfo } = useAuth();
   const userId = userInfo?.user?.id;
+
   const messageQueue: any[] = [];
 
   const db: SQLiteDatabase = useSQLiteContext();
@@ -190,10 +198,24 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
           };
           await sqliteSetItem(`last_message_${data.community_id}`, JSON.stringify(newLastMessage));
           if (userId && data.sender_id !== userId) {
-            setUnreadCommunityMessages((prev) => ({
-              ...prev,
-              [data.community_id]: newLastMessage,
-            }));
+            if (data.community_id === currentCommunityId) {
+              if (socket) {
+              // Mark as read if received in the current community
+              socket.send(JSON.stringify({
+                type: "message_status_update",
+                message_id: data.id,
+                status: "read",
+              }));
+            }
+              newLastMessage.status = "read";
+              await sqliteSetItem(`last_message_${data.community_id}`, JSON.stringify(newLastMessage));
+            } else {
+              // Only update unread if not in the current community
+              setUnreadCommunityMessages((prev) => ({
+                ...prev,
+                [data.community_id]: newLastMessage,
+              }));
+            }
           }
           break;
         }
@@ -447,37 +469,33 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     return null;
   };
 
+  const setCurrentCommunity = (communityId: string | null) => {
+    setCurrentCommunityId(communityId);
+  };
+
   const unreadCommunitiesCount = Object.values(unreadCommunityMessages).filter(
     (message) => message?.status !== "read"
   ).length;
 
-  const markMessageAsRead = useCallback(
-    async (communityId: string) => {
-      setUnreadCommunityMessages((prev) => ({
-        ...prev,
-        [communityId]: {
-          ...prev[communityId],
-          status: "read",
-        },
-      }));
-      const lastMessageStr = await sqliteGetItem(`last_message_${communityId}`);
-      if (lastMessageStr) {
-        const lastMessage = JSON.parse(lastMessageStr);
-        await sqliteSetItem(`last_message_${communityId}`, JSON.stringify({
-          ...lastMessage,
+  const markMessageAsRead = useCallback(async (communityId: string) => {
+    const lastMessageStr = await sqliteGetItem(`last_message_${communityId}`);
+    if (lastMessageStr) {
+      const lastMessage = JSON.parse(lastMessageStr);
+      if (lastMessage.sender_id !== userId && lastMessage.status !== "read") {
+        lastMessage.status = "read";
+        await sqliteSetItem(`last_message_${communityId}`, JSON.stringify(lastMessage));
+        socket?.send(JSON.stringify({
+          type: "message_status_update",
+          message_id: lastMessage.id,
           status: "read",
         }));
-        socket?.send(
-          JSON.stringify({
-            type: "message_status_update",
-            message_id: lastMessage.id,
-            status: "read",
-          })
-        );
+        setUnreadCommunityMessages((prev) => ({
+          ...prev,
+          [communityId]: lastMessage,
+        }));
       }
-    },
-    [socket]
-  );
+    }
+  }, [socket, userId]);
 
   const joinAndSubscribeToCommunity = useCallback(
     async (communityId: string | number) => {
@@ -517,19 +535,23 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
 
   const updateCachedCommunitiesFn = async (communityId: string | number) => {
     if (token && isConnected) {
-      try {
-        const newCommunity = await getCommunityDetails(communityId, token);
-        let cachedCommunities = await sqliteGetItem("communities");
-        let communities = cachedCommunities ? JSON.parse(cachedCommunities) : [];
-        if (!communities.some((c: any) => c.id === communityId)) {
-          communities.push(newCommunity);
-          await sqliteSetItem("communities", JSON.stringify(communities));
+        try {
+            const newCommunity = await getCommunityDetails(communityId, token);
+            await sqliteSetItem(`community_${communityId}`, JSON.stringify(newCommunity));
+            const cachedCommunitiesRaw = await sqliteGetItem("communities");
+            let cachedCommunities = cachedCommunitiesRaw ? JSON.parse(cachedCommunitiesRaw) : [];
+            const communityIndex = cachedCommunities.findIndex((comm: any) => comm.id.toString() === communityId.toString());
+            if (communityIndex !== -1) {
+                cachedCommunities[communityIndex] = newCommunity;
+            } else {
+                cachedCommunities.push(newCommunity);
+            }
+            await sqliteSetItem("communities", JSON.stringify(cachedCommunities));
+        } catch (error) {
+            console.error("Error updating cached communities:", error);
         }
-      } catch (error) {
-        console.error("Error updating cached communities:", error);
-      }
     }
-  };
+};
 
   const fetchAndCacheCommunitiesFn = useCallback(async () => {
     if (token && isConnected) {
@@ -557,7 +579,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     }
   }, [token, isConnected, sqliteGetItem, sqliteSetItem]);
 
-  const scheduleTaskNotification = useCallback(async (task: Task) => {
+  const scheduleTaskNotification = useCallback(async (task: Task): Promise<string | null> => {
     try {
       const [year, month, day] = task.due_date.split("-").map(Number);
       const [hours, minutes] = task.due_time_start.split(":").map(Number);
@@ -565,7 +587,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
 
       if (triggerDate <= new Date()) {
         console.log(`Task ${task.id} is in the past, skipping notification`);
-        return;
+        return null;
       }
 
       const notificationId = await Notifications.scheduleNotificationAsync({
@@ -579,46 +601,42 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
       });
 
       console.log(`Scheduled notification for task ${task.id} at ${triggerDate.toISOString()}`);
+      return notificationId;
     } catch (error) {
       console.error("Failed to schedule notification:", error);
+      return null;
     }
   }, []);
 
-  const scheduleNotificationsForExistingPlans = useCallback(async () => {
-    if (!token) return;
-
+  const cancelTaskNotification = useCallback(async (taskId: string): Promise<void> => {
     try {
-      const today = new Date();
-      const dateString = today.toISOString().split("T")[0];
-      const cacheKey = `todayPlans_${dateString}_all`;
-
-      const cachedPlans = await sqliteGetItem(cacheKey);
-      let plans: Task[] = cachedPlans ? JSON.parse(cachedPlans) : [];
-
-      if (plans.length === 0) {
-        plans = await getTodayPlans(token, today);
-        await sqliteSetItem(cacheKey, JSON.stringify(plans));
-      }
-
-      for (const plan of plans) {
-        const [year, month, day] = plan.due_date.split("-").map(Number);
-        const [hours, minutes] = plan.due_time_start.split(":").map(Number);
-        const dueDate = new Date(year, month - 1, day, hours, minutes);
-
-        if (dueDate > new Date()) {
-          await scheduleTaskNotification(plan);
-        }
+      const notificationId = await sqliteGetItem(`notification_${taskId}`);
+      if (notificationId) {
+        await Notifications.cancelScheduledNotificationAsync(notificationId);
+        await sqliteRemoveItem(`notification_${taskId}`);
+        console.log(`Canceled notification for task ${taskId}`);
       }
     } catch (error) {
-      console.error("Failed to schedule notifications for existing plans:", error);
+      console.error("Failed to cancel notification:", error);
     }
-  }, [token, scheduleTaskNotification]);
+  }, [sqliteGetItem, sqliteRemoveItem]);
 
-  useEffect(() => {
-    if (token && isConnected) {
-      scheduleNotificationsForExistingPlans();
-    }
-  }, [token, isConnected, scheduleNotificationsForExistingPlans]);
+  const storeNotificationId = useCallback(
+    async (taskId: string | number, notificationId: string): Promise<void> => {
+      await sqliteSetItem(`notification_${taskId}`, notificationId);
+      console.log(`Stored notification ID ${notificationId} for task ${taskId}`);
+    },
+    [sqliteSetItem]
+  );
+
+  const getNotificationId = useCallback(
+    async (taskId: string | number): Promise<string | null> => {
+      return await sqliteGetItem(`notification_${taskId}`);
+    },
+    [sqliteGetItem]
+  );
+
+ 
 
   const fetchAndCacheCoursesFn = useCallback(async () => {
     if (token && isConnected) {
@@ -793,6 +811,9 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     fetchAndCacheCourses,
     fetchAndCacheCourseCategories,
     scheduleTaskNotification,
+    cancelTaskNotification,
+    storeNotificationId,
+    getNotificationId,
     fetchAndCacheTodayPlans,
     fetchAndCacheCategoryNames,
     getCachedTodayPlans,
@@ -803,6 +824,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     sqliteSetItem,
     sqliteRemoveItem,
     sqliteClear,
+    setCurrentCommunity,
   };
 
   return (

@@ -20,7 +20,7 @@ import { createCommunity } from "../../../CommunityApiCalls";
 import { router } from "expo-router";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
-import { useNavigation } from "@react-navigation/native";
+
 import { useWebSocket } from "../../../webSocketProvider";
 
 const CreateCommunity = () => {
@@ -30,32 +30,10 @@ const CreateCommunity = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
-  const navigation = useNavigation();
+
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const { joinAndSubscribeToCommunity, sqliteGetItem, sqliteSetItem } = useWebSocket(); // Updated to include SQLite utilities
-
-  const createCommunityMutation = useMutation({
-    mutationFn: async ({ communityData, token }) => {
-      console.log("Submitting Community Data:", communityData);
-      const community = await createCommunity(communityData, token);
-      return community;
-    },
-    onSuccess: async (communityData) => {
-      await updateCommunityCache(communityData);
-      await joinAndSubscribeToCommunity(communityData.id); // Subscribe to the new community
-      navigation.goBack();
-      router.setParams({ newCommunity: communityData }); // Pass new community data
-      setErrorMessage(null);
-    },
-    onError: (error: any) => {
-      const errorDetail = error.response?.data
-        ? JSON.stringify(error.response.data)
-        : error.message || "Error creating community";
-      console.error("Error creating community:", errorDetail);
-      setErrorMessage(errorDetail);
-    },
-  });
 
   const handleSaveCommunity = async () => {
     try {
@@ -80,14 +58,6 @@ const CreateCommunity = () => {
         } as any;
 
         formData.append("image_url", fileData);
-
-        console.log("FormData contents:", {
-          name,
-          description,
-          image: { uri: imageUrl, name: fileName, type: mimeType },
-        });
-      } else {
-        console.log("FormData contents:", { name, description });
       }
 
       createCommunityMutation.mutate({
@@ -99,6 +69,28 @@ const CreateCommunity = () => {
       setErrorMessage("Failed to create community. Please try again.");
     }
   };
+
+  const createCommunityMutation = useMutation({
+    mutationFn: async ({ communityData, token }) => {
+      console.log("Submitting Community Data:", communityData);
+      const community = await createCommunity(communityData, token); // Assume createCommunity is your API call
+      return community;
+    },
+    onSuccess: async (communityData) => {
+      await updateCommunityCache(communityData); // Assume this updates your cache
+      await joinAndSubscribeToCommunity(communityData.id); // Assume this handles joining/subscription
+      router.dismiss(1);
+      router.setParams({ newCommunity: JSON.stringify(communityData) });
+      setErrorMessage(null);
+    },
+    onError: (error: any) => {
+      const errorDetail = error.response?.data
+        ? JSON.stringify(error.response.data)
+        : error.message || "Error creating community";
+      console.error("Error creating community:", errorDetail);
+      setErrorMessage(errorDetail);
+    },
+  });
 
   const pickImage = async () => {
     try {

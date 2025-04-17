@@ -10,15 +10,15 @@ import {
   useColorScheme,
 } from "react-native";
 import { useForm, Controller } from "react-hook-form";
-import Colors from "../../../constants/Colors";
-import { rMS, rS, rV } from "../../../constants";
-import AnimatedRoundTextInput from "../../../components/AnimatedRoundTextInput";
-import GameButton from "../../../components/GameButton";
-import CustomDateTimeSelector from "../../../components/CustomDateTimeSelector";
+import Colors from "../../constants/Colors";
+import { rMS, rS, rV } from "../../constants";
+import AnimatedRoundTextInput from "../../components/AnimatedRoundTextInput";
+import GameButton from "../../components/GameButton";
+import CustomDateTimeSelector from "../../components/CustomDateTimeSelector";
 import { useMutation } from "@tanstack/react-query";
-import { updatePeriod, deletePeriod } from "../../../TimelineApiCalls";
+import { updatePeriod, deletePeriod } from "../../TimelineApiCalls";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { useAuth } from "../../../components/AuthContext";
+import { useAuth } from "../../components/AuthContext";
 
 // This interface is used for the API (times as strings)
 interface Period {

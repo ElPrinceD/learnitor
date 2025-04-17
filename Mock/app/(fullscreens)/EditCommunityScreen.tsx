@@ -18,6 +18,7 @@ import Colors from "../../constants/Colors";
 import { Community } from "../../components/types";
 import * as ImagePicker from "expo-image-picker";
 import { rMS } from "../../constants";
+import { router } from "expo-router";
 
 type RouteParams = {
   id: string;
@@ -58,31 +59,29 @@ const EditCommunityScreen: React.FC = () => {
     if (userToken && community) {
       try {
         const updateData: any = { name, description };
-
-        // Handle image upload
         let finalImageUrl = profilePicture;
+  
         if (profilePicture && !profilePicture.startsWith("http")) {
           const uriParts = profilePicture.split(".");
           const fileType = uriParts[uriParts.length - 1];
           updateData.image_url = {
             uri: profilePicture,
-            name: `photo.${fileType}`,
+            name: `photo_${id}_${Date.now()}.${fileType}`, // Unique filename
             type: `image/${fileType}`,
           };
         }
-
+  
         const formData = new FormData();
         Object.entries(updateData).forEach(([key, value]) => {
           formData.append(key, value);
         });
-
-        // Update community via API (server broadcasts community_updated)
+  
         const response = await updateCommunity(id, formData, userToken.token);
-
-        // Construct updated community object
+  
+        const communityId = id.toString(); // Standardize as string
         const updatedCommunity = {
           ...community,
-          id: community.id || parseInt(id),
+          id: parseInt(communityId),
           name,
           description,
           image_url: response.image_url || finalImageUrl || community.image_url,
@@ -91,20 +90,21 @@ const EditCommunityScreen: React.FC = () => {
           members: community.members || [],
           shareable_link: community.shareable_link,
         };
-
-        // Update local caches for the editing user
-        await sqliteSetItem(`community_${id}`, JSON.stringify(updatedCommunity));
+  
+        // Update individual community cache
+        await sqliteSetItem(`community_${communityId}`, JSON.stringify(updatedCommunity));
+        // Update communities list cache
         const cachedCommunitiesRaw = await sqliteGetItem("communities");
         let cachedCommunities = cachedCommunitiesRaw ? JSON.parse(cachedCommunitiesRaw) : [];
-        const communityIndex = cachedCommunities.findIndex((comm: Community) => comm.id.toString() === id);
+        const communityIndex = cachedCommunities.findIndex((comm: Community) => comm.id.toString() === communityId);
         if (communityIndex !== -1) {
           cachedCommunities[communityIndex] = updatedCommunity;
         } else {
           cachedCommunities.push(updatedCommunity);
         }
         await sqliteSetItem("communities", JSON.stringify(cachedCommunities));
-
-        navigation.goBack();
+  
+        router.dismiss(1);
       } catch (error) {
         console.error("Failed to update community details:", error);
         Alert.alert("Error", "Failed to save changes.");
