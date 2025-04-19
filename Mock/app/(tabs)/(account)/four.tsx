@@ -21,6 +21,7 @@ import Colors from "../../../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../../../constants";
 import { useWebSocket } from "../../../webSocketProvider"; // Add this import
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import AppImage from "../../../components/AppImage";
 
 const Profile = () => {
   const { logout, userToken, userInfo, setUserInfo } = useAuth();
@@ -252,10 +253,10 @@ const Profile = () => {
           onPress={handleProfilePictureUpdate}
           style={styles.profileImageContainer}
         >
-          <Image
-            source={{ uri: userInfo?.user.profile_picture }}
+          <AppImage
+             uri={ userInfo?.user.profile_picture }
             style={styles.profileImage}
-            onError={() => console.log("Error loading image")}
+            
           />
           <Ionicons
             name="camera-outline"

@@ -130,7 +130,7 @@ const TimetableDetailPage = () => {
 
 
   const handleEditTimetable = () => {
-   
+    console.log('Here')
     router.push({
       pathname: "TimeTable", // Adjust this path according to your routing setup
      params: {

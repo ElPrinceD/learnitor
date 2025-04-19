@@ -48,6 +48,7 @@ export interface Community {
   lastMessageSender: string; // Email or username of the sender
   members?: User[]; // Array of detailed user objects
   messages?: Message[]; // Array of detailed message objects
+  isPublic?: boolean;
 }
 
 export interface RecommendedCourse {

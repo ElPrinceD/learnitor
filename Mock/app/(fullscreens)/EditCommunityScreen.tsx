@@ -9,6 +9,7 @@ import {
   ScrollView,
   useColorScheme,
   Alert,
+  Switch,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { getCommunityDetails, updateCommunity } from "../../CommunityApiCalls";
@@ -17,8 +18,9 @@ import { useWebSocket } from "../../webSocketProvider";
 import Colors from "../../constants/Colors";
 import { Community } from "../../components/types";
 import * as ImagePicker from "expo-image-picker";
-import { rMS } from "../../constants";
+import { rMS, rS, rV, SIZES } from "../../constants";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 
 type RouteParams = {
   id: string;
@@ -34,6 +36,7 @@ const EditCommunityScreen: React.FC = () => {
   const [name, setName] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
+  const [isPublic, setIsPublic] = useState<boolean>(false);
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
@@ -42,10 +45,12 @@ const EditCommunityScreen: React.FC = () => {
       try {
         if (userToken) {
           const data = await getCommunityDetails(id, userToken.token);
+          
           setCommunity(data);
           setName(data.name);
           setDescription(data.description);
           setProfilePicture(data.image_url);
+          setIsPublic(data.is_public)
         }
       } catch (error) {
         console.error("Failed to load community details:", error);
@@ -58,7 +63,7 @@ const EditCommunityScreen: React.FC = () => {
   const handleSave = async () => {
     if (userToken && community) {
       try {
-        const updateData: any = { name, description };
+        const updateData: any = { name, description,is_public: isPublic };
         let finalImageUrl = profilePicture;
   
         if (profilePicture && !profilePicture.startsWith("http")) {
@@ -89,7 +94,10 @@ const EditCommunityScreen: React.FC = () => {
           created_at: community.created_at,
           members: community.members || [],
           shareable_link: community.shareable_link,
+          is_public: response.is_public !== undefined ? response.is_public : isPublic,
         };
+
+        console.log(updateCommunity)
   
         // Update individual community cache
         await sqliteSetItem(`community_${communityId}`, JSON.stringify(updatedCommunity));
@@ -138,6 +146,85 @@ const EditCommunityScreen: React.FC = () => {
     });
   }, [navigation, handleSave, themeColors]);
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 16,
+    },
+    profilePictureContainer: {
+      alignItems: "center",
+      marginVertical: 20,
+      paddingTop: 10,
+      position: "relative",
+    },
+    profilePicture: {
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      borderWidth: 1,
+      backgroundColor: 'lightgray',
+    },
+    selectImageButton: {
+      marginTop: 10,
+      padding: 10,
+      borderRadius: 10,
+      alignItems: "center",
+    },
+    selectImageButtonText: {
+      fontSize: 16,
+      fontWeight: "bold",
+    },
+    inputContainer: {
+      marginVertical: 10,
+    },
+    input: {
+      height: 50,
+      borderRadius: 10,
+      paddingHorizontal: 15,
+      marginBottom: 10,
+    },
+    descriptionInput: {
+      height: 100,
+    },
+    doneButton: {
+      fontSize: rMS(19),
+      fontWeight: "bold",
+      marginRight: 10,
+    },
+    cancelButton: {
+      fontSize: rMS(19),
+      marginLeft: 10,
+    },
+    sectionItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: rV(10),
+      borderBottomWidth: rS(1),
+      borderBottomColor: themeColors.secondaryBackground,
+      paddingHorizontal: rS(16),
+    },
+    icon: { marginRight: rS(10) },
+    sectionTextContainer: { flex: 1 },
+    sectionTitle: { fontSize: SIZES.medium, color: themeColors.text },
+    sectionValue: {
+      fontSize: SIZES.small,
+      color: themeColors.textSecondary,
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: rS(16),
+      marginTop: rV(30),
+      marginBottom: rV(10),
+    },
+    sectionHeaderText: {
+      fontSize: SIZES.medium,
+      fontWeight: "bold",
+      color: themeColors.text,
+    },
+  });
+
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -169,60 +256,31 @@ const EditCommunityScreen: React.FC = () => {
             multiline
           />
         </View>
+        <View style={styles.sectionItem}>
+              <Ionicons
+                name="lock-closed-outline"
+                size={24}
+                color={themeColors.text}
+                style={styles.icon}
+              />
+              <View style={styles.sectionTextContainer}>
+                <Text
+                  style={[styles.sectionTitle, { color: themeColors.text }]}
+                >
+                  Lock chat
+                </Text>
+              </View>
+              <Switch
+                value={isPublic}
+                onValueChange={() => setIsPublic((prev) => !prev)}
+                trackColor={{ true: themeColors.tint, false: "#999" }}
+              />
+            </View>
       </ScrollView>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-  },
-  profilePictureContainer: {
-    alignItems: "center",
-    marginVertical: 20,
-    paddingTop: 10,
-    position: "relative",
-  },
-  profilePicture: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 1,
-    backgroundColor: 'lightgray',
-  },
-  selectImageButton: {
-    marginTop: 10,
-    padding: 10,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  selectImageButtonText: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  inputContainer: {
-    marginVertical: 10,
-  },
-  input: {
-    height: 50,
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    marginBottom: 10,
-  },
-  descriptionInput: {
-    height: 100,
-  },
-  doneButton: {
-    fontSize: rMS(19),
-    fontWeight: "bold",
-    marginRight: 10,
-  },
-  cancelButton: {
-    fontSize: rMS(19),
-    marginLeft: 10,
-  },
-});
+
 
 export default EditCommunityScreen;

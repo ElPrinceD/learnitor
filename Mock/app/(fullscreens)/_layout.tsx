@@ -9,6 +9,7 @@ import { useAuth } from "../../components/AuthContext";
 import CommunityDetailScreen from "./CommunityDetailScreen";
 import CommunityImagesScreen from "./CommunityImageScreen";
 import EditCommunityScreen from "./EditCommunityScreen";
+import AppImage from "../../components/AppImage";
 
 export default function ChatScreenLayout() {
   const colorScheme = useColorScheme();
@@ -45,8 +46,8 @@ export default function ChatScreenLayout() {
                 }
                 style={{ flexDirection: "row", alignItems: "center" }}
               >
-                <Image
-                  source={{ uri: route.params?.image }}
+                <AppImage
+                   uri= {route.params?.image }
                   style={{
                     width: rS(30),
                     height: rV(30),
@@ -135,7 +136,7 @@ export default function ChatScreenLayout() {
           name="TimeTableDetails"
           options={{
             headerShown: true,
-            presentation: "containedModal",
+            presentation: "modal",
             headerBackTitle: "Back",
             headerStyle: {
               backgroundColor: themeColors.background,

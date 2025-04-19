@@ -24,6 +24,7 @@ import {
   getCommunityMessages,
   getCommunityTimetable,
   removeCommunityMember,
+  shareCommunity
 } from "../../CommunityApiCalls";
 import { useAuth } from "../../components/AuthContext";
 import { useWebSocket } from "../../webSocketProvider";
@@ -344,17 +345,23 @@ const CommunityDetailScreen: React.FC = () => {
     [isUserLeader]
   );
 
-  const shareCommunity = useCallback(async () => {
+
+  const handleShareCommunity = useCallback(async () => {
     try {
-      const shareableLink = community?.shareable_link;
+      if (!userToken?.token) throw new Error("User not authenticated.");
+      const response = await shareCommunity(id, userToken.token);
+      const shareableLink = response.shareable_link;
+      if (!shareableLink) throw new Error("Failed to generate shareable link.");
+
       await Share.share({
-        message: `Check out this channel: ${community?.name}\nJoin here: ${shareableLink}`,
+        message: `Join the channel "${community?.name}"! Use this link to join`,
         url: shareableLink,
       });
     } catch (err) {
       console.error("Error sharing community:", err);
+      Alert.alert("Error", "Failed to generate or share the channel link.");
     }
-  }, [community?.name, community?.shareable_link]);
+  }, [id, community?.name, userToken?.token]);
 
   const leaveCommunityHandler = useCallback(async () => {
     try {
@@ -460,7 +467,7 @@ const CommunityDetailScreen: React.FC = () => {
           </View>
           <TouchableOpacity
             style={[styles.statItem, styles.statDivider]}
-            onPressIn={shareCommunity}
+            onPressIn={handleShareCommunity}
           >
             <FontAwesome6 name="share" size={16} color={themeColors.text} />
             <Text
@@ -512,28 +519,7 @@ const CommunityDetailScreen: React.FC = () => {
             />
           </TouchableOpacity>
 
-          {isUserLeader && (
-            <View style={styles.sectionItem}>
-              <Ionicons
-                name="lock-closed-outline"
-                size={24}
-                color={themeColors.text}
-                style={styles.icon}
-              />
-              <View style={styles.sectionTextContainer}>
-                <Text
-                  style={[styles.sectionTitle, { color: themeColors.text }]}
-                >
-                  Lock chat
-                </Text>
-              </View>
-              <Switch
-                value={isMuted}
-                onValueChange={() => setIsMuted((prev) => !prev)}
-                trackColor={{ true: themeColors.tint, false: "#999" }}
-              />
-            </View>
-          )}
+          
           <TouchableOpacity style={styles.sectionItem}>
             <Ionicons
               name="lock-closed"

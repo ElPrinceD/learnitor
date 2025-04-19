@@ -2,8 +2,10 @@ export default {
   expo: {
     name: "Slate",
     slug: "mock",
+    scheme: "myapp",
     description: "Learn it all",
     version: "1.0.0",
+    deepLinking: true,
     orientation: "portrait",
     icon: "./assets/images/SlateLogo.png",
     scheme: "myapp",

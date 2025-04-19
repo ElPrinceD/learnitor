@@ -14,6 +14,7 @@ import { Community } from "./types";
 import Colors from "../constants/Colors";
 import { rS, rV, SIZES } from "../constants";
 import { useAuth } from "./AuthContext";
+import AppImage from "./AppImage";
 
 interface CommunityListItemProps {
   item: Community;
@@ -139,7 +140,7 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
     >
       <View style={styles.communityItem}>
         <View style={styles.communityImage}>
-          <Image source={{ uri: item.image_url }} style={{ width: "100%", height: "100%", borderRadius: 50 }} />
+          <AppImage uri= {item.image_url}  style={{ width: "100%", height: "100%", borderRadius: 50 }} />
         </View>
         <View style={styles.communityTextContainer}>
           <Text style={styles.communityName}>{item.name}</Text>

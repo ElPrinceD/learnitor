@@ -76,7 +76,7 @@ const MemoizedGiftedChat = memo(GiftedChat, (prevProps, nextProps) => {
 const CommunityChatScreen: React.FC = () => {
   const route = useRoute();
   const { communityId } = route.params as { communityId: string };
-  console.log(communityId)
+  
   const { userToken, userInfo } = useAuth();
   const user = userInfo?.user;
   const {

@@ -599,6 +599,7 @@ const CreateTimetablePage: React.FC = () => {
       mode="time"
       label="Start Time"
       value={formatTime(value)} // Convert Date to string "HH:mm"
+      initialValue={formatTime(value)}
       onTimeChange={(time) => {
         onChange(parseTime(time)); // Convert string back to Date
         if (!isEditMode) {

@@ -11,8 +11,6 @@ const apiClient = axios.create({
 const COMMUNITY_API_BASE_URL = '/api/communities';
 const MESSAGE_API_BASE_URL = '/api/messages'
 
-// {GET APIs}
-
 export const getCommunities = async (token: string) => {
     try {
         const response = await apiClient.get(`${COMMUNITY_API_BASE_URL}/`, {
@@ -140,7 +138,22 @@ export const removeCommunityMember = async (
     }
 };
 
-
+export const shareCommunity = async (communityId: string, token: string) => {
+    console.log(communityId, token)
+    try { 
+    const response = await apiClient.get(`${COMMUNITY_API_BASE_URL}/${communityId}/share/`, {
+      
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${token}`,
+      },
+    });
+    return response.data;
+    } catch (error) {
+        console.error('Error fetching share details', error);
+        throw error;
+    }
+  };
 
 
 
