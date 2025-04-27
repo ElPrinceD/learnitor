@@ -55,7 +55,7 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
       marginRight: rS(13),
     },
     timelineText: {
-      fontSize: rMS(12),
+      fontSize: 15,
       color: themeColors.text,
       marginTop: rV(18),
       maxWidth: "80%", // now responsive instead of a fixed width
@@ -155,7 +155,7 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
             <View style={[styles.backgroundContainer]}>
               <SvgComponent
                 paths={[
-                  "M10.3635 198.539C150 0 20 -50 250 150",
+                  "M10.3635 198.539C150 -60 30 -50 250 150",
                   index === 0 ? null : "M250 150C300 200 350 150 400 200",
                   index === 0 ? null : "m 300 178 L 139 365",
                   ...(index === enrolledTopics.length - 1

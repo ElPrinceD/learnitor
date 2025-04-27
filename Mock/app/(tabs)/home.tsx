@@ -206,7 +206,7 @@ const Home: React.FC = () => {
     },
   });
 
-  // Transform announcements into carousel items
+
   const carouselItems = announcementsData.map((announcement) => ({
     title: announcement.title,
     description: announcement.description,

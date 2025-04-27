@@ -5,6 +5,7 @@ import React, {
   useState,
   useCallback,
   FC,
+  useRef,
 } from "react";
 import { SQLiteProvider, useSQLiteContext, SQLiteDatabase } from "expo-sqlite";
 import {
@@ -14,6 +15,7 @@ import {
   getCommunityMessages,
 } from "./CommunityApiCalls";
 import * as Notifications from "expo-notifications";
+import { Community } from "./components/types";
 import { getCourseCategories, getCourses } from "./CoursesApiCalls";
 import WsUrl from "./configWs";
 import { getCategoryNames, getTodayPlans } from "./TimelineApiCalls";
@@ -26,12 +28,13 @@ interface Task {
   due_time_start: string;
 }
 
+
 export interface WebSocketContextType {
   socket: WebSocket | null;
   isConnected: boolean;
   sendMessage: (message: any) => void;
-  joinAndSubscribeToCommunity: (communityId: string | number) => Promise<void>;
-  unsubscribeFromCommunity: (communityId: string | number) => void;
+  joinAndSubscribeToCommunity: (communityId: string) => Promise<void>;
+  unsubscribeFromCommunity: (communityId: string) => void;
   subscribeToExistingUserCommunities: () => Promise<void>;
   fetchAndCacheCommunities: () => Promise<void>;
   fetchAndCacheCourses: () => Promise<void>;
@@ -44,19 +47,19 @@ export interface WebSocketContextType {
   fetchAndCacheCategoryNames: (token: string | null) => Promise<Record<number, string>>;
   getCachedTodayPlans: (date: Date, category?: string) => Promise<any[]>;
   getCachedCategoryNames: () => Promise<Record<number, string>>;
-  unreadCommunitiesCount: number;
+  unreadMessages: Record<string, number>;
   scheduleTaskNotification: (task: any) => Promise<string | null>;
   cancelTaskNotification: (taskId: string) => Promise<void>;
-  storeNotificationId: (taskId: string | number, notificationId: string) => Promise<void>;
-  getNotificationId: (taskId: string | number) => Promise<string | null>;
-  markMessageAsRead: (communityId: string) => void;
+  storeNotificationId: (taskId: string, notificationId: string) => Promise<void>;
+  getNotificationId: (taskId: string) => Promise<string | null>;
+  markMessageAsRead: (communityId: string, messageId?: string) => void;
   sqliteGetItem: (key: string) => Promise<string | null>;
   sqliteSetItem: (key: string, value: string) => Promise<void>;
   sqliteRemoveItem: (key: string) => Promise<void>;
   sqliteClear: () => Promise<void>;
   setCurrentCommunity: (communityId: string | null) => void;
-  
-  
+  communities: Community[] | null;
+  refreshCommunities: () => Promise<void>;
 }
 
 const WebSocketContext = createContext<WebSocketContextType | null>(null);
@@ -70,56 +73,89 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
-  const [unreadCommunityMessages, setUnreadCommunityMessages] = useState<Record<string, any>>({});
+  const [unreadMessages, setUnreadMessages] = useState<Record<string, number>>({});
   const [currentCommunityId, setCurrentCommunityId] = useState<string | null>(null);
+  const [communities, setCommunities] = useState<Community[] | null>(null);
   const { userToken, userInfo } = useAuth();
   const userId = userInfo?.user?.id;
-
-  const messageQueue: any[] = [];
-
   const db: SQLiteDatabase = useSQLiteContext();
+  const messageQueue: any[] = [];
+  const operationQueue = useRef<Promise<void>>(Promise.resolve());
 
+  // Initialize SQLite tables
   useEffect(() => {
     db.execAsync(`
       CREATE TABLE IF NOT EXISTS storage (
         key TEXT PRIMARY KEY NOT NULL,
         value TEXT
       );
+      CREATE TABLE IF NOT EXISTS messages (
+        community_id TEXT,
+        message_id TEXT,
+        status TEXT,
+        sender_id TEXT,
+        PRIMARY KEY (community_id, message_id)
+      );
     `).catch(console.error);
   }, [db]);
 
+  // SQLite operation queue to prevent race conditions
+  const enqueueSQLiteOperation = useCallback(async (operation: () => Promise<unknown>) => {
+    const current = operationQueue.current;
+    const next = current.then(async () => {
+      try {
+        await operation();
+      } catch (error) {
+        console.error("Error in SQLite operation:", error);
+      }
+    });
+    operationQueue.current = next;
+    await next;
+  }, []);
+
   const sqliteSetItem = useCallback(
     async (key: string, value: string): Promise<void> => {
-      await db.runAsync("INSERT OR REPLACE INTO storage (key, value) VALUES (?, ?);", [key, value]);
+      await enqueueSQLiteOperation(() =>
+        db.runAsync("INSERT OR REPLACE INTO storage (key, value) VALUES (?, ?);", [key, value])
+      );
     },
-    [db]
+    [db, enqueueSQLiteOperation]
   );
 
   const sqliteGetItem = useCallback(
     async (key: string): Promise<string | null> => {
-      const row = await db.getFirstAsync<{ value: string }>("SELECT value FROM storage WHERE key = ?;", [key]);
-      return row ? row.value : null;
+      let result: string | null = null;
+      await enqueueSQLiteOperation(async () => {
+        const row = await db.getFirstAsync<{ value: string }>("SELECT value FROM storage WHERE key = ?;", [key]);
+        result = row ? row.value : null;
+      });
+      return result;
     },
-    [db]
+    [db, enqueueSQLiteOperation]
   );
 
   const sqliteClear = useCallback(async () => {
-    await db.runAsync("DELETE FROM storage");
-  }, [db]);
+    await enqueueSQLiteOperation(() => db.runAsync("DELETE FROM storage"));
+    await enqueueSQLiteOperation(() => db.runAsync("DELETE FROM messages"));
+  }, [db, enqueueSQLiteOperation]);
 
   const sqliteRemoveItem = useCallback(
     async (key: string): Promise<void> => {
-      await db.runAsync("DELETE FROM storage WHERE key = ?;", [key]);
+      await enqueueSQLiteOperation(() => db.runAsync("DELETE FROM storage WHERE key = ?;", [key]));
     },
-    [db]
+    [db, enqueueSQLiteOperation]
   );
 
   const sqliteGetAllKeys = useCallback(
     async (): Promise<string[]> => {
-      const rows = await db.getAllAsync<{ key: string }>("SELECT key FROM storage;");
-      return rows.map((row) => row.key);
+      let results: string[] = [];
+      await enqueueSQLiteOperation(async () => {
+        const rows = await db.getAllAsync<{ key: string }>("SELECT key FROM storage;");
+        results = rows.map((row) => row.key);
+      });
+      return results;
     },
-    [db]
+    [db, enqueueSQLiteOperation]
   );
 
   const sqliteMultiGet = useCallback(
@@ -133,6 +169,146 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     },
     [sqliteGetItem]
   );
+
+  const updateUnreadCount = useCallback(
+    async (communityId: string, delta: number = 0) => {
+      setUnreadMessages((prev) => {
+        const current = prev[communityId] ?? 0;
+        const next   = Math.max(0, current + delta);
+        // write it to SQLite immediately:
+        sqliteSetItem(`unread_count_${communityId}`, JSON.stringify(next));
+        return { ...prev, [communityId]: next };
+      });
+    },
+    [sqliteSetItem]
+  );
+  
+
+  const markMessageAsRead = useCallback(
+    async (communityId: string, messageId?: string) => {
+      if (!messageId) {
+        await enqueueSQLiteOperation(() =>
+          db.runAsync(
+            "UPDATE messages SET status = 'read' WHERE community_id = ? AND status != 'read';",
+            [communityId]
+          )
+        );
+        await updateUnreadCount(communityId, -unreadMessages[communityId] || 0);
+        socket?.send(JSON.stringify({
+          type: "mark_all_read",
+          community_id: communityId,
+        }));
+      } else {
+        await enqueueSQLiteOperation(() =>
+          db.runAsync(
+            "UPDATE messages SET status = 'read' WHERE community_id = ? AND message_id = ? AND status != 'read';",
+            [communityId, messageId]
+          )
+        );
+        await updateUnreadCount(communityId, -1);
+        socket?.send(JSON.stringify({
+          type: "message_status_update",
+          message_id: messageId,
+          status: "read",
+        }));
+      }
+      await loadUnreadCounts(); // Sync state with SQLite
+    },
+    [socket, updateUnreadCount, unreadMessages, enqueueSQLiteOperation, loadUnreadCounts]
+  );
+
+  const loadUnreadCounts = useCallback(async () => {
+    const allKeys = await sqliteGetAllKeys();
+    const unreadKeys = allKeys.filter((key) => key.startsWith("unread_count_"));
+    const unreadCounts: Record<string, number> = {};
+    for (const key of unreadKeys) {
+      const communityId = key.replace("unread_count_", "");
+      const countStr = await sqliteGetItem(key);
+      if (countStr) {
+        unreadCounts[communityId] = JSON.parse(countStr);
+      }
+    }
+    setUnreadMessages(unreadCounts);
+  }, [sqliteGetAllKeys, sqliteGetItem]);
+
+  const fetchAndCacheCommunitiesFn = useCallback(async () => {
+    if (token && isConnected) {
+      try {
+        let leftCommunityIds = await sqliteGetItem("leftCommunityIds");
+        leftCommunityIds = leftCommunityIds ? JSON.parse(leftCommunityIds) : [];
+
+        let cachedCommunities = await sqliteGetItem("communities");
+        if (!cachedCommunities || JSON.parse(cachedCommunities).length === 0) {
+          const communities = await getUserCommunities(token);
+          const filtered = communities.filter((c: any) => !leftCommunityIds.includes(c.id.toString()));
+          await sqliteSetItem("communities", JSON.stringify(filtered));
+          setCommunities(filtered);
+          console.log("Communities fetched and cached.");
+        } else {
+          const communities = JSON.parse(cachedCommunities);
+          const filtered = communities.filter((c: any) => !leftCommunityIds.includes(c.id.toString()));
+          await sqliteSetItem("communities", JSON.stringify(filtered));
+          setCommunities(filtered);
+          console.log("Cached communities updated after filtering left communities.");
+        }
+      } catch (error) {
+        console.error("Failed to fetch or cache communities:", error);
+      }
+    } else {
+      console.warn("WebSocket not connected, skipping community fetch.");
+    }
+  }, [token, isConnected, sqliteGetItem, sqliteSetItem]);
+
+  const subscribeToExistingUserCommunities = useCallback(async () => {
+    if (socket && isConnected && token) {
+      try {
+        const communities = await getUserCommunities(token);
+        for (const community of communities) {
+          await subscribeToExistingCommunity(community.id.toString());
+        }
+      } catch (error) {
+        console.error("Error fetching user communities:", error);
+      }
+    }
+  }, [socket, isConnected, token]);
+
+  const subscribeToExistingCommunity = useCallback(
+    async (communityId: string) => {
+      if (socket && isConnected) {
+        try {
+          sendMessage({
+            type: "subscribe_existing",
+            community_id: communityId,
+          });
+          await updateCachedCommunitiesFn(communityId);
+        } catch (error) {
+          console.error("Failed to subscribe to existing community:", error);
+        }
+      }
+    },
+    [socket, isConnected]
+  );
+
+  const updateCachedCommunitiesFn = async (communityId: string) => {
+    if (token && isConnected) {
+      try {
+        const newCommunity = await getCommunityDetails(communityId, token);
+        await sqliteSetItem(`community_${communityId}`, JSON.stringify(newCommunity));
+        const cachedCommunitiesRaw = await sqliteGetItem("communities");
+        let cachedCommunities = cachedCommunitiesRaw ? JSON.parse(cachedCommunitiesRaw) : [];
+        const communityIndex = cachedCommunities.findIndex((comm: any) => comm.id.toString() === communityId);
+        if (communityIndex !== -1) {
+          cachedCommunities[communityIndex] = newCommunity;
+        } else {
+          cachedCommunities.push(newCommunity);
+        }
+        await sqliteSetItem("communities", JSON.stringify(cachedCommunities));
+        setCommunities(cachedCommunities);
+      } catch (error) {
+        console.error("Error updating cached communities:", error);
+      }
+    }
+  };
 
   const connectWebSocket = useCallback(() => {
     if (!token) return;
@@ -148,7 +324,8 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
       setReconnectAttempts(0);
       console.log("WebSocket connected");
       subscribeToExistingUserCommunities().catch(console.error);
-      fetchInitialLastMessages().catch(console.error);
+      loadUnreadCounts().catch(console.error);
+      fetchAndCacheCommunitiesFn().catch(console.error); // Fetch latest communities on reconnect
     };
 
     ws.onmessage = async (event) => {
@@ -158,7 +335,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
           const keyMessages = `messages_${data.community_id}`;
           const cachedMessages = await sqliteGetItem(keyMessages);
           const updatedMessages = cachedMessages ? JSON.parse(cachedMessages) : [];
-          updatedMessages.push({
+          const newMessage = {
             _id: data.id.toString(),
             text: data.message,
             createdAt: new Date(data.sent_at),
@@ -181,7 +358,8 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
             image: data.image || null,
             video: data.video || null,
             document: data.document || null,
-          });
+          };
+          updatedMessages.push(newMessage);
           await sqliteSetItem(keyMessages, JSON.stringify(updatedMessages));
 
           const newLastMessage = {
@@ -197,24 +375,18 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
               : null,
           };
           await sqliteSetItem(`last_message_${data.community_id}`, JSON.stringify(newLastMessage));
+
           if (userId && data.sender_id !== userId) {
+            await enqueueSQLiteOperation(() =>
+              db.runAsync(
+                "INSERT OR REPLACE INTO messages (community_id, message_id, status, sender_id) VALUES (?, ?, ?, ?);",
+                [data.community_id, data.id.toString(), data.status || "sent", data.sender_id]
+              )
+            );
             if (data.community_id === currentCommunityId) {
-              if (socket) {
-              // Mark as read if received in the current community
-              socket.send(JSON.stringify({
-                type: "message_status_update",
-                message_id: data.id,
-                status: "read",
-              }));
-            }
-              newLastMessage.status = "read";
-              await sqliteSetItem(`last_message_${data.community_id}`, JSON.stringify(newLastMessage));
+              await markMessageAsRead(data.community_id, data.id.toString());
             } else {
-              // Only update unread if not in the current community
-              setUnreadCommunityMessages((prev) => ({
-                ...prev,
-                [data.community_id]: newLastMessage,
-              }));
+              await updateUnreadCount(data.community_id, 1);
             }
           }
           break;
@@ -245,6 +417,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
             document: msg.document || null,
           }));
           await sqliteSetItem(`messages_${data.community_id}`, JSON.stringify(normalizedMessages));
+
           if (data.messages.length > 0) {
             const lastMessage = data.messages[data.messages.length - 1];
             await sqliteSetItem(
@@ -262,23 +435,24 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
                   : null,
               })
             );
-            if (userId && lastMessage.sender_id !== userId) {
-              setUnreadCommunityMessages((prev) => ({
-                ...prev,
-                [data.community_id]: {
-                  ...lastMessage,
-                  status: lastMessage.status || "sent",
-                  sent_at: new Date(lastMessage.sent_at).toISOString(),
-                  replyTo: lastMessage.reply_to
-                    ? {
-                        id: lastMessage.reply_to.id ? lastMessage.reply_to.id.toString() : null,
-                        snippet: lastMessage.reply_to.snippet || null,
-                        sender_name: lastMessage.reply_to.sender_name || null,
-                      }
-                    : null,
-                },
-              }));
+
+            for (const msg of data.messages) {
+              if (userId && msg.sender_id !== userId) {
+                await enqueueSQLiteOperation(() =>
+                  db.runAsync(
+                    "INSERT OR REPLACE INTO messages (community_id, message_id, status, sender_id) VALUES (?, ?, ?, ?);",
+                    [data.community_id, msg.id.toString(), msg.status || "sent", msg.sender_id]
+                  )
+                );
+              }
             }
+
+            const unreadCountResult = await db.getFirstAsync<{ count: number }>(
+              "SELECT COUNT(*) as count FROM messages WHERE community_id = ? AND status != 'read' AND sender_id != ?;",
+              [data.community_id, userId || ""]
+            );
+            const unreadCount = unreadCountResult?.count || 0;
+            await updateUnreadCount(data.community_id, unreadCount - (unreadMessages[data.community_id] || 0));
           }
           break;
         }
@@ -286,6 +460,13 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
           const messageId = data.message_id;
           const communityId = await getCommunityIdFromMessage(messageId);
           if (communityId) {
+            await enqueueSQLiteOperation(() =>
+              db.runAsync(
+                "UPDATE messages SET status = ? WHERE community_id = ? AND message_id = ?;",
+                [data.status, communityId, messageId]
+              )
+            );
+
             const messagesStr = await sqliteGetItem(`messages_${communityId}`);
             if (messagesStr) {
               let parsedMessages = JSON.parse(messagesStr);
@@ -295,43 +476,45 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
                 await sqliteSetItem(`messages_${communityId}`, JSON.stringify(parsedMessages));
               }
             }
+
             const lastMessageStr = await sqliteGetItem(`last_message_${communityId}`);
             if (lastMessageStr) {
               let parsedLastMessage = JSON.parse(lastMessageStr);
               if (parsedLastMessage.id === messageId) {
                 parsedLastMessage.status = data.status;
                 await sqliteSetItem(`last_message_${communityId}`, JSON.stringify(parsedLastMessage));
-                if (userId && data.sender_id !== userId) {
-                  setUnreadCommunityMessages((prev) => ({
-                    ...prev,
-                    [communityId]: parsedLastMessage,
-                  }));
-                }
               }
+            }
+
+            if (data.status === "read") {
+              await updateUnreadCount(communityId, -1);
             }
           }
           break;
         }
         case "community_updated": {
+          console.log("Received community_updated event:", data);
           const updatedCommunity = data.community;
           if (!updatedCommunity?.id) {
             console.error("Invalid community_updated message: missing id");
             break;
           }
           const communityId = updatedCommunity.id.toString();
-          // Update individual community cache
+          console.log(`Updating cache for community ${communityId}`);
           await sqliteSetItem(`community_${communityId}`, JSON.stringify(updatedCommunity));
-          // Update communities list cache
           const cachedCommunitiesRaw = await sqliteGetItem("communities");
           let cachedCommunities = cachedCommunitiesRaw ? JSON.parse(cachedCommunitiesRaw) : [];
           const communityIndex = cachedCommunities.findIndex((comm: any) => comm.id.toString() === communityId);
           if (communityIndex !== -1) {
+            console.log(`Updating existing community at index ${communityIndex}`);
             cachedCommunities[communityIndex] = updatedCommunity;
           } else {
+            console.log(`Adding new community ${communityId}`);
             cachedCommunities.push(updatedCommunity);
           }
           await sqliteSetItem("communities", JSON.stringify(cachedCommunities));
-          console.log(`Updated cache for community ${communityId}`);
+          setCommunities(cachedCommunities);
+          console.log(`Updated cache and state for community ${communityId}:`, cachedCommunities);
           break;
         }
         case "error": {
@@ -375,6 +558,36 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     }
   }, [token, connectWebSocket]);
 
+  const loadCachedCommunities = useCallback(async () => {
+    try {
+      const cachedCommunities = await sqliteGetItem("communities");
+      if (cachedCommunities) {
+        setCommunities(JSON.parse(cachedCommunities));
+      }
+    } catch (error) {
+      console.error("Error loading cached communities:", error);
+    }
+  }, [sqliteGetItem]);
+
+  useEffect(() => {
+
+      console.log('Here: ',loadUnreadCounts)
+    loadCachedCommunities();
+  }, [loadCachedCommunities]);
+
+  const refreshCommunities = useCallback(async () => {
+    try {
+      const cachedCommunities = await sqliteGetItem("communities");
+      if (cachedCommunities) {
+        setCommunities(JSON.parse(cachedCommunities));
+      }
+    } catch (error) {
+      console.error("Error refreshing communities:", error);
+    }
+  }, [sqliteGetItem]);
+
+ 
+
   const reconnectWebSocket = useCallback(() => {
     const initialBackoffMs = 1000;
     const maxBackoffMs = 300000;
@@ -400,6 +613,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     },
     [socket, isConnected]
   );
+
 
   useEffect(() => {
     if (isConnected) {
@@ -434,26 +648,6 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     }
   }, [isConnected, sendMessage, sqliteGetAllKeys, sqliteGetItem, sqliteRemoveItem]);
 
-  const fetchInitialLastMessages = useCallback(async () => {
-    if (!token || !isConnected) return;
-    try {
-      const communities = await getUserCommunities(token);
-      for (const community of communities) {
-        const cachedLastMessage = await sqliteGetItem(`last_message_${community.id}`);
-        if (!cachedLastMessage) {
-          sendMessage({ type: "fetch_history", community_id: community.id });
-        } else if (userId && JSON.parse(cachedLastMessage).sender_id !== userId) {
-          setUnreadCommunityMessages((prev) => ({
-            ...prev,
-            [community.id]: JSON.parse(cachedLastMessage),
-          }));
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching initial last messages:", error);
-    }
-  }, [token, isConnected, sendMessage, userId]);
-
   const getCommunityIdFromMessage = async (messageId: string) => {
     const allKeys = await sqliteGetAllKeys();
     const messageKeys = allKeys.filter((key) => key.startsWith("messages_"));
@@ -471,59 +665,45 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
 
   const setCurrentCommunity = (communityId: string | null) => {
     setCurrentCommunityId(communityId);
+    if (communityId) {
+      markMessageAsRead(communityId);
+    }
   };
 
-  const unreadCommunitiesCount = Object.values(unreadCommunityMessages).filter(
-    (message) => message?.status !== "read"
-  ).length;
-
-  const markMessageAsRead = useCallback(async (communityId: string) => {
-    const lastMessageStr = await sqliteGetItem(`last_message_${communityId}`);
-    if (lastMessageStr) {
-      const lastMessage = JSON.parse(lastMessageStr);
-      if (lastMessage.sender_id !== userId && lastMessage.status !== "read") {
-        lastMessage.status = "read";
-        await sqliteSetItem(`last_message_${communityId}`, JSON.stringify(lastMessage));
-        socket?.send(JSON.stringify({
-          type: "message_status_update",
-          message_id: lastMessage.id,
-          status: "read",
-        }));
-        setUnreadCommunityMessages((prev) => ({
-          ...prev,
-          [communityId]: lastMessage,
-        }));
-      }
-    }
-  }, [socket, userId]);
-
   const joinAndSubscribeToCommunity = useCallback(
-    async (communityId: string | number) => {
-      if (socket && isConnected) {
-        try {
-          const message = { type: "join_community", community_id: communityId };
-          socket.send(JSON.stringify(message));
-          const handleJoinSuccess = (event: MessageEvent) => {
-            const data = JSON.parse(event.data);
-            if (data.type === "join_success" && data.community_id === communityId) {
-              console.log(`Successfully joined community: ${communityId}`);
+    (communityId: string) => {
+      return new Promise<void>((resolve, reject) => {
+        if (socket && isConnected) {
+          try {
+            const message = { type: "join_community", community_id: communityId };
+            socket.send(JSON.stringify(message));
+            const handleJoinSuccess = (event: MessageEvent) => {
+              const data = JSON.parse(event.data);
+              if (data.type === "join_success" && data.community_id.toString() === communityId) {
+                console.log(`Successfully joined community: ${communityId}`);
+                socket.removeEventListener("message", handleJoinSuccess);
+                resolve();
+              }
+            };
+            socket.addEventListener("message", handleJoinSuccess);
+            // Timeout to prevent hanging
+            setTimeout(() => {
               socket.removeEventListener("message", handleJoinSuccess);
-            }
-          };
-          socket.addEventListener("message", handleJoinSuccess);
-          await updateCachedCommunitiesFn(communityId);
-        } catch (error) {
-          console.error("Failed to join community:", error);
+              reject(new Error("Timeout waiting for join_success"));
+            }, 10000); // 10 seconds timeout
+          } catch (error) {
+            reject(error);
+          }
+        } else {
+          reject(new Error("WebSocket is not connected."));
         }
-      } else {
-        console.error("WebSocket is not connected.");
-      }
+      });
     },
     [socket, isConnected]
   );
 
   const unsubscribeFromCommunity = useCallback(
-    (communityId: string | number) => {
+    (communityId: string) => {
       if (socket && isConnected) {
         sendMessage({ type: "leave_community", community_id: communityId });
       } else {
@@ -533,51 +713,108 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     [socket, isConnected, sendMessage]
   );
 
-  const updateCachedCommunitiesFn = async (communityId: string | number) => {
-    if (token && isConnected) {
-        try {
-            const newCommunity = await getCommunityDetails(communityId, token);
-            await sqliteSetItem(`community_${communityId}`, JSON.stringify(newCommunity));
-            const cachedCommunitiesRaw = await sqliteGetItem("communities");
-            let cachedCommunities = cachedCommunitiesRaw ? JSON.parse(cachedCommunitiesRaw) : [];
-            const communityIndex = cachedCommunities.findIndex((comm: any) => comm.id.toString() === communityId.toString());
-            if (communityIndex !== -1) {
-                cachedCommunities[communityIndex] = newCommunity;
-            } else {
-                cachedCommunities.push(newCommunity);
-            }
-            await sqliteSetItem("communities", JSON.stringify(cachedCommunities));
-        } catch (error) {
-            console.error("Error updating cached communities:", error);
-        }
-    }
-};
+  const fetchAndCacheCommunities = fetchAndCacheCommunitiesFn;
 
-  const fetchAndCacheCommunitiesFn = useCallback(async () => {
+  const fetchAndCacheCoursesFn = useCallback(async () => {
     if (token && isConnected) {
       try {
-        let leftCommunityIds = await sqliteGetItem("leftCommunityIds");
-        leftCommunityIds = leftCommunityIds ? JSON.parse(leftCommunityIds) : [];
-  
-        let cachedCommunities = await sqliteGetItem("communities");
-        if (!cachedCommunities || JSON.parse(cachedCommunities).length === 0) {
-          const communities = await getUserCommunities(token);
-          const filtered = communities.filter((c: any) => !leftCommunityIds.includes(c.id.toString()));
-          await sqliteSetItem("communities", JSON.stringify(filtered));
-          console.log("Communities fetched and cached.");
+        let cachedCourses = await sqliteGetItem("courses");
+        if (!cachedCourses || JSON.parse(cachedCourses).length === 0) {
+          const courses = await getCourses(token);
+          await sqliteSetItem("courses", JSON.stringify(courses));
+          console.log("Courses fetched and cached.");
         } else {
-          const communities = JSON.parse(cachedCommunities);
-          const filtered = communities.filter((c: any) => !leftCommunityIds.includes(c.id.toString()));
-          await sqliteSetItem("communities", JSON.stringify(filtered));
-          console.log("Cached communities updated after filtering left communities.");
+          console.log("Courses already cached.");
         }
       } catch (error) {
-        console.error("Failed to fetch or cache communities:", error);
+        console.error("Failed to fetch or cache courses:", error);
       }
     } else {
-      console.warn("WebSocket not connected, skipping community fetch.");
+      console.warn("WebSocket not connected, skipping course fetch.");
     }
   }, [token, isConnected, sqliteGetItem, sqliteSetItem]);
+
+  const fetchAndCacheCourses = fetchAndCacheCoursesFn;
+
+  const fetchAndCacheCourseCategories = useCallback(async () => {
+    if (token && isConnected) {
+      try {
+        let cachedCategories = await sqliteGetItem("courseCategories");
+        if (!cachedCategories || JSON.parse(cachedCategories).length === 0) {
+          const categories = await getCourseCategories(token);
+          await sqliteSetItem("courseCategories", JSON.stringify(categories));
+          console.log("Course categories fetched and cached.");
+        } else {
+          console.log("Course categories already cached.");
+        }
+      } catch (error) {
+        console.error("Failed to fetch or cache course categories:", error);
+      }
+    } else {
+      console.warn("WebSocket not connected, skipping course categories fetch.");
+    }
+  }, [token, isConnected, sqliteGetItem, sqliteSetItem]);
+
+  const fetchAndCacheTodayPlans = useCallback(
+    async (token: string | null, date: Date | null, category?: string) => {
+      if (token && isConnected && date) {
+        try {
+          const dateString = date.toISOString().split("T")[0];
+          const normalizedCategory = category || "all";
+          const cacheKey = `todayPlans_${dateString}_${normalizedCategory}`;
+          const cachedPlans = await sqliteGetItem(cacheKey);
+          if (cachedPlans) {
+            return JSON.parse(cachedPlans);
+          }
+          const plans = await getTodayPlans(token, date, normalizedCategory === "all" ? undefined : normalizedCategory);
+          await sqliteSetItem(cacheKey, JSON.stringify(plans));
+          return plans;
+        } catch (error) {
+          console.error("Failed to fetch or cache today's plans:", error);
+          throw error;
+        }
+      }
+      return [];
+    },
+    [isConnected, sqliteGetItem, sqliteSetItem]
+  );
+
+  const getCachedTodayPlans = useCallback(
+    async (date: Date, category?: string) => {
+      const dateString = date.toISOString().split("T")[0];
+      const normalizedCategory = category || "all";
+      const cacheKey = `todayPlans_${dateString}_${normalizedCategory}`;
+      const cachedData = await sqliteGetItem(cacheKey);
+      return cachedData ? JSON.parse(cachedData) : [];
+    },
+    [sqliteGetItem]
+  );
+
+  const fetchAndCacheCategoryNames = useCallback(
+    async (token: string | null) => {
+      if (token && isConnected) {
+        try {
+          const cachedCategories = await sqliteGetItem("categoryNames");
+          if (cachedCategories) {
+            return JSON.parse(cachedCategories);
+          }
+          const categories = await getCategoryNames(token);
+          await sqliteSetItem("categoryNames", JSON.stringify(categories));
+          return categories;
+        } catch (error) {
+          console.error("Failed to fetch or cache category names:", error);
+          throw error;
+        }
+      }
+      return {};
+    },
+    [isConnected, sqliteGetItem, sqliteSetItem]
+  );
+
+  const getCachedCategoryNames = useCallback(async (): Promise<Record<number, string>> => {
+    const cachedData = await sqliteGetItem("categoryNames");
+    return cachedData ? JSON.parse(cachedData) : {};
+  }, [sqliteGetItem]);
 
   const scheduleTaskNotification = useCallback(async (task: Task): Promise<string | null> => {
     try {
@@ -593,7 +830,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title: "Plan Reminder",
-          body: `Your plan "${task.title}" is due now!`,
+          body: `${task.title} is due now!`,
           data: { taskId: task.id },
           sound: "default",
         },
@@ -622,7 +859,7 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   }, [sqliteGetItem, sqliteRemoveItem]);
 
   const storeNotificationId = useCallback(
-    async (taskId: string | number, notificationId: string): Promise<void> => {
+    async (taskId: string, notificationId: string): Promise<void> => {
       await sqliteSetItem(`notification_${taskId}`, notificationId);
       console.log(`Stored notification ID ${notificationId} for task ${taskId}`);
     },
@@ -630,158 +867,26 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   );
 
   const getNotificationId = useCallback(
-    async (taskId: string | number): Promise<string | null> => {
+    async (taskId: string): Promise<string | null> => {
       return await sqliteGetItem(`notification_${taskId}`);
     },
     [sqliteGetItem]
   );
 
- 
-
-  const fetchAndCacheCoursesFn = useCallback(async () => {
-    if (token && isConnected) {
-      try {
-        let cachedCourses = await sqliteGetItem("courses");
-        if (!cachedCourses || JSON.parse(cachedCourses).length === 0) {
-          const courses = await getCourses(token);
-          await sqliteSetItem("courses", JSON.stringify(courses));
-          console.log("Courses fetched and cached.");
-        } else {
-          console.log("Courses already cached.");
-        }
-      } catch (error) {
-        console.error("Failed to fetch or cache courses:", error);
-      }
-    } else {
-      console.warn("WebSocket not connected, skipping course fetch.");
-    }
-  }, [token, isConnected]);
-
-  const fetchAndCacheCourseCategories = useCallback(async () => {
-    if (token && isConnected) {
-      try {
-        let cachedCategories = await sqliteGetItem("courseCategories");
-        if (!cachedCategories || JSON.parse(cachedCategories).length === 0) {
-          const categories = await getCourseCategories(token);
-          await sqliteSetItem("courseCategories", JSON.stringify(categories));
-          console.log("Course categories fetched and cached.");
-        } else {
-          console.log("Course categories already cached.");
-        }
-      } catch (error) {
-        console.error("Failed to fetch or cache course categories:", error);
-      }
-    } else {
-      console.warn("WebSocket not connected, skipping course categories fetch.");
-    }
-  }, [token, isConnected]);
-
-  const fetchAndCacheTodayPlans = useCallback(
-    async (token: string, date: Date, category?: string) => {
-      if (token && isConnected) {
-        try {
-          const dateString = date.toISOString().split("T")[0];
-          const normalizedCategory = category || "all";
-          const cacheKey = `todayPlans_${dateString}_${normalizedCategory}`;
-          const cachedPlans = await sqliteGetItem(cacheKey);
-          if (cachedPlans) {
-            return JSON.parse(cachedPlans);
-          }
-          const plans = await getTodayPlans(token, date, normalizedCategory === "all" ? undefined : normalizedCategory);
-          await sqliteSetItem(cacheKey, JSON.stringify(plans));
-          return plans;
-        } catch (error) {
-          console.error("Failed to fetch or cache today's plans:", error);
-          throw error;
-        }
-      }
-    },
-    [isConnected, sqliteGetItem, sqliteSetItem]
-  );
-
-  const getCachedTodayPlans = useCallback(
-    async (date: Date, category?: string) => {
-      const dateString = date.toISOString().split("T")[0];
-      const normalizedCategory = category || "all";
-      const cacheKey = `todayPlans_${dateString}_${normalizedCategory}`;
-      const cachedData = await sqliteGetItem(cacheKey);
-      return cachedData ? JSON.parse(cachedData) : [];
-    },
-    [sqliteGetItem]
-  );
-
-  const fetchAndCacheCategoryNames = useCallback(
-    async (token: string) => {
-      if (token && isConnected) {
-        try {
-          const cachedCategories = await sqliteGetItem("categoryNames");
-          if (cachedCategories) {
-            return JSON.parse(cachedCategories);
-          }
-          const categories = await getCategoryNames(token);
-          await sqliteSetItem("categoryNames", JSON.stringify(categories));
-          return categories;
-        } catch (error) {
-          console.error("Failed to fetch or cache category names:", error);
-          throw error;
-        }
-      }
-    },
-    [isConnected]
-  );
-
-  const getCachedCategoryNames = useCallback(async (): Promise<Record<number, string>> => {
-    const cachedData = await sqliteGetItem("categoryNames");
-    return cachedData ? JSON.parse(cachedData) : {};
-  }, []);
-
-  const subscribeToExistingUserCommunities = useCallback(async () => {
-    if (socket && isConnected && token) {
-      try {
-        const communities = await getUserCommunities(token);
-        for (const community of communities) {
-          await subscribeToExistingCommunity(community.id);
-        }
-      } catch (error) {
-        console.error("Error fetching user communities:", error);
-      }
-    }
-  }, [socket, isConnected, token]);
-
-  const subscribeToExistingCommunity = useCallback(
-    async (communityId: string | number) => {
-      if (socket && isConnected) {
-        try {
-          sendMessage({
-            type: "subscribe_existing",
-            community_id: communityId,
-          });
-          await updateCachedCommunitiesFn(communityId);
-        } catch (error) {
-          console.error("Failed to subscribe to existing community:", error);
-        }
-      }
-    },
-    [socket, isConnected, sendMessage]
-  );
-
-  const fetchAndCacheCommunities = fetchAndCacheCommunitiesFn;
-  const fetchAndCacheCourses = fetchAndCacheCoursesFn;
-
   useEffect(() => {
     const loadAndCacheData = async () => {
       if (token && isConnected) {
         try {
-          await fetchAndCacheCommunitiesFn();
-          await fetchAndCacheCoursesFn();
+          await fetchAndCacheCommunities();
+          await fetchAndCacheCourses();
           await fetchAndCacheCourseCategories();
           await fetchAndCacheTodayPlans(token, new Date());
           await fetchAndCacheCategoryNames(token);
           const communities = await getUserCommunities(token);
           for (const community of communities) {
-            sendMessage({ type: "fetch_history", community_id: community.id });
+            sendMessage({ type: "fetch_history", community_id: community.id.toString() });
           }
-          await fetchInitialLastMessages();
+          await loadUnreadCounts();
         } catch (error) {
           console.error("Error during initial data load:", error);
         }
@@ -791,13 +896,13 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
   }, [
     token,
     isConnected,
-    fetchAndCacheCommunitiesFn,
-    fetchAndCacheCoursesFn,
+    fetchAndCacheCommunities,
+    fetchAndCacheCourses,
     fetchAndCacheCourseCategories,
     fetchAndCacheTodayPlans,
     fetchAndCacheCategoryNames,
     sendMessage,
-    fetchInitialLastMessages,
+    loadUnreadCounts,
   ]);
 
   const contextValue: WebSocketContextType = {
@@ -818,13 +923,16 @@ export const WebSocketProvider: FC<WebSocketProviderProps> = ({ children, token 
     fetchAndCacheCategoryNames,
     getCachedTodayPlans,
     getCachedCategoryNames,
-    unreadCommunitiesCount,
+    unreadMessages,
+    loadUnreadCounts,
     markMessageAsRead,
     sqliteGetItem,
     sqliteSetItem,
     sqliteRemoveItem,
     sqliteClear,
     setCurrentCommunity,
+    communities,
+    refreshCommunities,
   };
 
   return (

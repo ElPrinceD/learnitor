@@ -67,7 +67,7 @@ function TabBarIcon(props: { name: string; color: string; focused: boolean }) {
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const { unreadCommunitiesCount } = useWebSocket();
+  const { unreadMessages } = useWebSocket();
   const currentHour = new Date().getHours();
   let greeting = "";
   if (currentHour >= 4 && currentHour < 12) {
@@ -85,6 +85,14 @@ export default function TabLayout() {
     "text"
   );
   const { userInfo } = useAuth();
+
+  const [communitiesWithUnread, setCommunitiesWithUnread] = useState(0);
+
+useEffect(() => {
+  const count = Object.values(unreadMessages).filter(c => c > 0).length;
+  setCommunitiesWithUnread(count);
+}, [unreadMessages]);
+
 
   return (
     <SafeAreaProvider>
@@ -167,18 +175,17 @@ export default function TabLayout() {
                   color={color}
                   focused={focused}
                 />
-                {unreadCommunitiesCount > 0 && (
-                  <View
-                    style={[
-                      styles.badge,
-                      { backgroundColor: Colors[colorScheme ?? "light"].tint },
-                    ]}
-                  >
-                    <Text style={styles.badgeText}>
-                      {unreadCommunitiesCount}
-                    </Text>
-                  </View>
-                )}
+                {communitiesWithUnread > 0 && (
+  <View style={[
+    styles.badge,
+    { backgroundColor: Colors[colorScheme ?? "light"].tint }
+  ]}>
+    <Text style={styles.badgeText}>
+      {communitiesWithUnread}
+    </Text>
+  </View>
+)}
+
               </View>
             ),
             headerShown: false,

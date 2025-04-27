@@ -44,6 +44,7 @@ import {
   InputToolbar,
 } from "react-native-gifted-chat";
 import { Swipeable } from "react-native-gesture-handler";
+import { v4 as uuidv4 } from "uuid";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
@@ -130,7 +131,7 @@ const CommunityChatScreen: React.FC = () => {
   const normalizeMessage = useCallback((data) => {
     if ("message" in data && "sent_at" in data) {
       return {
-        _id: data.id || data.temp_id || Date.now().toString(),
+        _id: data.id || data.temp_id || uuidv4(), // Use UUID instead of Date.now()
         text: data.message,
         createdAt: new Date(data.sent_at),
         user: {
@@ -275,27 +276,25 @@ const CommunityChatScreen: React.FC = () => {
 
   useEffect(() => {
     let socketCleanup = () => {};
-
+  
     if (socket) {
       const onMessage = (event: MessageEvent) => {
         try {
           const data = JSON.parse(event.data);
-          
-
+  
           if (data.type === "community_updated" && data.community?.id === communityId) {
             setCommunity(data.community);
           }
-
+  
           if (data.type === "history" && data.community_id === communityId) {
             const transformedMessages = data.messages
               .map(normalizeMessage)
               .filter((msg): msg is IMessage => msg !== null)
               .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
+  
             setMessages((prevMessages) => {
               const newMessages = transformedMessages.filter(
-                (newMsg) =>
-                  !prevMessages.some((prevMsg) => prevMsg._id === newMsg._id)
+                (newMsg) => !prevMessages.some((prevMsg) => prevMsg._id === newMsg._id)
               );
               const pendingMessages = prevMessages.filter(
                 (m) => m.status === "pending" || m.tempId
@@ -303,33 +302,25 @@ const CommunityChatScreen: React.FC = () => {
               const updatedMessages = data.before
                 ? [...prevMessages, ...newMessages] // Append for earlier messages
                 : [...pendingMessages, ...transformedMessages]; // Replace for initial fetch
-              const sortedMessages = updatedMessages.sort(
-                (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
-              );
-              sqliteSetItem(
-                `messages_${communityId}`,
-                JSON.stringify(sortedMessages)
-              );
+              // Deduplicate using a Map
+              const uniqueMessages = Array.from(
+                new Map(updatedMessages.map((msg) => [msg._id, msg])).values()
+              ).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+              
+              sqliteSetItem(`messages_${communityId}`, JSON.stringify(uniqueMessages));
               if (newMessages.length > 0 && data.before) {
-                setLastMessageTimestamp(
-                  sortedMessages[sortedMessages.length - 1].createdAt.getTime()
-                );
-              } else if (!data.before && sortedMessages.length > 0) {
-                setLastMessageTimestamp(
-                  sortedMessages[sortedMessages.length - 1].createdAt.getTime()
-                );
+                setLastMessageTimestamp(uniqueMessages[uniqueMessages.length - 1].createdAt.getTime());
+              } else if (!data.before && uniqueMessages.length > 0) {
+                setLastMessageTimestamp(uniqueMessages[0].createdAt.getTime());
               }
               setLoadEarlier(newMessages.length === 20);
-              const imageUris = transformedMessages
+              const imageUris = uniqueMessages
                 .filter((msg) => msg.image)
                 .map((msg) => msg.image);
               setImageViewerImages(imageUris);
-              return sortedMessages;
+              return uniqueMessages;
             });
-          } else if (
-            data.type === "message" &&
-            data.community_id === communityId
-          ) {
+          } else if (data.type === "message" && data.community_id === communityId) {
             const newMessage = normalizeMessage(data);
             console.log("New message processed:", newMessage);
             if (newMessage) {
@@ -344,15 +335,16 @@ const CommunityChatScreen: React.FC = () => {
                 } else {
                   updatedMessages = [newMessage, ...prevMessages];
                 }
-                sqliteSetItem(
-                  `messages_${communityId}`,
-                  JSON.stringify(updatedMessages)
+                // Deduplicate using a Map
+                const uniqueMessages = Array.from(
+                  new Map(updatedMessages.map((msg) => [msg._id, msg])).values()
                 );
-                const imageUris = updatedMessages
+                sqliteSetItem(`messages_${communityId}`, JSON.stringify(uniqueMessages));
+                const imageUris = uniqueMessages
                   .filter((msg) => msg.image)
                   .map((msg) => msg.image);
                 setImageViewerImages(imageUris);
-                return updatedMessages;
+                return uniqueMessages;
               });
             }
           } else if (data.type === "message_delete") {
@@ -360,10 +352,7 @@ const CommunityChatScreen: React.FC = () => {
               const updatedMessages = prevMessages.filter(
                 (m) => m._id !== data.message_id
               );
-              sqliteSetItem(
-                `messages_${communityId}`,
-                JSON.stringify(updatedMessages)
-              );
+              sqliteSetItem(`messages_${communityId}`, JSON.stringify(updatedMessages));
               const imageUris = updatedMessages
                 .filter((msg) => msg.image)
                 .map((msg) => msg.image);
@@ -377,10 +366,7 @@ const CommunityChatScreen: React.FC = () => {
                   ? { ...m, text: data.new_content, isEdited: true }
                   : m
               );
-              sqliteSetItem(
-                `messages_${communityId}`,
-                JSON.stringify(updatedMessages)
-              );
+              sqliteSetItem(`messages_${communityId}`, JSON.stringify(updatedMessages));
               return updatedMessages;
             });
           }
@@ -388,13 +374,13 @@ const CommunityChatScreen: React.FC = () => {
           console.error("Error processing WebSocket message:", error);
         }
       };
-
+  
       socket.addEventListener("message", onMessage);
       socketCleanup = () => {
         socket.removeEventListener("message", onMessage);
       };
     }
-
+  
     return socketCleanup;
   }, [socket, communityId, sqliteSetItem, normalizeMessage]);
 
@@ -477,11 +463,10 @@ const CommunityChatScreen: React.FC = () => {
       try {
         console.log("sendMediaMessage called with:", { fileUri, type });
         console.log("WebSocket isConnected:", isConnected);
-
+  
         let mediaData = fileUri;
         let payloadUri = fileUri;
-
-        // Convert to base64 based on type
+  
         if (type === "image") {
           const base64 = await FileSystem.readAsStringAsync(fileUri, {
             encoding: FileSystem.EncodingType.Base64,
@@ -494,14 +479,12 @@ const CommunityChatScreen: React.FC = () => {
             const fileContent = await FileSystem.readAsStringAsync(fileUri, {
               encoding: FileSystem.EncodingType.Base64,
             });
-
             const extension = fileUri.split(".").pop()?.toLowerCase();
             let mimeType = "application/octet-stream";
             if (extension === "pdf") mimeType = "application/pdf";
             else if (["doc", "docx"].includes(extension || ""))
               mimeType = "application/msword";
             else if (extension === "txt") mimeType = "text/plain";
-
             payloadUri = `data:${mimeType};base64,${fileContent}`;
           } catch (error) {
             console.error("Error encoding document to base64:", error);
@@ -509,10 +492,9 @@ const CommunityChatScreen: React.FC = () => {
             return;
           }
         }
-
-        const tempId =
-          Date.now().toString() + Math.random().toString(36).substr(2, 5);
-
+  
+        const tempId = uuidv4(); // Use UUID instead of Date.now() + random
+  
         const message = {
           _id: tempId,
           tempId,
@@ -525,18 +507,15 @@ const CommunityChatScreen: React.FC = () => {
           [type]: mediaData,
           status: isConnected ? "sending" : "pending",
         };
-
-        // Avoid duplicates
+  
         if (!messageIds.has(tempId)) {
           setMessages((prev) => [message, ...prev]);
           setMessageIds((prev) => new Set([...prev, tempId]));
-
           if (type === "image") {
-            // Use original URI for viewer
             setImageViewerImages((prev) => [fileUri, ...prev]);
           }
         }
-
+  
         if (!isConnected) {
           const offlineMessage = {
             ...message,
@@ -546,24 +525,14 @@ const CommunityChatScreen: React.FC = () => {
               [type]: payloadUri,
             },
           };
-
-          await sqliteSetItem(
-            `unsent_message_${tempId}`,
-            JSON.stringify(offlineMessage)
-          );
-          await sqliteSetItem(
-            `messages_${communityId}`,
-            JSON.stringify([message, ...messages])
-          );
-
+          await sqliteSetItem(`unsent_message_${tempId}`, JSON.stringify(offlineMessage));
+          await sqliteSetItem(`messages_${communityId}`, JSON.stringify([message, ...messages]));
           const allKeysRaw = (await sqliteGetItem("storage_keys")) || "[]";
           const keys = JSON.parse(allKeysRaw) || [];
-
           if (!keys.includes(`unsent_message_${tempId}`)) {
             keys.push(`unsent_message_${tempId}`);
             await sqliteSetItem("storage_keys", JSON.stringify(keys));
           }
-
           console.log("Message saved locally for later send.");
         } else {
           sendMessage({
@@ -575,7 +544,6 @@ const CommunityChatScreen: React.FC = () => {
             temp_id: tempId,
             [type]: payloadUri,
           });
-
           console.log("Message sent via WebSocket.");
         }
       } catch (error) {
@@ -583,16 +551,7 @@ const CommunityChatScreen: React.FC = () => {
         ToastAndroid.show("Error sending media", ToastAndroid.SHORT);
       }
     },
-    [
-      communityId,
-      sendMessage,
-      user,
-      isConnected,
-      messageIds,
-      messages,
-      sqliteSetItem,
-      sqliteGetItem,
-    ]
+    [communityId, sendMessage, user, isConnected, messageIds, messages, sqliteSetItem, sqliteGetItem]
   );
 
   const pickDocument = useCallback(async () => {
@@ -618,8 +577,7 @@ const CommunityChatScreen: React.FC = () => {
   const onSend = useCallback(
     async (newMessages: IMessage[] = []) => {
       for (let message of newMessages) {
-        const tempId =
-          Date.now().toString() + Math.random().toString(36).substr(2, 5);
+        const tempId = uuidv4(); // Use UUID instead of Date.now() + random
         const tempMessage: IMessage = {
           _id: tempId,
           tempId,
@@ -652,10 +610,10 @@ const CommunityChatScreen: React.FC = () => {
             },
           }),
         };
-
+  
         setReplyToMessage(null);
         setMediaPreview({ type: null, uri: null });
-
+  
         if (!messageIds.has(tempId)) {
           setMessages((prevMessages) => [tempMessage, ...prevMessages]);
           setMessageIds((prev) => new Set([...prev, tempId]));
@@ -663,7 +621,7 @@ const CommunityChatScreen: React.FC = () => {
             setImageViewerImages((prev) => [tempMessage.image, ...prev]);
           }
         }
-
+  
         if (!isConnected) {
           const messageToStore = {
             ...message,
@@ -674,14 +632,8 @@ const CommunityChatScreen: React.FC = () => {
               document: tempMessage.document || undefined,
             },
           };
-          await sqliteSetItem(
-            `unsent_message_${tempId}`,
-            JSON.stringify(messageToStore)
-          );
-          await sqliteSetItem(
-            `messages_${communityId}`,
-            JSON.stringify([tempMessage, ...messages])
-          );
+          await sqliteSetItem(`unsent_message_${tempId}`, JSON.stringify(messageToStore));
+          await sqliteSetItem(`messages_${communityId}`, JSON.stringify([tempMessage, ...messages]));
           const allKeysRaw = (await sqliteGetItem("storage_keys")) || "[]";
           let keys = JSON.parse(allKeysRaw) || [];
           if (!keys.includes(`unsent_message_${tempId}`)) {
@@ -701,24 +653,13 @@ const CommunityChatScreen: React.FC = () => {
             document: tempMessage.document ? tempMessage.document : undefined,
           });
         }
-
+  
         if (replyToMessage) {
           setSelectedMessages([]);
         }
       }
     },
-    [
-      communityId,
-      sendMessage,
-      user,
-      replyToMessage,
-      isConnected,
-      mediaPreview,
-      messageIds,
-      sqliteSetItem,
-      sqliteGetItem,
-      messages,
-    ]
+    [communityId, sendMessage, user, replyToMessage, isConnected, mediaPreview, messageIds, sqliteSetItem, sqliteGetItem, messages]
   );
 
   const pickImage = useCallback(async () => {
@@ -728,13 +669,13 @@ const CommunityChatScreen: React.FC = () => {
       quality: 1,
       allowsEditing: true,
     });
-
+  
     if (!result.canceled && result.assets && result.assets.length > 0) {
       const selectedImages = result.assets;
       const newImages = selectedImages.map((asset) => ({
         uri: asset.uri,
         type: "image",
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+        id: uuidv4(), // Use UUID instead of Date.now() + random
       }));
       console.log("Selected images:", newImages);
       setSelectedImagesForPreview(newImages);

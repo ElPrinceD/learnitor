@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   ActivityIndicator,
@@ -17,7 +17,12 @@ interface AppImageProps {
 }
 
 const AppImage: React.FC<AppImageProps> = ({ uri, style, onPress }) => {
+  const [loading, setLoading] = useState(true);
   const Wrapper = onPress ? TouchableOpacity : View;
+
+  const handleLoadEnd = () => {
+    setLoading(false);
+  };
 
   return (
     <Wrapper
@@ -26,7 +31,14 @@ const AppImage: React.FC<AppImageProps> = ({ uri, style, onPress }) => {
       activeOpacity={0.8}
     >
       {uri ? (
-        <Image uri={uri} style={[styles.image, style]} />
+        <>
+          <Image
+            uri={uri}
+            style={[styles.image, style]}
+            onLoadEnd={handleLoadEnd}
+          />
+      
+        </>
       ) : (
         <ActivityIndicator size="small" color="#888" style={styles.loader} />
       )}

@@ -20,7 +20,10 @@ export const getAnnouncements = async (token) => {
         const response = await apiClient.get(ANNOUNCEMENT_API_BASE_URL, {
         
         });
+        console.log("Here: ",response.data)
         return response.data;
+
+        
     } catch (error) {
         console.error('Error fetching announcements:', error);
         throw error;
