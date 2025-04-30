@@ -19,7 +19,7 @@ import { SIZES, rMS, rS, rV } from "../../../constants";
 import {
   getPracticeQuestions,
   getPracticeAnswers,
-} from "../../../CoursesApiCalls";
+} from "../../../services/CoursesApiCalls";
 import ErrorMessage from "../../../components/ErrorMessage";
 
 const PracticeQuestions: React.FC = () => {

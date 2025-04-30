@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
-import { createPeriod, createTimetable, updateTimetable } from "../../TimelineApiCalls";
+import { createPeriod, createTimetable, updateTimetable } from "../../services/TimelineApiCalls";
 import { useAuth } from "../../components/AuthContext";
 import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import Colors from "../../constants/Colors";

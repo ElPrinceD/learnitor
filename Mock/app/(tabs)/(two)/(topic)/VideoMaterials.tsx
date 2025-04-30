@@ -7,7 +7,7 @@ import { useAuth } from "../../../../components/AuthContext";
 import Videos from "../../../../components/Videos";
 
 import { Topic, Material } from "../../../../components/types";
-import { fetchTopicMaterials } from "../../../../CoursesApiCalls";
+import { fetchTopicMaterials } from "../../../../services/CoursesApiCalls";
 import ErrorMessage from "../../../../components/ErrorMessage";
 import { queryClient } from "../../../../QueryClient";
 

@@ -1,5 +1,6 @@
 import axios from 'axios';
-import ApiUrl from './config'; // Assuming you have a config file for API URL
+import ApiUrl from '../config';
+import { api } from './CoursesApiCalls';
 
 const apiClient = axios.create({
     baseURL: ApiUrl,
@@ -9,7 +10,7 @@ const apiClient = axios.create({
 });
 
 const COMMUNITY_API_BASE_URL = '/api/communities';
-const MESSAGE_API_BASE_URL = '/api/messages'
+const MESSAGE_API_BASE_URL = '/api/messages';
 
 export const getCommunities = async (token: string) => {
     try {
@@ -25,7 +26,6 @@ export const getCommunities = async (token: string) => {
         throw error;
     }
 };
-
 
 export const searchCommunities = async (searchQuery: string, token: string) => {
     try {
@@ -56,24 +56,24 @@ export const getCommunityDetails = async (communityId: string | number, token: a
     }
 };
 
-
 export const getCommunityTimetable = async (communityId: string, token: string) => {
+    
     try {
         const response = await apiClient.get(`api/timetables/community/${communityId}/`, {
             headers: {
                 Authorization: `Token ${token}`,
             },
         });
-        return response.data;
+        return response.data.results;
     } catch (error) {
-        console.error('Error fetching community details:', error);
+        console.error('Error fetching community timetable:', error);
         throw error;
     }
-    };
+};
 
 export const updateCommunity = async (communityId: string, communityData: any, token: string | null) => {
-    console.log(communityId)
-    console.log(communityData)
+    console.log(communityId);
+    console.log(communityData);
     try {
         const response = await apiClient.patch(`${COMMUNITY_API_BASE_URL}/${communityId}/`, communityData, {
             headers: {
@@ -88,13 +88,26 @@ export const updateCommunity = async (communityId: string, communityData: any, t
     }
 };
 
-export const getCommunityMessages = async (communityId: string, token: string) => {
+export const getCommunityMessages = async (
+    communityId: string,
+    token: string,
+    pageSize: number = 50,
+    beforeMessageId?: string,
+    beforeTimestamp?: string
+) => {
     try {
+        // Construct query parameters
+        const params: any = { page_size: pageSize };
+        if (beforeMessageId) params.before_message_id = beforeMessageId;
+        if (beforeTimestamp) params.before_timestamp = beforeTimestamp;
+
         const response = await apiClient.get(`${MESSAGE_API_BASE_URL}/${communityId}/get_messages/`, {
             headers: {
                 Authorization: `Token ${token}`,
             },
+            params, // Pass query parameters
         });
+        console.log('Response:', response.data);
         return response.data;
     } catch (error) {
         console.error('Error fetching community messages:', error);
@@ -139,23 +152,20 @@ export const removeCommunityMember = async (
 };
 
 export const shareCommunity = async (communityId: string, token: string) => {
-    console.log(communityId, token)
-    try { 
-    const response = await apiClient.get(`${COMMUNITY_API_BASE_URL}/${communityId}/share/`, {
-      
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Token ${token}`,
-      },
-    });
-    return response.data;
+    console.log(communityId, token);
+    try {
+        const response = await apiClient.get(`${COMMUNITY_API_BASE_URL}/${communityId}/share/`, {
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Token ${token}`,
+            },
+        });
+        return response.data;
     } catch (error) {
         console.error('Error fetching share details', error);
         throw error;
     }
-  };
-
-
+};
 
 export const joinCommunity = async (communityId: number, token: string) => {
     try {
@@ -185,6 +195,20 @@ export const leaveCommunity = async (communityId: string, token: any) => {
     }
 };
 
+export const getLastMessages = async (token: string) => {
+    try {
+        const response = await apiClient.get(`${MESSAGE_API_BASE_URL}/last_messages/`, {
+            headers: {
+                Authorization: `Token ${token}`,
+            },
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching last messages:', error);
+        throw error;
+    }
+};
+
 export const sendMessageToCommunity = async (communityId: number, message: string, token: string) => {
     try {
         const response = await apiClient.post(`${COMMUNITY_API_BASE_URL}/${communityId}/messages/`, { message }, {
@@ -200,8 +224,7 @@ export const sendMessageToCommunity = async (communityId: number, message: strin
 };
 
 export const createCommunity = async (communityData: any, token: string) => {
-
-    console.log('Community: ',communityData)
+    console.log('Community: ', communityData);
     try {
         const response = await apiClient.post(`${COMMUNITY_API_BASE_URL}/`, communityData, {
             headers: {
@@ -215,4 +238,3 @@ export const createCommunity = async (communityData: any, token: string) => {
         throw error;
     }
 };
-

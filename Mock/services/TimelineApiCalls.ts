@@ -1,5 +1,5 @@
 import axios from 'axios';
-import ApiUrl from './config'; 
+import ApiUrl from '../config'; 
 
 const apiClient = axios.create({
     baseURL: ApiUrl,
@@ -16,7 +16,8 @@ export const getTodayPlans = async (token, date, selectedCategory) => {
   const response = await axios.get(apiUrl, {
     headers: { Authorization: `Token ${token}` },
   });
-  return response.data.sort((a, b) => {
+
+  return response.data.results.sort((a, b) => {
     const dateA = new Date(`${a.due_date}T${a.due_time}`);
     const dateB = new Date(`${b.due_date}T${b.due_time}`);
     return dateA.getTime() - dateB.getTime();
@@ -60,8 +61,8 @@ export const getCategoryNames = async (token) => {
             headers: { Authorization: `Token ${token}` },
         });
 
-        console.table(response.data)
-        return response.data.reduce((acc, category) => {
+        
+        return response.data.results.reduce((acc, category) => {
             acc[category.id] = category.name;
             console.table(acc)
             return acc;
@@ -82,7 +83,7 @@ export const getCategories = async (token) => {
       },
     })
  
-    return response.data.map(category => ({
+    return response.data.results.map(category => ({
       label: category.name,
       value: category.id,
     }));
@@ -107,8 +108,7 @@ export const createTask = async (taskData, token) => {
 };
 
 export const updateTask = async (taskId, taskData, token) => {
-  console.log(taskId)
-  console.log(taskData)
+  
   try {
     const response = await apiClient.patch(`/tasks/${taskId}/`, taskData, {
       headers: {

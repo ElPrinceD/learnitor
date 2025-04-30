@@ -7,7 +7,7 @@ import { Course } from "../../components/types";
 import { useAuth } from "../../components/AuthContext";
 import Colors from "../../constants/Colors";
 import { SIZES, rV } from "../../constants";
-import { getCourses } from "../../CoursesApiCalls";
+import { getCourses } from "../../services/CoursesApiCalls";
 import { queryClient } from "../../QueryClient";
 import ErrorMessage from "../../components/ErrorMessage";
 

@@ -19,7 +19,7 @@ import {
   getTimetables,
   getUserDetails,
   updateTimetable,
-} from "../../TimelineApiCalls";
+} from "../../services/TimelineApiCalls";
 import Colors from "../../constants/Colors";
 import { rMS, rS, rV, SIZES } from "../../constants";
 import Icon from "react-native-vector-icons/Ionicons";

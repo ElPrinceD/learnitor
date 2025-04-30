@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useRoute, useNavigation } from "@react-navigation/native";
-import { useWebSocket } from "../../webSocketProvider";
+import { useWebSocket } from "../../contexts/webSocketProvider";
 import { useAuth } from "../../components/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import ApiUrl from './config'; // Assuming you have a config file for API URL
+import ApiUrl from '../config'; // Assuming you have a config file for API URL
 
 const apiClient = axios.create({
     baseURL: ApiUrl,
@@ -20,7 +20,7 @@ export const getAnnouncements = async (token) => {
         const response = await apiClient.get(ANNOUNCEMENT_API_BASE_URL, {
         
         });
-        console.log("Here: ",response.data)
+     
         return response.data;
 
         

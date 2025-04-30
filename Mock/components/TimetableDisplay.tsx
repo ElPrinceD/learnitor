@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import Colors from "../constants/Colors";
 import { Swipeable } from "react-native-gesture-handler";
-import { cancelPeriodForToday, uncancelPeriodForToday } from "../TimelineApiCalls";
+import { cancelPeriodForToday, uncancelPeriodForToday } from "../services/TimelineApiCalls";
 import { useAuth } from "./AuthContext";
 
 interface Period {

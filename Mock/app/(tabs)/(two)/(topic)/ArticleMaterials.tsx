@@ -6,7 +6,7 @@ import { useAuth } from "../../../../components/AuthContext";
 import Articles from "../../../../components/Articles";
 import { Topic, ArticleMaterial } from "../../../../components/types";
 import { useQuery } from "@tanstack/react-query";
-import { fetchTopicMaterials } from "../../../../CoursesApiCalls";
+import { fetchTopicMaterials } from "../../../../services/CoursesApiCalls";
 import { queryClient } from "../../../../QueryClient";
 import ErrorMessage from "../../../../components/ErrorMessage";
 

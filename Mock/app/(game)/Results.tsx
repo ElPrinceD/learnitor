@@ -15,7 +15,7 @@ import Colors from "../../constants/Colors";
 import GameButton from "../../components/GameButton";
 import { SIZES, rMS, rS, rV } from "../../constants";
 import { useQuery } from "@tanstack/react-query";
-import { getGameDetails } from "../../GamesApiCalls";
+import { getGameDetails } from "../../services/GamesApiCalls";
 
 export default function ResultsScreen() {
   const { userInfo, userToken } = useAuth();

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { queryClient } from "./QueryClient";
 import { useQuery } from "@tanstack/react-query";
-import { getGameDetails } from "./GamesApiCalls";
+import { getGameDetails } from "./services/GamesApiCalls";
 import ApiUrl from "./config";
 import WsUrl from "./configWs";
 export const useWebSocket = (

@@ -2,14 +2,13 @@ import { useEffect } from "react";
 import { Linking } from "react-native";
 import { useAuth } from "./components/AuthContext";
 import ApiUrl from "./config";
-import { useWebSocket } from "./webSocketProvider";
+import { useCommunity } from "./contexts/CommunityContext"; // Added for CommunityContext
 import { router } from "expo-router";
-
 
 const DeepLinkHandler = () => {
   const { userToken } = useAuth();
-  const { joinAndSubscribeToCommunity, fetchAndCacheCommunities } = useWebSocket();
-  const API_URL = ApiUrl
+  const { joinAndSubscribeToCommunity, fetchAndCacheCommunities } = useCommunity(); // Use CommunityContext
+  const API_URL = ApiUrl;
 
   const handleDeepLink = async (url) => {
     if (!url || !userToken?.token) return;

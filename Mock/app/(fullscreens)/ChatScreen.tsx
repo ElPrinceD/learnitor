@@ -27,12 +27,10 @@ import {
   Linking,
   FlatList,
 } from "react-native";
-import LinearGradient from "react-native-linear-gradient";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+
 import * as Clipboard from "expo-clipboard";
 import { useFocusEffect, useRoute } from "@react-navigation/native";
-import axios from "axios";
-import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
+
 import { useAuth } from "../../components/AuthContext";
 import { Message } from "../../components/types";
 import {
@@ -43,7 +41,6 @@ import {
   IMessage,
   InputToolbar,
 } from "react-native-gifted-chat";
-import { Swipeable } from "react-native-gesture-handler";
 import { v4 as uuidv4 } from "uuid";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
@@ -51,17 +48,18 @@ import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
 import * as MediaLibrary from "expo-media-library";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import Video from "react-native-video";
 import { useNavigation } from "@react-navigation/native";
-import { useWebSocket } from "../../webSocketProvider";
+import { useCommunity } from "../../contexts/CommunityContext";
+import { useCache } from "../../contexts/CacheContext";
+import { useWebSocket } from "../../contexts/webSocketProvider";
 import { rMS, rV, rS, SIZES, useShadows } from "../../constants";
 import Colors from "../../constants/Colors";
 import { FONT } from "../../constants";
 import { router } from "expo-router";
 import AppImage from "../../components/AppImage";
 import FullScreenImageViewer from "../../components/FullScreenImageViewer";
-import FileViewer from "react-native-file-viewer";
 import ImagePreviewModal from "../../components/ImagePreviewModal";
+import { getCommunityMessages } from "../../services/CommunityApiCalls";
 
 // Memoize GiftedChat to prevent unnecessary re-renders
 const MemoizedGiftedChat = memo(GiftedChat, (prevProps, nextProps) => {
@@ -77,26 +75,19 @@ const MemoizedGiftedChat = memo(GiftedChat, (prevProps, nextProps) => {
 const CommunityChatScreen: React.FC = () => {
   const route = useRoute();
   const { communityId } = route.params as { communityId: string };
-  
+  const [isUpdatingMessages, setIsUpdatingMessages] = useState(false);
   const { userToken, userInfo } = useAuth();
   const user = userInfo?.user;
-  const {
-    socket,
-    isConnected,
-    sendMessage,
-    setCurrentCommunity,
-    markMessageAsRead,
-    sqliteGetItem,
-    sqliteSetItem,
-  } = useWebSocket();
+  const { socket, isConnected, sendMessage } = useWebSocket();
+  const { setCurrentCommunityId, markMessageAsRead, fetchAndCacheMessages } = useCommunity();
+  const { getItem, setItem } = useCache();
   const navigation = useNavigation();
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [messageIds, setMessageIds] = useState(new Set<string>());
   const [loadEarlier, setLoadEarlier] = useState(true);
   const [isLoadingEarlier, setIsLoadingEarlier] = useState(false);
-  const [lastMessageTimestamp, setLastMessageTimestamp] = useState<
-    number | null
-  >(null);
+  const [lastMessageId, setLastMessageId] = useState<string | null>(null)
+  const [lastMessageTimestamp, setLastMessageTimestamp] = useState<number | null>(null);
   const { width } = Dimensions.get("window");
   const [messageInput, setMessageInput] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -119,9 +110,7 @@ const CommunityChatScreen: React.FC = () => {
   const [isVideoViewerVisible, setIsVideoViewerVisible] = useState(false);
   const [isDocumentViewerVisible, setIsDocumentViewerVisible] = useState(false);
   const [editingMessage, setEditingMessage] = useState<IMessage | null>(null);
-  const [profileImages, setProfileImages] = useState<Record<string, string>>(
-    {}
-  );
+  const [profileImages, setProfileImages] = useState<Record<string, string>>({});
   const [selectedImagesForPreview, setSelectedImagesForPreview] = useState<
     { uri: string; type: string; id: string }[]
   >([]);
@@ -131,7 +120,7 @@ const CommunityChatScreen: React.FC = () => {
   const normalizeMessage = useCallback((data) => {
     if ("message" in data && "sent_at" in data) {
       return {
-        _id: data.id || data.temp_id || uuidv4(), // Use UUID instead of Date.now()
+        _id: data.id || data.temp_id || uuidv4(),
         text: data.message,
         createdAt: new Date(data.sent_at),
         user: {
@@ -188,14 +177,14 @@ const CommunityChatScreen: React.FC = () => {
   // Fetch community data from cache
   const fetchCommunityData = useCallback(async () => {
     try {
-      const cachedCommunity = await sqliteGetItem(`community_${communityId}`);
+      const cachedCommunity = await getItem(`community_${communityId}`);
       if (cachedCommunity) {
         setCommunity(JSON.parse(cachedCommunity));
       }
     } catch (error) {
       console.error("Error fetching community data:", error);
     }
-  }, [communityId, sqliteGetItem]);
+  }, [communityId, getItem]);
 
   useEffect(() => {
     fetchCommunityData();
@@ -204,29 +193,33 @@ const CommunityChatScreen: React.FC = () => {
   const fetchInitialMessages = useCallback(async () => {
     try {
       setLoading(true);
-      const cachedMessages = await sqliteGetItem(`messages_${communityId}`);
-      if (cachedMessages) {
-        const parsedMessages = JSON.parse(cachedMessages).map(normalizeMessage);
-        const validMessages = parsedMessages
+
+      // Fetch messages using CommunityProvider
+      if (userToken?.token) {
+        const messages = await fetchAndCacheMessages(communityId, userToken.token);
+        const transformedMessages = messages
+          .map(normalizeMessage)
           .filter((msg): msg is IMessage => msg !== null)
           .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-        setMessages(validMessages);
-        if (validMessages.length > 0) {
-          setLastMessageTimestamp(
-            validMessages[validMessages.length - 1].createdAt.getTime()
+        setMessages(transformedMessages);
+        if (transformedMessages.length > 0) {
+          setLastMessageId(
+            transformedMessages[transformedMessages.length - 1]._id
           );
         }
-        const imageUris = validMessages
+        
+        const imageUris = transformedMessages
           .filter((msg) => msg.image)
           .map((msg) => msg.image);
         setImageViewerImages(imageUris);
       }
 
+      // Request message history via WebSocket if connected
       if (isConnected) {
         await sendMessage({
           type: "fetch_history",
           community_id: communityId,
-          limit: 20, // Initial batch size
+          limit: 20,
         });
       }
     } catch (error) {
@@ -235,63 +228,124 @@ const CommunityChatScreen: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [communityId, sendMessage, isConnected, sqliteGetItem, normalizeMessage]);
+  }, [communityId, userToken, sendMessage, isConnected, fetchAndCacheMessages, normalizeMessage]);
 
   const handleLoadEarlier = useCallback(async () => {
-    if (!loadEarlier || isLoadingEarlier) return;
-
+    if (!loadEarlier || isLoadingEarlier || !lastMessageId || isUpdatingMessages) {
+      console.log("Skipping load earlier:", { loadEarlier, isLoadingEarlier, lastMessageId, isUpdatingMessages });
+      return;
+    }
+  
+    setIsUpdatingMessages(true);
     setIsLoadingEarlier(true);
+    setError(null);
     try {
-      if (isConnected && lastMessageTimestamp) {
-        await sendMessage({
-          type: "fetch_history",
-          community_id: communityId,
-          limit: 20,
-          before: lastMessageTimestamp, // Use timestamp for pagination
-        });
+      if (isConnected && communityId && userToken) {
+        console.log("Fetching older messages with lastMessageId:", lastMessageId);
+        const olderMessages = await getCommunityMessages(
+          communityId,
+          userToken.token,
+          50,
+          lastMessageId,
+          undefined
+        );
+        console.log("Older messages received:", olderMessages);
+  
+        if (olderMessages && olderMessages.length > 0) {
+          const normalizedOlderMessages = olderMessages.map(normalizeMessage);
+          const validOlderMessages = normalizedOlderMessages.filter(
+            (msg): msg is IMessage => msg !== null && msg._id && !isNaN(msg.createdAt.getTime())
+          );
+  
+          validOlderMessages.forEach((msg, index) => {
+            console.log(`Older message ${index}:`, {
+              _id: msg._id,
+              createdAt: msg.createdAt.toISOString(),
+              text: msg.text.slice(0, 20),
+            });
+          });
+  
+          if (validOlderMessages.length > 0) {
+            setMessages((prevMessages) => {
+              const combinedMessages = [...validOlderMessages, ...prevMessages];
+              const uniqueMessages = Array.from(
+                new Map(combinedMessages.map((msg) => [msg._id, msg])).values()
+              ).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  
+              console.log("Combined messages (first 5):", uniqueMessages.slice(0, 5).map((m) => ({
+                _id: m._id,
+                createdAt: m.createdAt.toISOString(),
+              })));
+  
+              return uniqueMessages;
+            });
+  
+            const oldestMessage = validOlderMessages[validOlderMessages.length - 1];
+            if (oldestMessage && oldestMessage._id) {
+              setLastMessageId(oldestMessage._id);
+              setLastMessageTimestamp(oldestMessage.createdAt.getTime());
+              setLoadEarlier(olderMessages.length >= 50);
+              console.log("New lastMessageId:", oldestMessage._id, "Timestamp:", oldestMessage.createdAt.toISOString());
+            } else {
+              setLoadEarlier(false);
+              console.warn("Oldest message has no valid _id:", oldestMessage);
+            }
+          } else {
+            setLoadEarlier(false);
+            console.log("No valid earlier messages to load.");
+          }
+        } else {
+          setLoadEarlier(false);
+          console.log("No more earlier messages to load.");
+        }
+      } else {
+        setError(isConnected ? "Invalid community or token" : "No internet connection");
       }
     } catch (error) {
       console.error("Error loading earlier messages:", error);
       setError("Failed to load earlier messages");
     } finally {
       setIsLoadingEarlier(false);
+      setIsUpdatingMessages(false);
     }
   }, [
     loadEarlier,
     isLoadingEarlier,
     isConnected,
     communityId,
-    lastMessageTimestamp,
-    sendMessage,
+    lastMessageId,
+    userToken,
+    normalizeMessage,
+    isUpdatingMessages,
   ]);
 
   useFocusEffect(
     useCallback(() => {
-      setCurrentCommunity(communityId);
+      setCurrentCommunityId(communityId);
       markMessageAsRead(communityId);
       fetchInitialMessages();
       return () => {};
-    }, [fetchInitialMessages])
+    }, [fetchInitialMessages, setCurrentCommunityId, markMessageAsRead, communityId])
   );
 
   useEffect(() => {
     let socketCleanup = () => {};
-  
+
     if (socket) {
       const onMessage = (event: MessageEvent) => {
         try {
           const data = JSON.parse(event.data);
-  
+
           if (data.type === "community_updated" && data.community?.id === communityId) {
             setCommunity(data.community);
           }
-  
+
           if (data.type === "history" && data.community_id === communityId) {
             const transformedMessages = data.messages
               .map(normalizeMessage)
               .filter((msg): msg is IMessage => msg !== null)
               .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-  
+
             setMessages((prevMessages) => {
               const newMessages = transformedMessages.filter(
                 (newMsg) => !prevMessages.some((prevMsg) => prevMsg._id === newMsg._id)
@@ -300,14 +354,12 @@ const CommunityChatScreen: React.FC = () => {
                 (m) => m.status === "pending" || m.tempId
               );
               const updatedMessages = data.before
-                ? [...prevMessages, ...newMessages] // Append for earlier messages
-                : [...pendingMessages, ...transformedMessages]; // Replace for initial fetch
-              // Deduplicate using a Map
+                ? [...prevMessages, ...newMessages]
+                : [...pendingMessages, ...transformedMessages];
               const uniqueMessages = Array.from(
                 new Map(updatedMessages.map((msg) => [msg._id, msg])).values()
               ).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-              
-              sqliteSetItem(`messages_${communityId}`, JSON.stringify(uniqueMessages));
+
               if (newMessages.length > 0 && data.before) {
                 setLastMessageTimestamp(uniqueMessages[uniqueMessages.length - 1].createdAt.getTime());
               } else if (!data.before && uniqueMessages.length > 0) {
@@ -335,11 +387,9 @@ const CommunityChatScreen: React.FC = () => {
                 } else {
                   updatedMessages = [newMessage, ...prevMessages];
                 }
-                // Deduplicate using a Map
                 const uniqueMessages = Array.from(
                   new Map(updatedMessages.map((msg) => [msg._id, msg])).values()
                 );
-                sqliteSetItem(`messages_${communityId}`, JSON.stringify(uniqueMessages));
                 const imageUris = uniqueMessages
                   .filter((msg) => msg.image)
                   .map((msg) => msg.image);
@@ -347,53 +397,52 @@ const CommunityChatScreen: React.FC = () => {
                 return uniqueMessages;
               });
             }
-          } else if (data.type === "message_delete") {
+          } else if (data.type === "message_delete" && data.community_id === communityId) {
             setMessages((prevMessages) => {
               const updatedMessages = prevMessages.filter(
                 (m) => m._id !== data.message_id
               );
-              sqliteSetItem(`messages_${communityId}`, JSON.stringify(updatedMessages));
               const imageUris = updatedMessages
                 .filter((msg) => msg.image)
                 .map((msg) => msg.image);
               setImageViewerImages(imageUris);
               return updatedMessages;
             });
-          } else if (data.type === "message_edit") {
+          } else if (data.type === "message_edit" && data.community_id === communityId) {
+            
+            if(community)
+            console.log("Message edit event received:", data);
             setMessages((prevMessages) => {
               const updatedMessages = prevMessages.map((m) =>
                 m._id === data.message_id
                   ? { ...m, text: data.new_content, isEdited: true }
                   : m
               );
-              sqliteSetItem(`messages_${communityId}`, JSON.stringify(updatedMessages));
               return updatedMessages;
             });
           }
         } catch (error) {
-          console.error("Error processing WebSocket message:", error);
+          console.error("Error processing WebSocket message here:", error);
         }
       };
-  
+
       socket.addEventListener("message", onMessage);
       socketCleanup = () => {
         socket.removeEventListener("message", onMessage);
       };
     }
-  
+
     return socketCleanup;
-  }, [socket, communityId, sqliteSetItem, normalizeMessage]);
+  }, [socket, communityId, normalizeMessage]);
 
   useEffect(() => {
     (async () => {
       if (Platform.OS !== "web") {
-        const { status } =
-          await ImagePicker.requestMediaLibraryPermissionsAsync();
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== "granted") {
           alert("Sorry, we need camera roll permissions to make this work!");
         }
-        const { status: mediaStatus } =
-          await MediaLibrary.requestPermissionsAsync();
+        const { status: mediaStatus } = await MediaLibrary.requestPermissionsAsync();
         if (mediaStatus !== "granted") {
           alert("Sorry, we need media library permissions to save images.");
         }
@@ -405,31 +454,21 @@ const CommunityChatScreen: React.FC = () => {
     if (isConnected) {
       const sendUnsentMessages = async () => {
         try {
-          const allKeysRaw = (await sqliteGetItem("storage_keys")) || "[]";
+          const allKeysRaw = (await getItem("storage_keys")) || "[]";
           let keys = [];
           try {
             keys = JSON.parse(allKeysRaw);
             if (!Array.isArray(keys)) {
-              console.warn(
-                "storage_keys is not an array, resetting:",
-                allKeysRaw
-              );
+              console.warn("storage_keys is not an array, resetting:", allKeysRaw);
               keys = [];
             }
           } catch (e) {
-            console.error(
-              "Failed to parse storage_keys in sendUnsent:",
-              e,
-              "Raw value:",
-              allKeysRaw
-            );
+            console.error("Failed to parse storage_keys in sendUnsent:", e, "Raw value:", allKeysRaw);
             keys = [];
           }
-          const unsentKeys = keys.filter((key: string) =>
-            key.startsWith("unsent_message_")
-          );
+          const unsentKeys = keys.filter((key: string) => key.startsWith("unsent_message_"));
           for (const key of unsentKeys) {
-            const messageStr = await sqliteGetItem(key);
+            const messageStr = await getItem(key);
             if (messageStr) {
               const message = JSON.parse(messageStr);
               console.log("Sending unsent message:", message);
@@ -437,17 +476,16 @@ const CommunityChatScreen: React.FC = () => {
                 type: "send_message",
                 community_id: message.communityId,
                 message: message.content.text || "",
-                sender:
-                  user?.first_name + " " + user?.last_name || "Unknown User",
+                sender: user?.first_name + " " + user?.last_name || "Unknown User",
                 sender_id: user?.id || 1,
                 temp_id: message.tempId,
                 image: message.content.image || undefined,
                 document: message.content.document || undefined,
                 ...(message.replyTo && { reply_to: message.replyTo }),
               });
-              await sqliteSetItem(key, "");
+              await setItem(key, "");
               const updatedKeys = keys.filter((k: string) => k !== key);
-              await sqliteSetItem("storage_keys", JSON.stringify(updatedKeys));
+              await setItem("storage_keys", JSON.stringify(updatedKeys));
             }
           }
         } catch (error) {
@@ -456,17 +494,17 @@ const CommunityChatScreen: React.FC = () => {
       };
       sendUnsentMessages();
     }
-  }, [isConnected, sendMessage, user, sqliteGetItem, sqliteSetItem]);
+  }, [isConnected, sendMessage, user, getItem, setItem]);
 
   const sendMediaMessage = useCallback(
     async (fileUri: string, type: "image" | "document") => {
       try {
         console.log("sendMediaMessage called with:", { fileUri, type });
         console.log("WebSocket isConnected:", isConnected);
-  
+
         let mediaData = fileUri;
         let payloadUri = fileUri;
-  
+
         if (type === "image") {
           const base64 = await FileSystem.readAsStringAsync(fileUri, {
             encoding: FileSystem.EncodingType.Base64,
@@ -482,8 +520,7 @@ const CommunityChatScreen: React.FC = () => {
             const extension = fileUri.split(".").pop()?.toLowerCase();
             let mimeType = "application/octet-stream";
             if (extension === "pdf") mimeType = "application/pdf";
-            else if (["doc", "docx"].includes(extension || ""))
-              mimeType = "application/msword";
+            else if (["doc", "docx"].includes(extension || "")) mimeType = "application/msword";
             else if (extension === "txt") mimeType = "text/plain";
             payloadUri = `data:${mimeType};base64,${fileContent}`;
           } catch (error) {
@@ -492,9 +529,9 @@ const CommunityChatScreen: React.FC = () => {
             return;
           }
         }
-  
-        const tempId = uuidv4(); // Use UUID instead of Date.now() + random
-  
+
+        const tempId = uuidv4();
+
         const message = {
           _id: tempId,
           tempId,
@@ -507,7 +544,7 @@ const CommunityChatScreen: React.FC = () => {
           [type]: mediaData,
           status: isConnected ? "sending" : "pending",
         };
-  
+
         if (!messageIds.has(tempId)) {
           setMessages((prev) => [message, ...prev]);
           setMessageIds((prev) => new Set([...prev, tempId]));
@@ -515,7 +552,7 @@ const CommunityChatScreen: React.FC = () => {
             setImageViewerImages((prev) => [fileUri, ...prev]);
           }
         }
-  
+
         if (!isConnected) {
           const offlineMessage = {
             ...message,
@@ -525,13 +562,12 @@ const CommunityChatScreen: React.FC = () => {
               [type]: payloadUri,
             },
           };
-          await sqliteSetItem(`unsent_message_${tempId}`, JSON.stringify(offlineMessage));
-          await sqliteSetItem(`messages_${communityId}`, JSON.stringify([message, ...messages]));
-          const allKeysRaw = (await sqliteGetItem("storage_keys")) || "[]";
+          await setItem(`unsent_message_${tempId}`, JSON.stringify(offlineMessage));
+          const allKeysRaw = (await getItem("storage_keys")) || "[]";
           const keys = JSON.parse(allKeysRaw) || [];
           if (!keys.includes(`unsent_message_${tempId}`)) {
             keys.push(`unsent_message_${tempId}`);
-            await sqliteSetItem("storage_keys", JSON.stringify(keys));
+            await setItem("storage_keys", JSON.stringify(keys));
           }
           console.log("Message saved locally for later send.");
         } else {
@@ -551,7 +587,7 @@ const CommunityChatScreen: React.FC = () => {
         ToastAndroid.show("Error sending media", ToastAndroid.SHORT);
       }
     },
-    [communityId, sendMessage, user, isConnected, messageIds, messages, sqliteSetItem, sqliteGetItem]
+    [communityId, sendMessage, user, isConnected, messageIds, setItem, getItem]
   );
 
   const pickDocument = useCallback(async () => {
@@ -563,7 +599,6 @@ const CommunityChatScreen: React.FC = () => {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
-
         await sendMediaMessage(asset.uri, "document");
       } else {
         console.log("Document picking canceled");
@@ -577,7 +612,7 @@ const CommunityChatScreen: React.FC = () => {
   const onSend = useCallback(
     async (newMessages: IMessage[] = []) => {
       for (let message of newMessages) {
-        const tempId = uuidv4(); // Use UUID instead of Date.now() + random
+        const tempId = uuidv4();
         const tempMessage: IMessage = {
           _id: tempId,
           tempId,
@@ -610,10 +645,10 @@ const CommunityChatScreen: React.FC = () => {
             },
           }),
         };
-  
+
         setReplyToMessage(null);
         setMediaPreview({ type: null, uri: null });
-  
+
         if (!messageIds.has(tempId)) {
           setMessages((prevMessages) => [tempMessage, ...prevMessages]);
           setMessageIds((prev) => new Set([...prev, tempId]));
@@ -621,7 +656,7 @@ const CommunityChatScreen: React.FC = () => {
             setImageViewerImages((prev) => [tempMessage.image, ...prev]);
           }
         }
-  
+
         if (!isConnected) {
           const messageToStore = {
             ...message,
@@ -632,13 +667,12 @@ const CommunityChatScreen: React.FC = () => {
               document: tempMessage.document || undefined,
             },
           };
-          await sqliteSetItem(`unsent_message_${tempId}`, JSON.stringify(messageToStore));
-          await sqliteSetItem(`messages_${communityId}`, JSON.stringify([tempMessage, ...messages]));
-          const allKeysRaw = (await sqliteGetItem("storage_keys")) || "[]";
+          await setItem(`unsent_message_${tempId}`, JSON.stringify(messageToStore));
+          const allKeysRaw = (await getItem("storage_keys")) || "[]";
           let keys = JSON.parse(allKeysRaw) || [];
           if (!keys.includes(`unsent_message_${tempId}`)) {
             keys.push(`unsent_message_${tempId}`);
-            await sqliteSetItem("storage_keys", JSON.stringify(keys));
+            await setItem("storage_keys", JSON.stringify(keys));
           }
         } else {
           sendMessage({
@@ -653,13 +687,13 @@ const CommunityChatScreen: React.FC = () => {
             document: tempMessage.document ? tempMessage.document : undefined,
           });
         }
-  
+
         if (replyToMessage) {
           setSelectedMessages([]);
         }
       }
     },
-    [communityId, sendMessage, user, replyToMessage, isConnected, mediaPreview, messageIds, sqliteSetItem, sqliteGetItem, messages]
+    [communityId, sendMessage, user, replyToMessage, isConnected, mediaPreview, messageIds, setItem, getItem]
   );
 
   const pickImage = useCallback(async () => {
@@ -669,13 +703,13 @@ const CommunityChatScreen: React.FC = () => {
       quality: 1,
       allowsEditing: true,
     });
-  
+
     if (!result.canceled && result.assets && result.assets.length > 0) {
       const selectedImages = result.assets;
       const newImages = selectedImages.map((asset) => ({
         uri: asset.uri,
         type: "image",
-        id: uuidv4(), // Use UUID instead of Date.now() + random
+        id: uuidv4(),
       }));
       console.log("Selected images:", newImages);
       setSelectedImagesForPreview(newImages);
@@ -691,7 +725,6 @@ const CommunityChatScreen: React.FC = () => {
       try {
         await sendMediaMessage(uri, "image");
         setSelectedImagesForPreview([]);
-        // Toast moved to ImagePreviewModal
       } catch (error) {
         console.error("handleSendImage error:", error);
         throw error;
@@ -763,17 +796,13 @@ const CommunityChatScreen: React.FC = () => {
             ? { ...m, text: messageInput, isEdited: true }
             : m
         );
-        sqliteSetItem(
-          `messages_${communityId}`,
-          JSON.stringify(updatedMessages)
-        );
         return updatedMessages;
       });
       setEditingMessage(null);
       setMessageInput("");
       setSelectedMessages([]);
     }
-  }, [editingMessage, messageInput, sendMessage, communityId, sqliteSetItem]);
+  }, [editingMessage, messageInput, sendMessage]);
 
   const handleDeleteMessage = useCallback(() => {
     const { canDelete } = canEditDeleteOrReply();
@@ -797,10 +826,6 @@ const CommunityChatScreen: React.FC = () => {
                   (m) =>
                     !selectedMessages.some((selMsg) => selMsg._id === m._id)
                 );
-                sqliteSetItem(
-                  `messages_${communityId}`,
-                  JSON.stringify(updatedMessages)
-                );
                 return updatedMessages;
               });
               setSelectedMessages([]);
@@ -809,13 +834,7 @@ const CommunityChatScreen: React.FC = () => {
         ]
       );
     }
-  }, [
-    selectedMessages,
-    sendMessage,
-    canEditDeleteOrReply,
-    communityId,
-    sqliteSetItem,
-  ]);
+  }, [selectedMessages, sendMessage, canEditDeleteOrReply]);
 
   const updateHeader = useCallback(() => {
     if (selectedMessages.length > 0) {
@@ -890,1001 +909,1005 @@ const CommunityChatScreen: React.FC = () => {
               <MaterialCommunityIcons
                 name="content-copy"
                 size={rS(24)}
-                  color={themeColors.text}
-                />
-              </TouchableOpacity>
-            </View>
-          ),
-        });
-      } else {
-        navigation.setOptions({
-          headerTitle: () => (
-            <TouchableOpacity
-              onPressIn={() =>
-                router.push({
-                  pathname: "CommunityDetailScreen",
-                  params: { id: communityId },
-                })
-              }
-              style={{ flexDirection: "row", alignItems: "center" }}
-            >
-              <Image
-                source={{ uri: community?.image_url }}
-                style={{
-                  width: rS(33),
-                  height: rS(30),
-                  marginRight: rS(8),
-                  borderRadius: rMS(20),
-                }}
-              />
-              <Text
-                style={{ color: themeColors.text, fontSize: rMS(SIZES.large) }}
-              >
-                {community?.name ?? "Chat"}
-              </Text>
-            </TouchableOpacity>
-          ),
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={{ marginLeft: SIZES.xSmall }}
-            >
-              <MaterialCommunityIcons
-                name="arrow-left"
-                size={SIZES.large}
                 color={themeColors.text}
               />
             </TouchableOpacity>
-          ),
-          headerRight: () => null,
-        });
-      }
-    }, [
-      selectedMessages,
-      navigation,
-      communityId,
-      themeColors,
-      handleCopySelected,
-      handleDeleteMessage,
-      handleEditMessage,
-      canEditDeleteOrReply,
-      handleDeselectAll,
-      router,
-      community,
-    ]);
-
-    const handlePress = useCallback((message: IMessage) => {
-      setSelectedMessages((prevSelected) => {
-        if (prevSelected.length > 0) {
-          const isSelected = prevSelected.some((m) => m._id === message._id);
-          if (isSelected) {
-            return prevSelected.filter((m) => m._id !== message._id);
-          } else {
-            return [...prevSelected, message];
-          }
-        }
-        return prevSelected;
+          </View>
+        ),
       });
-      setMessages((prevMessages) =>
-        prevMessages.map((m) =>
-          m._id === message._id ? { ...m, isSelected: !m.isSelected } : m
-        )
+    } else {
+      navigation.setOptions({
+        headerTitle: () => (
+          <TouchableOpacity
+            onPressIn={() =>
+              router.push({
+                pathname: "CommunityDetailScreen",
+                params: { id: communityId },
+              })
+            }
+            style={{ flexDirection: "row", alignItems: "center" }}
+          >
+            <Image
+              source={{ uri: community?.image_url }}
+              style={{
+                width: rS(33),
+                height: rS(30),
+                marginRight: rS(8),
+                borderRadius: rMS(20),
+              }}
+            />
+            <Text
+              style={{ color: themeColors.text, fontSize: rMS(SIZES.large) }}
+            >
+              {community?.name ?? "Chat"}
+            </Text>
+          </TouchableOpacity>
+        ),
+        headerLeft: () => (
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{ marginLeft: SIZES.xSmall }}
+          >
+            <MaterialCommunityIcons
+              name="arrow-left"
+              size={SIZES.large}
+              color={themeColors.text}
+            />
+          </TouchableOpacity>
+        ),
+        headerRight: () => null,
+      });
+    }
+  }, [
+    selectedMessages,
+    navigation,
+    communityId,
+    themeColors,
+    handleCopySelected,
+    handleDeleteMessage,
+    handleEditMessage,
+    canEditDeleteOrReply,
+    handleDeselectAll,
+    router,
+    community,
+  ]);
+
+  const handlePress = useCallback((message: IMessage) => {
+    setSelectedMessages((prevSelected) => {
+      if (prevSelected.length > 0) {
+        const isSelected = prevSelected.some((m) => m._id === message._id);
+        if (isSelected) {
+          return prevSelected.filter((m) => m._id !== message._id);
+        } else {
+          return [...prevSelected, message];
+        }
+      }
+      return prevSelected;
+    });
+    setMessages((prevMessages) =>
+      prevMessages.map((m) =>
+        m._id === message._id ? { ...m, isSelected: !m.isSelected } : m
+      )
+    );
+  }, []);
+
+  useLayoutEffect(() => {
+    updateHeader();
+  }, [selectedMessages, updateHeader]);
+
+  const renderBubble = useCallback(
+    (props) => {
+      const isSelected = selectedMessages.some(
+        (m) => m._id === props.currentMessage._id
       );
-    }, []);
+      const isFirstMessageOfBlock =
+        !props.previousMessage ||
+        props.previousMessage?.user?._id !== props.currentMessage.user._id;
+      const isOtherUser = props.currentMessage.user._id !== user?.id;
+      const isNewDay =
+        !props.previousMessage ||
+        (props.currentMessage?.createdAt &&
+          props.previousMessage?.createdAt &&
+          props.currentMessage.createdAt.toDateString() !==
+            props.previousMessage.createdAt.toDateString());
 
-    useLayoutEffect(() => {
-      updateHeader();
-    }, [selectedMessages, updateHeader]);
+      const messageText = props.currentMessage.text
+        ? props.currentMessage.text
+        : props.currentMessage.image
+        ? "Photo"
+        : props.currentMessage.document
+        ? "Document"
+        : "";
 
-    const renderBubble = useCallback(
-      (props) => {
-        const isSelected = selectedMessages.some(
-          (m) => m._id === props.currentMessage._id
-        );
-        const isFirstMessageOfBlock =
-          !props.previousMessage ||
-          props.previousMessage?.user?._id !== props.currentMessage.user._id;
-        const isOtherUser = props.currentMessage.user._id !== user?.id;
-        const isNewDay =
-          !props.previousMessage ||
-          (props.currentMessage?.createdAt &&
-            props.previousMessage?.createdAt &&
-            props.currentMessage.createdAt.toDateString() !==
-              props.previousMessage.createdAt.toDateString());
-
-        const messageText = props.currentMessage.text
-          ? props.currentMessage.text
-          : props.currentMessage.image
-          ? "Photo"
-          : props.currentMessage.document
-          ? "Document"
-          : "";
-
-        // Create a custom view for reply messages and document cards.
-        const renderCustomContent = () => {
-          return (
-            <>
-              {/* Render reply preview if exists */}
-              {props.currentMessage.replyTo &&
-                props.currentMessage.replyTo._id !== null && (
-                  <TouchableOpacity>
-                    <View style={styles.replyContainer}>
-                      <Text style={styles.replyName}>
-                        {`Replying to ${
-                          props.currentMessage.replyTo.user?.name ||
-                          "Unknown User"
-                        }`}
-                      </Text>
-                      <View
-                        style={{ flexDirection: "row", alignItems: "center" }}
-                      >
-                        {props.currentMessage.replyTo.text == null ? (
-                          <>
-                            <MaterialCommunityIcons
-                              name={
-                                props.currentMessage.replyTo.image
-                                  ? "image"
-                                  : "file-document-outline"
-                              }
-                              size={SIZES.medium}
-                              color={themeColors.textSecondary}
-                              style={{ marginRight: 4 }}
-                            />
-                            <Text style={styles.replyText}>
-                              {props.currentMessage.replyTo.image
-                                ? "Photo"
-                                : "Document"}
-                            </Text>
-                          </>
-                        ) : (
+      // Create a custom view for reply messages and document cards.
+      const renderCustomContent = () => {
+        return (
+          <>
+            {/* Render reply preview if exists */}
+            {props.currentMessage.replyTo &&
+              props.currentMessage.replyTo._id !== null && (
+                <TouchableOpacity>
+                  <View style={styles.replyContainer}>
+                    <Text style={styles.replyName}>
+                      {`Replying to ${
+                        props.currentMessage.replyTo.user?.name ||
+                        "Unknown User"
+                      }`}
+                    </Text>
+                    <View
+                      style={{ flexDirection: "row", alignItems: "center" }}
+                    >
+                      {props.currentMessage.replyTo.text == null ? (
+                        <>
+                          <MaterialCommunityIcons
+                            name={
+                              props.currentMessage.replyTo.image
+                                ? "image"
+                                : "file-document-outline"
+                            }
+                            size={SIZES.medium}
+                            color={themeColors.textSecondary}
+                            style={{ marginRight: 4 }}
+                          />
                           <Text style={styles.replyText}>
-                            {props.currentMessage.replyTo.text || ""}
+                            {props.currentMessage.replyTo.image
+                              ? "Photo"
+                              : "Document"}
                           </Text>
-                        )}
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                )}
-              {((isOtherUser && isFirstMessageOfBlock) ||
-                (isOtherUser && isNewDay)) && (
-                <Text style={styles.username}>
-                  {props.currentMessage.user.name}
-                </Text>
-              )}
-
-              {/* Render document preview if there is a document */}
-              {props.currentMessage.document && (
-                <TouchableOpacity
-                  onPress={() => {
-                    Linking.openURL(props.currentMessage.document);
-                  }}
-                  style={[
-                    styles.documentContainer,
-                    {
-                      backgroundColor:
-                        props.position === "right"
-                          ? themeColors.tint
-                          : themeColors.secondaryBackground,
-                      borderRadius: rMS(10),
-                      padding: rS(10),
-                      marginVertical: rV(4),
-                      maxWidth: rS(250),
-                    },
-                  ]}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <MaterialCommunityIcons
-                      name="file-document-outline"
-                      size={SIZES.large}
-                      color={props.position === "right" ? "#fff" : "#007aff"}
-                      style={{ marginRight: rS(8) }}
-                    />
-                    <View>
-                      <Text
-                        style={{
-                          color:
-                            props.position === "right"
-                              ? "#fff"
-                              : themeColors.text,
-                          fontSize: SIZES.medium,
-                          fontWeight: "600",
-                          maxWidth: rS(180),
-                        }}
-                        numberOfLines={1}
-                      >
-                        {decodeURIComponent(
-                          props.currentMessage.document.split("/").pop() ||
-                            "Document"
-                        )}
-                      </Text>
-                      <Text
-                        style={{
-                          color:
-                            props.position === "right"
-                              ? "rgba(255,255,255,0.7)"
-                              : themeColors.textSecondary,
-                          fontSize: SIZES.small,
-                        }}
-                      >
-                        Document
-                      </Text>
+                        </>
+                      ) : (
+                        <Text style={styles.replyText}>
+                          {props.currentMessage.replyTo.text || ""}
+                        </Text>
+                      )}
                     </View>
                   </View>
                 </TouchableOpacity>
               )}
-            </>
-          );
-        };
+            {((isOtherUser && isFirstMessageOfBlock) ||
+              (isOtherUser && isNewDay)) && (
+              <Text style={styles.username}>
+                {props.currentMessage.user.name}
+              </Text>
+            )}
 
-        return (
-          <TouchableOpacity
-            onPress={() => handlePress(props.currentMessage)}
-            onLongPress={() => handleLongPress(props.currentMessage)}
-            style={
-              isSelected
-                ? [props.containerStyle, styles.blurBackground]
-                : props.containerStyle
-            }
-          >
-            <Bubble
-              {...props}
-              text={messageText}
-              onPress={() => handlePress(props.currentMessage)}
-              onLongPress={() => handleLongPress(props.currentMessage)}
-              wrapperStyle={{
-                ...props.wrapperStyle,
-                left: { backgroundColor: themeColors.secondaryBackground },
-                right: { backgroundColor: themeColors.tint },
-                ...(isSelected && styles.blurBackground),
-              }}
-              containerStyle={{
-                marginVertical: isFirstMessageOfBlock ? 5 : 0,
-              }}
-              renderTime={() => (
-                <View style={styles.timeContainer}>
-                  <Text style={styles.timeText}>
-                    {props.currentMessage.createdAt?.toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </Text>
-                  {!isOtherUser && (
-                    <View style={styles.statusIcon}>
-                      {props.currentMessage.status === "pending" && (
-                        <MaterialCommunityIcons
-                          name="clock-outline"
-                          size={SIZES.small}
-                          color={themeColors.textSecondary}
-                        />
-                      )}
-                      {props.currentMessage.status === "sending" && (
-                        <MaterialCommunityIcons
-                          name="sync"
-                          size={SIZES.small}
-                          color={themeColors.textSecondary}
-                        />
-                      )}
-                      {props.currentMessage.status === "sent" && (
-                        <MaterialCommunityIcons
-                          name="check"
-                          size={SIZES.small}
-                          color={themeColors.textSecondary}
-                        />
-                      )}
-                      {props.currentMessage.status === "read" && (
-                        <MaterialCommunityIcons
-                          name="check-all"
-                          size={SIZES.small}
-                          color={themeColors.textSecondary}
-                        />
-                      )}
-                    </View>
-                  )}
-                </View>
-              )}
-              renderCustomView={renderCustomContent}
-              textStyle={{
-                right: { color: "white" },
-                left: { color: themeColors.text },
-              }}
-            />
-            {props.currentMessage.isEdited && (
-              <Text
+            {/* Render document preview if there is a document */}
+            {props.currentMessage.document && (
+              <TouchableOpacity
+                onPress={() => {
+                  Linking.openURL(props.currentMessage.document);
+                }}
                 style={[
-                  styles.editedText,
+                  styles.documentContainer,
                   {
-                    alignSelf:
-                      props.position === "left" ? "flex-start" : "flex-end",
+                    backgroundColor:
+                      props.position === "right"
+                        ? themeColors.tint
+                        : themeColors.secondaryBackground,
+                    borderRadius: rMS(10),
+                    padding: rS(10),
+                    marginVertical: rV(4),
+                    maxWidth: rS(250),
                   },
                 ]}
               >
-                Edited
-              </Text>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <MaterialCommunityIcons
+                    name="file-document-outline"
+                    size={SIZES.large}
+                    color={props.position === "right" ? "#fff" : "#007aff"}
+                    style={{ marginRight: rS(8) }}
+                  />
+                  <View>
+                    <Text
+                      style={{
+                        color:
+                          props.position === "right"
+                            ? "#fff"
+                            : themeColors.text,
+                        fontSize: SIZES.medium,
+                        fontWeight: "600",
+                        maxWidth: rS(180),
+                      }}
+                      numberOfLines={1}
+                    >
+                      {decodeURIComponent(
+                        props.currentMessage.document.split("/").pop() ||
+                          "Document"
+                      )}
+                    </Text>
+                    <Text
+                      style={{
+                        color:
+                          props.position === "right"
+                            ? "rgba(255,255,255,0.7)"
+                            : themeColors.textSecondary,
+                        fontSize: SIZES.small,
+                      }}
+                    >
+                      Document
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
+          </>
         );
-      },
-      [selectedMessages, handlePress, handleLongPress, themeColors, user?.id]
-    );
+      };
 
-    const renderAvatar = useCallback(
-      (props) => {
-        const userId = props.currentMessage.user._id;
-        const avatarUrl =
-          profileImages[userId] ||
-          props.currentMessage.user.avatar ||
-          user?.profile_picture;
-
-        useEffect(() => {
-          if (!profileImages[userId] && avatarUrl) {
-            setProfileImages((prev) => ({ ...prev, [userId]: avatarUrl }));
+      return (
+        <TouchableOpacity
+          onPress={() => handlePress(props.currentMessage)}
+          onLongPress={() => handleLongPress(props.currentMessage)}
+          style={
+            isSelected
+              ? [props.containerStyle, styles.blurBackground]
+              : props.containerStyle
           }
-        }, [userId, avatarUrl]);
-
-        if (avatarUrl) {
-          return (
-            <View style={styles.avatarContainer}>
-              <AppImage uri={avatarUrl} style={styles.avatar} />
-            </View>
-          );
-        } else {
-          return (
-            <View style={styles.avatarContainer}>
-              <Text style={styles.initials}>
-                {props.currentMessage.user.name.charAt(0).toUpperCase()}
-              </Text>
-            </View>
-          );
-        }
-      },
-      [profileImages, user?.profile_picture]
-    );
-
-    const openImageViewer = useCallback(
-      (uri: string) => {
-        const index = imageViewerImages.findIndex((img) => img === uri);
-        if (index >= 0) {
-          setCurrentImageIndex(index);
-          setIsImageViewerVisible(true);
-        } else {
-          console.warn("Image not found in imageViewerImages:", uri);
-        }
-      },
-      [imageViewerImages]
-    );
-
-    const renderMessageImage = useCallback(
-      (props: any) => {
-        return (
-          <TouchableOpacity
+        >
+          <Bubble
+            {...props}
+            text={messageText}
             onPress={() => handlePress(props.currentMessage)}
             onLongPress={() => handleLongPress(props.currentMessage)}
-          >
-            <AppImage
-              uri={props.currentMessage.image}
-              style={{ width: rS(200), height: rV(200), borderRadius: rMS(10) }}
-              onPress={() => openImageViewer(props.currentMessage.image)}
-            />
-          </TouchableOpacity>
-        );
-      },
-      [openImageViewer]
-    );
+            wrapperStyle={{
+              ...props.wrapperStyle,
+              left: { backgroundColor: themeColors.secondaryBackground },
+              right: { backgroundColor: themeColors.tint },
+              ...(isSelected && styles.blurBackground),
+            }}
+            containerStyle={{
+              marginVertical: isFirstMessageOfBlock ? 5 : 0,
+            }}
+            renderTime={() => (
+              <View style={styles.timeContainer}>
+                <Text style={styles.timeText}>
+                  {props.currentMessage.createdAt?.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </Text>
+                {!isOtherUser && (
+                  <View style={styles.statusIcon}>
+                    {props.currentMessage.status === "pending" && (
+                      <MaterialCommunityIcons
+                        name="clock-outline"
+                        size={SIZES.small}
+                        color={themeColors.textSecondary}
+                      />
+                    )}
+                    {props.currentMessage.status === "sending" && (
+                      <MaterialCommunityIcons
+                        name="sync"
+                        size={SIZES.small}
+                        color={themeColors.textSecondary}
+                      />
+                    )}
+                    {props.currentMessage.status === "sent" && (
+                      <MaterialCommunityIcons
+                        name="check"
+                        size={SIZES.small}
+                        color={themeColors.textSecondary}
+                      />
+                    )}
+                    {props.currentMessage.status === "read" && (
+                      <MaterialCommunityIcons
+                        name="check-all"
+                        size={SIZES.small}
+                        color={themeColors.textSecondary}
+                      />
+                    )}
+                  </View>
+                )}
+              </View>
+            )}
+            renderCustomView={renderCustomContent}
+            textStyle={{
+              right: { color: "white" },
+              left: { color: themeColors.text },
+            }}
+          />
+          {props.currentMessage.isEdited && (
+            <Text
+              style={[
+                styles.editedText,
+                {
+                  alignSelf:
+                    props.position === "left" ? "flex-start" : "flex-end",
+                },
+              ]}
+            >
+              Edited
+            </Text>
+          )}
+        </TouchableOpacity>
+      );
+    },
+    [selectedMessages, handlePress, handleLongPress, themeColors, user?.id]
+  );
 
-    const renderDay = useCallback(
-      (props) => {
-        const { currentMessage, previousMessage } = props;
-        const isNewDay =
-          !previousMessage ||
-          (currentMessage?.createdAt &&
-            previousMessage?.createdAt &&
-            currentMessage.createdAt.toDateString() !==
-              previousMessage.createdAt.toDateString());
+  const renderAvatar = useCallback(
+    (props) => {
+      const userId = props.currentMessage.user._id;
+      const avatarUrl =
+        profileImages[userId] ||
+        props.currentMessage.user.avatar ||
+        user?.profile_picture;
 
-        if (!isNewDay) return null;
+      useEffect(() => {
+        if (!profileImages[userId] && avatarUrl) {
+          setProfileImages((prev) => ({ ...prev, [userId]: avatarUrl }));
+        }
+      }, [userId, avatarUrl]);
 
-        const formatDate = (date: Date) => {
-          const today = new Date();
-          const yesterday = new Date(today);
-          yesterday.setDate(today.getDate() - 1);
-
-          if (date.toDateString() === today.toDateString()) {
-            return "Today";
-          } else if (date.toDateString() === yesterday.toDateString()) {
-            return "Yesterday";
-          } else {
-            return date.toDateString();
-          }
-        };
-
+      if (avatarUrl) {
         return (
-          <View
-            style={[
-              styles.dateContainer,
-              { backgroundColor: themeColors.background },
-            ]}
-          >
-            <Text style={styles.dateText}>
-              {currentMessage.createdAt
-                ? formatDate(currentMessage.createdAt)
-                : "Unknown Date"}
+          <View style={styles.avatarContainer}>
+            <AppImage uri={avatarUrl} style={styles.avatar} />
+          </View>
+        );
+      } else {
+        return (
+          <View style={styles.avatarContainer}>
+            <Text style={styles.initials}>
+              {props.currentMessage.user.name.charAt(0).toUpperCase()}
             </Text>
           </View>
         );
-      },
-      [themeColors]
-    );
-
-    const renderSend = useCallback(
-      (props) => {
-        const hasText = props.text && props.text.trim().length > 0;
-
-        return (
-          <View style={styles.attachButtonContainer}>
-            {!hasText && !editingMessage ? (
-              <>
-                <TouchableOpacity onPress={pickImage} style={styles.attachButton}>
-                  <Ionicons
-                    name="image-outline"
-                    color={themeColors.text}
-                    size={SIZES.xLarge}
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={pickDocument}
-                  style={styles.attachButton}
-                >
-                  <MaterialCommunityIcons
-                    name="paperclip"
-                    color={themeColors.text}
-                    size={SIZES.xLarge}
-                  />
-                </TouchableOpacity>
-              </>
-            ) : (
-              <View style={styles.sendContainer}>
-                <Send
-                  {...props}
-                  containerStyle={styles.sendButton}
-                  alwaysShowSend
-                  onSend={() => {
-                    if (editingMessage) {
-                      onEditMessage();
-                    } else {
-                      props.onSend({ text: props.text.trim() }, true);
-                    }
-                  }}
-                >
-                  <Ionicons
-                    name={editingMessage ? "checkmark" : "send"}
-                    color="#ffffff"
-                    size={SIZES.large}
-                  />
-                </Send>
-              </View>
-            )}
-          </View>
-        );
-      },
-      [pickImage, pickDocument, themeColors, editingMessage, onEditMessage]
-    );
-
-    const renderMediaPreview = useCallback(() => {
-      if (mediaPreview.uri) {
-        return (
-          <View style={styles.replyContainer}>
-            {mediaPreview.type === "image" ? (
-              <Image
-                source={{ uri: mediaPreview.uri }}
-                style={[styles.previewImage, { width: "100%", height: rV(150) }]}
-              />
-            ) : (
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <MaterialCommunityIcons
-                  name="file-document-outline"
-                  size={SIZES.medium}
-                  color={themeColors.text}
-                  style={{ marginRight: rS(8) }}
-                />
-                <Text style={styles.previewDocument}>
-                  {decodeURIComponent(
-                    mediaPreview.uri.split("/").pop() || "Document"
-                  )}
-                </Text>
-              </View>
-            )}
-            <TouchableOpacity
-              style={styles.closeReplyButton}
-              onPress={() => setMediaPreview({ type: null, uri: null })}
-            >
-              <Ionicons
-                name="close"
-                color={themeColors.text}
-                size={SIZES.medium}
-              />
-            </TouchableOpacity>
-          </View>
-        );
       }
-      return null;
-    }, [mediaPreview, themeColors]);
+    },
+    [profileImages, user?.profile_picture]
+  );
 
-    const renderInputToolbar = useCallback(
-      (props) => {
-        return (
-          <View>
-            {renderMediaPreview()}
-            {editingMessage && (
-              <View style={styles.replyContainer}>
-                <Text style={styles.replyName}>
-                  Editing Message by {editingMessage.user.name}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => setEditingMessage(null)}
-                  style={styles.closeReplyButton}
-                >
-                  <Ionicons
-                    name="close"
-                    color={themeColors.text}
-                    size={SIZES.medium}
-                  />
-                </TouchableOpacity>
-              </View>
-            )}
-            {replyToMessage && (
-              <View style={styles.replyContainer}>
-                <Text style={styles.replyName}>
-                  Replying to {replyToMessage.user?.name || "Unknown User"}
-                </Text>
-                <Text style={styles.replyText}>
-                  {replyToMessage.text ||
-                    (replyToMessage.image
-                      ? "Photo"
-                      : replyToMessage.document
-                      ? "Document"
-                      : "")}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => setReplyToMessage(null)}
-                  style={styles.closeReplyButton}
-                >
-                  <Ionicons
-                    name="close"
-                    color={themeColors.text}
-                    size={SIZES.medium}
-                  />
-                </TouchableOpacity>
-              </View>
-            )}
-            <InputToolbar
-              {...props}
-              containerStyle={[
-                styles.inputToolbar,
-                (editingMessage || replyToMessage || mediaPreview.uri) && {
-                  marginTop: rV(0),
-                },
-              ]}
-              primaryStyle={{ alignItems: "center", flexDirection: "row" }}
-              renderComposer={() => (
-                <View style={styles.inputField}>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder={
-                      editingMessage
-                        ? "Edit message"
-                        : replyToMessage
-                        ? "Reply to message"
-                        : "Message"
-                    }
-                    placeholderTextColor={themeColors.textSecondary}
-                    value={props.text}
-                    onChangeText={props.onTextChanged}
-                  />
-                </View>
-              )}
-            />
-          </View>
-        );
-      },
-      [
-        renderMediaPreview,
-        editingMessage,
-        replyToMessage,
-        mediaPreview.uri,
-        themeColors,
-      ]
-    );
+  const openImageViewer = useCallback(
+    (uri: string) => {
+      const index = imageViewerImages.findIndex((img) => img === uri);
+      if (index >= 0) {
+        setCurrentImageIndex(index);
+        setIsImageViewerVisible(true);
+      } else {
+        console.warn("Image not found in imageViewerImages:", uri);
+      }
+    },
+    [imageViewerImages]
+  );
 
-    const styles = StyleSheet.create({
-      container: {
-        flex: 1,
-        padding: rMS(10),
-      },
-      statusContainer: {
-        alignSelf: "flex-end",
-        marginTop: 5,
-      },
-      statusTimeContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "flex-end",
-        marginRight: rS(5),
-      },
-      messageImageContainer: {
-        borderRadius: rMS(10),
-        overflow: "hidden",
-        marginVertical: rV(0),
-        paddingHorizontal: rS(2),
-        paddingVertical: rV(0),
-      },
-      whatsappImage: {
-        width: rS(150),
-        height: rV(150),
-        resizeMode: "cover",
-      },
-      statusText: {
-        fontSize: SIZES.xSmall,
-        color: themeColors.textSecondary,
-        textAlign: "right",
-        paddingRight: rS(8),
-      },
-      username: {
-        fontSize: SIZES.small,
-        color: themeColors.textSecondary,
-        fontWeight: "bold",
-        marginBottom: rV(1),
-        marginLeft: rS(10),
-        paddingRight: rS(12),
-      },
-      avatarContainer: {
-        width: rS(36),
-        height: rS(36),
-        borderRadius: rMS(18),
-        overflow: "hidden",
-        backgroundColor: "#ccc",
-        alignItems: "center",
-        justifyContent: "center",
-      },
-      avatar: {
-        width: "100%",
-        height: "100%",
-      },
-      initials: {
-        color: "#fff",
-        fontSize: SIZES.medium,
-      },
-      dateContainer: {
-        paddingVertical: rV(4),
-        paddingHorizontal: rS(8),
-        borderRadius: rMS(10),
-        alignSelf: "center",
-        marginVertical: rV(10),
-      },
-      dateText: {
-        color: themeColors.textSecondary,
-        fontSize: SIZES.small,
-        fontWeight: "bold",
-      },
-      messageImage: {
-        width: rS(300),
-        height: rV(200),
-        borderRadius: rMS(10),
-        margin: rMS(10),
-      },
-      messageVideo: {
-        width: rS(200),
-        height: rV(200),
-        borderRadius: rMS(10),
-        margin: rMS(10),
-      },
-      inputToolbar: {
-        backgroundColor: themeColors.background,
-        borderTopWidth: 0,
-        paddingHorizontal: rS(10),
-        paddingBottom: insets.bottom + rV(5),
-        paddingTop: rV(10),
-        opacity: 0.9,
-      },
-      inputField: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: themeColors.reverseText,
-        borderRadius: rMS(20),
-        flex: 1,
-        paddingVertical: rV(8),
-        paddingHorizontal: rS(10),
-        marginRight: rS(10),
-      },
-      textInput: {
-        flex: 1,
-        color: themeColors.text,
-        fontSize: SIZES.medium,
-        fontFamily: FONT.regular,
-      },
-      attachButtonContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginRight: rS(10),
-      },
-      attachButton: {
-        padding: rS(5),
-      },
-      attachIcon: {
-        color: themeColors.text,
-        fontSize: SIZES.large,
-      },
-      sendContainer: {
-        height: rV(30),
-        width: rS(35),
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: themeColors.tint,
-        borderRadius: rMS(20),
-      },
-      sendButton: {
-        justifyContent: "center",
-        alignItems: "center",
-      },
-      replyContainer: {
-        flexDirection: "column",
-        justifyContent: "flex-start",
-        alignItems: "flex-start",
-        backgroundColor: themeColors.secondaryBackground,
-        padding: rMS(10),
-        borderRadius: rMS(5),
-        borderLeftWidth: rS(4),
-        borderLeftColor: "#007AFF",
-        marginRight: rS(4),
-        width: "100%",
-      },
-      replyText: {
-        color: themeColors.text,
-        fontSize: SIZES.small,
-      },
-      replyName: {
-        color: themeColors.text,
-        fontSize: SIZES.small,
-        fontWeight: "bold",
-      },
-      closeReplyButton: {
-        position: "absolute",
-        right: rS(10),
-        top: rV(10),
-      },
-      documentContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        padding: rS(10),
-        borderRadius: rMS(8),
-        maxWidth: rS(250),
-        marginVertical: rV(4),
-      },
-      documentTextContainer: {
-        flexDirection: "column",
-        flexShrink: 1,
-      },
-      documentName: {
-        fontWeight: "600",
-        fontSize: SIZES.medium,
-        marginBottom: rV(2),
-        color: themeColors.text,
-      },
-      documentLabel: {
-        fontSize: SIZES.small,
-        color: themeColors.textSecondary,
-      },
-      previewImage: {
-        width: "100%",
-        height: rV(200),
-        marginBottom: rV(10),
-      },
-      previewDocument: {
-        color: themeColors.text,
-        fontSize: SIZES.medium,
-        marginBottom: rV(10),
-      },
-      modalContainer: {
-        flex: 1,
-        backgroundColor: "rgba(0, 0, 0, 0.9)",
-        justifyContent: "center",
-        alignItems: "center",
-      },
-      fullScreenImage: {
-        width: "100%",
-        height: "100%",
-        resizeMode: "contain",
-      },
-      fullScreenVideo: {
-        width: "100%",
-        height: "100%",
-      },
-      blurBackground: {
-        opacity: 0.7,
-        backgroundColor: themeColors.tint,
-        width: "100%",
-      },
-      editedText: {
-        fontSize: SIZES.xSmall,
-        color: themeColors.textSecondary,
-        marginTop: rV(2),
-      },
-      lastMessagePreview: {
-        fontSize: SIZES.small,
-        color: themeColors.textSecondary,
-        marginTop: rV(2),
-        alignSelf: "center",
-      },
-      timeContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "flex-end",
-        marginRight: rS(8),
-        marginBottom: rV(4),
-      },
-      timeText: {
-        fontSize: SIZES.small,
-        color: themeColors.textSecondary,
-        marginRight: rS(4),
-        marginLeft: rS(9),
-      },
-      statusIcon: {
-        marginLeft: rS(2),
-      },
-      downloadButton: {
-        position: "absolute",
-        bottom: 20,
-        right: 20,
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-        padding: rS(10),
-        borderRadius: rMS(20),
-      },
-      previewModalContainer: {
-        flex: 142,
-        backgroundColor: themeColors.background,
-      },
-      modalHeader: {
-        flexDirection: "row",
-        alignItems: "center",
-        padding: rS(10),
-        backgroundColor: themeColors.secondaryBackground,
-        borderBottomWidth: 1,
-        borderBottomColor: themeColors.textSecondary + "33",
-      },
-      previewModalTitle: {
-        fontSize: rMS(18),
-        fontWeight: "600",
-        marginLeft: rS(10),
-        color: themeColors.text,
-      },
-      previewImageContainer: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        padding: rS(10),
-      },
-      previewButtonContainer: {
-        flexDirection: "row",
-        justifyContent: "center",
-        padding: rS(10),
-        backgroundColor: themeColors.secondaryBackground,
-        borderTopWidth: 1,
-        borderTopColor: themeColors.textSecondary + "33",
-      },
-      previewButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: themeColors.tint,
-        paddingVertical: rV(8),
-        paddingHorizontal: rS(12),
-        borderRadius: rMS(8),
-        marginHorizontal: rS(10),
-      },
-      previewButtonText: {
-        color: "#fff",
-        fontSize: rMS(14),
-        fontWeight: "500",
-        marginLeft: rS(6),
-      },
-      previewActionContainer: {
-        flexDirection: "row",
-        justifyContent: "space-around",
-        padding: rS(10),
-        backgroundColor: themeColors.secondaryBackground,
-        borderTopWidth: 1,
-        borderTopColor: themeColors.textSecondary + "33",
-      },
-      previewActionButton: {
-        paddingVertical: rV(12),
-        borderRadius: rMS(10),
-        flex: 1,
-        marginHorizontal: rS(5),
-        alignItems: "center",
-      },
-      previewActionText: {
-        color: "#fff",
-        fontSize: rMS(16),
-        fontWeight: "600",
-      },
-      noImagesText: {
-        color: themeColors.textSecondary,
-        fontSize: rMS(16),
-        textAlign: "center",
-        marginTop: rV(20),
-      },
-      loadingContainer: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-      },
-      loadingText: {
-        marginTop: rV(10),
-        color: themeColors.text,
-        fontSize: rMS(16),
-      },
-    });
-
-    return (
-      <View style={{ flex: 1, paddingTop: rV(1) }}>
-        {loading && messages.length === 0 ? (
-          <View
-            style={[
-              styles.container,
-              { justifyContent: "center", alignItems: "center" },
-            ]}
-          >
-            <ActivityIndicator size="large" color={themeColors.tint} />
-          </View>
-        ) : (
-          <MemoizedGiftedChat
-            messages={messages}
-            onSend={onSend}
-            user={{ _id: user?.id || 1 }}
-            text={messageInput}
-            onInputTextChanged={(text) => setMessageInput(text)}
-            renderSystemMessage={(props) => (
-              <SystemMessage
-                {...props}
-                textStyle={{ color: themeColors.textSecondary }}
-              />
-            )}
-            renderAvatar={renderAvatar}
-            renderBubble={renderBubble}
-            renderSend={renderSend}
-            renderInputToolbar={renderInputToolbar}
-            renderMessageImage={renderMessageImage}
-            renderDay={renderDay}
-            minInputToolbarHeight={insets.bottom + rV(50)}
-            scrollToBottom={true}
-            isTyping={false}
-            inverted={true}
-            loadEarlier={loadEarlier}
-            onLoadEarlier={handleLoadEarlier}
-            isLoadingEarlier={isLoadingEarlier}
-            listViewProps={{
-              scrollEventThrottle: 400,
-              onScroll: ({ nativeEvent }) => {
-                const isCloseToTop = nativeEvent.contentOffset.y <= 100;
-                if (isCloseToTop && loadEarlier && !isLoadingEarlier) {
-                  handleLoadEarlier();
-                }
-              },
-            }}
+  const renderMessageImage = useCallback(
+    (props: any) => {
+      return (
+        <TouchableOpacity
+          onPress={() => handlePress(props.currentMessage)}
+          onLongPress={() => handleLongPress(props.currentMessage)}
+        >
+          <AppImage
+            uri={props.currentMessage.image}
+            style={{ width: rS(200), height: rV(200), borderRadius: rMS(10) }}
+            onPress={() => openImageViewer(props.currentMessage.image)}
           />
-        )}
-        <FullScreenImageViewer
-          visible={isImageViewerVisible}
-          images={imageViewerImages}
-          currentIndex={currentImageIndex}
-          onRequestClose={() => setIsImageViewerVisible(false)}
+        </TouchableOpacity>
+      );
+    },
+    [openImageViewer]
+  );
+
+  const renderDay = useCallback(
+    (props) => {
+      const { currentMessage, previousMessage } = props;
+      const isNewDay =
+        !previousMessage ||
+        (currentMessage?.createdAt &&
+          previousMessage?.createdAt &&
+          currentMessage.createdAt.toDateString() !==
+            previousMessage.createdAt.toDateString());
+
+      if (!isNewDay) return null;
+
+      const formatDate = (date: Date) => {
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+
+        if (date.toDateString() === today.toDateString()) {
+          return "Today";
+        } else if (date.toDateString() === yesterday.toDateString()) {
+          return "Yesterday";
+        } else {
+          return date.toDateString();
+        }
+      };
+
+      return (
+        <View
+          style={[
+            styles.dateContainer,
+            { backgroundColor: themeColors.background },
+          ]}
+        >
+          <Text style={styles.dateText}>
+            {currentMessage.createdAt
+              ? formatDate(currentMessage.createdAt)
+              : "Unknown Date"}
+          </Text>
+        </View>
+      );
+    },
+    [themeColors]
+  );
+
+  const renderSend = useCallback(
+    (props) => {
+      const hasText = props.text && props.text.trim().length > 0;
+
+      return (
+        <View style={styles.attachButtonContainer}>
+          {!hasText && !editingMessage ? (
+            <>
+              <TouchableOpacity onPress={pickImage} style={styles.attachButton}>
+                <Ionicons
+                  name="image-outline"
+                  color={themeColors.text}
+                  size={SIZES.xLarge}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={pickDocument}
+                style={styles.attachButton}
+              >
+                <MaterialCommunityIcons
+                  name="paperclip"
+                  color={themeColors.text}
+                  size={SIZES.xLarge}
+                />
+              </TouchableOpacity>
+            </>
+          ) : (
+            <View style={styles.sendContainer}>
+              <Send
+                {...props}
+                containerStyle={styles.sendButton}
+                alwaysShowSend
+                onSend={() => {
+                  if (editingMessage) {
+                    onEditMessage();
+                  } else {
+                    props.onSend({ text: props.text.trim() }, true);
+                  }
+                }}
+              >
+                <Ionicons
+                  name={editingMessage ? "checkmark" : "send"}
+                  color="#ffffff"
+                  size={SIZES.large}
+                />
+              </Send>
+            </View>
+          )}
+        </View>
+      );
+    },
+    [pickImage, pickDocument, themeColors, editingMessage, onEditMessage]
+  );
+
+  const renderMediaPreview = useCallback(() => {
+    if (mediaPreview.uri) {
+      return (
+        <View style={styles.replyContainer}>
+          {mediaPreview.type === "image" ? (
+            <Image
+              source={{ uri: mediaPreview.uri }}
+              style={[styles.previewImage, { width: "100%", height: rV(150) }]}
+            />
+          ) : (
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <MaterialCommunityIcons
+                name="file-document-outline"
+                size={SIZES.medium}
+                color={themeColors.text}
+                style={{ marginRight: rS(8) }}
+              />
+              <Text style={styles.previewDocument}>
+                {decodeURIComponent(
+                  mediaPreview.uri.split("/").pop() || "Document"
+                )}
+              </Text>
+            </View>
+          )}
+          <TouchableOpacity
+            style={styles.closeReplyButton}
+            onPress={() => setMediaPreview({ type: null, uri: null })}
+          >
+            <Ionicons
+              name="close"
+              color={themeColors.text}
+              size={SIZES.medium}
+            />
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    return null;
+  }, [mediaPreview, themeColors]);
+
+  const renderInputToolbar = useCallback(
+    (props) => {
+      return (
+        <View>
+          {renderMediaPreview()}
+          {editingMessage && (
+            <View style={styles.replyContainer}>
+              <Text style={styles.replyName}>
+                Editing Message by {editingMessage.user.name}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setEditingMessage(null)}
+                style={styles.closeReplyButton}
+              >
+                <Ionicons
+                  name="close"
+                  color={themeColors.text}
+                  size={SIZES.medium}
+                />
+              </TouchableOpacity>
+            </View>
+          )}
+          {replyToMessage && (
+            <View style={styles.replyContainer}>
+              <Text style={styles.replyName}>
+                Replying to {replyToMessage.user?.name || "Unknown User"}
+              </Text>
+              <Text style={styles.replyText}>
+                {replyToMessage.text ||
+                  (replyToMessage.image
+                    ? "Photo"
+                    : replyToMessage.document
+                    ? "Document"
+                    : "")}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setReplyToMessage(null)}
+                style={styles.closeReplyButton}
+              >
+                <Ionicons
+                  name="close"
+                  color={themeColors.text}
+                  size={SIZES.medium}
+                />
+              </TouchableOpacity>
+            </View>
+          )}
+          <InputToolbar
+            {...props}
+            containerStyle={[
+              styles.inputToolbar,
+              (editingMessage || replyToMessage || mediaPreview.uri) && {
+                marginTop: rV(0),
+              },
+            ]}
+            primaryStyle={{ alignItems: "center", flexDirection: "row" }}
+            renderComposer={() => (
+              <View style={styles.inputField}>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder={
+                    editingMessage
+                      ? "Edit message"
+                      : replyToMessage
+                      ? "Reply to message"
+                      : "Message"
+                  }
+                  placeholderTextColor={themeColors.textSecondary}
+                  value={props.text}
+                  onChangeText={props.onTextChanged}
+                  multiline={true}
+                />
+              </View>
+            )}
+          />
+        </View>
+      );
+    },
+    [
+      renderMediaPreview,
+      editingMessage,
+      replyToMessage,
+      mediaPreview.uri,
+      themeColors,
+    ]
+  );
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: rMS(10),
+    },
+    statusContainer: {
+      alignSelf: "flex-end",
+      marginTop: 5,
+    },
+    statusTimeContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      marginRight: rS(5),
+    },
+    messageImageContainer: {
+      borderRadius: rMS(10),
+      overflow: "hidden",
+      marginVertical: rV(0),
+      paddingHorizontal: rS(2),
+      paddingVertical: rV(0),
+    },
+    whatsappImage: {
+      width: rS(150),
+      height: rV(150),
+      resizeMode: "cover",
+    },
+    statusText: {
+      fontSize: SIZES.xSmall,
+      color: themeColors.textSecondary,
+      textAlign: "right",
+      paddingRight: rS(8),
+    },
+    username: {
+      fontSize: SIZES.small,
+      color: themeColors.textSecondary,
+      fontWeight: "bold",
+      marginBottom: rV(1),
+      marginLeft: rS(10),
+      paddingRight: rS(12),
+    },
+    avatarContainer: {
+      width: rS(36),
+      height: rS(36),
+      borderRadius: rMS(18),
+      overflow: "hidden",
+      backgroundColor: "#ccc",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    avatar: {
+      width: "100%",
+      height: "100%",
+    },
+    initials: {
+      color: "#fff",
+      fontSize: SIZES.medium,
+    },
+    dateContainer: {
+      paddingVertical: rV(4),
+      paddingHorizontal: rS(8),
+      borderRadius: rMS(10),
+      alignSelf: "center",
+      marginVertical: rV(10),
+    },
+    dateText: {
+      color: themeColors.textSecondary,
+      fontSize: SIZES.small,
+      fontWeight: "bold",
+    },
+    messageImage: {
+      width: rS(300),
+      height: rV(200),
+      borderRadius: rMS(10),
+      margin: rMS(10),
+    },
+    messageVideo: {
+      width: rS(200),
+      height: rV(200),
+      borderRadius: rMS(10),
+      margin: rMS(10),
+    },
+    inputToolbar: {
+      backgroundColor: themeColors.background,
+      borderTopWidth: 0,
+      paddingHorizontal: rS(10),
+      paddingBottom: insets.bottom + rV(5),
+      paddingTop: rV(10),
+      opacity: 0.9,
+    },
+    inputField: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: themeColors.reverseText,
+      borderRadius: rMS(20),
+      flex: 1,
+      paddingVertical: rV(8),
+      paddingHorizontal: rS(10),
+      marginRight: rS(10),
+    },
+    textInput: {
+      flex: 1,
+      color: themeColors.text,
+      fontSize: SIZES.medium,
+      fontFamily: FONT.regular,
+    },
+    attachButtonContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginRight: rS(10),
+    },
+    attachButton: {
+      padding: rS(5),
+    },
+    attachIcon: {
+      color: themeColors.text,
+      fontSize: SIZES.large,
+    },
+    sendContainer: {
+      height: rV(30),
+      width: rS(35),
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: themeColors.tint,
+      borderRadius: rMS(20),
+    },
+    sendButton: {
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    replyContainer: {
+      flexDirection: "column",
+      justifyContent: "flex-start",
+      alignItems: "flex-start",
+      backgroundColor: themeColors.secondaryBackground,
+      padding: rMS(10),
+      borderRadius: rMS(5),
+      borderLeftWidth: rS(4),
+      borderLeftColor: "#007AFF",
+      marginRight: rS(4),
+      width: "100%",
+    },
+    replyText: {
+      color: themeColors.text,
+      fontSize: SIZES.small,
+    },
+    replyName: {
+      color: themeColors.text,
+      fontSize: SIZES.small,
+      fontWeight: "bold",
+    },
+    closeReplyButton: {
+      position: "absolute",
+      right: rS(10),
+      top: rV(10),
+    },
+    documentContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: rS(10),
+      borderRadius: rMS(8),
+      maxWidth: rS(250),
+      marginVertical: rV(4),
+    },
+    documentTextContainer: {
+      flexDirection: "column",
+      flexShrink: 1,
+    },
+    documentName: {
+      fontWeight: "600",
+      fontSize: SIZES.medium,
+      marginBottom: rV(2),
+      color: themeColors.text,
+    },
+    documentLabel: {
+      fontSize: SIZES.small,
+      color: themeColors.textSecondary,
+    },
+    previewImage: {
+      width: "100%",
+      height: rV(200),
+      marginBottom: rV(10),
+    },
+    previewDocument: {
+      color: themeColors.text,
+      fontSize: SIZES.medium,
+      marginBottom: rV(10),
+    },
+    modalContainer: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.9)",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    fullScreenImage: {
+      width: "100%",
+      height: "100%",
+      resizeMode: "contain",
+    },
+    fullScreenVideo: {
+      width: "100%",
+      height: "100%",
+    },
+    blurBackground: {
+      opacity: 0.7,
+      backgroundColor: themeColors.tint,
+      width: "100%",
+    },
+    editedText: {
+      fontSize: SIZES.xSmall,
+      color: themeColors.textSecondary,
+      marginTop: rV(2),
+    },
+    lastMessagePreview: {
+      fontSize: SIZES.small,
+      color: themeColors.textSecondary,
+      marginTop: rV(2),
+      alignSelf: "center",
+    },
+    timeContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      marginRight: rS(8),
+      marginBottom: rV(4),
+    },
+    timeText: {
+      fontSize: SIZES.small,
+      color: themeColors.textSecondary,
+      marginRight: rS(4),
+      marginLeft: rS(9),
+    },
+    statusIcon: {
+      marginLeft: rS(2),
+    },
+    downloadButton: {
+      position: "absolute",
+      bottom: 20,
+      right: 20,
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      padding: rS(10),
+      borderRadius: rMS(20),
+    },
+    previewModalContainer: {
+      flex: 142,
+      backgroundColor: themeColors.background,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: rS(10),
+      backgroundColor: themeColors.secondaryBackground,
+      borderBottomWidth: 1,
+      borderBottomColor: themeColors.textSecondary + "33",
+    },
+    previewModalTitle: {
+      fontSize: rMS(18),
+      fontWeight: "600",
+      marginLeft: rS(10),
+      color: themeColors.text,
+    },
+    previewImageContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: rS(10),
+    },
+    previewButtonContainer: {
+      flexDirection: "row",
+      justifyContent: "center",
+      padding: rS(10),
+      backgroundColor: themeColors.secondaryBackground,
+      borderTopWidth: 1,
+      borderTopColor: themeColors.textSecondary + "33",
+    },
+    previewButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: themeColors.tint,
+      paddingVertical: rV(8),
+      paddingHorizontal: rS(12),
+      borderRadius: rMS(8),
+      marginHorizontal: rS(10),
+    },
+    previewButtonText: {
+      color: "#fff",
+      fontSize: rMS(14),
+      fontWeight: "500",
+      marginLeft: rS(6),
+    },
+    previewActionContainer: {
+      flexDirection: "row",
+      justifyContent: "space-around",
+      padding: rS(10),
+      backgroundColor: themeColors.secondaryBackground,
+      borderTopWidth: 1,
+      borderTopColor: themeColors.textSecondary + "33",
+    },
+    previewActionButton: {
+      paddingVertical: rV(12),
+      borderRadius: rMS(10),
+      flex: 1,
+      marginHorizontal: rS(5),
+      alignItems: "center",
+    },
+    previewActionText: {
+      color: "#fff",
+      fontSize: rMS(16),
+      fontWeight: "600",
+    },
+    noImagesText: {
+      color: themeColors.textSecondary,
+      fontSize: rMS(16),
+      textAlign: "center",
+      marginTop: rV(20),
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    loadingText: {
+      marginTop: rV(10),
+      color: themeColors.text,
+      fontSize: rMS(16),
+    },
+  });
+
+  return (
+    <View style={{ flex: 1, paddingTop: rV(1) }}>
+      {loading && messages.length === 0 ? (
+        <View
+          style={[
+            styles.container,
+            { justifyContent: "center", alignItems: "center" },
+          ]}
+        >
+          <ActivityIndicator size="large" color={themeColors.tint} />
+        </View>
+      ) : (
+        <MemoizedGiftedChat
+          messages={messages}
+          onSend={onSend}
+          user={{ _id: user?.id || 1 }}
+          text={messageInput}
+          onInputTextChanged={(text) => setMessageInput(text)}
+          renderSystemMessage={(props) => (
+            <SystemMessage
+              {...props}
+              textStyle={{ color: themeColors.textSecondary }}
+            />
+          )}
+          renderAvatar={renderAvatar}
+          renderBubble={renderBubble}
+          renderSend={renderSend}
+          renderInputToolbar={renderInputToolbar}
+          renderMessageImage={renderMessageImage}
+          renderDay={renderDay}
+          minInputToolbarHeight={insets.bottom + rV(50)}
+          scrollToBottom={true}
+          isTyping={false}
+          inverted={true}
+          loadEarlier={loadEarlier}
+          onLoadEarlier={handleLoadEarlier}
+          isLoadingEarlier={isLoadingEarlier}
+          listViewProps={{
+            scrollEventThrottle: 400,
+            maintainVisibleContentPosition: {
+              minIndexForVisible: 0,
+            },
+            onScroll: ({ nativeEvent }) => {
+              const isCloseToTop = nativeEvent.contentOffset.y <= 50;
+              if (isCloseToTop && loadEarlier && !isLoadingEarlier && !isUpdatingMessages) {
+                handleLoadEarlier();
+              }
+            },
+          }}
         />
-        <ImagePreviewModal
-          visible={isImagePreviewVisible}
-          images={selectedImagesForPreview}
-          onClose={() => setIsImagePreviewVisible(false)}
-          onSend={handleSendImage}
-        />
-      </View>
-    );
+      )}
+      <FullScreenImageViewer
+        visible={isImageViewerVisible}
+        images={imageViewerImages}
+        currentIndex={currentImageIndex}
+        onRequestClose={() => setIsImageViewerVisible(false)}
+      />
+      <ImagePreviewModal
+        visible={isImagePreviewVisible}
+        images={selectedImagesForPreview}
+        onClose={() => setIsImagePreviewVisible(false)}
+        onSend={handleSendImage}
+      />
+    </View>
+  );
 };
 
 export default CommunityChatScreen;

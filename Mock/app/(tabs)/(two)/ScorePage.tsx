@@ -17,7 +17,7 @@ import GameButton from "../../../components/GameButton";
 import { useNavigation } from "@react-navigation/native";
 import { SIZES, rMS, rS, rV, useShadows } from "../../../constants";
 import { useMutation } from "@tanstack/react-query";
-import { markTopicAsComplete } from "../../../CoursesApiCalls";
+import { markTopicAsComplete } from "../../../services/CoursesApiCalls";
 import ErrorMessage from "../../../components/ErrorMessage";
 
 const AnimatedText = Animated.createAnimatedComponent(Text);

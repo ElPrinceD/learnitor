@@ -39,7 +39,8 @@ export default {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.cradle.learnitor"
+      "package": "com.cradle.learnitor",
+      "hermesEnabled": true,
     },
     "web": {
       "bundler": "metro",

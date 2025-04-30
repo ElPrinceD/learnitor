@@ -24,10 +24,11 @@ import {
   getCommunityMessages,
   getCommunityTimetable,
   removeCommunityMember,
-  shareCommunity
-} from "../../CommunityApiCalls";
+  shareCommunity,
+} from "../../services/CommunityApiCalls";
 import { useAuth } from "../../components/AuthContext";
-import { useWebSocket } from "../../webSocketProvider";
+import { useWebSocket } from "../../contexts/webSocketProvider"; // Updated to WebSocketContext
+import { useCache } from "../../contexts/CacheContext"; // New import for caching
 import Colors from "../../constants/Colors";
 import { Community } from "../../components/types";
 import { rMS, rS, rV, SIZES } from "../../constants";
@@ -44,19 +45,11 @@ const CommunityDetailScreen: React.FC = () => {
   const { userToken, userInfo } = useAuth();
   const user = userInfo?.user;
 
-  const {
-    socket,
-    unsubscribeFromCommunity,
-    sqliteGetItem,
-    sqliteSetItem,
-    sqliteRemoveItem,
-  } = useWebSocket() || {
+  const { socket, unsubscribeFromCommunity } = useWebSocket() || {
     socket: null,
     unsubscribeFromCommunity: () => {},
-    sqliteGetItem: async () => null,
-    sqliteSetItem: async () => {},
-    sqliteRemoveItem: async () => {},
   };
+  const { getItem, setItem, removeItem } = useCache();
 
   const [community, setCommunity] = useState<Community | null>(null);
   const [loading, setLoading] = useState(true);
@@ -102,24 +95,24 @@ const CommunityDetailScreen: React.FC = () => {
 
   const getCachedData = useCallback(
     async (key: string) => {
-      const data = await sqliteGetItem(key);
+      const data = await getItem(key);
       return data ? JSON.parse(data) : null;
     },
-    [sqliteGetItem]
+    [getItem]
   );
 
   const setCachedData = useCallback(
     async (key: string, data: any) => {
-      await sqliteSetItem(key, JSON.stringify(data));
+      await setItem(key, JSON.stringify(data));
     },
-    [sqliteSetItem]
+    [setItem]
   );
 
   const removeCachedData = useCallback(
     async (key: string) => {
-      await sqliteRemoveItem(key);
+      await removeItem(key);
     },
-    [sqliteRemoveItem]
+    [removeItem]
   );
 
   const fetchCommunityData = useCallback(async () => {
@@ -153,7 +146,7 @@ const CommunityDetailScreen: React.FC = () => {
       await setCachedData(`images_${id}`, images);
 
       const timetableData = await getCommunityTimetable(id, userToken.token) || [];
-      console.log(timetableData)
+      console.log(timetableData);
       setTimetable(timetableData);
       await setCachedData(`timetable_${id}`, timetableData);
 
@@ -193,6 +186,11 @@ const CommunityDetailScreen: React.FC = () => {
               ...data.community,
               members: data.community.members || prev?.members || [],
             }));
+            setCachedData(`community_${id}`, {
+              ...community,
+              ...data.community,
+              members: data.community.members || community?.members || [],
+            });
           } else if (data.type === "member_removed" && data.community_id.toString() === id) {
             setCommunity((prev) => {
               if (!prev) return prev;
@@ -216,7 +214,7 @@ const CommunityDetailScreen: React.FC = () => {
     }
 
     return socketCleanup;
-  }, [socket, id, setCachedData]);
+  }, [socket, id, setCachedData, community]);
 
   const handleRemoveMember = useCallback(
     async (userId: number) => {
@@ -345,7 +343,6 @@ const CommunityDetailScreen: React.FC = () => {
     [isUserLeader]
   );
 
-
   const handleShareCommunity = useCallback(async () => {
     try {
       if (!userToken?.token) throw new Error("User not authenticated.");
@@ -375,7 +372,7 @@ const CommunityDetailScreen: React.FC = () => {
         `messages_${id}`,
         `last_message_${id}`,
       ];
-      await Promise.all(dbKeysToRemove.map((key) => sqliteRemoveItem(key)));
+      await Promise.all(dbKeysToRemove.map((key) => removeCachedData(key)));
 
       const cachedCommunities = await getCachedData("communities");
       if (cachedCommunities) {
@@ -385,9 +382,9 @@ const CommunityDetailScreen: React.FC = () => {
         await setCachedData("communities", updatedCommunities);
       }
 
-      const storedLeftIds = await sqliteGetItem("leftCommunityIds");
+      const storedLeftIds = await getItem("leftCommunityIds");
       const leftCommunityIds = storedLeftIds ? JSON.parse(storedLeftIds) : [];
-      await sqliteSetItem(
+      await setItem(
         "leftCommunityIds",
         JSON.stringify([...leftCommunityIds, id.toString()])
       );
@@ -409,9 +406,9 @@ const CommunityDetailScreen: React.FC = () => {
     unsubscribeFromCommunity,
     getCachedData,
     setCachedData,
-    sqliteRemoveItem,
-    sqliteGetItem,
-    sqliteSetItem,
+    removeCachedData,
+    getItem,
+    setItem,
   ]);
 
   const confirmLeaveCommunity = useCallback(() => {
@@ -519,7 +516,6 @@ const CommunityDetailScreen: React.FC = () => {
             />
           </TouchableOpacity>
 
-          
           <TouchableOpacity style={styles.sectionItem}>
             <Ionicons
               name="lock-closed"
@@ -550,7 +546,7 @@ const CommunityDetailScreen: React.FC = () => {
         </View>
       </>
     ),
-    [community, isUserLeader, themeColors, communityImages, isMuted, shareCommunity]
+    [community, isUserLeader, themeColors, communityImages, handleShareCommunity]
   );
 
   const renderFooter = useCallback(

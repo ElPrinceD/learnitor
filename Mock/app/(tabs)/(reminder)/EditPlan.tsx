@@ -6,7 +6,7 @@ import Colors from "../../../constants/Colors";
 import { rMS, rS, rV } from "../../../constants/responsive";
 import { SIZES } from "../../../constants/theme";
 import AnimatedRoundTextInput from "../../../components/AnimatedRoundTextInput.tsx";
-import { deleteTask, updateTask, getCategories } from "../../../TimelineApiCalls.ts";
+import { deleteTask, updateTask, getCategories } from "../../../services/TimelineApiCalls.ts";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import ErrorMessage from "../../../components/ErrorMessage.tsx";
 import GameButton from "../../../components/GameButton.tsx";
@@ -14,7 +14,8 @@ import CustomPicker from "../../../components/CustomPicker";
 import DateSelector from "../../../components/DateSelector.tsx";
 import CustomDateTimeSelector from "../../../components/CustomDateTimeSelector.tsx";
 import Animated, { FadeInLeft, FadeInRight, FadeOutRight, ReduceMotion } from "react-native-reanimated";
-import { useWebSocket } from "../../../webSocketProvider";
+import { useTimeline } from "../../../contexts/TimelineContext"; // Added for TimelineContext
+import { useCache } from "../../../contexts/CacheContext"; // Added for CacheContext
 
 interface Category { value: number; label: string; }
 interface UpdateTaskData {
@@ -45,7 +46,8 @@ const EditPlan = () => {
   console.log(oldCategoryId)
 
   const { userToken } = useAuth();
-  const { sqliteRemoveItem, scheduleTaskNotification, cancelTaskNotification, storeNotificationId } = useWebSocket();
+  const { scheduleTaskNotification, cancelTaskNotification, storeNotificationId } = useTimeline(); // Use TimelineContext
+  const { removeItem } = useCache(); // Use CacheContext for cache invalidation
 
   // Initialize dueDate with the plan's oldDate
   const [dueDate, setDueDate] = useState(() => {
@@ -129,13 +131,13 @@ const EditPlan = () => {
       const oldDateString = new Date(oldDate).toISOString().split("T")[0];
       const newDateString = formatDate(dueDate);
       const newCategoryId = selectedCategory?.value?.toString() || oldCategoryId;
-      await sqliteRemoveItem(`todayPlans_${oldDateString}_all`);
-      if (oldCategoryId) await sqliteRemoveItem(`todayPlans_${oldDateString}_${oldCategoryId}`);
+      await removeItem(`todayPlans_${oldDateString}_all`);
+      if (oldCategoryId) await removeItem(`todayPlans_${oldDateString}_${oldCategoryId}`);
       if (oldDateString !== newDateString) {
-        await sqliteRemoveItem(`todayPlans_${newDateString}_all`);
-        if (newCategoryId) await sqliteRemoveItem(`todayPlans_${newDateString}_${newCategoryId}`);
+        await removeItem(`todayPlans_${newDateString}_all`);
+        if (newCategoryId) await removeItem(`todayPlans_${newDateString}_${newCategoryId}`);
       } else if (oldCategoryId !== newCategoryId) {
-        if (newCategoryId) await sqliteRemoveItem(`todayPlans_${newDateString}_${newCategoryId}`);
+        if (newCategoryId) await removeItem(`todayPlans_${newDateString}_${newCategoryId}`);
       }
       try {
         await cancelTaskNotification(id);
@@ -155,8 +157,8 @@ const EditPlan = () => {
     onSuccess: async () => {
       const dateString = new Date(oldDate).toISOString().split("T")[0];
       const categoryId = params.category_id as string;
-      await sqliteRemoveItem(`todayPlans_${dateString}_all`);
-      if (categoryId) await sqliteRemoveItem(`todayPlans_${dateString}_${categoryId}`);
+      await removeItem(`todayPlans_${dateString}_all`);
+      if (categoryId) await removeItem(`todayPlans_${dateString}_${categoryId}`);
       try {
         await cancelTaskNotification(id);
       } catch (error) {
@@ -213,7 +215,6 @@ const EditPlan = () => {
 
     if (Object.keys(dataToSave).length > 0) {
       updateTaskMutation.mutate({ taskId: id, taskData: dataToSave, token: userToken?.token! });
-      
     } else {
       setErrorMessage("No changes to save.");
     }

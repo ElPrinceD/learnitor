@@ -19,13 +19,13 @@ import * as ImagePicker from "expo-image-picker";
 import ApiUrl from "../../../config";
 import Colors from "../../../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../../../constants";
-import { useWebSocket } from "../../../webSocketProvider"; // Add this import
+import { useCache } from "../../../contexts/CacheContext"; // New import for caching
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import AppImage from "../../../components/AppImage";
 
 const Profile = () => {
   const { logout, userToken, userInfo, setUserInfo } = useAuth();
-  const { sqliteClear } = useWebSocket(); // Access sqliteClear from context
+  const { clear } = useCache(); // Access clear from CacheContext
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
@@ -35,21 +35,22 @@ const Profile = () => {
 
   const clearUserDataCache = async () => {
     try {
-      await sqliteClear(); // Replace AsyncStorage.clear with sqliteClear
-      
+      await clear(); // Replace sqliteClear with clear from CacheContext
       console.log("All SQLite storage data cleared.");
     } catch (e) {
       console.error("Error clearing SQLite storage:", e);
     }
   };
+
   const clearUserTokenDataCache = async () => {
     try {
-       await AsyncStorage.multiRemove(["token", "user"]);
+      await AsyncStorage.multiRemove(["token", "user"]);
       console.log("All AsyncStorage data cleared.");
     } catch (e) {
       console.error("Error clearing AsyncStorage:", e);
     }
   };
+
   const handleLogout = async () => {
     try {
       await clearUserDataCache(); // Ensure this is awaited
@@ -254,9 +255,8 @@ const Profile = () => {
           style={styles.profileImageContainer}
         >
           <AppImage
-             uri={ userInfo?.user.profile_picture }
+            uri={userInfo?.user.profile_picture}
             style={styles.profileImage}
-            
           />
           <Ionicons
             name="camera-outline"

@@ -13,7 +13,7 @@ import Colors from "../../../constants/Colors";
 import { rMS, rS, rV } from "../../../constants/responsive";
 import { SIZES } from "../../../constants/theme.js";
 import AnimatedRoundTextInput from "../../../components/AnimatedRoundTextInput.tsx";
-import { createTask, getCategories } from "../../../TimelineApiCalls.ts";
+import { createTask, getCategories } from "../../../services/TimelineApiCalls.ts";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import ErrorMessage from "../../../components/ErrorMessage.tsx";
 import GameButton from "../../../components/GameButton.tsx";
@@ -21,7 +21,8 @@ import CustomPicker from "../../../components/CustomPicker";
 import DateSelector from "../../../components/DateSelector.tsx";
 import CustomDateTimeSelector from "../../../components/CustomDateTimeSelector.tsx";
 import Animated, { FadeInLeft, ReduceMotion } from "react-native-reanimated";
-import { useWebSocket } from "../../../webSocketProvider";
+import { useTimeline } from "../../../contexts/TimelineContext"; // Added for TimelineContext
+import { useCache } from "../../../contexts/CacheContext"; // Added for CacheContext
 
 interface Category {
   value: number;
@@ -43,7 +44,8 @@ interface CreateTaskData {
 
 const CreateNewTime = () => {
   const { userToken, userInfo } = useAuth();
-  const { sqliteRemoveItem, scheduleTaskNotification, storeNotificationId } = useWebSocket();
+  const { scheduleTaskNotification, storeNotificationId } = useTimeline(); // Use TimelineContext
+  const { removeItem } = useCache(); // Use CacheContext for cache invalidation
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState(new Date());
@@ -73,9 +75,9 @@ const CreateNewTime = () => {
       const categoryId = selectedCategory?.value?.toString();
 
       // Invalidate caches
-      await sqliteRemoveItem(`todayPlans_${dateString}_all`);
+      await removeItem(`todayPlans_${dateString}_all`);
       if (categoryId) {
-        await sqliteRemoveItem(`todayPlans_${dateString}_${categoryId}`);
+        await removeItem(`todayPlans_${dateString}_${categoryId}`);
       }
 
       // Schedule notification for the created task

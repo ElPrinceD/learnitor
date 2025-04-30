@@ -1,6 +1,6 @@
 import axios from 'axios';
-import ApiUrl from './config'; // Assuming you have a config file for API URL
-import { GameDetailsResponse } from "./components/types";
+import ApiUrl from '../config'; // Assuming you have a config file for API URL
+import { GameDetailsResponse } from "../components/types";
 
 const apiClient = axios.create({
     baseURL: ApiUrl,

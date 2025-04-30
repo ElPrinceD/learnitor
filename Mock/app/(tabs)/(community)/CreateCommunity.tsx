@@ -16,12 +16,12 @@ import Colors from "../../../constants/Colors";
 import { rMS, rV } from "../../../constants/responsive";
 import { SIZES } from "../../../constants/theme";
 import { useMutation } from "@tanstack/react-query";
-import { createCommunity } from "../../../CommunityApiCalls";
+import { createCommunity } from "../../../services/CommunityApiCalls";
 import { router } from "expo-router";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 
-import { useWebSocket } from "../../../webSocketProvider";
+import { useWebSocket } from "../../../contexts/webSocketProvider";
 
 const CreateCommunity = () => {
   const { userToken } = useAuth();

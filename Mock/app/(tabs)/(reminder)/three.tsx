@@ -1,8 +1,8 @@
-// Timeline.tsx
 import React, {
   useState,
   useMemo,
   useRef,
+  useEffect,
   useCallback,
 } from "react";
 import {
@@ -15,6 +15,8 @@ import {
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
+import { getTodayPlans, getCategoryNames } from "../../../services/TimelineApiCalls";
 import { useAuth } from "../../../components/AuthContext";
 import PlanItem from "../../../components/PlanItem";
 import DaySelector from "../../../components/DaySelector";
@@ -23,21 +25,13 @@ import { SIZES, rMS, rS, rV, useShadows } from "../../../constants";
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { FontAwesome6 } from "@expo/vector-icons";
 import ErrorMessage from "../../../components/ErrorMessage";
-import { useWebSocket } from "../../../webSocketProvider";
 
 const Timeline = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [todayPlans, setTodayPlans] = useState<any[]>([]);
-  const [categoryNames, setCategoryNames] = useState<Record<number, string>>({});
 
   const { userToken } = useAuth();
-  const {
-    fetchAndCacheTodayPlans,
-    fetchAndCacheCategoryNames,
-  } = useWebSocket();
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -61,35 +55,56 @@ const Timeline = () => {
     }
   };
 
+  const {
+    data: todayPlans,
+    status: plansStatus,
+    error: plansError,
+    refetch: refetchTodayPlans,
+  } = useQuery({
+    queryKey: ["todayPlans", userToken?.token],
+    queryFn: () =>
+      getTodayPlans(userToken?.token, selectedDate, selectedCategory),
+    enabled: !!userToken,
+  });
+
+  const {
+    data: categoryNames,
+    status: categoriesStatus,
+    error: categoriesError,
+    refetch: refetchCategoryNames,
+  } = useQuery({
+    queryKey: ["categoryNames", userToken],
+    queryFn: () => getCategoryNames(userToken?.token),
+    enabled: !!userToken,
+  });
+
+  useEffect(() => {
+    if (userToken && selectedDate) {
+      refetchTodayPlans();
+      refetchCategoryNames();
+    }
+  }, [userToken, selectedDate]);
+
   useFocusEffect(
     useCallback(() => {
-      const fetchDataOnFocus = async () => {
-        if (userToken) {
-          setIsLoading(true);
-          try {
-            const normalizedCategory = selectedCategory || "all";
-            const newPlans = await fetchAndCacheTodayPlans(
-              userToken.token,
-              selectedDate,
-              normalizedCategory
-            );
-            const newCategoryNames = await fetchAndCacheCategoryNames(userToken.token);
-
-            setTodayPlans(newPlans);
-            setCategoryNames(newCategoryNames);
-            setErrorMessage(null);
-          } catch (error) {
-            setErrorMessage("Failed to fetch data");
-          } finally {
-            setIsLoading(false);
-          }
-        }
-      };
-      fetchDataOnFocus();
-    }, [userToken, selectedDate, selectedCategory, fetchAndCacheTodayPlans, fetchAndCacheCategoryNames])
+      if (userToken) {
+        refetchTodayPlans();
+        refetchCategoryNames();
+      }
+    }, [userToken])
   );
 
-  const handleEditPlan = (plan: any) => {
+  useEffect(() => {
+    if (plansStatus === "error" || categoriesStatus === "error") {
+      setErrorMessage(
+        plansError?.message || categoriesError?.message || "An error occurred"
+      );
+    } else {
+      setErrorMessage(null);
+    }
+  }, [plansStatus, categoriesStatus]);
+
+  const handleEditPlan = (plan) => {
     router.navigate("EditPlan");
     router.setParams({
       taskId: String(plan.id),
@@ -97,8 +112,7 @@ const Timeline = () => {
       description: plan.description,
       duedate: plan.due_date,
       category_id: String(plan.category),
-      dueTimeStart: plan.due_time_start,
-      dueTimeEnd: plan.due_time_end,
+      duetime: plan.due_time,
       category_name: categoryNames[plan.category],
     });
   };
@@ -107,7 +121,12 @@ const Timeline = () => {
     router.navigate("createNewTime");
   };
 
-  const memoizedPlans = useMemo(() => todayPlans || [], [todayPlans]);
+  const memoizedPlans = useMemo(() => {
+    if (plansStatus === "success") {
+      return todayPlans || [];
+    }
+    return [];
+  }, [todayPlans, plansStatus]);
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: themeColors.background },
@@ -164,6 +183,7 @@ const Timeline = () => {
         selectedDate={selectedDate}
         setSelectedDate={setSelectedDate}
       />
+
       <BottomSheet
         ref={BottomSheetRef}
         snapPoints={snapPoints}
@@ -176,28 +196,39 @@ const Timeline = () => {
           contentContainerStyle={styles.scrollViewContent}
         >
           <View style={styles.plansContainer}>
-            {isLoading ? (
+            {plansStatus === "pending" ? (
               <View style={{ flex: 1, justifyContent: "center" }}>
                 <ActivityIndicator size="large" color="#0D47A1" />
               </View>
             ) : memoizedPlans.length === 0 ? (
               <Text style={styles.noPlansText}>Hey, you have a free day!</Text>
             ) : (
-              memoizedPlans.map((plan, index) => (
-                <View key={index} style={styles.planItemWrapper}>
-                  <PlanItem
-                    plan={plan}
-                    categoryNames={categoryNames}
-                    getCategoryColor={getCategoryColor}
-                    handleEditPlan={handleEditPlan}
-                  />
-                </View>
-              ))
+              memoizedPlans.map(
+                (plan, index) =>
+                  plan && (
+                    <View key={index} style={styles.planItemWrapper}>
+                      
+                      {categoryNames && (
+                        <PlanItem
+                          plan={plan}
+                          categoryNames={categoryNames}
+                          getCategoryColor={getCategoryColor}
+                          handleEditPlan={handleEditPlan}
+                        />
+                      )}
+                    </View>
+                  )
+              )
             )}
           </View>
         </BottomSheetScrollView>
       </BottomSheet>
-     
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={handleNavigateCreateTask}
+      >
+        <FontAwesome6 name="add" size={SIZES.xLarge} color={themeColors.text} />
+      </TouchableOpacity>
       {errorMessage && (
         <ErrorMessage
           message={errorMessage}

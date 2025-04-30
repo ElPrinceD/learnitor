@@ -16,7 +16,7 @@ import AnimatedRoundTextInput from "../../components/AnimatedRoundTextInput";
 import GameButton from "../../components/GameButton";
 import CustomDateTimeSelector from "../../components/CustomDateTimeSelector";
 import { useMutation } from "@tanstack/react-query";
-import { updatePeriod, deletePeriod } from "../../TimelineApiCalls";
+import { updatePeriod, deletePeriod } from "../../services/TimelineApiCalls";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useAuth } from "../../components/AuthContext";
 

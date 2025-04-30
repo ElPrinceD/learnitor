@@ -31,7 +31,7 @@ import {
   enrollInCourse,
   unenrollFromCourse,
   getCourseProgress,
-} from "../../../CoursesApiCalls";
+} from "../../../services/CoursesApiCalls";
 import ErrorMessage from "../../../components/ErrorMessage";
 import CourseInformation from "../../../components/CourseInformation";
 import CourseTopics from "../../../components/CourseTopics";

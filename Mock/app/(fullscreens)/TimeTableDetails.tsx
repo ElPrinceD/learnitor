@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../../components/AuthContext";
-import { getTimetable } from "../../TimelineApiCalls";
+import { getTimetable } from "../../services/TimelineApiCalls";
 import Colors from "../../constants/Colors";
 import TimetableDisplay from "../../components/TimetableDisplay";
 import { router, useLocalSearchParams } from "expo-router";

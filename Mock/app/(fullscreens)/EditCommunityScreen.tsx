@@ -12,9 +12,9 @@ import {
   Switch,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
-import { getCommunityDetails, updateCommunity } from "../../CommunityApiCalls";
+import { getCommunityDetails, updateCommunity } from "../../services/CommunityApiCalls";
 import { useAuth } from "../../components/AuthContext";
-import { useWebSocket } from "../../webSocketProvider";
+import { useCache } from "../../contexts/CacheContext"; // New import for caching
 import Colors from "../../constants/Colors";
 import { Community } from "../../components/types";
 import * as ImagePicker from "expo-image-picker";
@@ -31,7 +31,7 @@ const EditCommunityScreen: React.FC = () => {
   const navigation = useNavigation();
   const { id } = route.params as RouteParams;
   const { userToken } = useAuth();
-  const { sqliteSetItem, sqliteGetItem } = useWebSocket();
+  const { getItem, setItem } = useCache(); // Use CacheContext
   const [community, setCommunity] = useState<Community | null>(null);
   const [name, setName] = useState<string>("");
   const [description, setDescription] = useState<string>("");
@@ -50,7 +50,7 @@ const EditCommunityScreen: React.FC = () => {
           setName(data.name);
           setDescription(data.description);
           setProfilePicture(data.image_url);
-          setIsPublic(data.is_public)
+          setIsPublic(data.is_public);
         }
       } catch (error) {
         console.error("Failed to load community details:", error);
@@ -63,7 +63,7 @@ const EditCommunityScreen: React.FC = () => {
   const handleSave = async () => {
     if (userToken && community) {
       try {
-        const updateData: any = { name, description,is_public: isPublic };
+        const updateData: any = { name, description, is_public: isPublic };
         let finalImageUrl = profilePicture;
   
         if (profilePicture && !profilePicture.startsWith("http")) {
@@ -97,12 +97,12 @@ const EditCommunityScreen: React.FC = () => {
           is_public: response.is_public !== undefined ? response.is_public : isPublic,
         };
 
-        console.log(updateCommunity)
+        console.log(updatedCommunity);
   
         // Update individual community cache
-        await sqliteSetItem(`community_${communityId}`, JSON.stringify(updatedCommunity));
+        await setItem(`community_${communityId}`, JSON.stringify(updatedCommunity));
         // Update communities list cache
-        const cachedCommunitiesRaw = await sqliteGetItem("communities");
+        const cachedCommunitiesRaw = await getItem("communities");
         let cachedCommunities = cachedCommunitiesRaw ? JSON.parse(cachedCommunitiesRaw) : [];
         const communityIndex = cachedCommunities.findIndex((comm: Community) => comm.id.toString() === communityId);
         if (communityIndex !== -1) {
@@ -110,7 +110,7 @@ const EditCommunityScreen: React.FC = () => {
         } else {
           cachedCommunities.push(updatedCommunity);
         }
-        await sqliteSetItem("communities", JSON.stringify(cachedCommunities));
+        await setItem("communities", JSON.stringify(cachedCommunities));
   
         router.dismiss(1);
       } catch (error) {
@@ -257,30 +257,28 @@ const EditCommunityScreen: React.FC = () => {
           />
         </View>
         <View style={styles.sectionItem}>
-              <Ionicons
-                name="lock-closed-outline"
-                size={24}
-                color={themeColors.text}
-                style={styles.icon}
-              />
-              <View style={styles.sectionTextContainer}>
-                <Text
-                  style={[styles.sectionTitle, { color: themeColors.text }]}
-                >
-                  Lock chat
-                </Text>
-              </View>
-              <Switch
-                value={isPublic}
-                onValueChange={() => setIsPublic((prev) => !prev)}
-                trackColor={{ true: themeColors.tint, false: "#999" }}
-              />
-            </View>
+          <Ionicons
+            name="lock-closed-outline"
+            size={24}
+            color={themeColors.text}
+            style={styles.icon}
+          />
+          <View style={styles.sectionTextContainer}>
+            <Text
+              style={[styles.sectionTitle, { color: themeColors.text }]}
+            >
+              Lock chat
+            </Text>
+          </View>
+          <Switch
+            value={isPublic}
+            onValueChange={() => setIsPublic((prev) => !prev)}
+            trackColor={{ true: themeColors.tint, false: "#999" }}
+          />
+        </View>
       </ScrollView>
     </View>
   );
 };
-
-
 
 export default EditCommunityScreen;

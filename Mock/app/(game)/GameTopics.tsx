@@ -17,7 +17,7 @@ import TimelineCategoryItem from "../../components/TimelineCategoryItem";
 import GameButton from "../../components/GameButton";
 import Colors from "../../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../../constants";
-import { getCourseTopics } from "../../CoursesApiCalls"; // Import the new API function
+import { getCourseTopics } from "../../services/CoursesApiCalls"; // Import the new API function
 
 const GameTopics: React.FC = () => {
   const { userToken } = useAuth();

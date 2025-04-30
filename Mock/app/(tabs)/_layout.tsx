@@ -9,7 +9,7 @@ import { useThemeColor } from "../../components/Themed";
 import { rMS } from "../../constants";
 import { useAuth } from "../../components/AuthContext";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { useWebSocket } from "../../webSocketProvider";
+import { useCommunity } from "../../contexts/CommunityContext";
 
 // Animated TabBarIcon: the indicator uses a scale transform so that it starts at 0
 // in the middle and expands equally to left and right.
@@ -67,7 +67,7 @@ function TabBarIcon(props: { name: string; color: string; focused: boolean }) {
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const { unreadMessages } = useWebSocket();
+  const { unreadMessages } = useCommunity();
   const currentHour = new Date().getHours();
   let greeting = "";
   if (currentHour >= 4 && currentHour < 12) {

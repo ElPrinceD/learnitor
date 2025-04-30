@@ -22,7 +22,7 @@ import ApiUrl from "../../config";
 import { Question, Player, GameDetailsResponse } from "../../components/types";
 import { SIZES, rMS, rS, rV } from "../../constants";
 import { useQuery } from "@tanstack/react-query";
-import { getGameDetails } from "../../GamesApiCalls";
+import { getGameDetails } from "../../services/GamesApiCalls";
 import WsUrl from "../../configWs";
 
 export default function GameWaitingScreen() {

@@ -21,7 +21,7 @@ import { queryClient } from "../../../QueryClient";
 import {
   getCourseProgress,
   getEnrolledCourseTopics,
-} from "../../../CoursesApiCalls";
+} from "../../../services/CoursesApiCalls";
 import ErrorMessage from "../../../components/ErrorMessage";
 
 const EnrolledCourse: React.FC = () => {

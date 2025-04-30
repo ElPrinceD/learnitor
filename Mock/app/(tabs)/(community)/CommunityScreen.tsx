@@ -17,11 +17,13 @@ import { Community } from "../../../components/types";
 import CommunityList from "../../../components/CommunityList";
 import GlobalCommunityList from "../../../components/GlobalCommunityList";
 import { Skeleton } from "moti/skeleton";
-import { useWebSocket } from "../../../webSocketProvider";
+import { useWebSocket } from "../../../contexts/webSocketProvider"; // Updated to WebSocketContext
+import { useCommunity } from "../../../contexts/CommunityContext"; // Added for CommunityContext
+import { useCache } from "../../../contexts/CacheContext"; // Added for CacheContext
 import {
   getCommunityDetails,
   searchCommunities,
-} from "../../../CommunityApiCalls";
+} from "../../../services/CommunityApiCalls";
 
 const CommunityScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -39,21 +41,17 @@ const CommunityScreen: React.FC = () => {
   const colorMode = colorScheme === "dark" ? "dark" : "light";
   const params = useLocalSearchParams();
 
+  const { isConnected, socket } = useWebSocket(); // Only need isConnected and socket
   const {
-    isConnected,
-    socket,
+    unreadMessages,
     joinAndSubscribeToCommunity,
     unsubscribeFromCommunity,
     subscribeToExistingUserCommunities,
     fetchAndCacheCommunities,
     markMessageAsRead,
-    unreadMessages,
-    sqliteGetItem,
-    sqliteSetItem,
-    sqliteRemoveItem,
-    setCurrentCommunity,
-    loadUnreadCounts,
-  } = useWebSocket();
+    setCurrentCommunityId, // Use setCurrentCommunityId instead of setCurrentCommunity
+  } = useCommunity();
+  const { getItem, setItem, removeItem } = useCache(); // Replace sqlite caching methods
 
   // Utility function for mapping communities
   const mapCommunities = (
@@ -74,13 +72,14 @@ const CommunityScreen: React.FC = () => {
   // Load cached user communities
   const loadCachedData = useCallback(async () => {
     try {
-      const cachedCommunities = await sqliteGetItem("communities");
+      const cachedCommunities = await getItem("communities");
       if (cachedCommunities) {
         const parsedCommunities = JSON.parse(cachedCommunities);
         setMyCommunities(parsedCommunities);
         const messages = await Promise.all(
           parsedCommunities.map(async (community: Community) => {
-            const message = await sqliteGetItem(`last_message_${community.id}`);
+            const message = await getItem(`last_message_${community.id.toString()}`);
+            
             let parsedMessage = message ? JSON.parse(message) : null;
             return [community.id.toString(), parsedMessage];
           })
@@ -98,15 +97,13 @@ const CommunityScreen: React.FC = () => {
       setLoading(false);
       setInitialLoad(false);
     }
-  }, [sqliteGetItem]);
+  }, [getItem]);
 
   useFocusEffect(
     useCallback(() => {
       loadCachedData();
     }, [loadCachedData])
   );
-  
-
 
   // Fetch global communities
   useEffect(() => {
@@ -168,8 +165,8 @@ const CommunityScreen: React.FC = () => {
                   { ...data.community, id: parseInt(communityId) },
                 ];
               }
-              sqliteSetItem("communities", JSON.stringify(updatedCommunities));
-              sqliteSetItem(
+              setItem("communities", JSON.stringify(updatedCommunities));
+              setItem(
                 `community_${communityId}`,
                 JSON.stringify({ ...data.community, id: parseInt(communityId) })
               );
@@ -188,8 +185,8 @@ const CommunityScreen: React.FC = () => {
                     ...prev,
                     { ...communityDetails, id: parseInt(communityId) },
                   ];
-                  sqliteSetItem("communities", JSON.stringify(updatedCommunities));
-                  sqliteSetItem(
+                  setItem("communities", JSON.stringify(updatedCommunities));
+                  setItem(
                     `community_${communityId}`,
                     JSON.stringify({
                       ...communityDetails,
@@ -207,7 +204,7 @@ const CommunityScreen: React.FC = () => {
               const updatedCommunities = prev.filter(
                 (c) => c.id.toString() !== communityId
               );
-              sqliteSetItem("communities", JSON.stringify(updatedCommunities));
+              setItem("communities", JSON.stringify(updatedCommunities));
               return updatedCommunities;
             });
             setLastMessages((prev) => {
@@ -215,12 +212,12 @@ const CommunityScreen: React.FC = () => {
               return rest;
             });
             await Promise.all([
-              sqliteRemoveItem(`last_message_${communityId}`),
-              sqliteRemoveItem(`community_${communityId}`),
-              sqliteRemoveItem(`messages_${communityId}`),
-              sqliteRemoveItem(`timetable_${communityId}`),
-              sqliteRemoveItem(`images_${communityId}`),
-              sqliteRemoveItem(`unread_count_${communityId}`),
+              removeItem(`last_message_${communityId}`),
+              removeItem(`community_${communityId}`),
+              removeItem(`messages_${communityId}`),
+              removeItem(`timetable_${communityId}`),
+              removeItem(`images_${communityId}`),
+              removeItem(`unread_count_${communityId}`),
             ]);
           } else if (data.type === "message") {
             const communityId = data.community_id?.toString();
@@ -236,7 +233,7 @@ const CommunityScreen: React.FC = () => {
             };
             setLastMessages((prev) => {
               const updated = { ...prev, [communityId]: newMessage };
-              sqliteSetItem(
+              setItem(
                 `last_message_${communityId}`,
                 JSON.stringify(newMessage)
               );
@@ -255,7 +252,7 @@ const CommunityScreen: React.FC = () => {
     }
 
     return socketCleanup;
-  }, [socket, isConnected, userToken, sqliteGetItem, sqliteSetItem, sqliteRemoveItem, lastMessages]);
+  }, [socket, isConnected, userToken, getItem, setItem, removeItem, lastMessages]);
 
   // Handle community changes via navigation params
   useFocusEffect(
@@ -263,7 +260,7 @@ const CommunityScreen: React.FC = () => {
       const handleCommunityChanges = async () => {
         const newCommunityParam = params.newCommunity;
         let newCommunity: Community | undefined;
-  
+
         if (newCommunityParam && typeof newCommunityParam === "string") {
           try {
             newCommunity = JSON.parse(newCommunityParam) as Community;
@@ -271,23 +268,23 @@ const CommunityScreen: React.FC = () => {
             console.error("Error parsing newCommunity param:", error);
           }
         }
-  
+
         if (newCommunity && newCommunity.id) {
           setMyCommunities((prev) => {
             const alreadyExists = prev.some((c) => c.id === newCommunity!.id);
             if (!alreadyExists) {
               const updated = [...prev, newCommunity!];
-              sqliteSetItem("communities", JSON.stringify(updated));
+              setItem("communities", JSON.stringify(updated));
               return updated;
             }
             return prev;
           });
         }
-  
-        if (sqliteGetItem && myCommunities.length > 0) {
+
+        if (getItem && myCommunities.length > 0) {
           const messages = await Promise.all(
             myCommunities.map(async (community: Community) => {
-              const message = await sqliteGetItem(`last_message_${community.id}`);
+              const message = await getItem(`last_message_${community.id}`);
               return [
                 community.id.toString(),
                 message ? JSON.parse(message) : null,
@@ -296,12 +293,12 @@ const CommunityScreen: React.FC = () => {
           );
           setLastMessages(Object.fromEntries(messages));
         }
-  
+
         router.setParams({ newCommunity: undefined });
       };
-  
+
       handleCommunityChanges();
-    }, [params.newCommunity, myCommunities, sqliteGetItem])
+    }, [params.newCommunity, myCommunities, getItem])
   );
 
   const handleNavigateCreateCommunity = useCallback(() => {
@@ -344,20 +341,20 @@ const CommunityScreen: React.FC = () => {
       const isUserCommunity = myCommunities.some((c) => c.id === community.id);
       if (!isUserCommunity && isConnected) {
         await joinAndSubscribeToCommunity(community.id.toString());
-        const communityDetails = await getCommunityDetails(community.id.toString(), userToken.token);
+        const communityDetails = await getCommunityDetails(community.id.toString(), userToken?.token);
         setMyCommunities((prev) => {
           if (!prev.some((c) => c.id === communityDetails.id)) {
             const updatedCommunities = [...prev, communityDetails];
-            sqliteSetItem("communities", JSON.stringify(updatedCommunities));
+            setItem("communities", JSON.stringify(updatedCommunities));
             return updatedCommunities;
           }
           return prev;
         });
       }
-  
-      setCurrentCommunity(community.id.toString()); // Set current community
+
+      setCurrentCommunityId(community.id.toString()); // Use setCurrentCommunityId
       await markMessageAsRead(community.id.toString());
-  
+
       router.navigate({
         pathname: "ChatScreen",
         params: { communityId: community.id, name: community.name, image: community.image_url },
@@ -367,7 +364,7 @@ const CommunityScreen: React.FC = () => {
       console.error("Error in handleCommunityPress:", error);
       setErrorMessage("Failed to join or navigate to community");
     }
-  }, [myCommunities, isConnected, joinAndSubscribeToCommunity, markMessageAsRead, setCurrentCommunity, userToken, sqliteSetItem]);
+  }, [myCommunities, isConnected, joinAndSubscribeToCommunity, markMessageAsRead, setCurrentCommunityId, userToken, setItem]);
 
   const styles = StyleSheet.create({
     container: {
@@ -451,9 +448,8 @@ const CommunityScreen: React.FC = () => {
                 showLastMessage
                 getLastMessage={getLastMessage}
                 showUnreadIndicator={Object.fromEntries(
-      Object.entries(unreadMessages).map(([id, count]) => [id, count > 0])
-    )}
-                
+                  Object.entries(unreadMessages).map(([id, count]) => [id, count > 0])
+                )}
               />
               {filteredCommunities.global.length > 0 && (
                 <GlobalCommunityList
@@ -470,10 +466,9 @@ const CommunityScreen: React.FC = () => {
               onCommunityPress={handleCommunityPress}
               showLastMessage
               getLastMessage={getLastMessage}
-             showUnreadIndicator={Object.fromEntries(
-      Object.entries(unreadMessages).map(([id, count]) => [id, count > 0])
-    )}
-            
+              showUnreadIndicator={Object.fromEntries(
+                Object.entries(unreadMessages).map(([id, count]) => [id, count > 0])
+              )}
             />
           )}
         </View>

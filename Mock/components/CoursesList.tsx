@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import Colors from "../constants/Colors"; // Adjust the import path as necessary
 import { SIZES, rMS, rS, rV } from "../constants";
+import AppImage from "./AppImage";
 import { Course } from "./types";
 import { Skeleton } from "moti/skeleton";
 
@@ -114,7 +115,7 @@ const CoursesList: React.FC<Props> = ({
       >
         <View style={styles.courseListContainer}>
           <View style={styles.imageContainer}>
-            <Image source={{ uri: item.url }} style={styles.image} />
+            <AppImage  uri= {item.url} style={styles.image} />
             {/* <View style={styles.newLabelContainer}>
               <Text style={styles.newLabelText}>NEW</Text>
             </View> */}
@@ -130,6 +131,7 @@ const CoursesList: React.FC<Props> = ({
     [themeColors, onCoursePress]
   );
   const sortCourses = useCallback((list: Course[]) => {
+    
     return [...list].sort((a, b) => a.title.localeCompare(b.title));
   }, []);
 

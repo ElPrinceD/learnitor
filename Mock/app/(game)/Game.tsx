@@ -3,8 +3,8 @@ import { View, StyleSheet, Text, useColorScheme, ScrollView } from "react-native
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, router } from "expo-router";
 import { useAuth } from "../../components/AuthContext";
-import { getGameDetails } from "../../GamesApiCalls";
-import { getPracticeAnswers } from "../../CoursesApiCalls";
+import { getGameDetails } from "../../services/GamesApiCalls";
+import { getPracticeAnswers } from "../../services/CoursesApiCalls";
 import Questions from "../../components/Questions";
 import { Question, Answer, GameDetailsResponse } from "../../components/types";
 import { StatusBar } from "expo-status-bar";
