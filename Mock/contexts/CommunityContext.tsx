@@ -88,11 +88,13 @@ export const CommunityProvider: React.FC<CommunityProviderProps> = ({ token, chi
         // Check cache first
         const cachedMessages = await getItem(`messages_${communityId}`);
         if (cachedMessages) {
+          console.log('Using cached messages for community:', communityId);
           const parsedMessages = JSON.parse(cachedMessages);
           return parsedMessages;
         }
 
         // Fetch from API if cache is empty
+        console.log('Using api for cached messages')
         const messages = await getCommunityMessages(communityId, token, 50);
         const normalizedMessages = messages.map(normalizeMessage);
         await setItem(`messages_${communityId}`, JSON.stringify(normalizedMessages));
@@ -160,30 +162,42 @@ export const CommunityProvider: React.FC<CommunityProviderProps> = ({ token, chi
           }
           break;
         }
-        case 'history': {
-          const normalizedMessages = data.messages.map(normalizeMessage);
-          await setItem(`messages_${data.community_id}`, JSON.stringify(normalizedMessages));
-          if (data.messages.length > 0) {
-            const lastMessage = normalizeMessage(data.messages[0]);
-            await setItem(`last_message_${data.community_id}`, JSON.stringify(lastMessage));
-          }
-          break;
-        }
+        // case 'history': {
+        //   const normalizedMessages = data.messages.map(normalizeMessage);
+        //   await setItem(`messages_${data.community_id}`, JSON.stringify(normalizedMessages));
+        //   if (data.messages.length > 0) {
+        //     const lastMessage = normalizeMessage(data.messages[0]);
+        //     await setItem(`last_message_${data.community_id}`, JSON.stringify(lastMessage));
+        //   }
+        //   break;
+        // }
         case "message_edit": {
+          console.log("Message edit event received:", data);
           const messageId = data.message_id;
           const communityId = await getCommunityIdFromMessage(messageId);
+          if (!communityId) {
+            console.warn("Could not find communityId for message:", messageId);
+          }
+          
           if (communityId) {
             const messagesStr = await getItem(`messages_${communityId}`);
+            
             if (messagesStr) {
               let parsedMessages = JSON.parse(messagesStr);
-              const messageIndex = parsedMessages.findIndex((msg: any) => msg._id === messageId.toString());
+              const messageIndex = parsedMessages.findIndex((msg: any) => msg.id === messageId.toString());
+              
               if (messageIndex !== -1) {
+                
                 parsedMessages[messageIndex] = {
                   ...parsedMessages[messageIndex],
                   text: data.new_content,
+                  message: data.new_content,
                   is_edited: true,
                 };
+               
                 await setItem(`messages_${communityId}`, JSON.stringify(parsedMessages));
+               
+                
               }
             }
             const lastMessageStr = await getItem(`last_message_${communityId}`);
@@ -205,13 +219,15 @@ export const CommunityProvider: React.FC<CommunityProviderProps> = ({ token, chi
           break;
         }
         case "message_delete": {
+          console.log("Message delete event received:", data);
           const messageId = data.message_id;
           const communityId = await getCommunityIdFromMessage(messageId);
           if (communityId) {
             const messagesStr = await getItem(`messages_${communityId}`);
             if (messagesStr) {
+              console.log('here: ', messagesStr);
               let parsedMessages = JSON.parse(messagesStr);
-              parsedMessages = parsedMessages.filter((msg: any) => msg._id !== messageId.toString());
+              parsedMessages = parsedMessages.filter((msg: any) => msg.id !== messageId.toString());
               await setItem(`messages_${communityId}`, JSON.stringify(parsedMessages));
             }
             const lastMessageStr = await getItem(`last_message_${communityId}`);

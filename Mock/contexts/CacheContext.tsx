@@ -36,7 +36,9 @@ export const CacheProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [db]);
 
   const setItem = useCallback(
+    
     async (key: string, value: string) => {
+      
       await db.runAsync(
         'INSERT OR REPLACE INTO storage (key, value) VALUES (?, ?);',
         [key, value]

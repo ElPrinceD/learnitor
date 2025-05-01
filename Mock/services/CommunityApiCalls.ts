@@ -107,7 +107,7 @@ export const getCommunityMessages = async (
             },
             params, // Pass query parameters
         });
-        console.log('Response:', response.data);
+        
         return response.data;
     } catch (error) {
         console.error('Error fetching community messages:', error);

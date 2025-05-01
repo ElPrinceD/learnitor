@@ -197,6 +197,7 @@ const CommunityChatScreen: React.FC = () => {
       // Fetch messages using CommunityProvider
       if (userToken?.token) {
         const messages = await fetchAndCacheMessages(communityId, userToken.token);
+        
         const transformedMessages = messages
           .map(normalizeMessage)
           .filter((msg): msg is IMessage => msg !== null)
@@ -214,14 +215,8 @@ const CommunityChatScreen: React.FC = () => {
         setImageViewerImages(imageUris);
       }
 
-      // Request message history via WebSocket if connected
-      if (isConnected) {
-        await sendMessage({
-          type: "fetch_history",
-          community_id: communityId,
-          limit: 20,
-        });
-      }
+      
+     
     } catch (error) {
       console.error("Error fetching initial messages:", error);
       setError("Failed to load message history");
@@ -408,9 +403,9 @@ const CommunityChatScreen: React.FC = () => {
               setImageViewerImages(imageUris);
               return updatedMessages;
             });
-          } else if (data.type === "message_edit" && data.community_id === communityId) {
+          } else if (data.type === "message_edit" ) {
             
-            if(community)
+            
             console.log("Message edit event received:", data);
             setMessages((prevMessages) => {
               const updatedMessages = prevMessages.map((m) =>
@@ -820,7 +815,9 @@ const CommunityChatScreen: React.FC = () => {
                   type: "delete_message",
                   message_id: message._id,
                 });
+                console.log('Message deleted!', message._id)
               });
+              
               setMessages((prevMessages) => {
                 const updatedMessages = prevMessages.filter(
                   (m) =>
