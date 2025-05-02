@@ -100,6 +100,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ token, chi
     (message: any) => {
       if (socket?.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify(message));
+        console.log('WebSocket sent:', message);
       } else {
         console.warn('WebSocket is not connected.');
       }

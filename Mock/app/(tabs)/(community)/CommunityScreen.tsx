@@ -17,9 +17,9 @@ import { Community } from "../../../components/types";
 import CommunityList from "../../../components/CommunityList";
 import GlobalCommunityList from "../../../components/GlobalCommunityList";
 import { Skeleton } from "moti/skeleton";
-import { useWebSocket } from "../../../contexts/webSocketProvider"; // Updated to WebSocketContext
-import { useCommunity } from "../../../contexts/CommunityContext"; // Added for CommunityContext
-import { useCache } from "../../../contexts/CacheContext"; // Added for CacheContext
+import { useWebSocket } from "../../../contexts/webSocketProvider";
+import { useCommunity } from "../../../contexts/CommunityContext";
+import { useCache } from "../../../contexts/CacheContext";
 import {
   getCommunityDetails,
   searchCommunities,
@@ -41,59 +41,40 @@ const CommunityScreen: React.FC = () => {
   const colorMode = colorScheme === "dark" ? "dark" : "light";
   const params = useLocalSearchParams();
 
-  const { isConnected, socket } = useWebSocket(); // Only need isConnected and socket
+  const { isConnected, socket } = useWebSocket();
   const {
     unreadMessages,
     joinAndSubscribeToCommunity,
-    unsubscribeFromCommunity,
-    subscribeToExistingUserCommunities,
-    fetchAndCacheCommunities,
     markMessageAsRead,
-    setCurrentCommunityId, // Use setCurrentCommunityId instead of setCurrentCommunity
+    setCurrentCommunityId,
   } = useCommunity();
-  const { getItem, setItem, removeItem } = useCache(); // Replace sqlite caching methods
+  const { getItem, setItem, removeItem } = useCache();
 
-  // Utility function for mapping communities
-  const mapCommunities = (
-    communities: Community[],
-    lastMessages: Record<string, any>
-  ) => {
-    return communities
+  const mapCommunities = (communities: Community[], lastMsgs: Record<string, any>) =>
+    communities
       .map((community) => ({
         ...community,
-        lastMessageTime:
-          lastMessages[community.id]?.sent_at || new Date(0).toISOString(),
+        lastMessageTime: lastMsgs[community.id]?.sent_at || new Date(0).toISOString(),
       }))
-      .sort((a, b) =>
-        moment(b.lastMessageTime).diff(moment(a.lastMessageTime))
-      );
-  };
+      .sort((a, b) => moment(b.lastMessageTime).diff(moment(a.lastMessageTime)));
 
-  // Load cached user communities
   const loadCachedData = useCallback(async () => {
     try {
-      const cachedCommunities = await getItem("communities");
-      if (cachedCommunities) {
-        const parsedCommunities = JSON.parse(cachedCommunities);
-        setMyCommunities(parsedCommunities);
+      const cached = await getItem("communities");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setMyCommunities(parsed);
         const messages = await Promise.all(
-          parsedCommunities.map(async (community: Community) => {
-            const message = await getItem(`last_message_${community.id.toString()}`);
-            
-            let parsedMessage = message ? JSON.parse(message) : null;
-            return [community.id.toString(), parsedMessage];
+          parsed.map(async (c: Community) => {
+            const msg = await getItem(`last_message_${c.id}`);
+            return [c.id.toString(), msg ? JSON.parse(msg) : null];
           })
         );
-        const messagesMap = Object.fromEntries(messages);
-        setLastMessages(messagesMap);
-      } else {
-        console.log("No cached communities found");
+        setLastMessages(Object.fromEntries(messages));
       }
-      setLoading(false);
-      setInitialLoad(false);
-    } catch (error) {
-      console.error("Error loading cached communities:", error);
+    } catch (e) {
       setErrorMessage("Failed to load communities");
+    } finally {
       setLoading(false);
       setInitialLoad(false);
     }
@@ -105,25 +86,17 @@ const CommunityScreen: React.FC = () => {
     }, [loadCachedData])
   );
 
-  // Fetch global communities
   useEffect(() => {
-    const searchForCommunities = async () => {
+    const fetchGlobal = async () => {
       if (searchQuery.length >= 3 && userToken?.token) {
         setIsFetching(true);
         try {
-          const fetchedCommunities = await searchCommunities(
-            searchQuery,
-            userToken.token
+          const result = await searchCommunities(searchQuery, userToken.token);
+          const filtered = result.filter(
+            (c) => !myCommunities.some((mc) => mc.id === c.id)
           );
-          const filteredGlobalCommunities = fetchedCommunities.filter(
-            (community) =>
-              !myCommunities.some(
-                (myCommunity) => myCommunity.id === community.id
-              )
-          );
-          setGlobalCommunities(filteredGlobalCommunities);
-        } catch (error) {
-          console.error("Error searching for global communities:", error);
+          setGlobalCommunities(filtered);
+        } catch (e) {
           setErrorMessage("Failed to search global communities");
         } finally {
           setIsFetching(false);
@@ -132,258 +105,166 @@ const CommunityScreen: React.FC = () => {
         setGlobalCommunities([]);
       }
     };
-    searchForCommunities();
+    fetchGlobal();
   }, [searchQuery, userToken, myCommunities]);
 
-  // WebSocket message handler
   useEffect(() => {
-    let socketCleanup = () => {};
+    if (!socket || !isConnected || !userToken) return;
 
-    if (socket && isConnected && userToken) {
-      const onMessage = async (event: MessageEvent) => {
-        try {
-          const data = JSON.parse(event.data);
+    const onMessage = async (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data);
 
-          if (data.type === "community_updated" && data.community) {
-            const communityId = data.community.id?.toString();
-            if (!communityId) {
-              console.warn("Received community_updated with missing community ID");
-              return;
-            }
-            setMyCommunities((prev) => {
-              const exists = prev.some((c) => c.id.toString() === communityId);
-              let updatedCommunities;
-              if (exists) {
-                updatedCommunities = prev.map((c) =>
-                  c.id.toString() === communityId
-                    ? { ...c, ...data.community, id: parseInt(communityId) }
-                    : c
-                );
-              } else {
-                updatedCommunities = [
-                  ...prev,
-                  { ...data.community, id: parseInt(communityId) },
-                ];
-              }
-              setItem("communities", JSON.stringify(updatedCommunities));
-              setItem(
-                `community_${communityId}`,
-                JSON.stringify({ ...data.community, id: parseInt(communityId) })
-              );
-              return updatedCommunities;
-            });
-          } else if (data.type === "join_success" && data.community_id) {
-            const communityId = data.community_id.toString();
-            const communityDetails = await getCommunityDetails(
-              communityId,
-              userToken.token
-            );
-            if (communityDetails) {
-              setMyCommunities((prev) => {
-                if (!prev.some((c) => c.id.toString() === communityId)) {
-                  const updatedCommunities = [
-                    ...prev,
-                    { ...communityDetails, id: parseInt(communityId) },
-                  ];
-                  setItem("communities", JSON.stringify(updatedCommunities));
-                  setItem(
-                    `community_${communityId}`,
-                    JSON.stringify({
-                      ...communityDetails,
-                      id: parseInt(communityId),
-                    })
-                  );
-                  return updatedCommunities;
-                }
-                return prev;
-              });
-            }
-          } else if (data.type === "leave_community" && data.community_id) {
-            const communityId = data.community_id.toString();
-            setMyCommunities((prev) => {
-              const updatedCommunities = prev.filter(
-                (c) => c.id.toString() !== communityId
-              );
-              setItem("communities", JSON.stringify(updatedCommunities));
-              return updatedCommunities;
-            });
-            setLastMessages((prev) => {
-              const { [communityId]: _, ...rest } = prev;
-              return rest;
-            });
-            await Promise.all([
-              removeItem(`last_message_${communityId}`),
-              removeItem(`community_${communityId}`),
-              removeItem(`messages_${communityId}`),
-              removeItem(`timetable_${communityId}`),
-              removeItem(`images_${communityId}`),
-              removeItem(`unread_count_${communityId}`),
-            ]);
-          } else if (data.type === "message") {
-            const communityId = data.community_id?.toString();
-            if (!communityId) {
-              console.warn("Received message with missing community_id");
-              return;
-            }
-            const newMessage = {
-              ...data,
-              status: "sent",
-              sent_at: new Date(data.sent_at).toISOString(),
-              community_id: parseInt(communityId),
-            };
-            setLastMessages((prev) => {
-              const updated = { ...prev, [communityId]: newMessage };
-              setItem(
-                `last_message_${communityId}`,
-                JSON.stringify(newMessage)
-              );
-              return updated;
-            });
-          }
-        } catch (error) {
-          console.error("Error processing WebSocket message:", error);
-        }
-      };
+        const id = data.community?.id?.toString() || data.community_id?.toString();
+        if (!id) return;
 
-      socket.addEventListener("message", onMessage);
-      socketCleanup = () => {
-        socket.removeEventListener("message", onMessage);
-      };
-    }
-
-    return socketCleanup;
-  }, [socket, isConnected, userToken, getItem, setItem, removeItem, lastMessages]);
-
-  // Handle community changes via navigation params
-  useFocusEffect(
-    useCallback(() => {
-      const handleCommunityChanges = async () => {
-        const newCommunityParam = params.newCommunity;
-        let newCommunity: Community | undefined;
-
-        if (newCommunityParam && typeof newCommunityParam === "string") {
-          try {
-            newCommunity = JSON.parse(newCommunityParam) as Community;
-          } catch (error) {
-            console.error("Error parsing newCommunity param:", error);
-          }
-        }
-
-        if (newCommunity && newCommunity.id) {
+        if (data.type === "community_updated" && data.community) {
           setMyCommunities((prev) => {
-            const alreadyExists = prev.some((c) => c.id === newCommunity!.id);
-            if (!alreadyExists) {
-              const updated = [...prev, newCommunity!];
-              setItem("communities", JSON.stringify(updated));
-              return updated;
-            }
-            return prev;
+            const exists = prev.some((c) => c.id.toString() === id);
+            const updated = exists
+              ? prev.map((c) => (c.id.toString() === id ? { ...c, ...data.community } : c))
+              : [...prev, { ...data.community, id: parseInt(id) }];
+            setItem("communities", JSON.stringify(updated));
+            setItem(`community_${id}`, JSON.stringify(data.community));
+            return updated;
+          });
+        } else if (data.type === "join_success") {
+          const community = await getCommunityDetails(id, userToken.token);
+          if (community) {
+            setMyCommunities((prev) => {
+              if (!prev.some((c) => c.id === community.id)) {
+                const updated = [...prev, community];
+                setItem("communities", JSON.stringify(updated));
+                setItem(`community_${id}`, JSON.stringify(community));
+                return updated;
+              }
+              return prev;
+            });
+          }
+        } else if (data.type === "leave_community") {
+          setMyCommunities((prev) => {
+            const updated = prev.filter((c) => c.id.toString() !== id);
+            setItem("communities", JSON.stringify(updated));
+            return updated;
+          });
+          setLastMessages((prev) => {
+            const { [id]: _, ...rest } = prev;
+            return rest;
+          });
+          await Promise.all([
+            removeItem(`last_message_${id}`),
+            removeItem(`community_${id}`),
+            removeItem(`messages_${id}`),
+            removeItem(`timetable_${id}`),
+            removeItem(`images_${id}`),
+            removeItem(`unread_count_${id}`),
+          ]);
+        } else if (data.type === "message") {
+          const newMsg = {
+            ...data,
+            sent_at: new Date(data.sent_at).toISOString(),
+            community_id: parseInt(id),
+          };
+          setLastMessages((prev) => {
+            const updated = { ...prev, [id]: newMsg };
+            setItem(`last_message_${id}`, JSON.stringify(newMsg));
+            return updated;
           });
         }
+      } catch (e) {
+        console.error("WebSocket error:", e);
+      }
+    };
 
-        if (getItem && myCommunities.length > 0) {
-          const messages = await Promise.all(
-            myCommunities.map(async (community: Community) => {
-              const message = await getItem(`last_message_${community.id}`);
-              return [
-                community.id.toString(),
-                message ? JSON.parse(message) : null,
-              ];
-            })
-          );
-          setLastMessages(Object.fromEntries(messages));
+    socket.addEventListener("message", onMessage);
+    return () => socket.removeEventListener("message", onMessage);
+  }, [socket, isConnected, userToken, getItem, setItem, removeItem]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const handleNavParam = async () => {
+        const newCommunityParam = params.newCommunity;
+        if (newCommunityParam && typeof newCommunityParam === "string") {
+          try {
+            const parsed: Community = JSON.parse(newCommunityParam);
+            if (!myCommunities.some((c) => c.id === parsed.id)) {
+              const updated = [...myCommunities, parsed];
+              setMyCommunities(updated);
+              await setItem("communities", JSON.stringify(updated));
+              await setItem(`community_${parsed.id}`, JSON.stringify(parsed));
+            }
+          } catch (e) {
+            console.warn("Failed to parse new community param:", e);
+          }
         }
-
         router.setParams({ newCommunity: undefined });
       };
-
-      handleCommunityChanges();
-    }, [params.newCommunity, myCommunities, getItem])
+      handleNavParam();
+    }, [params.newCommunity, myCommunities])
   );
 
-  const handleNavigateCreateCommunity = useCallback(() => {
-    router.navigate("CreateCommunity");
-  }, []);
+  const handleSearch = useCallback((q: string) => setSearchQuery(q), []);
 
   const getLastMessage = useCallback(
-    (communityId: string) => lastMessages[communityId] || null,
+    (id: string) => lastMessages[id] || null,
     [lastMessages]
   );
 
-  const sortedMyCommunities = useMemo(() => {
-    return mapCommunities(myCommunities, lastMessages);
-  }, [myCommunities, lastMessages]);
+  const sortedMyCommunities = useMemo(
+    () => mapCommunities(myCommunities, lastMessages),
+    [myCommunities, lastMessages]
+  );
 
   const filteredCommunities = useMemo(() => {
     if (searchQuery.length < 3)
       return { user: sortedMyCommunities, global: [] };
 
-    const filteredUserCommunities = mapCommunities(
-      myCommunities.filter((community) =>
-        community.name.toLowerCase().includes(searchQuery.toLowerCase())
+    return {
+      user: mapCommunities(
+        myCommunities.filter((c) =>
+          c.name.toLowerCase().includes(searchQuery.toLowerCase())
+        ),
+        lastMessages
       ),
-      lastMessages
-    );
-
-    const filteredGlobalCommunities = globalCommunities.filter((community) =>
-      community.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    return { user: filteredUserCommunities, global: filteredGlobalCommunities };
+      global: globalCommunities.filter((c) =>
+        c.name.toLowerCase().includes(searchQuery.toLowerCase())
+      ),
+    };
   }, [searchQuery, myCommunities, globalCommunities, lastMessages]);
-
-  const handleSearch = useCallback((query: string) => {
-    setSearchQuery(query);
-  }, []);
 
   const handleCommunityPress = useCallback(async (community: Community) => {
     try {
-      const isUserCommunity = myCommunities.some((c) => c.id === community.id);
-      if (!isUserCommunity && isConnected) {
+      const exists = myCommunities.some((c) => c.id === community.id);
+      if (!exists && isConnected) {
         await joinAndSubscribeToCommunity(community.id.toString());
-        const communityDetails = await getCommunityDetails(community.id.toString(), userToken?.token);
+        const details = await getCommunityDetails(community.id.toString(), userToken?.token);
         setMyCommunities((prev) => {
-          if (!prev.some((c) => c.id === communityDetails.id)) {
-            const updatedCommunities = [...prev, communityDetails];
-            setItem("communities", JSON.stringify(updatedCommunities));
-            return updatedCommunities;
+          if (!prev.some((c) => c.id === details.id)) {
+            const updated = [...prev, details];
+            setItem("communities", JSON.stringify(updated));
+            return updated;
           }
           return prev;
         });
       }
-
-      setCurrentCommunityId(community.id.toString()); // Use setCurrentCommunityId
-      await markMessageAsRead(community.id.toString());
-
+      setCurrentCommunityId(community.id.toString());
+      markMessageAsRead(community.id.toString());
       router.navigate({
         pathname: "ChatScreen",
         params: { communityId: community.id, name: community.name, image: community.image_url },
       });
       setSearchQuery("");
-    } catch (error) {
-      console.error("Error in handleCommunityPress:", error);
-      setErrorMessage("Failed to join or navigate to community");
+    } catch (e) {
+      console.error("Join or navigate failed:", e);
+      setErrorMessage("Failed to join or open community");
     }
   }, [myCommunities, isConnected, joinAndSubscribeToCommunity, markMessageAsRead, setCurrentCommunityId, userToken, setItem]);
 
   const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      paddingHorizontal: 16,
-      backgroundColor: themeColors.background,
-    },
-    searchContainer: {
-      paddingVertical: 10,
-      flex: 0.05,
-    },
-    listContainer: {
-      flex: 1,
-      paddingTop: 15,
-    },
-    noResultsText: {
-      color: themeColors.textSecondary,
-      alignSelf: "center",
-    },
+    container: { flex: 1, paddingHorizontal: 16, backgroundColor: themeColors.background },
+    searchContainer: { paddingVertical: 10, flex: 0.05 },
+    listContainer: { flex: 1, paddingTop: 15 },
+    noResultsText: { color: themeColors.textSecondary, alignSelf: "center" },
     skeletonItem: {
       flexDirection: "row",
       alignItems: "center",
@@ -391,50 +272,33 @@ const CommunityScreen: React.FC = () => {
       paddingLeft: rS(1),
       paddingVertical: rV(10),
     },
-    skeletonTextContainer: {
-      flex: 1,
-      gap: 10,
-    },
+    skeletonTextContainer: { flex: 1, gap: 10 },
   });
 
-  const noResultsFound =
-    searchQuery.length >= 3 &&
-    filteredCommunities.user.length === 0 &&
-    filteredCommunities.global.length === 0;
+  const noResultsFound = searchQuery.length >= 3 && !filteredCommunities.user.length && !filteredCommunities.global.length;
 
   return (
-    <View
-      style={[styles.container, { backgroundColor: themeColors.background }]}
-    >
+    <View style={styles.container}>
       <View style={styles.searchContainer}>
         <SearchBar onSearch={handleSearch} />
       </View>
 
       {initialLoad || loading ? (
-        Array.from({ length: 6 }).map((_, index) => (
-          <View key={`skeleton-${index}`} style={styles.skeletonItem}>
-            <Skeleton
-              colorMode={colorMode}
-              width={50}
-              height={50}
-              radius={50}
-            />
+        Array.from({ length: 6 }).map((_, idx) => (
+          <View key={`skeleton-${idx}`} style={styles.skeletonItem}>
+            <Skeleton colorMode={colorMode} width={50} height={50} radius={50} />
             <View style={styles.skeletonTextContainer}>
-              <Skeleton colorMode={colorMode} height={rV(20)} width={"60%"} />
-              <Skeleton colorMode={colorMode} height={rV(15)} width={"80%"} />
+              <Skeleton colorMode={colorMode} height={rV(20)} width="60%" />
+              <Skeleton colorMode={colorMode} height={rV(15)} width="80%" />
             </View>
           </View>
         ))
       ) : noResultsFound ? (
         <View style={styles.listContainer}>
           {isFetching ? (
-            <ActivityIndicator color="white" style={[styles.noResultsText]} />
+            <ActivityIndicator color="white" style={styles.noResultsText} />
           ) : (
-            <Text
-              style={[styles.noResultsText, { color: themeColors.placeholder }]}
-            >
-              No results found
-            </Text>
+            <Text style={[styles.noResultsText, { color: themeColors.placeholder }]}>No results found</Text>
           )}
         </View>
       ) : (
@@ -475,11 +339,7 @@ const CommunityScreen: React.FC = () => {
       )}
 
       {errorMessage && (
-        <ErrorMessage
-          message={errorMessage}
-          visible={!!errorMessage}
-          onDismiss={() => setErrorMessage(null)}
-        />
+        <ErrorMessage message={errorMessage} visible onDismiss={() => setErrorMessage(null)} />
       )}
     </View>
   );

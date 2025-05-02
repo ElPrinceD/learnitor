@@ -20,8 +20,8 @@ import { createCommunity } from "../../../services/CommunityApiCalls";
 import { router } from "expo-router";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
-
-import { useWebSocket } from "../../../contexts/webSocketProvider";
+import { useCommunity } from "../../../contexts/CommunityContext";
+import { useCache } from "../../../contexts/CacheContext";
 
 const CreateCommunity = () => {
   const { userToken } = useAuth();
@@ -30,10 +30,10 @@ const CreateCommunity = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
-
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
-  const { joinAndSubscribeToCommunity, sqliteGetItem, sqliteSetItem } = useWebSocket(); // Updated to include SQLite utilities
+  const { joinAndSubscribeToCommunity } = useCommunity();
+  const { getItem, setItem } = useCache();
 
   const handleSaveCommunity = async () => {
     try {
@@ -72,14 +72,13 @@ const CreateCommunity = () => {
 
   const createCommunityMutation = useMutation({
     mutationFn: async ({ communityData, token }) => {
-      console.log("Submitting Community Data:", communityData);
-      const community = await createCommunity(communityData, token); // Assume createCommunity is your API call
+      const community = await createCommunity(communityData, token);
       return community;
     },
     onSuccess: async (communityData) => {
-      await updateCommunityCache(communityData); // Assume this updates your cache
-      await joinAndSubscribeToCommunity(communityData.id); // Assume this handles joining/subscription
-      router.dismiss(1);
+      await updateCommunityCache(communityData);
+      await joinAndSubscribeToCommunity(communityData.id);
+      router.back();
       router.setParams({ newCommunity: JSON.stringify(communityData) });
       setErrorMessage(null);
     },
@@ -120,14 +119,14 @@ const CreateCommunity = () => {
 
   const updateCommunityCache = async (newCommunity) => {
     try {
-      // Retrieve cached communities from SQLite
-      const cachedCommunities = await sqliteGetItem("communities");
+      const cachedCommunities = await getItem("communities");
       let communities = cachedCommunities ? JSON.parse(cachedCommunities) : [];
 
-      // Add the new community if it doesn't already exist
       if (!communities.some((c) => c.id === newCommunity.id)) {
         communities.push(newCommunity);
-        await sqliteSetItem("communities", JSON.stringify(communities));
+        await setItem("communities", JSON.stringify(communities));
+        const communitiesData= await getItem("communities");
+        console.log("Updated communities cache:", communitiesData);
       }
     } catch (error) {
       console.error("Error updating community cache:", error);
@@ -200,10 +199,22 @@ const CreateCommunity = () => {
       textAlign: "center",
       marginVertical: rV(10),
     },
+    loadingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 10,
+    },
   });
 
   return (
     <View style={styles.container}>
+      {createCommunityMutation.isLoading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={themeColors.text} />
+        </View>
+      )}
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.profilePictureContainer}>
           <Image
@@ -243,11 +254,7 @@ const CreateCommunity = () => {
             onPress={handleSaveCommunity}
             disabled={isButtonDisabled}
           >
-            {createCommunityMutation.isLoading ? (
-              <ActivityIndicator color={themeColors.text} />
-            ) : (
-              <Text style={styles.buttonText}>Create Community</Text>
-            )}
+            <Text style={styles.buttonText}>Create Community</Text>
           </TouchableOpacity>
         </View>
         {errorMessage && <Text style={styles.errorMessage}>{errorMessage}</Text>}

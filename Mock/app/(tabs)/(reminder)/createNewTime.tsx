@@ -74,11 +74,6 @@ const CreateNewTime = () => {
       const dateString = formatDate(dueDate);
       const categoryId = selectedCategory?.value?.toString();
 
-      // Invalidate caches
-      await removeItem(`todayPlans_${dateString}_all`);
-      if (categoryId) {
-        await removeItem(`todayPlans_${dateString}_${categoryId}`);
-      }
 
       // Schedule notification for the created task
       try {

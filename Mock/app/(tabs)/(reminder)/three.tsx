@@ -105,6 +105,7 @@ const Timeline = () => {
   }, [plansStatus, categoriesStatus]);
 
   const handleEditPlan = (plan) => {
+    console.log("Edit plan:", plan);
     router.navigate("EditPlan");
     router.setParams({
       taskId: String(plan.id),
@@ -112,7 +113,8 @@ const Timeline = () => {
       description: plan.description,
       duedate: plan.due_date,
       category_id: String(plan.category),
-      duetime: plan.due_time,
+      due_time_start: plan.due_time_start,
+      due_time_end: plan.due_time_end,
       category_name: categoryNames[plan.category],
     });
   };
@@ -223,12 +225,6 @@ const Timeline = () => {
           </View>
         </BottomSheetScrollView>
       </BottomSheet>
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={handleNavigateCreateTask}
-      >
-        <FontAwesome6 name="add" size={SIZES.xLarge} color={themeColors.text} />
-      </TouchableOpacity>
       {errorMessage && (
         <ErrorMessage
           message={errorMessage}

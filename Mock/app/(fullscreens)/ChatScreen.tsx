@@ -239,10 +239,11 @@ const CommunityChatScreen: React.FC = () => {
         console.log("Fetching older messages with lastMessageId:", lastMessageId);
         const olderMessages = await getCommunityMessages(
           communityId,
-          userToken.token,
+          userToken?.token,
           50,
-          lastMessageId,
-          undefined
+          lastMessageId, // No beforeMessageId
+          undefined, // No beforeTimestamp
+          undefined // Using afterMessageId to get messages after the last message
         );
         console.log("Older messages received:", olderMessages);
   
@@ -276,15 +277,14 @@ const CommunityChatScreen: React.FC = () => {
             });
   
             const oldestMessage = validOlderMessages[validOlderMessages.length - 1];
-            if (oldestMessage && oldestMessage._id) {
-              setLastMessageId(oldestMessage._id);
-              setLastMessageTimestamp(oldestMessage.createdAt.getTime());
-              setLoadEarlier(olderMessages.length >= 50);
-              console.log("New lastMessageId:", oldestMessage._id, "Timestamp:", oldestMessage.createdAt.toISOString());
-            } else {
-              setLoadEarlier(false);
-              console.warn("Oldest message has no valid _id:", oldestMessage);
-            }
+if (oldestMessage && oldestMessage._id) {
+  // Always update lastMessageId and lastMessageTimestamp to the oldest message
+  setLastMessageId(oldestMessage._id);
+  setLastMessageTimestamp(oldestMessage.createdAt.getTime());
+} else {
+  setLoadEarlier(false);
+  console.warn("Oldest message has no valid _id:", oldestMessage);
+}
           } else {
             setLoadEarlier(false);
             console.log("No valid earlier messages to load.");
@@ -607,6 +607,7 @@ const CommunityChatScreen: React.FC = () => {
   const onSend = useCallback(
     async (newMessages: IMessage[] = []) => {
       for (let message of newMessages) {
+        console.log(message)
         const tempId = uuidv4();
         const tempMessage: IMessage = {
           _id: tempId,
@@ -1015,6 +1016,8 @@ const CommunityChatScreen: React.FC = () => {
         : props.currentMessage.document
         ? "Document"
         : "";
+
+       
 
       // Create a custom view for reply messages and document cards.
       const renderCustomContent = () => {
@@ -1427,6 +1430,7 @@ const CommunityChatScreen: React.FC = () => {
 
   const renderInputToolbar = useCallback(
     (props) => {
+      
       return (
         <View>
           {renderMediaPreview()}

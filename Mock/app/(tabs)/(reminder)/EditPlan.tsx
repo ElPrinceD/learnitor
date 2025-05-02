@@ -33,12 +33,13 @@ interface UpdateTaskData {
 
 const EditPlan = () => {
   const params = useLocalSearchParams();
+  console.log(params)
   const id = params.taskId as string;
   const oldTitle = params.title as string;
   const oldDescription = params.description as string;
   const oldDate = params.duedate as string;
-  const oldStartTime = params.dueTimeStart as string;
-  const oldEndTime = params.dueTimeEnd as string;
+  const oldStartTime = params.due_time_start as string;
+  const oldEndTime = params.due_time_end as string;
   const oldCategoryId = params.category_id as string;
   const oldIsRecurring = params.is_recurring === "true";
   const oldRecurrenceInterval = (params.recurrence_interval as string) || null;

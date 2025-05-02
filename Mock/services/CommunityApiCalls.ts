@@ -35,7 +35,7 @@ export const searchCommunities = async (searchQuery: string, token: string) => {
                 Authorization: `Token ${token}`,
             },
         });
-        return response.data;
+        return response.data.results;
     } catch (error) {
         console.error('Error searching communities:', error);
         throw error;
@@ -93,27 +93,33 @@ export const getCommunityMessages = async (
     token: string,
     pageSize: number = 50,
     beforeMessageId?: string,
-    beforeTimestamp?: string
+    beforeTimestamp?: string,
+    afterMessageId?: string,
+    afterTimestamp?: string
 ) => {
     try {
         // Construct query parameters
         const params: any = { page_size: pageSize };
+
         if (beforeMessageId) params.before_message_id = beforeMessageId;
         if (beforeTimestamp) params.before_timestamp = beforeTimestamp;
+        if (afterMessageId) params.after_message_id = afterMessageId;
+        if (afterTimestamp) params.after_timestamp = afterTimestamp;
 
         const response = await apiClient.get(`${MESSAGE_API_BASE_URL}/${communityId}/get_messages/`, {
             headers: {
                 Authorization: `Token ${token}`,
             },
-            params, // Pass query parameters
+            params,
         });
-        
+
         return response.data;
     } catch (error) {
         console.error('Error fetching community messages:', error);
         throw error;
     }
 };
+
 
 export const getUserCommunities = async (token: string) => {
     try {

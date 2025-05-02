@@ -13,10 +13,7 @@ interface Task {
 
 interface TimelineContextType {
  
-  fetchAndCacheTodayPlans: (date: Date, category?: string) => Promise<any[]>;
-  getCachedTodayPlans: (date: Date, category?: string) => Promise<any[]>;
-  fetchAndCacheCategoryNames: () => Promise<Record<number, string>>;
-  getCachedCategoryNames: () => Promise<Record<number, string>>;
+ 
   scheduleTaskNotification: (task: Task) => Promise<string | null>;
   cancelTaskNotification: (taskId: string) => Promise<void>;
   storeNotificationId: (taskId: string | number, notificationId: string) => Promise<void>;
@@ -32,71 +29,6 @@ interface TimelineProviderProps {
 
 export const TimelineProvider: React.FC<TimelineProviderProps> = ({ token, children }) => {
   const { setItem, getItem, removeItem } = useCache();
-
-
-
-
-
-  const fetchAndCacheTodayPlans = useCallback(
-    async (date: Date, category?: string) => {
-      if (token) {
-        try {
-          const dateString = date.toISOString().split('T')[0];
-          const normalizedCategory = category || 'all';
-          const cacheKey = `todayPlans_${dateString}_${normalizedCategory}`;
-          const cachedPlans = await getItem(cacheKey);
-          if (cachedPlans) {
-            return JSON.parse(cachedPlans);
-          }
-          const plans = await getTodayPlans(token, date, normalizedCategory === 'all' ? undefined : normalizedCategory);
-          await setItem(cacheKey, JSON.stringify(plans));
-          return plans;
-        } catch (error) {
-          console.error("Failed to fetch or cache today's plans:", error);
-          throw error;
-        }
-      }
-      return [];
-    },
-    [token, getItem, setItem]
-  );
-
-  const getCachedTodayPlans = useCallback(
-    async (date: Date, category?: string) => {
-      const dateString = date.toISOString().split('T')[0];
-      const normalizedCategory = category || 'all';
-      const cacheKey = `todayPlans_${dateString}_${normalizedCategory}`;
-      const cachedData = await getItem(cacheKey);
-      return cachedData ? JSON.parse(cachedData) : [];
-    },
-    [getItem]
-  );
-
-  const fetchAndCacheCategoryNames = useCallback(
-    async () => {
-      if (token) {
-        try {
-          const cachedCategories = await getItem('categoryNames');
-          if (cachedCategories) {
-            return JSON.parse(cachedCategories);
-          }
-          const categories = await getCategoryNames(token);
-          await setItem('categoryNames', JSON.stringify(categories));
-          return categories;
-        } catch (error) {
-          console.error('Failed to fetch or cache category names:', error);
-          throw error;
-        }
-      }
-      return {};
-    },
-    [token, getItem, setItem]
-  );
-
-  const getCachedCategoryNames = useCallback(async (): Promise<Record<number, string>> => {
-    const cachedData = await getItem('categoryNames');
-    return cachedData ? JSON.parse(cachedData) : {};
-  }, [getItem]);
 
   const scheduleTaskNotification = useCallback(
     async (task: Task): Promise<string | null> => {
@@ -163,10 +95,7 @@ export const TimelineProvider: React.FC<TimelineProviderProps> = ({ token, child
   );
 
   const contextValue: TimelineContextType = {
-    fetchAndCacheTodayPlans,
-    getCachedTodayPlans,
-    fetchAndCacheCategoryNames,
-    getCachedCategoryNames,
+   
     scheduleTaskNotification,
     cancelTaskNotification,
     storeNotificationId,

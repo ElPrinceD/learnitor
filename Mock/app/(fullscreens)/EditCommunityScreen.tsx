@@ -12,9 +12,9 @@ import {
   Switch,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
-import { getCommunityDetails, updateCommunity } from "../../services/CommunityApiCalls";
+import { getCommunityDetails } from "../../services/CommunityApiCalls";
 import { useAuth } from "../../components/AuthContext";
-import { useCache } from "../../contexts/CacheContext"; // New import for caching
+import { useWebSocket } from "../../contexts/webSocketProvider"; // Import WebSocket context
 import Colors from "../../constants/Colors";
 import { Community } from "../../components/types";
 import * as ImagePicker from "expo-image-picker";
@@ -31,7 +31,7 @@ const EditCommunityScreen: React.FC = () => {
   const navigation = useNavigation();
   const { id } = route.params as RouteParams;
   const { userToken } = useAuth();
-  const { getItem, setItem } = useCache(); // Use CacheContext
+  const { socket, isConnected, sendMessage } = useWebSocket(); // Use WebSocket context
   const [community, setCommunity] = useState<Community | null>(null);
   const [name, setName] = useState<string>("");
   const [description, setDescription] = useState<string>("");
@@ -45,7 +45,6 @@ const EditCommunityScreen: React.FC = () => {
       try {
         if (userToken) {
           const data = await getCommunityDetails(id, userToken.token);
-          
           setCommunity(data);
           setName(data.name);
           setDescription(data.description);
@@ -61,62 +60,65 @@ const EditCommunityScreen: React.FC = () => {
   }, [id, userToken]);
 
   const handleSave = async () => {
-    if (userToken && community) {
-      try {
-        const updateData: any = { name, description, is_public: isPublic };
-        let finalImageUrl = profilePicture;
-  
-        if (profilePicture && !profilePicture.startsWith("http")) {
-          const uriParts = profilePicture.split(".");
-          const fileType = uriParts[uriParts.length - 1];
-          updateData.image_url = {
-            uri: profilePicture,
-            name: `photo_${id}_${Date.now()}.${fileType}`, // Unique filename
-            type: `image/${fileType}`,
-          };
-        }
-  
-        const formData = new FormData();
-        Object.entries(updateData).forEach(([key, value]) => {
-          formData.append(key, value);
-        });
-  
-        const response = await updateCommunity(id, formData, userToken.token);
-  
-        const communityId = id.toString(); // Standardize as string
-        const updatedCommunity = {
-          ...community,
-          id: parseInt(communityId),
-          name,
-          description,
-          image_url: response.image_url || finalImageUrl || community.image_url,
-          created_by: community.created_by,
-          created_at: community.created_at,
-          members: community.members || [],
-          shareable_link: community.shareable_link,
-          is_public: response.is_public !== undefined ? response.is_public : isPublic,
-        };
+    if (!userToken || !community || !isConnected || !socket) {
+      Alert.alert("Error", "Not connected or missing authentication.");
+      return;
+    }
 
-        console.log(updatedCommunity);
-  
-        // Update individual community cache
-        await setItem(`community_${communityId}`, JSON.stringify(updatedCommunity));
-        // Update communities list cache
-        const cachedCommunitiesRaw = await getItem("communities");
-        let cachedCommunities = cachedCommunitiesRaw ? JSON.parse(cachedCommunitiesRaw) : [];
-        const communityIndex = cachedCommunities.findIndex((comm: Community) => comm.id.toString() === communityId);
-        if (communityIndex !== -1) {
-          cachedCommunities[communityIndex] = updatedCommunity;
-        } else {
-          cachedCommunities.push(updatedCommunity);
-        }
-        await setItem("communities", JSON.stringify(cachedCommunities));
-  
-        router.dismiss(1);
-      } catch (error) {
-        console.error("Failed to update community details:", error);
-        Alert.alert("Error", "Failed to save changes.");
+    try {
+      const communityData: any = {
+        name,
+        description,
+        is_public: isPublic,
+      };
+
+      // Handle image if it's a local URI (not a remote URL)
+      if (profilePicture && !profilePicture.startsWith("http")) {
+        communityData.image_url = {
+          uri: profilePicture,
+        };
+      } else if (profilePicture) {
+        communityData.image_url = profilePicture;
       }
+
+      // Send WebSocket message
+      sendMessage({
+        type: 'update_community',
+        community_id: id,
+        community: communityData,
+      });
+
+      // Listen for success/error response
+      const handleResponse = (event: MessageEvent) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'community_updated' && data.community.id.toString() === id) {
+            console.log('Community updated successfully:', data.community);
+            router.dismiss(1); // Navigate back on success
+          } else if (data.type === 'error' && data.message.includes('community')) {
+            console.error('Community update error:', data.message);
+            Alert.alert("Error", data.message || "Failed to update community.");
+          }
+        } catch (error) {
+          console.error('Error processing WebSocket response:', error);
+        }
+      };
+
+      socket.addEventListener('message', handleResponse);
+
+      // Cleanup listener after a timeout or on component unmount
+      const timeout = setTimeout(() => {
+        socket.removeEventListener('message', handleResponse);
+        Alert.alert("Error", "No response from server. Please try again.");
+      }, 5000); // 5 seconds timeout
+
+      return () => {
+        clearTimeout(timeout);
+        socket.removeEventListener('message', handleResponse);
+      };
+    } catch (error) {
+      console.error("Failed to update community details:", error);
+      Alert.alert("Error", "Failed to save changes.");
     }
   };
 
