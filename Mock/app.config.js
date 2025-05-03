@@ -96,7 +96,10 @@ export default {
     "runtimeVersion": "1.0.0",
     "updates": {
       "url": "https://u.expo.dev/7fd80734-c8a7-49db-accf-6b9f79c74f9f"
-    }
+    },
+    plugins: [
+      "expo-web-browser", // Add this line
+    ],
   }
 
 };

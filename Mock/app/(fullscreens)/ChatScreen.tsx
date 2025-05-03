@@ -316,10 +316,15 @@ if (oldestMessage && oldestMessage._id) {
 
   useFocusEffect(
     useCallback(() => {
+      // Set the current community ID when the screen is focused
       setCurrentCommunityId(communityId);
       markMessageAsRead(communityId);
       fetchInitialMessages();
-      return () => {};
+  
+      // Cleanup function to reset the current community ID when the screen is unfocused
+      return () => {
+        setCurrentCommunityId(null); // Reset the current community ID
+      };
     }, [fetchInitialMessages, setCurrentCommunityId, markMessageAsRead, communityId])
   );
 
@@ -1605,6 +1610,7 @@ if (oldestMessage && oldestMessage._id) {
       paddingBottom: insets.bottom + rV(5),
       paddingTop: rV(10),
       opacity: 0.9,
+      
     },
     inputField: {
       flexDirection: "row",
@@ -1615,6 +1621,7 @@ if (oldestMessage && oldestMessage._id) {
       paddingVertical: rV(8),
       paddingHorizontal: rS(10),
       marginRight: rS(10),
+      height: rV(40)
     },
     textInput: {
       flex: 1,

@@ -119,14 +119,15 @@ const CreateCommunity = () => {
 
   const updateCommunityCache = async (newCommunity) => {
     try {
-      const cachedCommunities = await getItem("communities");
-      let communities = cachedCommunities ? JSON.parse(cachedCommunities) : [];
-
-      if (!communities.some((c) => c.id === newCommunity.id)) {
-        communities.push(newCommunity);
-        await setItem("communities", JSON.stringify(communities));
-        const communitiesData= await getItem("communities");
-        console.log("Updated communities cache:", communitiesData);
+      // Store the new community using the key `community_<id>`
+      const communityKey = `community_${newCommunity.id}`;
+      const existingCommunity = await getItem(communityKey);
+  
+      if (!existingCommunity) {
+        await setItem(communityKey, JSON.stringify(newCommunity));
+        console.log(`Community ${newCommunity.id} added to cache.`);
+      } else {
+        console.log(`Community ${newCommunity.id} already exists in cache.`);
       }
     } catch (error) {
       console.error("Error updating community cache:", error);

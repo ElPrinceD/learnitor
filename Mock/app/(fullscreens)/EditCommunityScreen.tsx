@@ -11,12 +11,14 @@ import {
   Alert,
   Switch,
 } from "react-native";
+import * as FileSystem from 'expo-file-system';
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { getCommunityDetails } from "../../services/CommunityApiCalls";
 import { useAuth } from "../../components/AuthContext";
 import { useWebSocket } from "../../contexts/webSocketProvider"; // Import WebSocket context
 import Colors from "../../constants/Colors";
 import { Community } from "../../components/types";
+import { useCache } from "../../contexts/CacheContext";
 import * as ImagePicker from "expo-image-picker";
 import { rMS, rS, rV, SIZES } from "../../constants";
 import { router } from "expo-router";
@@ -31,9 +33,11 @@ const EditCommunityScreen: React.FC = () => {
   const navigation = useNavigation();
   const { id } = route.params as RouteParams;
   const { userToken } = useAuth();
+  const {getItem} = useCache();
   const { socket, isConnected, sendMessage } = useWebSocket(); // Use WebSocket context
   const [community, setCommunity] = useState<Community | null>(null);
   const [name, setName] = useState<string>("");
+  const [currentCommunityData, setCurrentCommunityData] = useState<any | null>(null);
   const [description, setDescription] = useState<string>("");
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [isPublic, setIsPublic] = useState<boolean>(false);
@@ -43,7 +47,18 @@ const EditCommunityScreen: React.FC = () => {
   useEffect(() => {
     const fetchCommunity = async () => {
       try {
-        if (userToken) {
+        const communityDetails = await getItem(`community_${id}`);
+        if (communityDetails) {
+          const parsedCommunity = JSON.parse(communityDetails); // Parse the string into an object
+          setCommunity(parsedCommunity); // Set the parsed object
+          setCurrentCommunityData(parsedCommunity);
+          setName(parsedCommunity.name);
+          setDescription(parsedCommunity.description);
+          setProfilePicture(parsedCommunity.image_url);
+          setIsPublic(parsedCommunity.is_public);
+        }
+   
+        else if (userToken) {
           const data = await getCommunityDetails(id, userToken.token);
           setCommunity(data);
           setName(data.name);
@@ -52,75 +67,79 @@ const EditCommunityScreen: React.FC = () => {
           setIsPublic(data.is_public);
         }
       } catch (error) {
-        console.error("Failed to load community details:", error);
+        console.error("Failed to fetch community details:", error);
       }
     };
-
+  
     fetchCommunity();
-  }, [id, userToken]);
+  }, [id, userToken, getItem]);
 
-  const handleSave = async () => {
-    if (!userToken || !community || !isConnected || !socket) {
-      Alert.alert("Error", "Not connected or missing authentication.");
-      return;
+  const getChangedFields = (original: any, updated: any) => {
+    const changes: any = {};
+    for (const key in updated) {
+      if (updated[key] !== original[key]) {
+        changes[key] = updated[key];
+      }
     }
+    return changes;
+  };
 
-    try {
-      const communityData: any = {
-        name,
-        description,
-        is_public: isPublic,
-      };
 
-      // Handle image if it's a local URI (not a remote URL)
-      if (profilePicture && !profilePicture.startsWith("http")) {
-        communityData.image_url = {
-          uri: profilePicture,
-        };
-      } else if (profilePicture) {
-        communityData.image_url = profilePicture;
+
+const handleSave = async () => {
+  if (!userToken || !community || !isConnected || !socket) {
+    Alert.alert("Error", "Not connected or missing authentication.");
+    return;
+  }
+
+  try {
+    const communityData: any = {
+      name,
+      description,
+      is_public: isPublic,
+    };
+
+    // Handle image if it's a local URI (not a remote URL)
+    if (profilePicture && !profilePicture.startsWith("http")) {
+      const fileInfo = await FileSystem.getInfoAsync(profilePicture);
+      if (!fileInfo.exists) {
+        throw new Error("Image file does not exist");
       }
 
-      // Send WebSocket message
+      const fileName = profilePicture.split("/").pop() || "image.jpg";
+      const fileType = fileName.split(".").pop() || "jpeg";
+      const mimeType = `image/${fileType.toLowerCase() === "jpg" ? "jpeg" : fileType.toLowerCase()}`;
+
+      const fileData = {
+        uri: profilePicture,
+        name: fileName,
+        type: mimeType,
+      } as any;
+      communityData.image_url = fileData; 
+    } else if (profilePicture) {
+      communityData.image_url = profilePicture;
+    }
+
+    // Send only the changed data
+    const changedData = getChangedFields(currentCommunityData, communityData);
+    console.log("Changed data:", changedData);
+
+    if (Object.keys(changedData).length > 0) {
       sendMessage({
         type: 'update_community',
         community_id: id,
-        community: communityData,
+        community: changedData, // Send only the changed fields
       });
 
-      // Listen for success/error response
-      const handleResponse = (event: MessageEvent) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === 'community_updated' && data.community.id.toString() === id) {
-            console.log('Community updated successfully:', data.community);
-            router.dismiss(1); // Navigate back on success
-          } else if (data.type === 'error' && data.message.includes('community')) {
-            console.error('Community update error:', data.message);
-            Alert.alert("Error", data.message || "Failed to update community.");
-          }
-        } catch (error) {
-          console.error('Error processing WebSocket response:', error);
-        }
-      };
-
-      socket.addEventListener('message', handleResponse);
-
-      // Cleanup listener after a timeout or on component unmount
-      const timeout = setTimeout(() => {
-        socket.removeEventListener('message', handleResponse);
-        Alert.alert("Error", "No response from server. Please try again.");
-      }, 5000); // 5 seconds timeout
-
-      return () => {
-        clearTimeout(timeout);
-        socket.removeEventListener('message', handleResponse);
-      };
-    } catch (error) {
-      console.error("Failed to update community details:", error);
-      Alert.alert("Error", "Failed to save changes.");
+      console.log('Update community request sent for community ID:', id);
+    } else {
+      console.log('No changes detected, skipping update.');
     }
-  };
+  } catch (error) {
+    console.error("Failed to save community:", error);
+    Alert.alert("Error", "Failed to save community.");
+  }
+};
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({

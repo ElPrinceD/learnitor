@@ -80,6 +80,7 @@ const styles = StyleSheet.create({
     width: "90%",
     marginBottom: rV(18),
     justifyContent: "center",
+    height: rV(40)
   },
   container: {
     height: rV(60),

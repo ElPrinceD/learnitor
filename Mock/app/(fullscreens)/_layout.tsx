@@ -19,10 +19,11 @@ export default function ChatScreenLayout() {
 
   return (
     <SafeAreaProvider>
+      
       <Stack
         screenOptions={{
           headerStyle: {
-            backgroundColor: themeColors.background,
+            backgroundColor: themeColors.tint,
           },
           headerTintColor: themeColors.text,
           headerTitleStyle: {

@@ -48,7 +48,7 @@ const CommunityScreen: React.FC = () => {
     markMessageAsRead,
     setCurrentCommunityId,
   } = useCommunity();
-  const { getItem, setItem, removeItem } = useCache();
+  const { getItem, setItem, removeItem,getAllKeys } = useCache();
 
   const mapCommunities = (communities: Community[], lastMsgs: Record<string, any>) =>
     communities
@@ -58,27 +58,46 @@ const CommunityScreen: React.FC = () => {
       }))
       .sort((a, b) => moment(b.lastMessageTime).diff(moment(a.lastMessageTime)));
 
-  const loadCachedData = useCallback(async () => {
-    try {
-      const cached = await getItem("communities");
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        setMyCommunities(parsed);
-        const messages = await Promise.all(
-          parsed.map(async (c: Community) => {
-            const msg = await getItem(`last_message_${c.id}`);
-            return [c.id.toString(), msg ? JSON.parse(msg) : null];
-          })
-        );
-        setLastMessages(Object.fromEntries(messages));
-      }
-    } catch (e) {
-      setErrorMessage("Failed to load communities");
-    } finally {
-      setLoading(false);
-      setInitialLoad(false);
-    }
-  }, [getItem]);
+      const loadCachedData = useCallback(async () => {
+        try {
+          // Get all cached keys
+          const keys = await getAllKeys();
+          const cachedCommunityKeys = keys.filter((key) => key.startsWith("community_"));
+      
+          if (cachedCommunityKeys.length > 0) {
+            // Fetch all cached communities
+            const cachedCommunities = await Promise.all(
+              cachedCommunityKeys.map(async (key) => {
+                const community = await getItem(key);
+                return community ? JSON.parse(community) : null;
+              })
+            );
+      
+            // Filter out any null values (in case of corrupted or missing data)
+            const validCommunities = cachedCommunities.filter((c) => c !== null);
+      
+            // Set communities to state
+            setMyCommunities(validCommunities);
+      
+            // Load last messages for each community
+            const messages = await Promise.all(
+              validCommunities.map(async (c: Community) => {
+                const msg = await getItem(`last_message_${c.id}`);
+                return [c.id.toString(), msg ? JSON.parse(msg) : null];
+              })
+            );
+      
+            setLastMessages(Object.fromEntries(messages));
+          } else {
+            setErrorMessage("No cached communities found");
+          }
+        } catch (e) {
+          setErrorMessage("Failed to load communities");
+        } finally {
+          setLoading(false);
+          setInitialLoad(false);
+        }
+      }, [getAllKeys, getItem]);
 
   useFocusEffect(
     useCallback(() => {

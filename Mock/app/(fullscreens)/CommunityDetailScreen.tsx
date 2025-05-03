@@ -29,6 +29,7 @@ import {
 import { useAuth } from "../../components/AuthContext";
 import { useWebSocket } from "../../contexts/webSocketProvider"; // Updated to WebSocketContext
 import { useCache } from "../../contexts/CacheContext"; // New import for caching
+import { useCommunity } from "../../contexts/CommunityContext";
 import Colors from "../../constants/Colors";
 import { Community } from "../../components/types";
 import { rMS, rS, rV, SIZES } from "../../constants";
@@ -44,8 +45,8 @@ const CommunityDetailScreen: React.FC = () => {
   const navigation = useNavigation();
   const { userToken, userInfo } = useAuth();
   const user = userInfo?.user;
-
-  const { socket, unsubscribeFromCommunity } = useWebSocket() || {
+  const { unsubscribeFromCommunity, removeMemberFromCommunity} = useCommunity();
+  const { socket } = useWebSocket() || {
     socket: null,
     unsubscribeFromCommunity: () => {},
   };
@@ -220,7 +221,7 @@ const CommunityDetailScreen: React.FC = () => {
     async (userId: number) => {
       try {
         if (!userToken?.token) throw new Error("User not authenticated.");
-        await removeCommunityMember(id, userId, userToken.token);
+        await removeMemberFromCommunity(id,userId);
         Alert.alert("Success", "Member removed from the channel.");
       } catch (err) {
         console.error("Error removing member:", err);
@@ -364,15 +365,10 @@ const CommunityDetailScreen: React.FC = () => {
     try {
       if (!userToken?.token) throw new Error("User not authenticated.");
 
-      await leaveCommunity(id, userToken.token);
+      
       unsubscribeFromCommunity(id);
 
-      const dbKeysToRemove = [
-        `community_${id}`,
-        `messages_${id}`,
-        `last_message_${id}`,
-      ];
-      await Promise.all(dbKeysToRemove.map((key) => removeCachedData(key)));
+    
 
       const cachedCommunities = await getCachedData("communities");
       if (cachedCommunities) {
