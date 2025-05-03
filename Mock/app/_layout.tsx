@@ -26,7 +26,7 @@ import config from '../tamagui.config';
 
 export { ErrorBoundary } from 'expo-router';
 
-// Configure Reanimated logger
+
 configureReanimatedLogger({
   level: ReanimatedLogLevel.warn,
   strict: false,
@@ -72,7 +72,7 @@ const RootLayoutNav = () => {
                     <WebSocketProvider token={userToken?.token}>
                       <CommunityProvider token={userToken?.token}>
                         <TimelineProvider token={userToken?.token}>
-                          <DeepLinkHandler />
+                         
                           <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
                             <Stack>
                               <Stack.Screen name="index" options={{ headerShown: false }} />

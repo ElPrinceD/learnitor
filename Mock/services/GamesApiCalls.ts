@@ -23,6 +23,7 @@ export const getGameDetails = async (
                 headers: { Authorization: `Token ${token}` },
             }
         );
+        
         return response.data;
            } catch (error) {
         console.error('Error fetching game details:', error);

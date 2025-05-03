@@ -17,7 +17,7 @@ export default function Game() {
   const { userToken, userInfo } = useAuth();
   const { gameId, gameCode } = useLocalSearchParams();
 
-  // Game state variables
+
   const [gameAnswers, setGameAnswers] = useState<Answer[]>([]);
   const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: number[] }>({});
   const [questionsWithMultipleCorrectAnswers, setQuestionsWithMultipleCorrectAnswers] = useState<number[]>([]);
