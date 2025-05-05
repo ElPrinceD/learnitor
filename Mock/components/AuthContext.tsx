@@ -33,6 +33,7 @@ interface AuthContextType {
   login: (user: UserInfo, token: string) => Promise<void>;
   logout: () => Promise<void>;
   setUserInfo: (userInfo: UserInfo) => void;
+  setUserInformation: (userInfo: any) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -101,6 +102,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setUserToken({ token });
     setUserInfo(user);
   };
+  const setUserInformation = async (userInfo: any) => {
+    try {
+      await setItem('user', JSON.stringify(userInfo));
+    } catch (error) {
+      console.error('Error setting userInfo:', error);
+    }
+  };
 
   const logout = async () => {
     await deleteItem("token");
@@ -112,7 +120,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   return (
     <AuthContext.Provider
-      value={{ userInfo, userToken, login, logout, setUserInfo, isLoading }}
+      value={{ userInfo, userToken, login, logout, setUserInfo,setUserInformation, isLoading }}
     >
       {children}
     </AuthContext.Provider>

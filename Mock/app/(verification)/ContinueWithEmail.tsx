@@ -7,6 +7,7 @@ import {
   Platform,
   useColorScheme,
   Keyboard,
+  ScrollView,
 } from "react-native";
 import { router } from "expo-router";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -46,7 +47,7 @@ const ContinueWithEmail = () => {
     axios
       .get(`${ApiUrl}/institution/`)
       .then((response) => {
-        setInstitutionList(response.data);
+        setInstitutionList(response.data.results);
       })
       .catch((error) => {
         console.error("Error fetching institutions:", error);
@@ -55,7 +56,7 @@ const ContinueWithEmail = () => {
     axios
       .get(`${ApiUrl}/program/`)
       .then((response) => {
-        setProgramList(response.data);
+        setProgramList(response.data.results);
       })
       .catch((error) => {
         console.error("Error fetching programs:", error);
@@ -124,9 +125,8 @@ const ContinueWithEmail = () => {
       !surname ||
       !email ||
       !password ||
-      !dob ||
-      !institution ||
-      !program_of_study
+      !dob 
+    
     ) {
       setAllFieldsError("Please fill in all fields");
     } else if (password.length < 8) {
@@ -142,8 +142,7 @@ const ContinueWithEmail = () => {
           email: email,
           password: password,
           dob: dob?.toISOString().substring(0, 10),
-          institution: institution,
-          program_of_study: program_of_study,
+
         })
         .then((response) => {
           setUser(response.data.user);
@@ -168,12 +167,18 @@ const ContinueWithEmail = () => {
   const [dateOfBirth, setDateOfBirth] = useState(new Date(2000, 0, 1));
 
   const styles = StyleSheet.create({
+    scrollContainer: {
+      flexGrow: 1,
+      justifyContent: "center",
+      backgroundColor: themeColors.background,
+    },
     container: {
       flex: 1,
       alignItems: "center",
       justifyContent: "center",
       padding: rMS(16),
       backgroundColor: themeColors.background,
+      
     },
     headerText: {
       fontSize: SIZES.xxLarge,
@@ -222,6 +227,7 @@ const ContinueWithEmail = () => {
   });
 
   return (
+    <ScrollView contentContainerStyle={styles.scrollContainer}>
     <View style={styles.container}>
       <StatusBar hidden={true} />
       <View style={styles.container}>
@@ -286,66 +292,11 @@ const ContinueWithEmail = () => {
           />
         </TouchableOpacity>
 
-        <View style={styles.rowContainer}>
-          <View style={[styles.halfInput, { marginRight: rS(20) }]}>
-            <TouchableOpacity onPress={handleInstitutionSelect}>
-              <AnimatedTextInput
-                label="Institution"
-                value={
-                  institutionList.find((inst) => inst.id === institution)
-                    ?.name || ""
-                }
-                editable={false}
-                placeholderTextColor={Colors.light.textSecondary}
-                style={styles.inputContainer}
-              />
-            </TouchableOpacity>
-          </View>
+       
 
-          <View style={styles.halfInput}>
-            <TouchableOpacity onPress={handleProgramSelect}>
-              <AnimatedTextInput
-                label="Program"
-                value={
-                  programList.find((program) => program.id === program_of_study)
-                    ?.name || ""
-                }
-                editable={false}
-                placeholderTextColor={Colors.light.textSecondary}
-                style={styles.inputContainer}
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
+      
 
-        {/* Show Picker for Android */}
-        {showInstitutionPicker && (
-          <Picker
-            selectedValue={institution}
-            onValueChange={(itemValue) => setInstitution(itemValue)}
-            style={styles.picker}
-          >
-            {institutionList.map((inst, index) => (
-              <Picker.Item key={index} label={inst.name} value={inst.id} />
-            ))}
-          </Picker>
-        )}
-
-        {showProgramPicker && (
-          <Picker
-            selectedValue={program_of_study}
-            onValueChange={(itemValue) => setProgramOfStudy(itemValue)}
-            style={styles.picker}
-          >
-            {programList.map((program, index) => (
-              <Picker.Item
-                key={index}
-                label={program.name}
-                value={program.id}
-              />
-            ))}
-          </Picker>
-        )}
+      
 
         <VerificationButton onPress={handleSignUp} title="Register" />
       </View>
@@ -356,6 +307,7 @@ const ContinueWithEmail = () => {
         </Text>
       </View>
     </View>
+    </ScrollView>
   );
 };
 

@@ -106,6 +106,61 @@ const CommunityScreen: React.FC = () => {
   );
 
   useEffect(() => {
+    if (!socket || !isConnected || !userToken) return;
+
+    const onMessage = async (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        const id = data.community?.id?.toString() || data.community_id?.toString();
+        if (!id) return;
+
+        if (data.type === "community_updated" && data.community) {
+          setMyCommunities((prev) => {
+            const exists = prev.some((c) => c.id.toString() === id);
+            const updated = exists
+              ? prev.map((c) => (c.id.toString() === id ? { ...c, ...data.community } : c))
+              : [...prev, { ...data.community, id: parseInt(id) }];
+            
+            setItem(`community_${id}`, JSON.stringify(data.community));
+            return updated;
+          });
+        } else if (data.type === "join_success") {
+          const community = await getCommunityDetails(id, userToken.token);
+          if (community) {
+            setMyCommunities((prev) => {
+              if (!prev.some((c) => c.id === community.id)) {
+                const updated = [...prev, community];
+                setItem("communities", JSON.stringify(updated));
+                setItem(`community_${id}`, JSON.stringify(community));
+                return updated;
+              }
+              return prev;
+            });
+          }
+        }  else if (data.type === "message") {
+          const newMsg = {
+            ...data,
+            sent_at: new Date(data.sent_at).toISOString(),
+            community_id: parseInt(id),
+          };
+          setLastMessages((prev) => {
+            const updated = { ...prev, [id]: newMsg };
+            console.log("Updated last messages:", updated);
+            setItem(`last_message_${id}`, JSON.stringify(newMsg));
+            return updated;
+          });
+        }
+      } catch (e) {
+        console.error("WebSocket error:", e);
+      }
+    };
+
+    socket.addEventListener("message", onMessage);
+    return () => socket.removeEventListener("message", onMessage);
+  }, [socket, isConnected, userToken, getItem, setItem, removeItem]);
+
+  useEffect(() => {
     const fetchGlobal = async () => {
       if (searchQuery.length >= 3 && userToken?.token) {
         setIsFetching(true);
@@ -127,77 +182,7 @@ const CommunityScreen: React.FC = () => {
     fetchGlobal();
   }, [searchQuery, userToken, myCommunities]);
 
-  useEffect(() => {
-    if (!socket || !isConnected || !userToken) return;
-
-    const onMessage = async (event: MessageEvent) => {
-      try {
-        const data = JSON.parse(event.data);
-
-        const id = data.community?.id?.toString() || data.community_id?.toString();
-        if (!id) return;
-
-        if (data.type === "community_updated" && data.community) {
-          setMyCommunities((prev) => {
-            const exists = prev.some((c) => c.id.toString() === id);
-            const updated = exists
-              ? prev.map((c) => (c.id.toString() === id ? { ...c, ...data.community } : c))
-              : [...prev, { ...data.community, id: parseInt(id) }];
-            setItem("communities", JSON.stringify(updated));
-            setItem(`community_${id}`, JSON.stringify(data.community));
-            return updated;
-          });
-        } else if (data.type === "join_success") {
-          const community = await getCommunityDetails(id, userToken.token);
-          if (community) {
-            setMyCommunities((prev) => {
-              if (!prev.some((c) => c.id === community.id)) {
-                const updated = [...prev, community];
-                setItem("communities", JSON.stringify(updated));
-                setItem(`community_${id}`, JSON.stringify(community));
-                return updated;
-              }
-              return prev;
-            });
-          }
-        } else if (data.type === "leave_community") {
-          setMyCommunities((prev) => {
-            const updated = prev.filter((c) => c.id.toString() !== id);
-            setItem("communities", JSON.stringify(updated));
-            return updated;
-          });
-          setLastMessages((prev) => {
-            const { [id]: _, ...rest } = prev;
-            return rest;
-          });
-          await Promise.all([
-            removeItem(`last_message_${id}`),
-            removeItem(`community_${id}`),
-            removeItem(`messages_${id}`),
-            removeItem(`timetable_${id}`),
-            removeItem(`images_${id}`),
-            removeItem(`unread_count_${id}`),
-          ]);
-        } else if (data.type === "message") {
-          const newMsg = {
-            ...data,
-            sent_at: new Date(data.sent_at).toISOString(),
-            community_id: parseInt(id),
-          };
-          setLastMessages((prev) => {
-            const updated = { ...prev, [id]: newMsg };
-            setItem(`last_message_${id}`, JSON.stringify(newMsg));
-            return updated;
-          });
-        }
-      } catch (e) {
-        console.error("WebSocket error:", e);
-      }
-    };
-
-    socket.addEventListener("message", onMessage);
-    return () => socket.removeEventListener("message", onMessage);
-  }, [socket, isConnected, userToken, getItem, setItem, removeItem]);
+ 
 
   useFocusEffect(
     useCallback(() => {
@@ -209,7 +194,7 @@ const CommunityScreen: React.FC = () => {
             if (!myCommunities.some((c) => c.id === parsed.id)) {
               const updated = [...myCommunities, parsed];
               setMyCommunities(updated);
-              await setItem("communities", JSON.stringify(updated));
+              
               await setItem(`community_${parsed.id}`, JSON.stringify(parsed));
             }
           } catch (e) {
@@ -260,7 +245,7 @@ const CommunityScreen: React.FC = () => {
         setMyCommunities((prev) => {
           if (!prev.some((c) => c.id === details.id)) {
             const updated = [...prev, details];
-            setItem("communities", JSON.stringify(updated));
+            setItem(`community_${details.id}`, JSON.stringify(community));
             return updated;
           }
           return prev;

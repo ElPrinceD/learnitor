@@ -74,10 +74,20 @@ const EditCommunityScreen: React.FC = () => {
     fetchCommunity();
   }, [id, userToken, getItem]);
 
+  // Update getChangedFields to handle image_url comparison
   const getChangedFields = (original: any, updated: any) => {
     const changes: any = {};
     for (const key in updated) {
-      if (updated[key] !== original[key]) {
+      if (key === "image_url") {
+        // Compare image_url specifically
+        const originalImage = original[key] || null;
+        const updatedImage = updated[key];
+        if (typeof updatedImage === "object" && updatedImage.uri !== originalImage) {
+          changes[key] = updatedImage;
+        } else if (typeof updatedImage === "string" && updatedImage !== originalImage) {
+          changes[key] = updatedImage;
+        }
+      } else if (updated[key] !== original[key]) {
         changes[key] = updated[key];
       }
     }
@@ -86,60 +96,69 @@ const EditCommunityScreen: React.FC = () => {
 
 
 
-const handleSave = async () => {
-  if (!userToken || !community || !isConnected || !socket) {
-    Alert.alert("Error", "Not connected or missing authentication.");
-    return;
-  }
-
-  try {
-    const communityData: any = {
-      name,
-      description,
-      is_public: isPublic,
-    };
-
-    // Handle image if it's a local URI (not a remote URL)
-    if (profilePicture && !profilePicture.startsWith("http")) {
-      const fileInfo = await FileSystem.getInfoAsync(profilePicture);
-      if (!fileInfo.exists) {
-        throw new Error("Image file does not exist");
+  const handleSave = async () => {
+    if (!userToken || !community || !isConnected || !socket) {
+      Alert.alert("Error", "Not connected or missing authentication.");
+      return;
+    }
+  
+    try {
+      const communityData: any = {
+        name,
+        description,
+        is_public: isPublic,
+      };
+  
+      // Handle image if it's a local URI (not a remote URL)
+      if (profilePicture && !profilePicture.startsWith("http")) {
+        const fileInfo = await FileSystem.getInfoAsync(profilePicture);
+        if (!fileInfo.exists) {
+          throw new Error("Image file does not exist");
+        }
+  
+        // Read the file and convert to Base64
+        const base64 = await FileSystem.readAsStringAsync(profilePicture, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        const fileName = profilePicture.split("/").pop() || "image.jpg";
+        const fileType = fileName.split(".").pop() || "jpeg";
+        const mimeType = `image/${fileType.toLowerCase() === "jpg" ? "jpeg" : fileType.toLowerCase()}`;
+  
+        // Create Base64 data URI
+        const dataUri = `data:${mimeType};base64,${base64}`;
+  
+        // Send as a dictionary with uri key
+        communityData.image_url = {
+          uri: dataUri,
+        };
+      } else if (profilePicture) {
+        communityData.image_url = profilePicture; // Remote URL
       }
-
-      const fileName = profilePicture.split("/").pop() || "image.jpg";
-      const fileType = fileName.split(".").pop() || "jpeg";
-      const mimeType = `image/${fileType.toLowerCase() === "jpg" ? "jpeg" : fileType.toLowerCase()}`;
-
-      const fileData = {
-        uri: profilePicture,
-        name: fileName,
-        type: mimeType,
-      } as any;
-      communityData.image_url = fileData; 
-    } else if (profilePicture) {
-      communityData.image_url = profilePicture;
+  
+      // Send only the changed data
+      const changedData = getChangedFields(currentCommunityData, communityData);
+      console.log("Changed data:", changedData);
+  
+      if (Object.keys(changedData).length > 0) {
+        sendMessage({
+          type: "update_community",
+          community_id: id,
+          community: changedData, // Send only the changed fields
+        });
+  
+        console.log("Update community request sent for community ID:", id);
+        Alert.alert("Success", "Community updated successfully.");
+      } else {
+        console.log("No changes detected, skipping update.");
+        Alert.alert("Info", "No changes detected.");
+      }
+    } catch (error) {
+      console.error("Failed to save community:", error);
+      Alert.alert("Error", "Failed to save community.");
     }
-
-    // Send only the changed data
-    const changedData = getChangedFields(currentCommunityData, communityData);
-    console.log("Changed data:", changedData);
-
-    if (Object.keys(changedData).length > 0) {
-      sendMessage({
-        type: 'update_community',
-        community_id: id,
-        community: changedData, // Send only the changed fields
-      });
-
-      console.log('Update community request sent for community ID:', id);
-    } else {
-      console.log('No changes detected, skipping update.');
-    }
-  } catch (error) {
-    console.error("Failed to save community:", error);
-    Alert.alert("Error", "Failed to save community.");
-  }
-};
+  };
+  
+ 
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({

@@ -112,7 +112,7 @@ export const getCommunityMessages = async (
             },
             params,
         });
-
+        console.log('Getting community messages', communityId)
         return response.data;
     } catch (error) {
         console.error('Error fetching community messages:', error);
@@ -128,6 +128,7 @@ export const getUserCommunities = async (token: string) => {
                 Authorization: `Token ${token}`,
             },
         });
+        console.log('User communities fetching:');
         return response.data;
     } catch (error) {
         console.error('Error fetching user communities:', error);

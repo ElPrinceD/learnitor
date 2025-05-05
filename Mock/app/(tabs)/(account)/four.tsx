@@ -24,7 +24,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import AppImage from "../../../components/AppImage";
 
 const Profile = () => {
-  const { logout, userToken, userInfo, setUserInfo } = useAuth();
+  const { logout, userToken, userInfo, setUserInformation } = useAuth();
+  console.log(userInfo)
   const { clear } = useCache(); // Access clear from CacheContext
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -139,7 +140,7 @@ const Profile = () => {
         );
 
         if (userInfo) {
-          setUserInfo({
+          setUserInformation({
             ...userInfo,
             user: {
               ...userInfo?.user,

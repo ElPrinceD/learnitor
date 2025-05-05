@@ -6,6 +6,7 @@ import {
   useColorScheme,
   TouchableWithoutFeedback,
   Keyboard,
+  ScrollView,
 } from "react-native";
 import { Text } from "../../components/Themed";
 import { router, useGlobalSearchParams } from "expo-router";
@@ -69,6 +70,11 @@ const LogIn = () => {
   };
 
   const styles = StyleSheet.create({
+    scrollContainer: {
+      flexGrow: 1,
+      justifyContent: "center",
+      backgroundColor: themeColors.background,
+    },
     container: {
       flex: 1,
       alignItems: "center",
@@ -118,6 +124,7 @@ const LogIn = () => {
   });
 
   return (
+    <ScrollView contentContainerStyle={styles.scrollContainer}>
     <TouchableWithoutFeedback onPress={handleKeyboardDismiss}>
       <View style={styles.container}>
         <StatusBar hidden={true} />
@@ -173,6 +180,7 @@ const LogIn = () => {
         </View>
       </View>
     </TouchableWithoutFeedback>
+    </ScrollView>
   );
 };
 

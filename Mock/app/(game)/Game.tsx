@@ -123,6 +123,7 @@ export default function Game() {
       if (gameEnded) return;
       const message = JSON.parse(event.data);
       console.log(`Player ${userInfo?.user.id} received:`, message);
+    
 
       if (
         message.type === "question.attempted" &&

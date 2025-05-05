@@ -245,7 +245,7 @@ const CommunityChatScreen: React.FC = () => {
           undefined, // No beforeTimestamp
           undefined // Using afterMessageId to get messages after the last message
         );
-        console.log("Older messages received:", olderMessages);
+        
   
         if (olderMessages && olderMessages.length > 0) {
           const normalizedOlderMessages = olderMessages.map(normalizeMessage);

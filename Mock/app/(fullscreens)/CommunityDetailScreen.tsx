@@ -221,14 +221,28 @@ const CommunityDetailScreen: React.FC = () => {
     async (userId: number) => {
       try {
         if (!userToken?.token) throw new Error("User not authenticated.");
-        await removeMemberFromCommunity(id,userId);
+        
+        // Call API to remove member
+        await removeMemberFromCommunity(id, userId);
+        
+        // Immediately update local state
+        setCommunity((prev) => {
+          if (!prev) return prev;
+          const updatedMembers = prev.members?.filter(
+            (member) => member.id !== userId
+          );
+          const updatedCommunity = { ...prev, members: updatedMembers };
+         
+          return updatedCommunity;
+        });
+        
         Alert.alert("Success", "Member removed from the channel.");
       } catch (err) {
         console.error("Error removing member:", err);
         Alert.alert("Error", "Failed to remove member.");
       }
     },
-    [id, userToken?.token]
+    [id, userToken?.token, setCachedData]
   );
 
   const renderRightActions = useCallback(
@@ -366,25 +380,7 @@ const CommunityDetailScreen: React.FC = () => {
       if (!userToken?.token) throw new Error("User not authenticated.");
 
       
-      unsubscribeFromCommunity(id);
-
-    
-
-      const cachedCommunities = await getCachedData("communities");
-      if (cachedCommunities) {
-        const updatedCommunities = cachedCommunities.filter(
-          (c: Community) => c.id.toString() !== id.toString()
-        );
-        await setCachedData("communities", updatedCommunities);
-      }
-
-      const storedLeftIds = await getItem("leftCommunityIds");
-      const leftCommunityIds = storedLeftIds ? JSON.parse(storedLeftIds) : [];
-      await setItem(
-        "leftCommunityIds",
-        JSON.stringify([...leftCommunityIds, id.toString()])
-      );
-
+      unsubscribeFromCommunity(id, false);
       setIsFollowing(false);
       Alert.alert("Success", "You have left the channel.");
 

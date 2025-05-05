@@ -22,7 +22,7 @@ import DateSelector from "../../../components/DateSelector"; // DateSelector com
 import { router } from "expo-router"; // Import the router from Expo Router
 
 const AccountSettings = () => {
-  const { userInfo, userToken, setUserInfo } = useAuth();
+  const { userInfo, userToken, setUserInformation, setUserInfo } = useAuth();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
@@ -50,43 +50,56 @@ const AccountSettings = () => {
 
   const handleUpdateInfo = async () => {
     setLoading(true);
+  
     const config = {
       headers: {
         Authorization: `Token ${userToken?.token}`,
       },
     };
+  
+    // Build only fields that were provided
+    const updatedFields = {
+      ...(formData.firstName && { first_name: formData.firstName }),
+      ...(formData.lastName && { last_name: formData.lastName }),
+      ...(formData.email && { email: formData.email }),
+      ...(formData.dob && { dob: formData.dob }),
+    };
+  
     try {
       await axios.put(
         `${ApiUrl}/api/update/user/${userInfo?.user.id}/`,
-        {
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          email: formData.email,
-          dob: formData.dob,
-        },
+        updatedFields,
         config
       );
-
+  
       if (userInfo) {
+        const updatedUser = {
+          ...userInfo.user,
+          ...(formData.firstName && { first_name: formData.firstName }),
+          ...(formData.lastName && { last_name: formData.lastName }),
+          ...(formData.email && { email: formData.email }),
+          ...(formData.dob && { dob: formData.dob }),
+          address: {
+            ...userInfo.user.address,
+            ...(formData.street1 && { street_1: formData.street1 }),
+            ...(formData.street2 && { street_2: formData.street2 }),
+            ...(formData.city && { city: formData.city }),
+            ...(formData.region && { region: formData.region }),
+            ...(formData.country && { country: formData.country }),
+          },
+        };
+      
+        setUserInformation({
+          ...userInfo,
+          user: updatedUser,
+        });
         setUserInfo({
           ...userInfo,
-          user: {
-            ...userInfo.user,
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            email: formData.email,
-            dob: formData.dob,
-            address: {
-              ...userInfo.user.address,
-              street_1: formData.street1,
-              street_2: formData.street2,
-              city: formData.city,
-              region: formData.region,
-              country: formData.country,
-            },
-          },
+          user: updatedUser,
         });
       }
+      
+  
       Alert.alert("Success", "Your information has been updated.", [
         {
           text: "OK",
@@ -102,6 +115,7 @@ const AccountSettings = () => {
       setLoading(false);
     }
   };
+  
 
   const styles = StyleSheet.create({
     container: {
