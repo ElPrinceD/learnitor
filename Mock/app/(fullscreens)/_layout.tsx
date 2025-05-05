@@ -137,7 +137,7 @@ export default function ChatScreenLayout() {
           name="TimeTableDetails"
           options={{
             headerShown: true,
-            presentation: "modal",
+            presentation: "containedModal",
             headerBackTitle: "Back",
             headerStyle: {
               backgroundColor: themeColors.background,
@@ -189,7 +189,7 @@ export default function ChatScreenLayout() {
           name="EditCommunityScreen"
           options={({ navigation }) => ({
             title: "Edit Community",
-            presentation: "modal",
+            presentation: "containedModal",
             headerLeft: () => (
               <TouchableOpacity onPress={() => navigation.goBack()}>
                 <Text

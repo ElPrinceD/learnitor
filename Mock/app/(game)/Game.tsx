@@ -355,7 +355,11 @@ export default function Game() {
         )}
         {!gameEnded && gameQuestions.length > 0 && (
           <Text style={{ fontSize: SIZES.large, color: themeColors.text, textAlign: 'center', marginVertical: rV(10) }}>
-             {Math.ceil(timeLeft / 1000)} seconds
+             {`${Math.floor(timeLeft / 60000)
+  .toString()
+  .padStart(2, '0')}:${Math.floor((timeLeft % 60000) / 1000)
+  .toString()
+  .padStart(2, '0')}`} 
           </Text>
         )}
         {gameQuestions.length > 0 && (

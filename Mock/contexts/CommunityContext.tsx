@@ -1,5 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { useWebSocket } from './webSocketProvider';
 import { useCache } from './CacheContext';
 import {
@@ -11,20 +10,43 @@ import {
 } from '../services/CommunityApiCalls';
 import { useAuth } from '../components/AuthContext';
 
+// Define TypeScript interfaces for better type safety
+interface Message {
+  id: string;
+  community_id: string;
+  message: string;
+  sender_id: string | null;
+  sender: string;
+  sender_image: string | null;
+  sent_at: string;
+  status: 'sent' | 'read';
+  reply_to: { id: string; snippet: string; sender_id: string; sender_name: string } | null;
+  image: string | null;
+  document: string | null;
+  temp_id?: string;
+  is_edited: boolean;
+}
+
+interface Community {
+  id: string;
+  name: string;
+  members: { id: string; first_name: string; last_name: string; email: string; profile_picture: string | null }[];
+  // Add other community properties as needed
+}
+
 interface CommunityContextType {
-  lastMessages: Record<string, any>;
+  lastMessages: Record<string, Message>;
   unreadCommunitiesCount: number;
   unreadMessages: Record<string, number>;
-  joinAndSubscribeToCommunity: (communityId: string | number) => Promise<void>;
-  unsubscribeFromCommunity: (communityId: string | number, removed: boolean) => void;
+  joinAndSubscribeToCommunity: (communityId: string) => Promise<void>;
+  unsubscribeFromCommunity: (communityId: string, removed: boolean) => Promise<void>;
   subscribeToExistingUserCommunities: () => Promise<void>;
   fetchAndCacheCommunities: () => Promise<void>;
-  markMessageAsRead: (communityId: string) => void;
+  markMessageAsRead: (communityId: string) => Promise<void>;
   setCurrentCommunityId: (communityId: string | null) => void;
   fetchInitialLastMessages: () => Promise<void>;
-  fetchAndCacheMessages: (communityId: string, token: string) => Promise<any[]>;
-  removeMemberFromCommunity: (communityId: string | number, memberId: string | number) => void;
-  
+  fetchAndCacheMessages: (communityId: string, token: string) => Promise<Message[]>;
+  removeMemberFromCommunity: (communityId: string, memberId: string) => void;
 }
 
 const CommunityContext = createContext<CommunityContextType | null>(null);
@@ -36,58 +58,51 @@ interface CommunityProviderProps {
 
 export const CommunityProvider: React.FC<CommunityProviderProps> = ({ token, children }) => {
   const { socket, isConnected, sendMessage, addMessageListener, removeMessageListener } = useWebSocket();
-  const { setItem, getItem, removeItem, getAllKeys, multiGet } = useCache();
+  const { setItem, getItem, removeItem, getAllKeys } = useCache();
   const { userInfo } = useAuth();
   const userId = userInfo?.user?.id;
-  const userName = userInfo?.user.first_name + ' ' + userInfo?.user.last_name;
-  const [unreadCommunityMessages, setUnreadCommunityMessages] = useState<Record<string, any>>({});
-  const [lastMessages, setLastMessages] = useState<Record<string, any>>({});
+  const userName = `${userInfo?.user.first_name} ${userInfo?.user.last_name}`;
+  const [unreadCommunityMessages, setUnreadCommunityMessages] = useState<Record<string, Message>>({});
+  const [lastMessages, setLastMessages] = useState<Record<string, Message>>({});
   const [unreadMessages, setUnreadMessages] = useState<Record<string, number>>({});
   const [currentCommunityId, setCurrentCommunityId] = useState<string | null>(null);
   const messageQueue: any[] = [];
 
-  const normalizeMessage = useCallback((data: any) => ({
-    
-    id: data.id?.toString() || data._id?.toString() || data.temp_id || undefined,
-    community_id: (data.community_id || data.community)?.toString(), // Handle both community_id and community
+  const normalizeMessage = useCallback((data: any): Message => ({
+    id: data.id?.toString() || data._id?.toString() || data.temp_id || '',
+    community_id: (data.community_id || data.community)?.toString() || '',
     message: data.message || data.text || '',
-    sender_id: data.sender_id || data.user?._id || null, // Allow null if sender_id is missing
+    sender_id: data.sender_id || data.user?._id || null,
     sender: data.sender || data.user?.name || 'Unknown User',
     sender_image: data.sender_image || data.user?.avatar || null,
-    sent_at: new Date(data.sent_at || data.createdAt || Date.now()).toISOString(), // Fallback to now if sent_at is missing
+    sent_at: new Date(data.sent_at || data.createdAt || Date.now()).toISOString(),
     status: data.status || 'sent',
     reply_to: data.reply_to || data.replyTo
       ? {
-          id: data.reply_to?.id?.toString() || data.replyTo?._id?.toString() || null,
-          snippet: data.reply_to?.snippet || data.replyTo?.text || null,
-          sender_id: data.reply_to?.sender_id || data.replyTo?.user?._id || null,
-          sender_name: data.reply_to?.sender_name || data.replyTo?.user?.name || null,
+          id: data.reply_to?.id?.toString() || data.replyTo?._id?.toString() || '',
+          snippet: data.reply_to?.snippet || data.replyTo?.text || '',
+          sender_id: data.reply_to?.sender_id || data.replyTo?.user?._id || '',
+          sender_name: data.reply_to?.sender_name || data.replyTo?.user?.name || '',
         }
       : null,
     image: data.image || null,
     document: data.document || null,
-    temp_id: data.temp_id || data.tempId || undefined,
+    temp_id: data.temp_id || data.tempId,
     is_edited: data.is_edited || data.isEdited || false,
   }), []);
-
-
 
   const fetchAndCacheMessages = useCallback(
     async (communityId: string, token: string) => {
       try {
-        // Check cache first
-        const cachedMessages = await getItem(`messages_${communityId}`);
+        const key = `messages_${communityId}`;
+        const cachedMessages = await getItem(key);
         if (cachedMessages) {
-          console.log('Using cached messages for community:', communityId);
-          const parsedMessages = JSON.parse(cachedMessages);
-          return parsedMessages;
+          return JSON.parse(cachedMessages) as Message[];
         }
 
-        // Fetch from API if cache is empty
-        console.log('Using api for cached messages')
         const messages = await getCommunityMessages(communityId, token, 50);
         const normalizedMessages = messages.map(normalizeMessage);
-        await setItem(`messages_${communityId}`, JSON.stringify(normalizedMessages));
+        await setItem(key, JSON.stringify(normalizedMessages));
         return normalizedMessages;
       } catch (error) {
         console.error('Error fetching and caching messages:', error);
@@ -98,477 +113,337 @@ export const CommunityProvider: React.FC<CommunityProviderProps> = ({ token, chi
   );
 
   const removeMemberFromCommunity = useCallback(
-    (communityId: string | number, memberId: string | number) => {
+    (communityId: string, memberId: string) => {
       if (!isConnected || !socket) return;
       sendMessage({
         type: 'remove_member',
-        community_id: communityId.toString(),
-        member_id: memberId.toString(),
+        community_id: communityId,
+        member_id: memberId,
       });
-      console.log(`Requested removal of member ${memberId} from community ${communityId}`);
     },
     [isConnected, socket, sendMessage]
   );
+
   const unsubscribeFromCommunity = useCallback(
-    async (communityId: string | number, removed: boolean) => {
+    async (communityId: string, removed: boolean) => {
       if (!isConnected || !socket) return;
-  
+
       if (!removed) {
         sendMessage({
           type: 'leave_community',
-          community_id: communityId.toString(),
+          community_id: communityId,
         });
       }
-  
-      // Remove cached community info and messages
+
       try {
-        await removeItem(`community_${communityId}`);
-        await removeItem(`messages_${communityId}`);
-        console.log('Removed community and messages from cache:', communityId);
-      } catch (err) {
-        console.error('Error removing cached data for community:', communityId, err);
+        await Promise.all([
+          removeItem(`community_${communityId}`),
+          removeItem(`messages_${communityId}`),
+          removeItem(`last_message_${communityId}`),
+        ]);
+      } catch (error) {
+        console.error('Error removing cached data for community:', communityId, error);
       }
-  
-      console.log('Unsubscribed from community in community context:', communityId);
     },
     [isConnected, socket, sendMessage, removeItem]
   );
+
+  // Split handleMessage into smaller functions for readability and maintainability
+  const handleNewMessage = useCallback(
+    async (data: any) => {
+      const communityId = data.community_id.toString();
+      const keyMessages = `messages_${communityId}`;
+      const cachedMessages = await getItem(keyMessages);
+      const existingMessages: Message[] = cachedMessages ? JSON.parse(cachedMessages) : [];
+      const normalizedMessage = normalizeMessage(data);
+
+      if (!existingMessages.some((msg) => msg.id === normalizedMessage.id || msg.temp_id === normalizedMessage.temp_id)) {
+        const updatedMessages = [normalizedMessage, ...existingMessages];
+        await setItem(keyMessages, JSON.stringify(updatedMessages));
+      } else if (normalizedMessage.temp_id) {
+        const updatedMessages = existingMessages.map((msg) =>
+          msg.temp_id === normalizedMessage.temp_id ? normalizedMessage : msg
+        );
+        await setItem(keyMessages, JSON.stringify(updatedMessages));
+      }
+
+      const newLastMessage = { ...normalizedMessage };
+      await setItem(`last_message_${communityId}`, JSON.stringify(newLastMessage));
+
+      if (userId && data.sender_id !== userId) {
+        if (communityId === currentCommunityId) {
+          if (socket) {
+            socket.send(JSON.stringify({ type: 'message_status_update', message_id: data.id, status: 'read' }));
+          }
+          newLastMessage.status = 'read';
+          await setItem(`last_message_${communityId}`, JSON.stringify(newLastMessage));
+        } else {
+          setUnreadCommunityMessages((prev) => ({ ...prev, [communityId]: newLastMessage }));
+          setUnreadMessages((prev) => ({ ...prev, [communityId]: (prev[communityId] || 0) + 1 }));
+        }
+      }
+    },
+    [getItem, setItem, normalizeMessage, userId, currentCommunityId, socket]
+  );
+
+  const handleMessageEdit = useCallback(
+    async (data: any) => {
+      const communityId = data.community_id.toString();
+      const messageId = data.message_id.toString();
+      const messagesStr = await getItem(`messages_${communityId}`);
+      if (messagesStr) {
+        const messages: Message[] = JSON.parse(messagesStr);
+        const messageIndex = messages.findIndex((msg) => msg.id === messageId);
+        if (messageIndex !== -1) {
+          messages[messageIndex] = { ...messages[messageIndex], message: data.new_content, is_edited: true };
+          await setItem(`messages_${communityId}`, JSON.stringify(messages));
+        }
+      }
+
+      const lastMessageStr = await getItem(`last_message_${communityId}`);
+      if (lastMessageStr) {
+        const lastMessage: Message = JSON.parse(lastMessageStr);
+        if (lastMessage.id === messageId) {
+          lastMessage.message = data.new_content;
+          lastMessage.is_edited = true;
+          await setItem(`last_message_${communityId}`, JSON.stringify(lastMessage));
+          if (userId && lastMessage.sender_id !== userId) {
+            setUnreadCommunityMessages((prev) => ({ ...prev, [communityId]: lastMessage }));
+          }
+        }
+      }
+    },
+    [getItem, setItem, userId]
+  );
+
+  const handleMessageDelete = useCallback(
+    async (data: any) => {
+      const communityId = data.community_id.toString();
+      const messageId = data.message_id.toString();
+      const messagesStr = await getItem(`messages_${communityId}`);
+      if (messagesStr) {
+        const messages: Message[] = JSON.parse(messagesStr).filter((msg: Message) => msg.id !== messageId);
+        await setItem(`messages_${communityId}`, JSON.stringify(messages));
+      }
+
+      const lastMessageStr = await getItem(`last_message_${communityId}`);
+      if (lastMessageStr) {
+        const lastMessage: Message = JSON.parse(lastMessageStr);
+        if (lastMessage.id === messageId) {
+          const messagesStr = await getItem(`messages_${communityId}`);
+          if (messagesStr) {
+            const messages: Message[] = JSON.parse(messagesStr);
+            if (messages.length > 0) {
+              const newLastMessage = messages[0];
+              await setItem(`last_message_${communityId}`, JSON.stringify(newLastMessage));
+              if (userId && newLastMessage.sender_id !== userId) {
+                setUnreadCommunityMessages((prev) => ({ ...prev, [communityId]: newLastMessage }));
+              }
+            } else {
+              await removeItem(`last_message_${communityId}`);
+              setUnreadCommunityMessages((prev) => {
+                const newUnread = { ...prev };
+                delete newUnread[communityId];
+                return newUnread;
+              });
+            }
+          }
+        }
+      }
+    },
+    [getItem, setItem, removeItem, userId]
+  );
+
+  const handleCommunityUpdated = useCallback(
+    async (data: any) => {
+      const communityId = data.community.id.toString();
+      const existingCommunityStr = await getItem(`community_${communityId}`);
+      const updatedCommunity = existingCommunityStr
+        ? { ...JSON.parse(existingCommunityStr), ...data.community }
+        : data.community;
+      await setItem(`community_${communityId}`, JSON.stringify(updatedCommunity));
+    },
+    [getItem, setItem]
+  );
+
+  const handleMemberJoined = useCallback(
+    async (data: any) => {
+      const communityId = data.community_id.toString();
+      const cachedCommunity = await getItem(`community_${communityId}`);
+      if (cachedCommunity) {
+        const community: Community = JSON.parse(cachedCommunity);
+        if (!community.members.some((m) => m.id === data.user_details.id.toString())) {
+          community.members.push({
+            id: data.user_details.id,
+            first_name: data.user_details.first_name,
+            last_name: data.user_details.last_name,
+            email: data.user_details.email,
+            profile_picture: data.user_details.profile_picture,
+          });
+          await setItem(`community_${communityId}`, JSON.stringify(community));
+        }
+      }
+    },
+    [getItem, setItem]
+  );
+
+  const handleMemberRemoved = useCallback(
+    async (data: any) => {
+      const communityId = data.community_id.toString();
+      const removedMemberId = data.user_id.toString();
+      if (removedMemberId === userId) {
+        await unsubscribeFromCommunity(communityId, true);
+        setUnreadMessages((prev) => {
+          const updated = { ...prev };
+          delete updated[communityId];
+          return updated;
+        });
+        setUnreadCommunityMessages((prev) => {
+          const updated = { ...prev };
+          delete updated[communityId];
+          return updated;
+        });
+      } else {
+        const cachedCommunity = await getItem(`community_${communityId}`);
+        if (cachedCommunity) {
+          const community: Community = JSON.parse(cachedCommunity);
+          community.members = community.members.filter((m) => m.id !== removedMemberId);
+          await setItem(`community_${communityId}`, JSON.stringify(community));
+        }
+      }
+    },
+    [getItem, setItem, userId, unsubscribeFromCommunity]
+  );
+
   const handleMessage = useCallback(
     async (data: any) => {
       switch (data.type) {
-        case 'message': {
-          const keyMessages = `messages_${data.community_id}`;
-          const cachedMessages = await getItem(keyMessages);
-          const existingMessages = cachedMessages ? JSON.parse(cachedMessages) : [];
-          
-          // Normalize the new message
-          const normalizedMessage = normalizeMessage(data);
-          
-          // Check if message already exists to avoid duplicates
-          if (!existingMessages.some((msg: any) => msg.id === normalizedMessage.id || msg.temp_id === normalizedMessage.temp_id)) {
-            const updatedMessages = [normalizedMessage, ...existingMessages];
-            await setItem(keyMessages, JSON.stringify(updatedMessages));
-          } else if (normalizedMessage.temp_id) {
-            // Update message if it was a pending message (temp_id exists)
-            const updatedMessages = existingMessages.map((msg: any) =>
-              msg.temp_id === normalizedMessage.temp_id ? normalizedMessage : msg
-            );
-            await setItem(keyMessages, JSON.stringify(updatedMessages));
-          }
-
-          const newLastMessage = {
-            ...normalizedMessage,
-            replyTo: normalizedMessage.reply_to,
-          };
-          await setItem(`last_message_${data.community_id}`, JSON.stringify(newLastMessage));
-
-          if (userId && data.sender_id !== userId) {
-            if (data.community_id === currentCommunityId) {
-              if (socket) {
-                socket.send(
-                  JSON.stringify({
-                    type: 'message_status_update',
-                    message_id: data.id,
-                    status: 'read',
-                  })
-                );
-              }
-              newLastMessage.status = 'read';
-              await setItem(`last_message_${data.community_id}`, JSON.stringify(newLastMessage));
-            } else {
-              setUnreadCommunityMessages((prev) => ({
-                ...prev,
-                [data.community_id]: newLastMessage,
-              }));
-              setUnreadMessages((prev) => ({
-                ...prev,
-                [data.community_id]: (prev[data.community_id] || 0) + 1,
-              }));
-            }
-          }
+        case 'message':
+          await handleNewMessage(data);
           break;
-        }
-        
-        case "message_edit": {
-          console.log("Message edit event received:", data);
-          const messageId = data.message_id;
-          const communityId = data.community_id;
-          if (!communityId) {
-            console.warn("Could not find communityId for message:", messageId);
-          }
-          
-          if (communityId) {
-            const messagesStr = await getItem(`messages_${communityId}`);
-            
-            if (messagesStr) {
-              let parsedMessages = JSON.parse(messagesStr);
-              const messageIndex = parsedMessages.findIndex((msg: any) => msg.id === messageId.toString());
-              
-              if (messageIndex !== -1) {
-                
-                parsedMessages[messageIndex] = {
-                  ...parsedMessages[messageIndex],
-                  text: data.new_content,
-                  message: data.new_content,
-                  is_edited: true,
-                };
-               
-                await setItem(`messages_${communityId}`, JSON.stringify(parsedMessages));
-               
-                
-              }
-            }
-            const lastMessageStr = await getItem(`last_message_${communityId}`);
-            if (lastMessageStr) {
-              let parsedLastMessage = JSON.parse(lastMessageStr);
-              if (parsedLastMessage.id === messageId) {
-                parsedLastMessage.message = data.new_content;
-                parsedLastMessage.is_edited = true;
-                await setItem(`last_message_${communityId}`, JSON.stringify(parsedLastMessage));
-                if (userId && parsedLastMessage.sender_id !== userId) {
-                  setUnreadCommunityMessages((prev) => ({
-                    ...prev,
-                    [communityId]: parsedLastMessage,
-                  }));
-                }
-              }
-            }
-          }
+        case 'message_edit':
+          await handleMessageEdit(data);
           break;
-        }
-        case "message_deleted": {
-          console.log("Message delete event received:", data);
-          const messageId = data.message_id;
-          const communityId = data.community_id;
-          if (communityId) {
-            const messagesStr = await getItem(`messages_${communityId}`);
-            if (messagesStr) {
-              console.log('here: ', messagesStr);
-              let parsedMessages = JSON.parse(messagesStr);
-              parsedMessages = parsedMessages.filter((msg: any) => msg.id !== messageId.toString());
-              await setItem(`messages_${communityId}`, JSON.stringify(parsedMessages));
-            }
-            const lastMessageStr = await getItem(`last_message_${communityId}`);
-            if (lastMessageStr) {
-              let parsedLastMessage = JSON.parse(lastMessageStr);
-              if (parsedLastMessage.id === messageId) {
-                // Find the next most recent message
-                const messagesStr = await getItem(`messages_${communityId}`);
-                if (messagesStr) {
-                  const parsedMessages = JSON.parse(messagesStr);
-                  if (parsedMessages.length > 0) {
-                    const newLastMessage = parsedMessages[parsedMessages.length - 1];
-                    await setItem(
-                      `last_message_${communityId}`,
-                      JSON.stringify({
-                        ...newLastMessage,
-                        sent_at: new Date(newLastMessage.createdAt).toISOString(),
-                        status: newLastMessage.status || "sent",
-                        replyTo: newLastMessage.replyTo || null,
-                      })
-                    );
-                    if (userId && newLastMessage.user._id !== userId) {
-                      setUnreadCommunityMessages((prev) => ({
-                        ...prev,
-                        [communityId]: {
-                          ...newLastMessage,
-                          sent_at: new Date(newLastMessage.createdAt).toISOString(),
-                          status: newLastMessage.status || "sent",
-                          replyTo: newLastMessage.replyTo || null,
-                        },
-                      }));
-                    }
-                  } else {
-                    // No messages left, clear last message
-                    await removeItem(`last_message_${communityId}`);
-                    setUnreadCommunityMessages((prev) => {
-                      const newUnread = { ...prev };
-                      delete newUnread[communityId];
-                      return newUnread;
-                    });
-                  }
-                }
-              }
-            }
-          }
+        case 'message_deleted':
+          await handleMessageDelete(data);
           break;
-        }
-        case 'community_updated': {
-          console.log('Received community_updated event:', data);
-          const updatedCommunity = data.community;
-        
-          if (!updatedCommunity || !updatedCommunity.id) {
-            console.warn('Invalid community data received in community_updated event:', data);
-            break;
-          }
-        
-          const communityId = updatedCommunity.id.toString();
-        
-          // Retrieve the existing community data
-          const existingCommunityStr = await getItem(`community_${communityId}`);
-          if (existingCommunityStr) {
-            const existingCommunity = JSON.parse(existingCommunityStr);
-        
-            // Merge the updated data with the existing community data
-            const mergedCommunity = {
-              ...existingCommunity,
-              ...updatedCommunity,
-            };
-        
-            // Save the updated community data back to storage
-            await setItem(`community_${communityId}`, JSON.stringify(mergedCommunity));
-            console.log(`Community ${communityId} updated successfully.`);
-          } else {
-            // If the community doesn't exist, save the new data
-            await setItem(`community_${communityId}`, JSON.stringify(updatedCommunity));
-            console.log(`Community ${communityId} added as new.`);
-          }
-        
-         
-        
+        case 'community_updated':
+          await handleCommunityUpdated(data);
           break;
-        }
-        case 'member_joined': {
-          console.log('Received member_joined event:', data);
-          const communityId = data.community_id;
-          const userDetails = data.user_details;
-  
-          // Update cached community data
-          const cachedCommunity = await getItem(`community_${communityId}`);
-          if (cachedCommunity) {
-            const parsedCommunity = JSON.parse(cachedCommunity);
-           
-            // Add the new member to the members list if not already present
-            if (!parsedCommunity.members.some((member: any) => member.id.toString() === userDetails.id.toString())) {
-              
-              parsedCommunity.members.push({
-                id: userDetails.id,
-                first_name: userDetails.first_name,
-                last_name: userDetails.last_name,
-                email: userDetails.email,
-                profile_picture: userDetails.profile_picture
-              });
-              await setItem(`community_${communityId}`, JSON.stringify(parsedCommunity));
-              
-            }
-          }
+        case 'member_joined':
+          await handleMemberJoined(data);
           break;
-        }
-
-        case 'member_removed': {
-          console.log('Received member_removed event:', data);
-        
-          const removedMemberId = data.user_id; // Fixed: it was `member_id` before
-          const communityId = data.community_id;
-        
-          if (removedMemberId && communityId) {
-            // If the current user is the one removed, unsubscribe from the community
-            if (removedMemberId.toString() === userId?.toString()) {
-              unsubscribeFromCommunity(communityId, true); // True = was removed externally
-              console.log(`Unsubscribed user ${userId} from community ${communityId} due to removal.`);
-        
-              // Optionally clean up their cache
-              await removeItem(`messages_${communityId}`);
-              await removeItem(`last_message_${communityId}`);
-              await removeItem(`community_${communityId}`);
-        
-              // Clear from unread message state
-              setUnreadMessages((prev) => {
-                const updated = { ...prev };
-                delete updated[communityId];
-                return updated;
-              });
-        
-              setUnreadCommunityMessages((prev) => {
-                const updated = { ...prev };
-                delete updated[communityId];
-                return updated;
-              });
-        
-            } else {
-              // A different user was removed; update community cache
-              const cachedCommunity = await getItem(`community_${communityId}`);
-              if (cachedCommunity) {
-                const parsedCommunity = JSON.parse(cachedCommunity);
-        
-                // Filter out the removed user from members list
-                parsedCommunity.members = (parsedCommunity.members || []).filter(
-                  (member: any) => member.id.toString() !== removedMemberId.toString()
-                );
-        
-                await setItem(`community_${communityId}`, JSON.stringify(parsedCommunity));
-                console.log(`Removed user ${removedMemberId} from local cache for community ${communityId}.`);
-              }
-            }
-          }
-        
+        case 'member_removed':
+          await handleMemberRemoved(data);
           break;
-        }
-        
-    }
+      }
     },
-    [getItem, setItem, normalizeMessage, userId, currentCommunityId, socket, setUnreadCommunityMessages, setUnreadMessages, unsubscribeFromCommunity]
+    [
+      handleNewMessage,
+      handleMessageEdit,
+      handleMessageDelete,
+      handleCommunityUpdated,
+      handleMemberJoined,
+      handleMemberRemoved,
+    ]
   );
 
-  const fetchAndCacheCommunities = useCallback(async () => {
-    try {
+  const fetchAndCacheCommunities = useCallback(
+    async () => {
       if (!token) return;
-      // Check if communities are already cached
-      const keys = await getAllKeys();
-      const cachedCommunityKeys = keys.filter((key) => key.startsWith("community_"));
-      if (!cachedCommunityKeys) {
-        console.log('No cached communities found, fetching from API...');
-        const communities = await getUserCommunities(token);
-     
-
-        for (const community of communities) {
-          await setItem(`community_${community.id}`, JSON.stringify(community));
+      try {
+        const keys = await getAllKeys();
+        const cachedCommunityKeys = keys.filter((key) => key.startsWith('community_'));
+        if (cachedCommunityKeys.length === 0) {
+          const communities = await getUserCommunities(token);
+          await Promise.all(
+            communities.map((community) =>
+              setItem(`community_${community.id}`, JSON.stringify(community))
+            )
+          );
         }
-      
+      } catch (error) {
+        console.error('Error fetching and caching communities:', error);
       }
-
-    
-      
-    } catch (error) {
-      console.error('Error fetching and caching communities:', error);
-    }
-  }, [token, setItem]);
+    },
+    [token, getAllKeys, setItem]
+  );
 
   const joinAndSubscribeToCommunity = useCallback(
-    async (communityId: string | number) => {
+    async (communityId: string) => {
       if (!socket || !token) {
         messageQueue.push({ type: 'join_community', community_id: communityId });
         return;
       }
-  
-      // Send the join request immediately
-      sendMessage({
-        type: 'join_community',
-        community_id: communityId.toString(),
-      });
-  
-      // Optimistically resolve early, fetch details in background
-      (async () => {
-        try {
-          const communityDetails = await getCommunityDetails(communityId, token);
-          await setItem(`community_${communityId}`, JSON.stringify(communityDetails));
-        } catch (error) {
-          console.error('Background fetch for community details failed:', error);
-        }
-      })();
+      sendMessage({ type: 'join_community', community_id: communityId });
+      try {
+        const communityDetails = await getCommunityDetails(communityId, token);
+        await setItem(`community_${communityId}`, JSON.stringify(communityDetails));
+      } catch (error) {
+        console.error('Error fetching community details:', error);
+      }
     },
     [socket, token, sendMessage, setItem]
   );
-  
 
-  
-  
-  
-
-  const subscribeToExistingUserCommunities = useCallback(async () => {
-    if (!token || !isConnected || !socket) return;
-  
-    try {
-      // Check if any community is cached
-      const keys = await getAllKeys(); // Get all keys from storage
-      const cachedCommunityKeys = keys.filter((key) => key.startsWith('community_'));
-  
-      if (cachedCommunityKeys.length > 0) {
-        console.log('User communities found in cache:', cachedCommunityKeys);
-        return; // Exit if communities are already cached
+  const subscribeToExistingUserCommunities = useCallback(
+    async () => {
+      if (!token || !isConnected || !socket) return;
+      try {
+        const keys = await getAllKeys();
+        const cachedCommunityKeys = keys.filter((key) => key.startsWith('community_'));
+        if (cachedCommunityKeys.length === 0) {
+          const userCommunities = await getUserCommunities(token);
+          await Promise.all(
+            userCommunities.map((community) =>
+              setItem(`community_${community.id}`, JSON.stringify(community))
+            )
+          );
+        }
+      } catch (error) {
+        console.error('Error subscribing to user communities:', error);
       }
-  
-      // Fetch user communities from the API if not in cache
-      const userCommunities = await getUserCommunities(token);
-      for (const community of userCommunities) {
-        console.log('Subscribing to community:', community.id);
-        await setItem(`community_${community.id}`, JSON.stringify(community));
+    },
+    [token, isConnected, socket, getAllKeys, setItem]
+  );
+
+  const fetchInitialLastMessages = useCallback(
+    async () => {
+      if (!token) return;
+      try {
+        const lastMessagesData = await getLastMessages(token);
+        await Promise.all(
+          lastMessagesData
+            .filter((msg) => msg && msg.community)
+            .map(async (message) => {
+              const normalizedMessage = normalizeMessage(message);
+              const communityId = message.community.toString();
+              await setItem(`last_message_${communityId}`, JSON.stringify(normalizedMessage));
+              if (message.sender !== userName && normalizedMessage.status !== 'read') {
+                setUnreadMessages((prev) => ({
+                  ...prev,
+                  [communityId]: (prev[communityId] || 0) + 1,
+                }));
+                setUnreadCommunityMessages((prev) => ({
+                  ...prev,
+                  [communityId]: normalizedMessage,
+                }));
+              }
+            })
+        );
+      } catch (error) {
+        console.error('Error fetching initial last messages:', error);
       }
-    } catch (error) {
-      console.error('Error subscribing to user communities:', error);
-    }
-  }, [token, isConnected, socket, sendMessage, getAllKeys, setItem]);
-
-  const fetchInitialLastMessages = useCallback(async () => {
-    if (!token) {
-      console.log("No token, skipping fetchInitialLastMessages");
-      return;
-    }
-
-    console.log('Fetching initial last messages...');
-    
-    try {
-      console.log('Community data getting 1');
-      const keys = await getAllKeys(); // Get all keys from storage
-      const cachedCommunityKeys = keys.filter((key) => key.startsWith('community_'));
-      console.log('Cached community keys:', cachedCommunityKeys);
-      const cachedLastMessageKeys = keys.filter((key) => key.startsWith('last_message_'));
-      
-     
-const communities = await Promise.all(
-  cachedCommunityKeys.map(async (key) => {
-    const communityData = await getItem(key); // Assuming getItem is a function to fetch data
-    console.log('Community data getting 2');
-     const lastMessages = await getLastMessages(token);
-      
-     
-     for (const message of lastMessages) {
-      console.log(message.community)
-      
-      if (!message || !(message.community )) {
-        console.warn("Invalid message data:", message);
-        continue;
-      }
-      if (message.community !== undefined ){ 
-        
-       
-      const normalizedMessage = normalizeMessage(message);
-      const communityId = ( message.community).toString();
-      console.log('Community ID:', communityId);
-    
-     
-      await setItem(`last_message_${communityId}`, JSON.stringify(normalizedMessage));
-
-      // Update unread messages if applicable
-      if (message.sender !== userName && message.status !== 'read') {
-        console.log('Unread message:', normalizedMessage);
-        setUnreadMessages((prev) => ({
-          ...prev,
-          [communityId]: (prev[communityId] || 0) + 1,
-        }));
-        setUnreadCommunityMessages((prev) => ({
-          ...prev,
-          [communityId]: normalizedMessage,
-        }));
-        console.log('Unread community messages:', unreadCommunityMessages);
-      }
-    }
-  }
-    return communityData ? JSON.parse(communityData) : null;
-  })
-);
-
-
-      
-    
-      
-      
-   
-  
-    
-  
-     
-    } catch (error) {
-      console.error('Error fetching last messages:', error);
-    }
-  }, [token, userId, setItem, normalizeMessage]);
+    },
+    [token, userName, setItem, normalizeMessage]
+  );
 
   const markMessageAsRead = useCallback(
     async (communityId: string) => {
       try {
         const lastMessageStr = await getItem(`last_message_${communityId}`);
         if (lastMessageStr) {
-          const lastMessage = JSON.parse(lastMessageStr);
+          const lastMessage: Message = JSON.parse(lastMessageStr);
           if (lastMessage.sender_id !== userId && lastMessage.status !== 'read') {
             if (socket && isConnected) {
               socket.send(
@@ -603,14 +478,12 @@ const communities = await Promise.all(
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
       try {
-        console.log('Received WebSocket message:', event.data);
         const data = JSON.parse(event.data);
         handleMessage(data);
       } catch (error) {
-        console.error('Error processing WebSocket message context:', error);
+        console.error('Error processing WebSocket message:', error);
       }
     };
-
     addMessageListener(onMessage);
     return () => removeMessageListener(onMessage);
   }, [addMessageListener, removeMessageListener, handleMessage]);
@@ -619,86 +492,93 @@ const communities = await Promise.all(
     if (isConnected && socket) {
       while (messageQueue.length > 0) {
         const message = messageQueue.shift();
-        if (message) {
-          sendMessage(message);
-        }
+        if (message) sendMessage(message);
       }
     }
   }, [isConnected, socket, sendMessage]);
+
   useEffect(() => {
     const initializeCommunityData = async () => {
-      if (isConnected) {
-        // Wait for subscribeToExistingUserCommunities to complete
-        await subscribeToExistingUserCommunities();
-  
-        // Then fetch initial last messages
-        await fetchInitialLastMessages();
-  
-        // Fetch missed messages
-        const updateMissedMessages = async () => {
-          const allKeys = await getAllKeys();
-          const messageKeys = allKeys.filter((key) => key.startsWith('messages_'));
-  
-          for (const key of messageKeys) {
+      if (!isConnected || !token) return;
+      await subscribeToExistingUserCommunities();
+      await fetchInitialLastMessages();
+
+      const updateMissedMessages = async () => {
+        const allKeys = await getAllKeys();
+        const messageKeys = allKeys.filter((key) => key.startsWith('messages_'));
+        await Promise.all(
+          messageKeys.map(async (key) => {
             const communityId = key.split('_')[1];
             const messagesStr = await getItem(key);
-  
             if (messagesStr) {
-              const messages = JSON.parse(messagesStr);
-              const latestMessage = messages[0]; // Assuming most recent message is at index 0
-  
+              const messages: Message[] = JSON.parse(messagesStr);
+              const latestMessage = messages[0];
               if (latestMessage) {
-                // Pass the latestMessage.id as `afterMessageId`
-                console.log('Get Community messages', communityId);
                 const newMessages = await getCommunityMessages(
                   communityId,
                   token,
                   50,
-                  undefined, // beforeMessageId
-                  undefined, // beforeTimestamp
-                  latestMessage.id // afterMessageId
+                  undefined,
+                  undefined,
+                  latestMessage.id
                 );
-  
                 const normalizedNew = newMessages.map(normalizeMessage);
-  
                 if (normalizedNew.length) {
-                  const updated = [...normalizedNew, ...messages];
-                  await setItem(key, JSON.stringify(updated));
+                  await setItem(key, JSON.stringify([...normalizedNew, ...messages]));
                 }
               }
             }
-          }
-        };
-  
-        await updateMissedMessages();
-      }
+          })
+        );
+      };
+      await updateMissedMessages();
     };
-  
-    initializeCommunityData().catch((error) => {
-      console.error('Error initializing community data:', error);
-    });
-  }, [token, isConnected, subscribeToExistingUserCommunities, fetchInitialLastMessages, setItem, getAllKeys, getItem, normalizeMessage, token]);
 
+    initializeCommunityData().catch((error) =>
+      console.error('Error initializing community data:', error)
+    );
+  }, [
+    token,
+    isConnected,
+    subscribeToExistingUserCommunities,
+    fetchInitialLastMessages,
+    getAllKeys,
+    getItem,
+    setItem,
+    normalizeMessage,
+  ]);
 
-  const unreadCommunitiesCount = Object.keys(unreadMessages).length;
+  const contextValue = useMemo(
+    () => ({
+      lastMessages,
+      unreadCommunitiesCount: Object.keys(unreadMessages).length,
+      unreadMessages,
+      joinAndSubscribeToCommunity,
+      unsubscribeFromCommunity,
+      subscribeToExistingUserCommunities,
+      fetchAndCacheCommunities,
+      markMessageAsRead,
+      setCurrentCommunityId,
+      fetchInitialLastMessages,
+      fetchAndCacheMessages,
+      removeMemberFromCommunity,
+    }),
+    [
+      lastMessages,
+      unreadMessages,
+      joinAndSubscribeToCommunity,
+      unsubscribeFromCommunity,
+      subscribeToExistingUserCommunities,
+      fetchAndCacheCommunities,
+      markMessageAsRead,
+      fetchInitialLastMessages,
+      fetchAndCacheMessages,
+      removeMemberFromCommunity,
+    ]
+  );
 
   return (
-    <CommunityContext.Provider
-      value={{
-        lastMessages,
-        unreadCommunitiesCount,
-        unreadMessages,
-        joinAndSubscribeToCommunity,
-        unsubscribeFromCommunity,
-        subscribeToExistingUserCommunities,
-        fetchAndCacheCommunities,
-        markMessageAsRead,
-        setCurrentCommunityId,
-        fetchInitialLastMessages,
-        fetchAndCacheMessages,
-        removeMemberFromCommunity
-      }}
-    >
+    <CommunityContext.Provider value={contextValue}>
       {children}
     </CommunityContext.Provider>
   );
@@ -706,8 +586,6 @@ const communities = await Promise.all(
 
 export const useCommunity = () => {
   const context = useContext(CommunityContext);
-  if (!context) {
-    throw new Error('useCommunity must be used within a CommunityProvider');
-  }
+  if (!context) throw new Error('useCommunity must be used within a CommunityProvider');
   return context;
 };
