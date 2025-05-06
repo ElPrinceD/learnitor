@@ -30,9 +30,7 @@ const ContinueWithEmail = () => {
   const [password, setPassword] = useState("");
   const [dob, setDob] = useState<Date | null>(null);
   const [institution, setInstitution] = useState("");
-  const [program_of_study, setProgramOfStudy] = useState("");
-  const [institutionList, setInstitutionList] = useState<any[]>([]);
-  const [programList, setProgramList] = useState<any[]>([]);
+
   const [user, setUser] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
@@ -42,26 +40,7 @@ const ContinueWithEmail = () => {
   const themeColors = Colors[colorScheme ?? "light"];
   const [showSecondText, setShowSecondText] = useState(false);
 
-  useEffect(() => {
-    // Fetch the lists from the backend
-    axios
-      .get(`${ApiUrl}/institution/`)
-      .then((response) => {
-        setInstitutionList(response.data.results);
-      })
-      .catch((error) => {
-        console.error("Error fetching institutions:", error);
-      });
-
-    axios
-      .get(`${ApiUrl}/program/`)
-      .then((response) => {
-        setProgramList(response.data.results);
-      })
-      .catch((error) => {
-        console.error("Error fetching programs:", error);
-      });
-  }, []);
+ 
 
   const onChange = (event: any, selectedDate: Date | undefined) => {
     const currentDate = selectedDate || dateOfBirth;
