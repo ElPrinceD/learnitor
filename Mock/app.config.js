@@ -1,16 +1,16 @@
 export default {
   "expo": {
-    "name": "Slate",
+    "name": "Elevay",
     "slug": "mock",
     "scheme": "myapp",
     "description": "Learn it all",
     "version": "1.0.0",
     "deepLinking": true,
     "orientation": "portrait",
-    "icon": "./assets/images/SlateLogo.png",
+    "icon": "./assets/images/Elevay.jpg",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/images/SlateLogo.png",
+      "image": "./assets/images/Elevay.jpg",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -56,7 +56,7 @@ export default {
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/SlateLogo.png",
+          "icon": "./assets/images/Elevay.jpg",
           "color": "#ffffff",
           "sounds": ["default"]
         }
@@ -99,6 +99,7 @@ export default {
     },
     plugins: [
       "expo-web-browser", // Add this line
+      "expo-dev-client"
     ],
   }
 

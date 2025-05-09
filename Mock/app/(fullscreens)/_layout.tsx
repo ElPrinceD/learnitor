@@ -23,7 +23,7 @@ export default function ChatScreenLayout() {
       <Stack
         screenOptions={{
           headerStyle: {
-            backgroundColor: themeColors.tint,
+            backgroundColor: themeColors.background,
           },
           headerTintColor: themeColors.text,
           headerTitleStyle: {
@@ -172,7 +172,7 @@ export default function ChatScreenLayout() {
           name="TimeTable"
           options={{
             headerShown: true,
-            presentation: "card",
+            presentation: "containedModal",
             headerStyle: {
               backgroundColor: themeColors.background,
             },

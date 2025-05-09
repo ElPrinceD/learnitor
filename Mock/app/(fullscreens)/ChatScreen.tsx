@@ -56,6 +56,7 @@ import { rMS, rV, rS, SIZES, useShadows } from "../../constants";
 import Colors from "../../constants/Colors";
 import { FONT } from "../../constants";
 import { router } from "expo-router";
+import * as ImageManipulator from "expo-image-manipulator";
 import AppImage from "../../components/AppImage";
 import FullScreenImageViewer from "../../components/FullScreenImageViewer";
 import ImagePreviewModal from "../../components/ImagePreviewModal";
@@ -168,6 +169,7 @@ const CommunityChatScreen: React.FC = () => {
       return null;
     }
   }, []);
+  
 
   const backgroundImage =
     colorScheme === "dark"
@@ -609,6 +611,7 @@ if (oldestMessage && oldestMessage._id) {
     }
   }, [sendMediaMessage]);
 
+
   const onSend = useCallback(
     async (newMessages: IMessage[] = []) => {
       for (let message of newMessages) {
@@ -693,6 +696,7 @@ if (oldestMessage && oldestMessage._id) {
           setSelectedMessages([]);
         }
       }
+      
     },
     [communityId, sendMessage, user, replyToMessage, isConnected, mediaPreview, messageIds, setItem, getItem]
   );
@@ -704,16 +708,26 @@ if (oldestMessage && oldestMessage._id) {
       quality: 1,
       allowsEditing: true,
     });
-
+  
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      const selectedImages = result.assets;
-      const newImages = selectedImages.map((asset) => ({
-        uri: asset.uri,
-        type: "image",
-        id: uuidv4(),
-      }));
-      console.log("Selected images:", newImages);
-      setSelectedImagesForPreview(newImages);
+      const selectedImages = await Promise.all(
+        result.assets.map(async (asset) => {
+          const manipulatedImage = await ImageManipulator.manipulateAsync(
+            asset.uri,
+            [{ resize: { width: 800 } }], // Resize to width 800px
+            { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+          );
+  
+          return {
+            uri: manipulatedImage.uri,
+            type: "image",
+            id: uuidv4(),
+          };
+        })
+      );
+  
+      console.log("Manipulated & selected images:", selectedImages);
+      setSelectedImagesForPreview(selectedImages);
       setIsImagePreviewVisible(true);
     } else {
       console.log("Image picker canceled or no assets:", result);
@@ -928,7 +942,12 @@ if (oldestMessage && oldestMessage._id) {
                 params: { id: communityId },
               })
             }
-            style={{ flexDirection: "row", alignItems: "center" }}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",  // This centers the content
+              flex: 1,  // This makes it take up the full space
+            }}
           >
             <Image
               source={{ uri: community?.image_url }}
@@ -940,7 +959,11 @@ if (oldestMessage && oldestMessage._id) {
               }}
             />
             <Text
-              style={{ color: themeColors.text, fontSize: rMS(SIZES.large) }}
+              style={{
+                color: themeColors.text,
+                fontSize: rMS(SIZES.large),
+                textAlign: 'center',  // Center the text
+              }}
             >
               {community?.name ?? "Chat"}
             </Text>
@@ -974,6 +997,7 @@ if (oldestMessage && oldestMessage._id) {
     router,
     community,
   ]);
+  
 
   const handlePress = useCallback((message: IMessage) => {
     setSelectedMessages((prevSelected) => {
@@ -1618,10 +1642,10 @@ if (oldestMessage && oldestMessage._id) {
       backgroundColor: themeColors.reverseText,
       borderRadius: rMS(20),
       flex: 1,
-      paddingVertical: rV(8),
+      paddingVertical: rV(1),
       paddingHorizontal: rS(10),
       marginRight: rS(10),
-      height: rV(40)
+      height: rV(30)
     },
     textInput: {
       flex: 1,
@@ -1863,44 +1887,49 @@ if (oldestMessage && oldestMessage._id) {
           <ActivityIndicator size="large" color={themeColors.tint} />
         </View>
       ) : (
-        <MemoizedGiftedChat
-          messages={messages}
-          onSend={onSend}
-          user={{ _id: user?.id || 1 }}
-          text={messageInput}
-          onInputTextChanged={(text) => setMessageInput(text)}
-          renderSystemMessage={(props) => (
-            <SystemMessage
-              {...props}
-              textStyle={{ color: themeColors.textSecondary }}
-            />
-          )}
-          renderAvatar={renderAvatar}
-          renderBubble={renderBubble}
-          renderSend={renderSend}
-          renderInputToolbar={renderInputToolbar}
-          renderMessageImage={renderMessageImage}
-          renderDay={renderDay}
-          minInputToolbarHeight={insets.bottom + rV(50)}
-          scrollToBottom={true}
-          isTyping={false}
-          inverted={true}
-          loadEarlier={loadEarlier}
-          onLoadEarlier={handleLoadEarlier}
-          isLoadingEarlier={isLoadingEarlier}
-          listViewProps={{
-            scrollEventThrottle: 400,
-            maintainVisibleContentPosition: {
-              minIndexForVisible: 0,
-            },
-            onScroll: ({ nativeEvent }) => {
-              const isCloseToTop = nativeEvent.contentOffset.y <= 50;
-              if (isCloseToTop && loadEarlier && !isLoadingEarlier && !isUpdatingMessages) {
-                handleLoadEarlier();
-              }
-            },
-          }}
-        />
+<MemoizedGiftedChat
+  messages={messages}
+  onSend={onSend}
+  user={{ _id: user?.id || 1 }}
+  text={messageInput}
+  onInputTextChanged={(text) => setMessageInput(text)}
+  renderSystemMessage={(props) => (
+    <SystemMessage
+      {...props}
+      textStyle={{ color: themeColors.textSecondary }}
+    />
+  )}
+  renderAvatar={renderAvatar}
+  renderBubble={renderBubble}
+  renderSend={renderSend}
+  renderInputToolbar={renderInputToolbar}
+  renderMessageImage={renderMessageImage}
+  renderDay={renderDay}
+  minInputToolbarHeight={insets.bottom + rV(50)}
+  scrollToBottom={true} // Already set, keep this
+ 
+  scrollToBottomStyle={{
+    backgroundColor: themeColors.secondaryBackground,
+    borderRadius: rMS(20),
+    padding: rS(5),
+  }} // Optional: Style the scroll-to-bottom button
+  inverted={true}
+  loadEarlier={loadEarlier}
+  onLoadEarlier={handleLoadEarlier}
+  isLoadingEarlier={isLoadingEarlier}
+  listViewProps={{
+    scrollEventThrottle: 400,
+    maintainVisibleContentPosition: {
+      minIndexForVisible: 0,
+    },
+    onScroll: ({ nativeEvent }) => {
+      const isCloseToTop = nativeEvent.contentOffset.y <= 50;
+      if (isCloseToTop && loadEarlier && !isLoadingEarlier && !isUpdatingMessages) {
+        handleLoadEarlier();
+      }
+    },
+  }}
+/>
       )}
       <FullScreenImageViewer
         visible={isImageViewerVisible}

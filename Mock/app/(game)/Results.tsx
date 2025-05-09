@@ -72,7 +72,7 @@ export default function ResultsScreen() {
   }, [gameDetails, scores, userInfo]);
 
   const handleCreateNewGame = () => {
-    router.navigate("GameIntro");
+    router.push("GameIntro");
   };
 
   const styles = StyleSheet.create({

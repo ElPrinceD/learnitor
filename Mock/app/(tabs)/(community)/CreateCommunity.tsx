@@ -19,6 +19,7 @@ import { useMutation } from "@tanstack/react-query";
 import { createCommunity } from "../../../services/CommunityApiCalls";
 import { router } from "expo-router";
 import * as FileSystem from "expo-file-system";
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from "expo-image-picker";
 import { useCommunity } from "../../../contexts/CommunityContext";
 import { useCache } from "../../../contexts/CacheContext";
@@ -98,20 +99,28 @@ const CreateCommunity = () => {
         Alert.alert("Permission to access media library is required!");
         return;
       }
-
+  
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 1,
+        quality: 1, // pick highest to retain quality pre-compression
       });
-
+  
       if (!result.canceled) {
-        const uri = result.assets[0].uri;
-        setImageUrl(uri);
+        const originalUri = result.assets[0].uri;
+  
+        // Compress image to 50% quality
+        const compressedImage = await ImageManipulator.manipulateAsync(
+          originalUri,
+          [{ resize: { width: 800 } }], // Resize if needed
+          { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG }
+        );
+  
+        setImageUrl(compressedImage.uri);
       }
     } catch (error) {
-      console.error("Error picking image:", error);
+      console.error("Error picking or compressing image:", error);
     }
   };
 

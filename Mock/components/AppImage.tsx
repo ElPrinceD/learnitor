@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   ActivityIndicator,
@@ -18,26 +18,40 @@ interface AppImageProps {
 
 const AppImage: React.FC<AppImageProps> = ({ uri, style, onPress }) => {
   const [loading, setLoading] = useState(true);
+  const [cachedUri, setCachedUri] = useState<string | null>(null);
   const Wrapper = onPress ? TouchableOpacity : View;
+
+  // Cache the loaded image URI
+  useEffect(() => {
+    if (uri) {
+      setCachedUri(uri); // Set cached URI when the URI is provided
+    }
+  }, [uri]);
 
   const handleLoadEnd = () => {
     setLoading(false);
   };
 
+  const handlePress = (event: GestureResponderEvent) => {
+    // Prevent reloading the image on tap by checking the cached URI
+    if (onPress && cachedUri) {
+      onPress(event);
+    }
+  };
+
   return (
     <Wrapper
       style={[styles.container, style]}
-      onPress={onPress}
+      onPress={handlePress}
       activeOpacity={0.8}
     >
-      {uri ? (
+      {cachedUri ? (
         <>
           <Image
-            uri={uri}
+            uri={cachedUri}
             style={[styles.image, style]}
             onLoadEnd={handleLoadEnd}
           />
-      
         </>
       ) : (
         <ActivityIndicator size="small" color="#888" style={styles.loader} />

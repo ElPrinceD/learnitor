@@ -4,6 +4,7 @@ import React from "react";
 import { Pressable, useColorScheme } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import Colors from "../../../constants/Colors";
+import CustomBackButton from "../../../components/CustomBackButton";
 
 export default function Tab3Layout() {
   const colorScheme = useColorScheme();
@@ -62,7 +63,7 @@ export default function Tab3Layout() {
           options={{
             headerShown: true,
             presentation: "card",
-            headerBackTitle: "Back",
+            headerLeft: () => <CustomBackButton label="Back"  />,
             // animation: "fade_from_bottom",
             headerStyle: {
               backgroundColor: themeColors.background,

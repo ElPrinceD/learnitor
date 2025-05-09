@@ -12,6 +12,7 @@ import {
   Switch,
 } from "react-native";
 import * as FileSystem from 'expo-file-system';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { getCommunityDetails } from "../../services/CommunityApiCalls";
 import { useAuth } from "../../components/AuthContext";
@@ -147,6 +148,7 @@ const EditCommunityScreen: React.FC = () => {
         });
   
         console.log("Update community request sent for community ID:", id);
+        router.back();
         Alert.alert("Success", "Community updated successfully.");
       } else {
         console.log("No changes detected, skipping update.");
@@ -160,16 +162,36 @@ const EditCommunityScreen: React.FC = () => {
   
  
 
+
+
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 1,
     });
-
+  
     if (!result.canceled && result.assets) {
-      setProfilePicture(result.assets[0].uri);
+      try {
+        const { uri } = result.assets[0];
+  
+        // Compress the image
+        const compressedImage = await ImageManipulator.manipulateAsync(
+          uri,
+          [],
+          {
+            compress: 0.5,  // 0.5 represents 50% compression (adjust as needed)
+            format: ImageManipulator.SaveFormat.JPEG,  // You can choose JPEG, PNG, etc.
+          }
+        );
+  
+        // Set the compressed image as the profile picture
+        setProfilePicture(compressedImage.uri);
+      } catch (error) {
+        console.error('Error compressing image:', error);
+      }
     }
   };
+  
 
   useEffect(() => {
     navigation.setOptions({
