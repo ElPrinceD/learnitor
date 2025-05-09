@@ -54,6 +54,7 @@ export default function Tab2Layout() {
           name="(topic)"
           options={{
             headerShown: true,
+            headerBackVisible: false, 
             title: "Materials",
             headerTitleStyle: {
               color: themeColors.text,
