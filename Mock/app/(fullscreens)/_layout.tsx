@@ -19,7 +19,6 @@ export default function ChatScreenLayout() {
 
   return (
     <SafeAreaProvider>
-      
       <Stack
         screenOptions={{
           headerStyle: {
@@ -48,7 +47,7 @@ export default function ChatScreenLayout() {
                 style={{ flexDirection: "row", alignItems: "center" }}
               >
                 <AppImage
-                   uri= {route.params?.image }
+                  uri={route.params?.image}
                   style={{
                     width: rS(30),
                     height: rV(30),
@@ -78,14 +77,13 @@ export default function ChatScreenLayout() {
         <Stack.Screen
           name="CommunityDetailScreen"
           options={({ route, navigation }) => {
-            
             const communityName = route.params?.name ?? "Community";
             const isCreator = route.params?.created_by === user?.email; // Assume userEmail is passed or stored in navigation state
 
             return {
               title: "Squad Info",
               headerBackTitle: "Back",
-              
+
               headerRight: () => (
                 <TouchableOpacity
                   onPressIn={() =>
@@ -111,14 +109,8 @@ export default function ChatScreenLayout() {
             headerBackTitle: "Back",
           }}
         />
+
         <Stack.Screen
-          name="ImagePreviewScreen"
-          options={{
-            title: "Photos",
-            headerBackTitle: "Back",
-          }}
-        />
-            <Stack.Screen
           name="TimeTableList"
           options={{
             headerStyle: {
@@ -148,7 +140,6 @@ export default function ChatScreenLayout() {
               fontWeight: "bold",
             },
             headerShadowVisible: false,
-            
           }}
         />
         <Stack.Screen
@@ -168,7 +159,7 @@ export default function ChatScreenLayout() {
             headerShadowVisible: false,
           }}
         />
-         <Stack.Screen
+        <Stack.Screen
           name="TimeTable"
           options={{
             headerShown: true,
