@@ -1,3 +1,3 @@
-const WsUrl = "ws://16.171.33.30";
+const WsUrl = "ws://elevay.online";
 export default WsUrl;
 

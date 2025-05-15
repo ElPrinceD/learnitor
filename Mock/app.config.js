@@ -40,7 +40,7 @@ export default {
         "backgroundColor": "#ffffff"
       },
       "package": "com.cradle.learnitor",
-      "hermesEnabled": true,
+      "hermesEnabled": false,
     },
     "web": {
       "bundler": "metro",
