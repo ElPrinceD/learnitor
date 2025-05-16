@@ -125,61 +125,61 @@ const LogIn = () => {
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
-    <TouchableWithoutFeedback onPress={handleKeyboardDismiss}>
-      <View style={styles.container}>
-        <StatusBar hidden={true} />
-
+      <TouchableWithoutFeedback onPress={handleKeyboardDismiss}>
         <View style={styles.container}>
-          <Typewriter
-            text="Hello again!"
-            delay={100}
-            style={[styles.headerText, { marginBottom: rMS(150) }]}
-            onComplete={() => setShowSecondText(true)}
-          />
+          <StatusBar hidden={true} />
 
-          <AnimatedTextInput
-            label="Email"
-            value={email}
-            onChangeText={(text) => setEmail(text)}
-            placeholderTextColor={themeColors.textSecondary}
-            style={styles.inputContainer}
-          />
+          <View style={styles.container}>
+            <Typewriter
+              text="Hello again!"
+              delay={100}
+              style={[styles.headerText, { marginBottom: rMS(150) }]}
+              onComplete={() => setShowSecondText(true)}
+            />
 
-          <AnimatedTextInput
-            label="Password"
-            value={password}
-            onChangeText={setPassword}
-            placeholderTextColor={themeColors.textSecondary}
-            secureTextEntry={!showPassword}
-            showToggleIcon={true}
-            style={styles.inputContainer}
-          />
+            <AnimatedTextInput
+              label="Email"
+              value={email}
+              onChangeText={(text) => setEmail(text)}
+              placeholderTextColor={themeColors.textSecondary}
+              style={styles.inputContainer}
+            />
 
-          {error ? <Text style={styles.errorMessage}>{error}</Text> : null}
-          <View style={styles.forgotPasswordContainer}>
-            <Text
-              style={styles.forgotPasswordText}
-              onPress={handleForgotPassword}
-            >
-              Forgot password?
-            </Text>
+            <AnimatedTextInput
+              label="Password"
+              value={password}
+              onChangeText={setPassword}
+              placeholderTextColor={themeColors.textSecondary}
+              secureTextEntry={!showPassword}
+              showToggleIcon={true}
+              style={styles.inputContainer}
+            />
+
+            {error ? <Text style={styles.errorMessage}>{error}</Text> : null}
+            <View style={styles.forgotPasswordContainer}>
+              <Text
+                style={styles.forgotPasswordText}
+                onPress={handleForgotPassword}
+              >
+                Forgot password?
+              </Text>
+            </View>
+
+            <VerificationButton
+              onPress={handleLogin}
+              title={loading ? <ActivityIndicator color="white" /> : "Login"}
+              disabled={loading}
+            />
           </View>
 
-          <VerificationButton
-            onPress={handleLogin}
-            title={loading ? <ActivityIndicator color="white" /> : "Login"}
-            disabled={loading}
-          />
+          <View style={styles.bottomContainer}>
+            <Text style={styles.existingText}>Don't have an account?</Text>
+            <Text style={styles.loginText} onPress={handleSignUp}>
+              Register
+            </Text>
+          </View>
         </View>
-
-        <View style={styles.bottomContainer}>
-          <Text style={styles.existingText}>Don't have an account?</Text>
-          <Text style={styles.loginText} onPress={handleSignUp}>
-            Register
-          </Text>
-        </View>
-      </View>
-    </TouchableWithoutFeedback>
+      </TouchableWithoutFeedback>
     </ScrollView>
   );
 };

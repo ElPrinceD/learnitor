@@ -40,8 +40,6 @@ const ContinueWithEmail = () => {
   const themeColors = Colors[colorScheme ?? "light"];
   const [showSecondText, setShowSecondText] = useState(false);
 
- 
-
   const onChange = (event: any, selectedDate: Date | undefined) => {
     const currentDate = selectedDate || dateOfBirth;
     setShow(false);
@@ -57,56 +55,49 @@ const ContinueWithEmail = () => {
     Keyboard.dismiss();
   };
 
-  const handleInstitutionSelect = () => {
-    if (Platform.OS === "ios") {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: [...institutionList.map((inst) => inst.name), "Cancel"],
-          cancelButtonIndex: institutionList.length,
-        },
-        (buttonIndex) => {
-          if (buttonIndex !== institutionList.length) {
-            const selectedInstitution = institutionList[buttonIndex];
-            setInstitution(selectedInstitution.id); // Set id
-          }
-        }
-      );
-    } else {
-      setShowInstitutionPicker(true);
-    }
-  };
+  // const handleInstitutionSelect = () => {
+  //   if (Platform.OS === "ios") {
+  //     ActionSheetIOS.showActionSheetWithOptions(
+  //       {
+  //         options: [...institutionList.map((inst) => inst.name), "Cancel"],
+  //         cancelButtonIndex: institutionList.length,
+  //       },
+  //       (buttonIndex) => {
+  //         if (buttonIndex !== institutionList.length) {
+  //           const selectedInstitution = institutionList[buttonIndex];
+  //           setInstitution(selectedInstitution.id); // Set id
+  //         }
+  //       }
+  //     );
+  //   } else {
+  //     setShowInstitutionPicker(true);
+  //   }
+  // };
 
-  const handleProgramSelect = () => {
-    if (Platform.OS === "ios") {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: [...programList.map((program) => program.name), "Cancel"],
-          cancelButtonIndex: programList.length,
-        },
-        (buttonIndex) => {
-          if (buttonIndex !== programList.length) {
-            const selectedProgram = programList[buttonIndex];
-            setProgramOfStudy(selectedProgram.id); // Set id
-          }
-        }
-      );
-    } else {
-      setShowProgramPicker(true);
-    }
-  };
+  // const handleProgramSelect = () => {
+  //   if (Platform.OS === "ios") {
+  //     ActionSheetIOS.showActionSheetWithOptions(
+  //       {
+  //         options: [...programList.map((program) => program.name), "Cancel"],
+  //         cancelButtonIndex: programList.length,
+  //       },
+  //       (buttonIndex) => {
+  //         if (buttonIndex !== programList.length) {
+  //           const selectedProgram = programList[buttonIndex];
+  //           setProgramOfStudy(selectedProgram.id); // Set id
+  //         }
+  //       }
+  //     );
+  //   } else {
+  //     setShowProgramPicker(true);
+  //   }
+  // };
 
   const handleSignUp = () => {
     setPasswordError("");
     setEmailError("");
     setAllFieldsError("");
-    if (
-      !firstName ||
-      !surname ||
-      !email ||
-      !password ||
-      !dob 
-    
-    ) {
+    if (!firstName || !surname || !email || !password || !dob) {
       setAllFieldsError("Please fill in all fields");
     } else if (password.length < 8) {
       setPasswordError("Password must be at least 8 characters long");
@@ -121,7 +112,6 @@ const ContinueWithEmail = () => {
           email: email,
           password: password,
           dob: dob?.toISOString().substring(0, 10),
-
         })
         .then((response) => {
           setUser(response.data.user);
@@ -137,7 +127,7 @@ const ContinueWithEmail = () => {
   };
 
   const handleSignIn = () => {
-    router.navigate("LogIn");
+    router.dismissTo("LogIn");
   };
 
   const [showInstitutionPicker, setShowInstitutionPicker] = useState(false);
@@ -157,7 +147,6 @@ const ContinueWithEmail = () => {
       justifyContent: "center",
       padding: rMS(16),
       backgroundColor: themeColors.background,
-      
     },
     headerText: {
       fontSize: SIZES.xxLarge,
@@ -207,85 +196,79 @@ const ContinueWithEmail = () => {
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
-    <View style={styles.container}>
-      <StatusBar hidden={true} />
       <View style={styles.container}>
-        <Typewriter
-          text="Create an account"
-          delay={100}
-          style={[styles.headerText, { marginBottom: rS(70) }]}
-          onComplete={() => setShowSecondText(true)}
-        />
-        <AnimatedTextInput
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          placeholderTextColor={themeColors.textSecondary}
-          style={styles.inputContainer}
-        />
-        <AnimatedTextInput
-          label="Password"
-          value={password}
-          onChangeText={setPassword}
-          placeholderTextColor={themeColors.textSecondary}
-          secureTextEntry={!showPassword}
-          showToggleIcon={true}
-          style={styles.inputContainer}
-        />
-        <View style={styles.rowContainer}>
-          <View style={[styles.halfInput, { marginRight: rS(20) }]}>
-            <AnimatedTextInput
-              label="First Name"
-              value={firstName}
-              onChangeText={setFirstName}
-              placeholderTextColor={themeColors.textSecondary}
-            />
-          </View>
-
-          <View style={styles.halfInput}>
-            <AnimatedTextInput
-              label="Last Name"
-              value={surname}
-              onChangeText={setSurname}
-              placeholderTextColor={themeColors.textSecondary}
-            />
-          </View>
-        </View>
-
-        {show && (
-          <DateTimePicker
-            testID="dateTimePicker"
-            value={dateOfBirth}
-            mode="date"
-            is24Hour={true}
-            onChange={onChange}
+        <StatusBar hidden={true} />
+        <View style={styles.container}>
+          <Typewriter
+            text="Create an account"
+            delay={100}
+            style={[styles.headerText, { marginBottom: rS(70) }]}
+            onComplete={() => setShowSecondText(true)}
           />
-        )}
-        <TouchableOpacity onPress={showDatePicker}>
           <AnimatedTextInput
-            label="Date of Birth"
-            value={dateOfBirth ? dateOfBirth.toDateString() : ""}
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
             placeholderTextColor={themeColors.textSecondary}
-            editable={false}
             style={styles.inputContainer}
           />
-        </TouchableOpacity>
+          <AnimatedTextInput
+            label="Password"
+            value={password}
+            onChangeText={setPassword}
+            placeholderTextColor={themeColors.textSecondary}
+            secureTextEntry={!showPassword}
+            showToggleIcon={true}
+            style={styles.inputContainer}
+          />
+          <View style={styles.rowContainer}>
+            <View style={[styles.halfInput, { marginRight: rS(20) }]}>
+              <AnimatedTextInput
+                label="First Name"
+                value={firstName}
+                onChangeText={setFirstName}
+                placeholderTextColor={themeColors.textSecondary}
+              />
+            </View>
 
-       
+            <View style={styles.halfInput}>
+              <AnimatedTextInput
+                label="Last Name"
+                value={surname}
+                onChangeText={setSurname}
+                placeholderTextColor={themeColors.textSecondary}
+              />
+            </View>
+          </View>
 
-      
+          {show && (
+            <DateTimePicker
+              testID="dateTimePicker"
+              value={dateOfBirth}
+              mode="date"
+              is24Hour={true}
+              onChange={onChange}
+            />
+          )}
+          <TouchableOpacity onPress={showDatePicker}>
+            <AnimatedTextInput
+              label="Date of Birth"
+              value={dateOfBirth ? dateOfBirth.toDateString() : ""}
+              placeholderTextColor={themeColors.textSecondary}
+              editable={false}
+              style={styles.inputContainer}
+            />
+          </TouchableOpacity>
 
-      
-
-        <VerificationButton onPress={handleSignUp} title="Register" />
+          <VerificationButton onPress={handleSignUp} title="Register" />
+        </View>
+        <View style={styles.bottomContainer}>
+          <Text style={styles.existingText}>Already have an account?</Text>
+          <Text style={styles.loginText} onPress={handleSignIn}>
+            Login
+          </Text>
+        </View>
       </View>
-      <View style={styles.bottomContainer}>
-        <Text style={styles.existingText}>Already have an account?</Text>
-        <Text style={styles.loginText} onPress={handleSignIn}>
-          Login
-        </Text>
-      </View>
-    </View>
     </ScrollView>
   );
 };

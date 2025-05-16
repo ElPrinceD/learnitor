@@ -1,10 +1,18 @@
 import React from "react";
-import { StyleSheet, View, Text, Image, useColorScheme } from "react-native";
+import {
+  StyleSheet,
+  View,
+  Text,
+  Image,
+  useColorScheme,
+  Button,
+} from "react-native";
 import { router } from "expo-router";
 import { SIZES, rMS, rS, rV } from "../../constants";
 import Colors from "../../constants/Colors";
 import VerificationButton from "../../components/VerificationButton";
 import { StatusBar } from "expo-status-bar";
+import * as Sentry from "@sentry/react-native";
 
 const Intro = () => {
   const colorScheme = useColorScheme();
@@ -83,6 +91,12 @@ const Intro = () => {
         </Text>
       </View>
       <View style={styles.buttonContainer}>
+        <VerificationButton
+          title="Try!"
+          onPress={() => {
+            Sentry.captureException(new Error("First error"));
+          }}
+        />
         <VerificationButton
           style={styles.button}
           onPress={handleSignUp}

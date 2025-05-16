@@ -1,31 +1,63 @@
-import React, { useEffect, useState } from 'react';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { useFonts } from 'expo-font';
-import { FontAwesome } from '@expo/vector-icons';
-import DeepLinkHandler from '../DeepLink';
-import { ThemeProvider, DarkTheme, DefaultTheme } from '@react-navigation/native';
-import { Stack, router, useSegments } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { AuthProvider, useAuth } from '../components/AuthContext'; // Update the path as needed
-import { usePushNotifications } from '../usePushNotifications';
-import { useColorScheme } from '../components/useColorScheme';
-import { RootSiblingParent } from 'react-native-root-siblings';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { queryClient } from '../QueryClient';
-import { SQLiteProvider } from 'expo-sqlite';
-import { CacheProvider } from '../contexts/CacheContext'; // Update the path
-import { WebSocketProvider } from '../contexts/webSocketProvider'; // Update the path
-import { CommunityProvider } from '../contexts/CommunityContext'; // Update the path
-import { TimelineProvider } from '../contexts/TimelineContext'; // Update the path
-import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-reanimated';
-import { TamaguiProvider } from '@tamagui/core';
-import { PortalProvider } from '@tamagui/portal';
-import config from '../tamagui.config';
+import "../wdyr";
+import React, { useEffect, useState } from "react";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { useFonts } from "expo-font";
+import { FontAwesome } from "@expo/vector-icons";
+import DeepLinkHandler from "../DeepLink";
+import {
+  ThemeProvider,
+  DarkTheme,
+  DefaultTheme,
+} from "@react-navigation/native";
+import { Stack, router, useSegments } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import { AuthProvider, useAuth } from "../components/AuthContext"; // Update the path as needed
+import { usePushNotifications } from "../usePushNotifications";
+import { useColorScheme } from "../components/useColorScheme";
+import { RootSiblingParent } from "react-native-root-siblings";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "../QueryClient";
+import { SQLiteProvider } from "expo-sqlite";
+import { CacheProvider } from "../contexts/CacheContext"; // Update the path
+import { WebSocketProvider } from "../contexts/webSocketProvider"; // Update the path
+import { CommunityProvider } from "../contexts/CommunityContext"; // Update the path
+import { TimelineProvider } from "../contexts/TimelineContext"; // Update the path
+import {
+  configureReanimatedLogger,
+  ReanimatedLogLevel,
+} from "react-native-reanimated";
+import { TamaguiProvider } from "@tamagui/core";
+import { PortalProvider } from "@tamagui/portal";
+import config from "../tamagui.config";
+import { vexo } from "vexo-analytics";
+import * as Sentry from "@sentry/react-native";
 
-export { ErrorBoundary } from 'expo-router';
+Sentry.init({
+  dsn: "https://181b6eaacd913139f0c11747d8a5ba59@o4509328707878912.ingest.us.sentry.io/4509328716464128",
 
+  // Adds more context data to events (IP address, cookies, user, etc.)
+  // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
+  sendDefaultPii: true,
+
+  // Configure Session Replay
+  replaysSessionSampleRate: 0.1,
+  replaysOnErrorSampleRate: 1,
+  integrations: [
+    Sentry.mobileReplayIntegration(),
+    Sentry.feedbackIntegration(),
+  ],
+
+  // uncomment the line below to enable Spotlight (https://spotlightjs.com)
+  // spotlight: __DEV__,
+});
+
+export { ErrorBoundary } from "expo-router";
+
+if (!__DEV__) {
+  vexo("0893ecd2-10a6-4e31-a30f-37848b825577");
+}
 
 configureReanimatedLogger({
   level: ReanimatedLogLevel.warn,
@@ -43,12 +75,12 @@ const RootLayoutNav = () => {
 
   useEffect(() => {
     if (isLoading) return;
-    const inTabsGroup = segments[0] === '(tabs)';
+    const inTabsGroup = segments[0] === "(tabs)";
 
     if (userToken && !inTabsGroup) {
-      router.replace({ pathname: '/home' });
+      router.replace({ pathname: "/home" });
     } else if (!userToken) {
-      router.replace('/Intro');
+      router.replace("/Intro");
     }
     setNavigationCompleted(true);
   }, [isLoading, userToken]);
@@ -72,11 +104,20 @@ const RootLayoutNav = () => {
                     <WebSocketProvider token={userToken?.token}>
                       <CommunityProvider token={userToken?.token}>
                         <TimelineProvider token={userToken?.token}>
-                         
-                          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                          <ThemeProvider
+                            value={
+                              colorScheme === "dark" ? DarkTheme : DefaultTheme
+                            }
+                          >
                             <Stack>
-                              <Stack.Screen name="index" options={{ headerShown: false }} />
-                              <Stack.Screen name="(verification)" options={{ headerShown: false }} />
+                              <Stack.Screen
+                                name="index"
+                                options={{ headerShown: false }}
+                              />
+                              <Stack.Screen
+                                name="(verification)"
+                                options={{ headerShown: false }}
+                              />
                               <Stack.Screen
                                 name="(tabs)"
                                 options={{
@@ -84,8 +125,14 @@ const RootLayoutNav = () => {
                                   headerShadowVisible: false,
                                 }}
                               />
-                              <Stack.Screen name="(game)" options={{ headerShown: false }} />
-                              <Stack.Screen name="(fullscreens)" options={{ headerShown: false }} />
+                              <Stack.Screen
+                                name="(game)"
+                                options={{ headerShown: false }}
+                              />
+                              <Stack.Screen
+                                name="(fullscreens)"
+                                options={{ headerShown: false }}
+                              />
                             </Stack>
                           </ThemeProvider>
                         </TimelineProvider>
@@ -112,4 +159,4 @@ const RootLayout = () => {
   );
 };
 
-export default RootLayout;
+export default Sentry.wrap(RootLayout);
