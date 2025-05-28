@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import {
   View,
   StyleSheet,
@@ -167,6 +173,11 @@ const EnrolledCourse: React.FC = () => {
       marginLeft: rS(10),
     },
   });
+  const containerStyle = useMemo(
+    () => ({ backgroundColor: themeColors.text, height: 7 }),
+    []
+  );
+  const fillStyle = useMemo(() => ({ backgroundColor: themeColors.icon }), []);
 
   useEffect(() => {
     navigation.setOptions({
@@ -196,12 +207,8 @@ const EnrolledCourse: React.FC = () => {
           >
             <ProgressBar
               progress={progress}
-              containerStyle={{
-                backgroundColor: themeColors.text,
-                height: rV(5),
-                width: rS(220), // Make sure the progress bar takes the full width
-              }}
-              fillStyle={{ backgroundColor: themeColors.icon }}
+              containerStyle={containerStyle}
+              fillStyle={fillStyle}
             />
           </Animated.View>
         </View>
@@ -250,7 +257,7 @@ const EnrolledCourse: React.FC = () => {
           {enrolledTopics && (
             <CourseRoadmap
               enrolledTopics={enrolledTopics}
-              course={parsedCourse}
+              // course={parsedCourse}
               handleTopicPress={handleTopicPress}
               handleQuestionPress={handleQuestionPress}
             />
@@ -259,8 +266,8 @@ const EnrolledCourse: React.FC = () => {
       </ScrollView>
       <ErrorMessage
         message={errorMessage}
-        visible={!!errorMessage} // Control visibility based on errorMessage state
-        onDismiss={() => setErrorMessage(null)} // Clear error message when dismissed
+        visible={!!errorMessage}
+        onDismiss={useCallback(() => setErrorMessage(null), [])}
       />
     </>
   );

@@ -3,13 +3,12 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Image,
   StyleSheet,
   useColorScheme,
   FlatList,
   RefreshControl,
 } from "react-native";
-import Colors from "../constants/Colors"; // Adjust the import path as necessary
+import Colors from "../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../constants";
 import AppImage from "./AppImage";
 import { Course } from "./types";
@@ -23,6 +22,98 @@ interface Props {
   loading: boolean;
 }
 
+const styles = StyleSheet.create({
+  container: {
+    flex: 9,
+    borderTopLeftRadius: rMS(30),
+    borderTopRightRadius: rMS(30),
+    padding: rMS(10),
+  },
+  courseList: {
+    paddingBottom: rMS(20),
+  },
+  courseListContainer: {
+    backgroundColor: Colors.light.card, // Fallback
+  },
+  courseItem: {
+    flex: 1,
+    margin: rMS(10),
+    borderRadius: rMS(10),
+    overflow: "hidden",
+    elevation: 1,
+  },
+  imageContainer: {
+    flex: 1,
+    borderRadius: rMS(10),
+    overflow: "hidden",
+  },
+  image: {
+    width: "100%",
+    height: rV(120),
+  },
+  textContainer: {
+    flex: 1,
+    padding: rMS(10),
+    backgroundColor: "transparent",
+  },
+  name: {
+    fontSize: SIZES.medium,
+    fontWeight: "bold",
+  },
+  skeletonContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    flex: 9,
+    borderTopLeftRadius: rMS(30),
+    borderTopRightRadius: rMS(30),
+    padding: rMS(10),
+  },
+  skeletonItem: {
+    width: "48%",
+    marginVertical: rS(5),
+    borderRadius: 10,
+    gap: 5,
+  },
+});
+
+const CourseItem: React.FC<{
+  item: Course;
+  onCoursePress: (course: Course) => void;
+  themeColors: any;
+}> = memo(({ item, onCoursePress, themeColors }) => {
+  const handlePress = useCallback(() => {
+    onCoursePress(item);
+  }, [onCoursePress, item]);
+
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      activeOpacity={0.5}
+      style={styles.courseItem}
+    >
+      <View
+        style={[
+          styles.courseListContainer,
+          { backgroundColor: themeColors.card },
+        ]}
+      >
+        <View style={styles.imageContainer}>
+          <AppImage uri={item.url} style={styles.image} />
+        </View>
+        <View style={styles.textContainer}>
+          <Text
+            style={[styles.name, { color: themeColors.text }]}
+            numberOfLines={1}
+          >
+            {item.title}
+          </Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+});
+
 const CoursesList: React.FC<Props> = ({
   courses,
   onCoursePress,
@@ -31,120 +122,60 @@ const CoursesList: React.FC<Props> = ({
   loading,
 }) => {
   const colorScheme = useColorScheme();
-  const themeColors = Colors[colorScheme ?? "light"];
+  const themeColors = useMemo(
+    () => Colors[colorScheme ?? "light"],
+    [colorScheme]
+  );
   const colorMode = colorScheme === "dark" ? "dark" : "light";
-
-  const styles = StyleSheet.create({
-    container: {
-      flex: 9,
-      borderTopLeftRadius: rMS(30),
-      borderTopRightRadius: rMS(30),
-      padding: rMS(10),
-      backgroundColor: themeColors.background,
-    },
-    courseList: {
-      paddingBottom: rMS(20),
-    },
-    courseListContainer: {
-      backgroundColor: themeColors.card,
-    },
-    courseItem: {
-      flex: 1,
-      margin: rMS(10),
-      borderRadius: rMS(10),
-      overflow: "hidden",
-      elevation: 1,
-    },
-    imageContainer: {
-      flex: 1,
-      borderRadius: rMS(10),
-      overflow: "hidden",
-    },
-    image: {
-      width: "100%",
-      height: rV(120),
-    },
-    newLabelContainer: {
-      position: "absolute",
-      top: rS(10),
-      right: 0,
-      backgroundColor: themeColors.tabIconSelected,
-      paddingHorizontal: rMS(5),
-      paddingVertical: rMS(2),
-    },
-    newLabelText: {
-      color: themeColors.text,
-      fontSize: SIZES.small,
-      fontWeight: "bold",
-    },
-    textContainer: {
-      flex: 1,
-      padding: rMS(10),
-      backgroundColor: "transparent",
-    },
-    name: {
-      fontSize: SIZES.medium,
-      fontWeight: "bold",
-      color: themeColors.text,
-    },
-    skeletonContainer: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      justifyContent: "space-between",
-      flex: 9,
-      borderTopLeftRadius: rMS(30),
-      borderTopRightRadius: rMS(30),
-      padding: rMS(10),
-      backgroundColor: themeColors.background,
-    },
-    skeletonItem: {
-      width: "48%",
-      marginVertical: rS(5),
-      borderRadius: 10,
-      gap: 5,
-    },
-  });
 
   const renderItem = useCallback(
     ({ item }: { item: Course }) => (
-      
-      <TouchableOpacity
-        onPress={() => onCoursePress(item)}
-        activeOpacity={0.5}
-        style={styles.courseItem}
-      >
-        <View style={styles.courseListContainer}>
-          <View style={styles.imageContainer}>
-            <AppImage  uri= {item.url} style={styles.image} />
-            {/* <View style={styles.newLabelContainer}>
-              <Text style={styles.newLabelText}>NEW</Text>
-            </View> */}
-          </View>
-          <View style={styles.textContainer}>
-            <Text style={styles.name} numberOfLines={1}>
-              {item.title}
-            </Text>
-          </View>
-        </View>
-      </TouchableOpacity>
+      <CourseItem
+        item={item}
+        onCoursePress={onCoursePress}
+        themeColors={themeColors}
+      />
     ),
-    [themeColors, onCoursePress]
+    [onCoursePress, themeColors]
   );
+
   const sortCourses = useCallback((list: Course[]) => {
-    
     return [...list].sort((a, b) => a.title.localeCompare(b.title));
   }, []);
 
-  // Sort the courses using useMemo for optimization
   const sortedCourses = useMemo(
     () => sortCourses(courses),
     [courses, sortCourses]
   );
   const keyExtractor = useCallback((item: Course) => item.id.toString(), []);
 
+  const refreshControl = useMemo(
+    () => (
+      <RefreshControl
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        tintColor={themeColors.tint}
+        colors={[themeColors.tint, themeColors.text]}
+        progressBackgroundColor={themeColors.background}
+      />
+    ),
+    [
+      refreshing,
+      onRefresh,
+      themeColors.tint,
+      themeColors.text,
+      themeColors.background,
+    ]
+  );
+
   if (loading) {
     return (
-      <View style={styles.skeletonContainer}>
+      <View
+        style={[
+          styles.skeletonContainer,
+          { backgroundColor: themeColors.background },
+        ]}
+      >
         {[...Array(6)].map((_, index) => (
           <View key={index} style={styles.skeletonItem}>
             <Skeleton colorMode={colorMode} height={rV(120)} width={"100%"} />
@@ -156,7 +187,9 @@ const CoursesList: React.FC<Props> = ({
   }
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[styles.container, { backgroundColor: themeColors.background }]}
+    >
       <FlatList
         data={sortedCourses}
         numColumns={2}
@@ -168,15 +201,7 @@ const CoursesList: React.FC<Props> = ({
         keyExtractor={keyExtractor}
         contentContainerStyle={styles.courseList}
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={themeColors.tint}
-            colors={[themeColors.tint, themeColors.text]}
-            progressBackgroundColor={themeColors.background}
-          />
-        }
+        refreshControl={refreshControl}
       />
     </View>
   );

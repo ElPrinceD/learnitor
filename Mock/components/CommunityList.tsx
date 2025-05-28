@@ -69,7 +69,7 @@ const CommunityList: React.FC<CommunityListProps> = ({
   });
 
   return data.length > 0 ? (
-    <ScrollView>
+    <ScrollView showsVerticalScrollIndicator={false}>
       {title ? <Text style={styles.sectionHeader}>{title}</Text> : null}
       <FlatList
         data={data}
@@ -91,4 +91,4 @@ const CommunityList: React.FC<CommunityListProps> = ({
   ) : null;
 };
 
-export default CommunityList;
+export default React.memo(CommunityList);

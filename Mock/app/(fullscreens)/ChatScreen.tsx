@@ -3,7 +3,6 @@ import React, {
   useState,
   useCallback,
   useEffect,
-  useRef,
   useLayoutEffect,
   memo,
 } from "react";
@@ -12,20 +11,15 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  ImageBackground,
   useColorScheme,
   TouchableOpacity,
-  Modal,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Keyboard,
   Image,
   ToastAndroid,
   Platform,
   Alert,
   Dimensions,
   Linking,
-  FlatList,
 } from "react-native";
 
 import * as Clipboard from "expo-clipboard";
@@ -40,6 +34,8 @@ import {
   SystemMessage,
   IMessage,
   InputToolbar,
+  isSameDay,
+  isSameUser,
 } from "react-native-gifted-chat";
 import { v4 as uuidv4 } from "uuid";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -62,7 +58,6 @@ import FullScreenImageViewer from "../../components/FullScreenImageViewer";
 import ImagePreviewModal from "../../components/ImagePreviewModal";
 import { getCommunityMessages } from "../../services/CommunityApiCalls";
 
-// Memoize GiftedChat to prevent unnecessary re-renders
 const MemoizedGiftedChat = memo(GiftedChat, (prevProps, nextProps) => {
   return (
     prevProps.messages === nextProps.messages &&
@@ -80,15 +75,18 @@ const CommunityChatScreen: React.FC = () => {
   const { userToken, userInfo } = useAuth();
   const user = userInfo?.user;
   const { socket, isConnected, sendMessage } = useWebSocket();
-  const { setCurrentCommunityId, markMessageAsRead, fetchAndCacheMessages } = useCommunity();
+  const { setCurrentCommunityId, markMessageAsRead, fetchAndCacheMessages } =
+    useCommunity();
   const { getItem, setItem } = useCache();
   const navigation = useNavigation();
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [messageIds, setMessageIds] = useState(new Set<string>());
   const [loadEarlier, setLoadEarlier] = useState(true);
   const [isLoadingEarlier, setIsLoadingEarlier] = useState(false);
-  const [lastMessageId, setLastMessageId] = useState<string | null>(null)
-  const [lastMessageTimestamp, setLastMessageTimestamp] = useState<number | null>(null);
+  const [lastMessageId, setLastMessageId] = useState<string | null>(null);
+  const [lastMessageTimestamp, setLastMessageTimestamp] = useState<
+    number | null
+  >(null);
   const { width } = Dimensions.get("window");
   const [messageInput, setMessageInput] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -111,12 +109,19 @@ const CommunityChatScreen: React.FC = () => {
   const [isVideoViewerVisible, setIsVideoViewerVisible] = useState(false);
   const [isDocumentViewerVisible, setIsDocumentViewerVisible] = useState(false);
   const [editingMessage, setEditingMessage] = useState<IMessage | null>(null);
-  const [profileImages, setProfileImages] = useState<Record<string, string>>({});
+  const [profileImages, setProfileImages] = useState<Record<string, string>>(
+    {}
+  );
   const [selectedImagesForPreview, setSelectedImagesForPreview] = useState<
     { uri: string; type: string; id: string }[]
   >([]);
   const [isImagePreviewVisible, setIsImagePreviewVisible] = useState(false);
-  const [community, setCommunity] = useState<{ id: string; name: string; image_url: string } | null>(null);
+  const [community, setCommunity] = useState<{
+    id: string;
+    name: string;
+    image_url: string;
+  } | null>(null);
+  const [inputHeight, setInputHeight] = useState(rV(40));
 
   const normalizeMessage = useCallback((data) => {
     if ("message" in data && "sent_at" in data) {
@@ -169,7 +174,6 @@ const CommunityChatScreen: React.FC = () => {
       return null;
     }
   }, []);
-  
 
   const backgroundImage =
     colorScheme === "dark"
@@ -198,8 +202,11 @@ const CommunityChatScreen: React.FC = () => {
 
       // Fetch messages using CommunityProvider
       if (userToken?.token) {
-        const messages = await fetchAndCacheMessages(communityId, userToken.token);
-        
+        const messages = await fetchAndCacheMessages(
+          communityId,
+          userToken.token
+        );
+
         const transformedMessages = messages
           .map(normalizeMessage)
           .filter((msg): msg is IMessage => msg !== null)
@@ -210,35 +217,52 @@ const CommunityChatScreen: React.FC = () => {
             transformedMessages[transformedMessages.length - 1]._id
           );
         }
-        
+
         const imageUris = transformedMessages
           .filter((msg) => msg.image)
           .map((msg) => msg.image);
         setImageViewerImages(imageUris);
       }
-
-      
-     
     } catch (error) {
       console.error("Error fetching initial messages:", error);
       setError("Failed to load message history");
     } finally {
       setLoading(false);
     }
-  }, [communityId, userToken, sendMessage, isConnected, fetchAndCacheMessages, normalizeMessage]);
+  }, [
+    communityId,
+    userToken,
+    sendMessage,
+    isConnected,
+    fetchAndCacheMessages,
+    normalizeMessage,
+  ]);
 
   const handleLoadEarlier = useCallback(async () => {
-    if (!loadEarlier || isLoadingEarlier || !lastMessageId || isUpdatingMessages) {
-      console.log("Skipping load earlier:", { loadEarlier, isLoadingEarlier, lastMessageId, isUpdatingMessages });
+    if (
+      !loadEarlier ||
+      isLoadingEarlier ||
+      !lastMessageId ||
+      isUpdatingMessages
+    ) {
+      console.log("Skipping load earlier:", {
+        loadEarlier,
+        isLoadingEarlier,
+        lastMessageId,
+        isUpdatingMessages,
+      });
       return;
     }
-  
+
     setIsUpdatingMessages(true);
     setIsLoadingEarlier(true);
     setError(null);
     try {
       if (isConnected && communityId && userToken) {
-        console.log("Fetching older messages with lastMessageId:", lastMessageId);
+        console.log(
+          "Fetching older messages with lastMessageId:",
+          lastMessageId
+        );
         const olderMessages = await getCommunityMessages(
           communityId,
           userToken?.token,
@@ -247,14 +271,14 @@ const CommunityChatScreen: React.FC = () => {
           undefined, // No beforeTimestamp
           undefined // Using afterMessageId to get messages after the last message
         );
-        
-  
+
         if (olderMessages && olderMessages.length > 0) {
           const normalizedOlderMessages = olderMessages.map(normalizeMessage);
           const validOlderMessages = normalizedOlderMessages.filter(
-            (msg): msg is IMessage => msg !== null && msg._id && !isNaN(msg.createdAt.getTime())
+            (msg): msg is IMessage =>
+              msg !== null && msg._id && !isNaN(msg.createdAt.getTime())
           );
-  
+
           validOlderMessages.forEach((msg, index) => {
             console.log(`Older message ${index}:`, {
               _id: msg._id,
@@ -262,31 +286,35 @@ const CommunityChatScreen: React.FC = () => {
               text: msg.text.slice(0, 20),
             });
           });
-  
+
           if (validOlderMessages.length > 0) {
             setMessages((prevMessages) => {
               const combinedMessages = [...validOlderMessages, ...prevMessages];
               const uniqueMessages = Array.from(
                 new Map(combinedMessages.map((msg) => [msg._id, msg])).values()
               ).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-  
-              console.log("Combined messages (first 5):", uniqueMessages.slice(0, 5).map((m) => ({
-                _id: m._id,
-                createdAt: m.createdAt.toISOString(),
-              })));
-  
+
+              console.log(
+                "Combined messages (first 5):",
+                uniqueMessages.slice(0, 5).map((m) => ({
+                  _id: m._id,
+                  createdAt: m.createdAt.toISOString(),
+                }))
+              );
+
               return uniqueMessages;
             });
-  
-            const oldestMessage = validOlderMessages[validOlderMessages.length - 1];
-if (oldestMessage && oldestMessage._id) {
-  // Always update lastMessageId and lastMessageTimestamp to the oldest message
-  setLastMessageId(oldestMessage._id);
-  setLastMessageTimestamp(oldestMessage.createdAt.getTime());
-} else {
-  setLoadEarlier(false);
-  console.warn("Oldest message has no valid _id:", oldestMessage);
-}
+
+            const oldestMessage =
+              validOlderMessages[validOlderMessages.length - 1];
+            if (oldestMessage && oldestMessage._id) {
+              // Always update lastMessageId and lastMessageTimestamp to the oldest message
+              setLastMessageId(oldestMessage._id);
+              setLastMessageTimestamp(oldestMessage.createdAt.getTime());
+            } else {
+              setLoadEarlier(false);
+              console.warn("Oldest message has no valid _id:", oldestMessage);
+            }
           } else {
             setLoadEarlier(false);
             console.log("No valid earlier messages to load.");
@@ -296,7 +324,9 @@ if (oldestMessage && oldestMessage._id) {
           console.log("No more earlier messages to load.");
         }
       } else {
-        setError(isConnected ? "Invalid community or token" : "No internet connection");
+        setError(
+          isConnected ? "Invalid community or token" : "No internet connection"
+        );
       }
     } catch (error) {
       console.error("Error loading earlier messages:", error);
@@ -322,12 +352,17 @@ if (oldestMessage && oldestMessage._id) {
       setCurrentCommunityId(communityId);
       markMessageAsRead(communityId);
       fetchInitialMessages();
-  
+
       // Cleanup function to reset the current community ID when the screen is unfocused
       return () => {
         setCurrentCommunityId(null); // Reset the current community ID
       };
-    }, [fetchInitialMessages, setCurrentCommunityId, markMessageAsRead, communityId])
+    }, [
+      fetchInitialMessages,
+      setCurrentCommunityId,
+      markMessageAsRead,
+      communityId,
+    ])
   );
 
   useEffect(() => {
@@ -338,7 +373,10 @@ if (oldestMessage && oldestMessage._id) {
         try {
           const data = JSON.parse(event.data);
 
-          if (data.type === "community_updated" && data.community?.id === communityId) {
+          if (
+            data.type === "community_updated" &&
+            data.community?.id === communityId
+          ) {
             setCommunity(data.community);
           }
 
@@ -350,7 +388,8 @@ if (oldestMessage && oldestMessage._id) {
 
             setMessages((prevMessages) => {
               const newMessages = transformedMessages.filter(
-                (newMsg) => !prevMessages.some((prevMsg) => prevMsg._id === newMsg._id)
+                (newMsg) =>
+                  !prevMessages.some((prevMsg) => prevMsg._id === newMsg._id)
               );
               const pendingMessages = prevMessages.filter(
                 (m) => m.status === "pending" || m.tempId
@@ -363,7 +402,9 @@ if (oldestMessage && oldestMessage._id) {
               ).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
               if (newMessages.length > 0 && data.before) {
-                setLastMessageTimestamp(uniqueMessages[uniqueMessages.length - 1].createdAt.getTime());
+                setLastMessageTimestamp(
+                  uniqueMessages[uniqueMessages.length - 1].createdAt.getTime()
+                );
               } else if (!data.before && uniqueMessages.length > 0) {
                 setLastMessageTimestamp(uniqueMessages[0].createdAt.getTime());
               }
@@ -374,7 +415,10 @@ if (oldestMessage && oldestMessage._id) {
               setImageViewerImages(imageUris);
               return uniqueMessages;
             });
-          } else if (data.type === "message" && data.community_id === communityId) {
+          } else if (
+            data.type === "message" &&
+            data.community_id === communityId
+          ) {
             const newMessage = normalizeMessage(data);
             console.log("New message processed:", newMessage);
             if (newMessage) {
@@ -399,7 +443,10 @@ if (oldestMessage && oldestMessage._id) {
                 return uniqueMessages;
               });
             }
-          } else if (data.type === "message_delete" && data.community_id === communityId) {
+          } else if (
+            data.type === "message_delete" &&
+            data.community_id === communityId
+          ) {
             setMessages((prevMessages) => {
               const updatedMessages = prevMessages.filter(
                 (m) => m._id !== data.message_id
@@ -410,9 +457,7 @@ if (oldestMessage && oldestMessage._id) {
               setImageViewerImages(imageUris);
               return updatedMessages;
             });
-          } else if (data.type === "message_edit" ) {
-            
-            
+          } else if (data.type === "message_edit") {
             console.log("Message edit event received:", data);
             setMessages((prevMessages) => {
               const updatedMessages = prevMessages.map((m) =>
@@ -440,11 +485,13 @@ if (oldestMessage && oldestMessage._id) {
   useEffect(() => {
     (async () => {
       if (Platform.OS !== "web") {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        const { status } =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== "granted") {
           alert("Sorry, we need camera roll permissions to make this work!");
         }
-        const { status: mediaStatus } = await MediaLibrary.requestPermissionsAsync();
+        const { status: mediaStatus } =
+          await MediaLibrary.requestPermissionsAsync();
         if (mediaStatus !== "granted") {
           alert("Sorry, we need media library permissions to save images.");
         }
@@ -461,14 +508,24 @@ if (oldestMessage && oldestMessage._id) {
           try {
             keys = JSON.parse(allKeysRaw);
             if (!Array.isArray(keys)) {
-              console.warn("storage_keys is not an array, resetting:", allKeysRaw);
+              console.warn(
+                "storage_keys is not an array, resetting:",
+                allKeysRaw
+              );
               keys = [];
             }
           } catch (e) {
-            console.error("Failed to parse storage_keys in sendUnsent:", e, "Raw value:", allKeysRaw);
+            console.error(
+              "Failed to parse storage_keys in sendUnsent:",
+              e,
+              "Raw value:",
+              allKeysRaw
+            );
             keys = [];
           }
-          const unsentKeys = keys.filter((key: string) => key.startsWith("unsent_message_"));
+          const unsentKeys = keys.filter((key: string) =>
+            key.startsWith("unsent_message_")
+          );
           for (const key of unsentKeys) {
             const messageStr = await getItem(key);
             if (messageStr) {
@@ -478,7 +535,8 @@ if (oldestMessage && oldestMessage._id) {
                 type: "send_message",
                 community_id: message.communityId,
                 message: message.content.text || "",
-                sender: user?.first_name + " " + user?.last_name || "Unknown User",
+                sender:
+                  user?.first_name + " " + user?.last_name || "Unknown User",
                 sender_id: user?.id || 1,
                 temp_id: message.tempId,
                 image: message.content.image || undefined,
@@ -522,7 +580,8 @@ if (oldestMessage && oldestMessage._id) {
             const extension = fileUri.split(".").pop()?.toLowerCase();
             let mimeType = "application/octet-stream";
             if (extension === "pdf") mimeType = "application/pdf";
-            else if (["doc", "docx"].includes(extension || "")) mimeType = "application/msword";
+            else if (["doc", "docx"].includes(extension || ""))
+              mimeType = "application/msword";
             else if (extension === "txt") mimeType = "text/plain";
             payloadUri = `data:${mimeType};base64,${fileContent}`;
           } catch (error) {
@@ -564,7 +623,10 @@ if (oldestMessage && oldestMessage._id) {
               [type]: payloadUri,
             },
           };
-          await setItem(`unsent_message_${tempId}`, JSON.stringify(offlineMessage));
+          await setItem(
+            `unsent_message_${tempId}`,
+            JSON.stringify(offlineMessage)
+          );
           const allKeysRaw = (await getItem("storage_keys")) || "[]";
           const keys = JSON.parse(allKeysRaw) || [];
           if (!keys.includes(`unsent_message_${tempId}`)) {
@@ -611,11 +673,10 @@ if (oldestMessage && oldestMessage._id) {
     }
   }, [sendMediaMessage]);
 
-
   const onSend = useCallback(
     async (newMessages: IMessage[] = []) => {
       for (let message of newMessages) {
-        console.log(message)
+        console.log(message);
         const tempId = uuidv4();
         const tempMessage: IMessage = {
           _id: tempId,
@@ -652,6 +713,7 @@ if (oldestMessage && oldestMessage._id) {
 
         setReplyToMessage(null);
         setMediaPreview({ type: null, uri: null });
+        setInputHeight(rV(40));
 
         if (!messageIds.has(tempId)) {
           setMessages((prevMessages) => [tempMessage, ...prevMessages]);
@@ -671,7 +733,10 @@ if (oldestMessage && oldestMessage._id) {
               document: tempMessage.document || undefined,
             },
           };
-          await setItem(`unsent_message_${tempId}`, JSON.stringify(messageToStore));
+          await setItem(
+            `unsent_message_${tempId}`,
+            JSON.stringify(messageToStore)
+          );
           const allKeysRaw = (await getItem("storage_keys")) || "[]";
           let keys = JSON.parse(allKeysRaw) || [];
           if (!keys.includes(`unsent_message_${tempId}`)) {
@@ -696,9 +761,18 @@ if (oldestMessage && oldestMessage._id) {
           setSelectedMessages([]);
         }
       }
-      
     },
-    [communityId, sendMessage, user, replyToMessage, isConnected, mediaPreview, messageIds, setItem, getItem]
+    [
+      communityId,
+      sendMessage,
+      user,
+      replyToMessage,
+      isConnected,
+      mediaPreview,
+      messageIds,
+      setItem,
+      getItem,
+    ]
   );
 
   const pickImage = useCallback(async () => {
@@ -708,7 +782,7 @@ if (oldestMessage && oldestMessage._id) {
       quality: 1,
       allowsEditing: true,
     });
-  
+
     if (!result.canceled && result.assets && result.assets.length > 0) {
       const selectedImages = await Promise.all(
         result.assets.map(async (asset) => {
@@ -717,7 +791,7 @@ if (oldestMessage && oldestMessage._id) {
             [{ resize: { width: 800 } }], // Resize to width 800px
             { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
           );
-  
+
           return {
             uri: manipulatedImage.uri,
             type: "image",
@@ -725,7 +799,7 @@ if (oldestMessage && oldestMessage._id) {
           };
         })
       );
-  
+
       console.log("Manipulated & selected images:", selectedImages);
       setSelectedImagesForPreview(selectedImages);
       setIsImagePreviewVisible(true);
@@ -835,9 +909,9 @@ if (oldestMessage && oldestMessage._id) {
                   type: "delete_message",
                   message_id: message._id,
                 });
-                console.log('Message deleted!', message._id)
+                console.log("Message deleted!", message._id);
               });
-              
+
               setMessages((prevMessages) => {
                 const updatedMessages = prevMessages.filter(
                   (m) =>
@@ -854,10 +928,35 @@ if (oldestMessage && oldestMessage._id) {
   }, [selectedMessages, sendMessage, canEditDeleteOrReply]);
 
   const updateHeader = useCallback(() => {
+    console.log("Updating header", {
+      community: community,
+      selectedMessagesCount: selectedMessages.length,
+    });
+
+    const headerOptions = {
+      headerStyle: {
+        backgroundColor: themeColors.reverseText,
+      },
+      headerTitleAlign: "center",
+      headerTintColor: themeColors.text,
+      headerShadowVisible: false,
+    };
+
     if (selectedMessages.length > 0) {
       const { canDelete, canEdit, canReply } = canEditDeleteOrReply();
       navigation.setOptions({
-        headerTitle: `${selectedMessages.length} Selected`,
+        ...headerOptions,
+        headerTitle: () => (
+          <Text
+            style={{
+              color: themeColors.text,
+              fontSize: rMS(19),
+              fontWeight: "bold",
+            }}
+          >
+            {`${selectedMessages.length} Selected`}
+          </Text>
+        ),
         headerLeft: () => (
           <TouchableOpacity
             onPress={handleDeselectAll}
@@ -874,10 +973,11 @@ if (oldestMessage && oldestMessage._id) {
           <View style={{ flexDirection: "row", marginRight: SIZES.xSmall }}>
             {canReply && (
               <TouchableOpacity
-                onPressIn={() => {
+                onPress={() => {
                   setReplyToMessage(selectedMessages[0]);
                   handleDeselectAll();
                 }}
+                style={{ marginHorizontal: rS(8) }}
               >
                 <MaterialCommunityIcons
                   name="reply"
@@ -888,7 +988,7 @@ if (oldestMessage && oldestMessage._id) {
             )}
             {canEdit && (
               <TouchableOpacity
-                onPressIn={() => {
+                onPress={() => {
                   handleEditMessage();
                   handleDeselectAll();
                 }}
@@ -903,7 +1003,7 @@ if (oldestMessage && oldestMessage._id) {
             )}
             {canDelete && (
               <TouchableOpacity
-                onPressIn={() => {
+                onPress={() => {
                   handleDeleteMessage();
                   handleDeselectAll();
                 }}
@@ -917,7 +1017,7 @@ if (oldestMessage && oldestMessage._id) {
               </TouchableOpacity>
             )}
             <TouchableOpacity
-              onPressIn={() => {
+              onPress={() => {
                 handleCopySelected();
                 handleDeselectAll();
               }}
@@ -934,38 +1034,35 @@ if (oldestMessage && oldestMessage._id) {
       });
     } else {
       navigation.setOptions({
+        ...headerOptions,
         headerTitle: () => (
           <TouchableOpacity
-            onPressIn={() =>
+            onPress={() =>
               router.push({
                 pathname: "CommunityDetailScreen",
                 params: { id: communityId },
               })
             }
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "center",  // This centers the content
-              flex: 1,  // This makes it take up the full space
-            }}
+            style={{ flexDirection: "row", alignItems: "center" }}
           >
-            <Image
-              source={{ uri: community?.image_url }}
+            <AppImage
+              uri={community?.image_url || "https://via.placeholder.com/30"}
               style={{
-                width: rS(33),
-                height: rS(30),
-                marginRight: rS(8),
-                borderRadius: rMS(20),
+                width: rS(30),
+                height: rV(30),
+                marginRight: SIZES.small,
+                borderRadius: rMS(SIZES.xSmall),
               }}
             />
             <Text
               style={{
                 color: themeColors.text,
-                fontSize: rMS(SIZES.large),
-                textAlign: 'center',  // Center the text
+                fontSize: rMS(19),
+                fontWeight: "bold",
               }}
+              numberOfLines={1}
             >
-              {community?.name ?? "Chat"}
+              {community?.name || "Chat"}
             </Text>
           </TouchableOpacity>
         ),
@@ -994,10 +1091,8 @@ if (oldestMessage && oldestMessage._id) {
     handleEditMessage,
     canEditDeleteOrReply,
     handleDeselectAll,
-    router,
     community,
   ]);
-  
 
   const handlePress = useCallback((message: IMessage) => {
     setSelectedMessages((prevSelected) => {
@@ -1027,16 +1122,17 @@ if (oldestMessage && oldestMessage._id) {
       const isSelected = selectedMessages.some(
         (m) => m._id === props.currentMessage._id
       );
-      const isFirstMessageOfBlock =
-        !props.previousMessage ||
-        props.previousMessage?.user?._id !== props.currentMessage.user._id;
       const isOtherUser = props.currentMessage.user._id !== user?.id;
-      const isNewDay =
-        !props.previousMessage ||
-        (props.currentMessage?.createdAt &&
-          props.previousMessage?.createdAt &&
-          props.currentMessage.createdAt.toDateString() !==
-            props.previousMessage.createdAt.toDateString());
+      const isSameUserMessage = isSameUser(
+        props.currentMessage,
+        props.previousMessage
+      );
+      const isSameDayMessage = isSameDay(
+        props.currentMessage,
+        props.previousMessage
+      );
+      const isFirstMessageOfBlock = !isSameUserMessage || !isSameDayMessage;
+      const isNewDay = !props.previousMessage || !isSameDayMessage;
 
       const messageText = props.currentMessage.text
         ? props.currentMessage.text
@@ -1045,8 +1141,6 @@ if (oldestMessage && oldestMessage._id) {
         : props.currentMessage.document
         ? "Document"
         : "";
-
-       
 
       // Create a custom view for reply messages and document cards.
       const renderCustomContent = () => {
@@ -1093,8 +1187,7 @@ if (oldestMessage && oldestMessage._id) {
                   </View>
                 </TouchableOpacity>
               )}
-            {((isOtherUser && isFirstMessageOfBlock) ||
-              (isOtherUser && isNewDay)) && (
+            {isOtherUser && isFirstMessageOfBlock && (
               <Text style={styles.username}>
                 {props.currentMessage.user.name}
               </Text>
@@ -1180,14 +1273,27 @@ if (oldestMessage && oldestMessage._id) {
             onPress={() => handlePress(props.currentMessage)}
             onLongPress={() => handleLongPress(props.currentMessage)}
             wrapperStyle={{
-              ...props.wrapperStyle,
-              left: { backgroundColor: themeColors.secondaryBackground },
-              right: { backgroundColor: themeColors.tint },
+              left: {
+                backgroundColor: themeColors.secondaryBackground,
+                marginTop:
+                  isSameUserMessage && isSameDayMessage ? rV(0.5) : rV(5),
+                marginBottom: rV(0.5),
+              },
+              right: {
+                backgroundColor: themeColors.tint,
+                marginTop:
+                  isSameUserMessage && isSameDayMessage ? rV(0.5) : rV(5),
+                marginBottom: rV(0.5),
+              },
               ...(isSelected && styles.blurBackground),
             }}
-            containerStyle={{
-              marginVertical: isFirstMessageOfBlock ? 5 : 0,
-            }}
+            // containerStyle={{
+            //   marginLeft:
+            //     isOtherUser && isSameUserMessage && isSameDayMessage
+            //       ? rS(24)
+            //       : rS(28),
+            //   marginRight: props.position === "right" ? rS(8) : rS(4),
+            // }}
             renderTime={() => (
               <View style={styles.timeContainer}>
                 <Text style={styles.timeText}>
@@ -1255,37 +1361,92 @@ if (oldestMessage && oldestMessage._id) {
     [selectedMessages, handlePress, handleLongPress, themeColors, user?.id]
   );
 
+  useEffect(() => {
+    const updateProfileImages = () => {
+      const newProfileImages = { ...profileImages };
+      let hasChanges = false;
+
+      messages.forEach((msg) => {
+        const userId = msg.user._id;
+        const avatarUrl = msg.user.avatar || user?.profile_picture;
+        if (!newProfileImages[userId] && avatarUrl) {
+          newProfileImages[userId] = avatarUrl;
+          hasChanges = true;
+        }
+      });
+
+      if (hasChanges) {
+        setProfileImages(newProfileImages);
+      }
+    };
+
+    updateProfileImages();
+  }, [messages, user?.profile_picture, profileImages]);
+
+  const getAvatarColor = (userId: string) => {
+    const colors = ["#007AFF", "#FF2D55", "#5856D6", "#FF9500"];
+    const index = userId.charCodeAt(0) % colors.length;
+    return colors[index];
+  };
+
   const renderAvatar = useCallback(
     (props) => {
-      const userId = props.currentMessage.user._id;
+      // Check if user exists to avoid undefined errors
+      if (!props.currentMessage?.user) {
+        console.warn("Message user is undefined:", props.currentMessage);
+        return null;
+      }
+
+      // Safely get userId with a fallback
+      const userId = props.currentMessage.user._id || "unknown";
+
+      // Determine avatar URL with fallbacks, including a default image
       const avatarUrl =
         profileImages[userId] ||
         props.currentMessage.user.avatar ||
-        user?.profile_picture;
+        user?.profile_picture ||
+        "https://slatebucket.s3.amazonaws.com/media/profile_pics/default.jpg";
 
-      useEffect(() => {
-        if (!profileImages[userId] && avatarUrl) {
-          setProfileImages((prev) => ({ ...prev, [userId]: avatarUrl }));
-        }
-      }, [userId, avatarUrl]);
+      // Construct display name with fallbacks
+      const displayName =
+        props.currentMessage.user.name ||
+        (user?.first_name
+          ? `${user.first_name} ${user.last_name || ""}`
+          : "Unknown User");
+      const initial = displayName.charAt(0).toUpperCase();
 
-      if (avatarUrl) {
+      // Render avatar image if a valid URL exists (not the default)
+      if (
+        avatarUrl &&
+        avatarUrl !==
+          "https://slatebucket.s3.amazonaws.com/media/profile_pics/default.jpg"
+      ) {
         return (
           <View style={styles.avatarContainer}>
             <AppImage uri={avatarUrl} style={styles.avatar} />
           </View>
         );
       } else {
+        // Render initial with a tinted background if no valid avatar or using default
         return (
-          <View style={styles.avatarContainer}>
-            <Text style={styles.initials}>
-              {props.currentMessage.user.name.charAt(0).toUpperCase()}
-            </Text>
+          <View
+            style={[
+              styles.avatarContainer,
+              { backgroundColor: themeColors.tint },
+            ]}
+          >
+            <Text style={styles.initials}>{initial}</Text>
           </View>
         );
       }
     },
-    [profileImages, user?.profile_picture]
+    [
+      profileImages,
+      user?.profile_picture,
+      user?.first_name,
+      user?.last_name,
+      themeColors,
+    ]
   );
 
   const openImageViewer = useCallback(
@@ -1459,7 +1620,9 @@ if (oldestMessage && oldestMessage._id) {
 
   const renderInputToolbar = useCallback(
     (props) => {
-      
+      const MIN_INPUT_HEIGHT = rV(40);
+      const MAX_INPUT_HEIGHT = rV(120);
+
       return (
         <View>
           {renderMediaPreview()}
@@ -1515,9 +1678,26 @@ if (oldestMessage && oldestMessage._id) {
             ]}
             primaryStyle={{ alignItems: "center", flexDirection: "row" }}
             renderComposer={() => (
-              <View style={styles.inputField}>
+              <View
+                style={[
+                  styles.inputField,
+                  {
+                    height: Math.min(
+                      Math.max(inputHeight, MIN_INPUT_HEIGHT),
+                      MAX_INPUT_HEIGHT
+                    ),
+                  },
+                ]}
+              >
                 <TextInput
-                  style={styles.textInput}
+                  style={[
+                    styles.textInput,
+                    {
+                      height: inputHeight,
+                      maxHeight: MAX_INPUT_HEIGHT,
+                      scrollEnabled: inputHeight >= MAX_INPUT_HEIGHT,
+                    },
+                  ]}
                   placeholder={
                     editingMessage
                       ? "Edit message"
@@ -1529,6 +1709,10 @@ if (oldestMessage && oldestMessage._id) {
                   value={props.text}
                   onChangeText={props.onTextChanged}
                   multiline={true}
+                  onContentSizeChange={(e) => {
+                    const newHeight = e.nativeEvent.contentSize.height;
+                    setInputHeight(newHeight);
+                  }}
                 />
               </View>
             )}
@@ -1542,6 +1726,7 @@ if (oldestMessage && oldestMessage._id) {
       replyToMessage,
       mediaPreview.uri,
       themeColors,
+      inputHeight,
     ]
   );
 
@@ -1587,13 +1772,14 @@ if (oldestMessage && oldestMessage._id) {
       paddingRight: rS(12),
     },
     avatarContainer: {
-      width: rS(36),
-      height: rS(36),
+      width: rS(26),
+      height: rS(26),
       borderRadius: rMS(18),
       overflow: "hidden",
       backgroundColor: "#ccc",
       alignItems: "center",
       justifyContent: "center",
+      marginRight: rS(3.5),
     },
     avatar: {
       width: "100%",
@@ -1634,7 +1820,6 @@ if (oldestMessage && oldestMessage._id) {
       paddingBottom: insets.bottom + rV(5),
       paddingTop: rV(10),
       opacity: 0.9,
-      
     },
     inputField: {
       flexDirection: "row",
@@ -1642,24 +1827,27 @@ if (oldestMessage && oldestMessage._id) {
       backgroundColor: themeColors.reverseText,
       borderRadius: rMS(20),
       flex: 1,
-      paddingVertical: rV(1),
+      marginVertical: rV(5),
       paddingHorizontal: rS(10),
       marginRight: rS(10),
-      height: rV(30)
+      height: rV(40),
     },
     textInput: {
       flex: 1,
       color: themeColors.text,
       fontSize: SIZES.medium,
       fontFamily: FONT.regular,
+      lineHeight: rV(20),
+      paddingVertical: 0,
     },
     attachButtonContainer: {
       flexDirection: "row",
       alignItems: "center",
       marginRight: rS(10),
+      height: rV(30),
     },
     attachButton: {
-      padding: rS(5),
+      marginHorizontal: rS(5),
     },
     attachIcon: {
       color: themeColors.text,
@@ -1706,10 +1894,10 @@ if (oldestMessage && oldestMessage._id) {
     documentContainer: {
       flexDirection: "row",
       alignItems: "center",
-      padding: rS(10),
+      // padding: rS(10),
       borderRadius: rMS(8),
       maxWidth: rS(250),
-      marginVertical: rV(4),
+      // marginVertical: rV(4),
     },
     documentTextContainer: {
       flexDirection: "column",
@@ -1887,49 +2075,54 @@ if (oldestMessage && oldestMessage._id) {
           <ActivityIndicator size="large" color={themeColors.tint} />
         </View>
       ) : (
-<MemoizedGiftedChat
-  messages={messages}
-  onSend={onSend}
-  user={{ _id: user?.id || 1 }}
-  text={messageInput}
-  onInputTextChanged={(text) => setMessageInput(text)}
-  renderSystemMessage={(props) => (
-    <SystemMessage
-      {...props}
-      textStyle={{ color: themeColors.textSecondary }}
-    />
-  )}
-  renderAvatar={renderAvatar}
-  renderBubble={renderBubble}
-  renderSend={renderSend}
-  renderInputToolbar={renderInputToolbar}
-  renderMessageImage={renderMessageImage}
-  renderDay={renderDay}
-  minInputToolbarHeight={insets.bottom + rV(50)}
-  scrollToBottom={true} // Already set, keep this
- 
-  scrollToBottomStyle={{
-    backgroundColor: themeColors.secondaryBackground,
-    borderRadius: rMS(20),
-    padding: rS(5),
-  }} // Optional: Style the scroll-to-bottom button
-  inverted={true}
-  loadEarlier={loadEarlier}
-  onLoadEarlier={handleLoadEarlier}
-  isLoadingEarlier={isLoadingEarlier}
-  listViewProps={{
-    scrollEventThrottle: 400,
-    maintainVisibleContentPosition: {
-      minIndexForVisible: 0,
-    },
-    onScroll: ({ nativeEvent }) => {
-      const isCloseToTop = nativeEvent.contentOffset.y <= 50;
-      if (isCloseToTop && loadEarlier && !isLoadingEarlier && !isUpdatingMessages) {
-        handleLoadEarlier();
-      }
-    },
-  }}
-/>
+        <MemoizedGiftedChat
+          messages={messages}
+          onSend={onSend}
+          user={{ _id: user?.id || 1 }}
+          text={messageInput}
+          onInputTextChanged={(text) => setMessageInput(text)}
+          renderSystemMessage={(props) => (
+            <SystemMessage
+              {...props}
+              textStyle={{ color: themeColors.textSecondary }}
+            />
+          )}
+          renderAvatar={renderAvatar}
+          renderBubble={renderBubble}
+          renderSend={renderSend}
+          renderInputToolbar={renderInputToolbar}
+          renderMessageImage={renderMessageImage}
+          renderDay={renderDay}
+          minInputToolbarHeight={insets.bottom + rV(50)}
+          scrollToBottom={true} // Already set, keep this
+          scrollToBottomStyle={{
+            backgroundColor: "black",
+            borderRadius: rMS(20),
+            padding: rS(5),
+          }}
+          // inverted={true}
+          loadEarlier={loadEarlier}
+          onLoadEarlier={handleLoadEarlier}
+          isLoadingEarlier={isLoadingEarlier}
+          listViewProps={{
+            scrollEventThrottle: 400,
+            maintainVisibleContentPosition: {
+              minIndexForVisible: 0,
+            },
+            initialNumToRender: 20,
+            onScroll: ({ nativeEvent }) => {
+              const isCloseToTop = nativeEvent.contentOffset.y <= 50;
+              if (
+                isCloseToTop &&
+                loadEarlier &&
+                !isLoadingEarlier &&
+                !isUpdatingMessages
+              ) {
+                handleLoadEarlier();
+              }
+            },
+          }}
+        />
       )}
       <FullScreenImageViewer
         visible={isImageViewerVisible}

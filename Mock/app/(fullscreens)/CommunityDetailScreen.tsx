@@ -15,7 +15,11 @@ import {
 } from "react-native";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { useRoute, useNavigation, useFocusEffect } from "@react-navigation/native";
+import {
+  useRoute,
+  useNavigation,
+  useFocusEffect,
+} from "@react-navigation/native";
 import { Ionicons, FontAwesome6 } from "@expo/vector-icons";
 import ImageView from "react-native-image-viewing";
 import {
@@ -45,7 +49,8 @@ const CommunityDetailScreen: React.FC = () => {
   const navigation = useNavigation();
   const { userToken, userInfo } = useAuth();
   const user = userInfo?.user;
-  const { unsubscribeFromCommunity, removeMemberFromCommunity} = useCommunity();
+  const { unsubscribeFromCommunity, removeMemberFromCommunity } =
+    useCommunity();
   const { socket } = useWebSocket() || {
     socket: null,
     unsubscribeFromCommunity: () => {},
@@ -62,7 +67,9 @@ const CommunityDetailScreen: React.FC = () => {
   const [isUserLeader, setIsUserLeader] = useState(false);
   const [visible, setIsVisible] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [profileImages, setProfileImages] = useState<Record<string, string>>({});
+  const [profileImages, setProfileImages] = useState<Record<string, string>>(
+    {}
+  );
   const [showAllMembers, setShowAllMembers] = useState(false);
   const [showAllCalendar, setShowAllCalendar] = useState(false);
 
@@ -140,13 +147,13 @@ const CommunityDetailScreen: React.FC = () => {
       setIsUserLeader(data?.created_by === user?.email);
 
       const messages = await getCommunityMessages(id, userToken.token);
-      const images = messages
-        .filter((msg) => msg.image)
-        .map((msg) => msg.image) || [];
+      const images =
+        messages.filter((msg) => msg.image).map((msg) => msg.image) || [];
       setCommunityImages(images);
       await setCachedData(`images_${id}`, images);
 
-      const timetableData = await getCommunityTimetable(id, userToken.token) || [];
+      const timetableData =
+        (await getCommunityTimetable(id, userToken.token)) || [];
       console.log(timetableData);
       setTimetable(timetableData);
       await setCachedData(`timetable_${id}`, timetableData);
@@ -181,7 +188,10 @@ const CommunityDetailScreen: React.FC = () => {
       const onMessage = (event: MessageEvent) => {
         try {
           const data = JSON.parse(event.data);
-          if (data.type === "community_updated" && data.community?.id.toString() === id) {
+          if (
+            data.type === "community_updated" &&
+            data.community?.id.toString() === id
+          ) {
             setCommunity((prev) => ({
               ...prev,
               ...data.community,
@@ -192,7 +202,10 @@ const CommunityDetailScreen: React.FC = () => {
               ...data.community,
               members: data.community.members || community?.members || [],
             });
-          } else if (data.type === "member_removed" && data.community_id.toString() === id) {
+          } else if (
+            data.type === "member_removed" &&
+            data.community_id.toString() === id
+          ) {
             setCommunity((prev) => {
               if (!prev) return prev;
               const updatedMembers = prev.members.filter(
@@ -221,10 +234,10 @@ const CommunityDetailScreen: React.FC = () => {
     async (userId: number) => {
       try {
         if (!userToken?.token) throw new Error("User not authenticated.");
-        
+
         // Call API to remove member
         await removeMemberFromCommunity(id, userId);
-        
+
         // Immediately update local state
         setCommunity((prev) => {
           if (!prev) return prev;
@@ -232,10 +245,10 @@ const CommunityDetailScreen: React.FC = () => {
             (member) => member.id !== userId
           );
           const updatedCommunity = { ...prev, members: updatedMembers };
-         
+
           return updatedCommunity;
         });
-        
+
         Alert.alert("Success", "Member removed from the channel.");
       } catch (err) {
         console.error("Error removing member:", err);
@@ -248,7 +261,10 @@ const CommunityDetailScreen: React.FC = () => {
   const renderRightActions = useCallback(
     (userId: number) => (
       <TouchableOpacity
-        style={[styles.removeAction, { backgroundColor: themeColors.errorText }]}
+        style={[
+          styles.removeAction,
+          { backgroundColor: themeColors.errorText },
+        ]}
         onPress={() => {
           Alert.alert(
             "Remove Member",
@@ -323,9 +339,7 @@ const CommunityDetailScreen: React.FC = () => {
             <Text style={[styles.memberName, { color: themeColors.text }]}>
               {item.first_name} {item.last_name}
             </Text>
-            {isLeader && (
-              <Text style={styles.adminText}>Admin</Text>
-            )}
+            {isLeader && <Text style={styles.adminText}>Admin</Text>}
           </View>
         </View>
       );
@@ -379,7 +393,6 @@ const CommunityDetailScreen: React.FC = () => {
     try {
       if (!userToken?.token) throw new Error("User not authenticated.");
 
-      
       unsubscribeFromCommunity(id, false);
       setIsFollowing(false);
       Alert.alert("Success", "You have left the channel.");
@@ -538,7 +551,13 @@ const CommunityDetailScreen: React.FC = () => {
         </View>
       </>
     ),
-    [community, isUserLeader, themeColors, communityImages, handleShareCommunity]
+    [
+      community,
+      isUserLeader,
+      themeColors,
+      communityImages,
+      handleShareCommunity,
+    ]
   );
 
   const renderFooter = useCallback(

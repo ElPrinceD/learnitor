@@ -16,7 +16,10 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
-import { getTodayPlans, getCategoryNames } from "../../../services/TimelineApiCalls";
+import {
+  getTodayPlans,
+  getCategoryNames,
+} from "../../../services/TimelineApiCalls";
 import { useAuth } from "../../../components/AuthContext";
 import PlanItem from "../../../components/PlanItem";
 import DaySelector from "../../../components/DaySelector";
@@ -209,7 +212,6 @@ const Timeline = () => {
                 (plan, index) =>
                   plan && (
                     <View key={index} style={styles.planItemWrapper}>
-                      
                       {categoryNames && (
                         <PlanItem
                           plan={plan}
@@ -229,7 +231,7 @@ const Timeline = () => {
         <ErrorMessage
           message={errorMessage}
           visible={!!errorMessage}
-          onDismiss={() => setErrorMessage(null)}
+          onDismiss={useCallback(() => setErrorMessage(null), [])}
         />
       )}
     </View>

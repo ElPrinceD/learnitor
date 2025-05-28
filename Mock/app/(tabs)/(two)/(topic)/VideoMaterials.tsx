@@ -80,7 +80,7 @@ const VideoMaterials: React.FC = () => {
       <ErrorMessage
         message={errorMessage}
         visible={!!errorMessage}
-        onDismiss={() => setErrorMessage(null)}
+        onDismiss={useCallback(() => setErrorMessage(null), [])}
       />
     </View>
   );

@@ -92,12 +92,6 @@ const Intro = () => {
       </View>
       <View style={styles.buttonContainer}>
         <VerificationButton
-          title="Try!"
-          onPress={() => {
-            Sentry.captureException(new Error("First error"));
-          }}
-        />
-        <VerificationButton
           style={styles.button}
           onPress={handleSignUp}
           title="Create an account"

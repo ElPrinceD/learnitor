@@ -263,19 +263,19 @@ const PracticeQuestions: React.FC = () => {
 
   const isSubmitDisabled = !allQuestionsAnswered;
 
-  const handleDisabledSubmitPress = () => {
-    if (isSubmitDisabled) {
-      Toast.show("Answer all questions", {
-        duration: Toast.durations.LONG,
-        position: Toast.positions.BOTTOM,
-        shadow: true,
-        animation: true,
-        hideOnPress: true,
-        delay: 0,
-        opacity: 0.8,
-      });
-    }
-  };
+  const handleDisabledSubmitPress = useCallback(() => {
+    Toast.show("Answer all questions", {
+      duration: Toast.durations.LONG,
+      position: Toast.positions.BOTTOM,
+      shadow: true,
+      animation: true,
+      hideOnPress: true,
+      delay: 0,
+      opacity: 0.8,
+    });
+  }, []);
+
+  const handleDismissError = useCallback(() => setErrorMessage(null), []);
 
   const progress = (currentQuestion + 1) / (practiceQuestions?.length || 1);
 
@@ -399,7 +399,7 @@ const PracticeQuestions: React.FC = () => {
           <ErrorMessage
             message={errorMessage}
             visible={!!errorMessage}
-            onDismiss={() => setErrorMessage(null)}
+            onDismiss={handleDismissError}
           />
         </View>
       )}
@@ -408,5 +408,3 @@ const PracticeQuestions: React.FC = () => {
 };
 
 export default PracticeQuestions;
-
-

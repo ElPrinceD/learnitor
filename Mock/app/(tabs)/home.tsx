@@ -10,7 +10,10 @@ import { useAuth } from "../../components/AuthContext";
 import Colors from "../../constants/Colors";
 import { SIZES, rMS, rS } from "../../constants";
 import TaskList from "../../components/TaskList";
-import { getTodayPlans, getCategoryNames } from "../../services/TimelineApiCalls";
+import {
+  getTodayPlans,
+  getCategoryNames,
+} from "../../services/TimelineApiCalls";
 import {
   getEnrolledCourses,
   getCourseProgress,
@@ -64,9 +67,8 @@ const Home: React.FC = () => {
     queryFn: async () => {
       const date = new Date();
       return {
-        
         categories: await getCategoryNames(token!),
-        tasks: await getTodayPlans(token!, date,getCategoryNames(token!)),
+        tasks: await getTodayPlans(token!, date, getCategoryNames(token!)),
       };
     },
     enabled: !!token,
@@ -127,8 +129,12 @@ const Home: React.FC = () => {
     try {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["announcements", token] }),
-        queryClient.invalidateQueries({ queryKey: ["enrolledCourses", userId, token] }),
-        queryClient.invalidateQueries({ queryKey: ["progress", userId, token, enrolledCoursesData] }),
+        queryClient.invalidateQueries({
+          queryKey: ["enrolledCourses", userId, token],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["progress", userId, token, enrolledCoursesData],
+        }),
         queryClient.invalidateQueries({ queryKey: ["todayTasks", token] }),
       ]);
     } finally {
@@ -174,7 +180,9 @@ const Home: React.FC = () => {
               />
               <View style={styles(themeColors).tasksContainer}>
                 <View style={styles(themeColors).taskCountContainer}>
-                  <Text style={styles(themeColors).taskCountText}>Tasks Today</Text>
+                  <Text style={styles(themeColors).taskCountText}>
+                    Tasks Today
+                  </Text>
                   <Text style={styles(themeColors).taskCountNumber}>
                     {tasksData.tasks.length}
                   </Text>
@@ -195,13 +203,13 @@ const Home: React.FC = () => {
       <ErrorMessage
         message={errorMessage}
         visible={!!errorMessage}
-        onDismiss={() => setErrorMessage(null)}
+        onDismiss={useCallback(() => setErrorMessage(null), [])}
       />
     </View>
   );
 };
 
-const styles = (themeColors: typeof Colors["light"]) =>
+const styles = (themeColors: (typeof Colors)["light"]) =>
   StyleSheet.create({
     container: {
       flex: 1,

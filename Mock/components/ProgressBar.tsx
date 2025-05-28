@@ -1,7 +1,29 @@
-import React from "react";
+import React, { memo } from "react";
 import { View, StyleSheet } from "react-native";
+import isEqual from "lodash/isEqual"; // For deep equality comparison
 
-const ProgressBar = ({ progress, containerStyle, fillStyle }) => {
+interface ProgressBarProps {
+  progress: number;
+  containerStyle?: object;
+  fillStyle?: object;
+}
+
+const arePropsEqual = (
+  prevProps: ProgressBarProps,
+  nextProps: ProgressBarProps
+) => {
+  return (
+    prevProps.progress === nextProps.progress &&
+    isEqual(prevProps.containerStyle, nextProps.containerStyle) &&
+    isEqual(prevProps.fillStyle, nextProps.fillStyle)
+  );
+};
+
+const ProgressBar: React.FC<ProgressBarProps> = ({
+  progress,
+  containerStyle,
+  fillStyle,
+}) => {
   const styles = StyleSheet.create({
     progressBar: {
       flex: 1,
@@ -25,4 +47,4 @@ const ProgressBar = ({ progress, containerStyle, fillStyle }) => {
   );
 };
 
-export default ProgressBar;
+export default memo(ProgressBar, arePropsEqual);

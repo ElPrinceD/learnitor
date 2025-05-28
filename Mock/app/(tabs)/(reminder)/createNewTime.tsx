@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,10 @@ import Colors from "../../../constants/Colors";
 import { rMS, rS, rV } from "../../../constants/responsive";
 import { SIZES } from "../../../constants/theme.js";
 import AnimatedRoundTextInput from "../../../components/AnimatedRoundTextInput.tsx";
-import { createTask, getCategories } from "../../../services/TimelineApiCalls.ts";
+import {
+  createTask,
+  getCategories,
+} from "../../../services/TimelineApiCalls.ts";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import ErrorMessage from "../../../components/ErrorMessage.tsx";
 import GameButton from "../../../components/GameButton.tsx";
@@ -51,7 +54,9 @@ const CreateNewTime = () => {
   const [dueDate, setDueDate] = useState(new Date());
   const [startTime, setStartTime] = useState(new Date());
   const [endTime, setEndTime] = useState(new Date());
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
+    null
+  );
   const [recurrenceOption, setRecurrenceOption] = useState("Does not repeat");
   const [recurrenceEndDate, setRecurrenceEndDate] = useState(new Date());
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -74,7 +79,6 @@ const CreateNewTime = () => {
       const dateString = formatDate(dueDate);
       const categoryId = selectedCategory?.value?.toString();
 
-
       // Schedule notification for the created task
       try {
         const notificationId = await scheduleTaskNotification(createdTask);
@@ -96,8 +100,17 @@ const CreateNewTime = () => {
   const parseTime = (timeString: string): Date => {
     if (!timeString) return new Date();
     const [hours, minutes] = timeString.split(":").map(Number);
-    if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
-      console.error(`Invalid time string: ${timeString}, Hours: ${hours}, Minutes: ${minutes}`);
+    if (
+      isNaN(hours) ||
+      isNaN(minutes) ||
+      hours < 0 ||
+      hours > 23 ||
+      minutes < 0 ||
+      minutes > 59
+    ) {
+      console.error(
+        `Invalid time string: ${timeString}, Hours: ${hours}, Minutes: ${minutes}`
+      );
       return new Date();
     }
     const newDate = new Date();
@@ -113,7 +126,8 @@ const CreateNewTime = () => {
   };
 
   const formatDate = (date: Date): string => {
-    if (!(date instanceof Date) || isNaN(date.getTime())) return new Date().toISOString().split("T")[0];
+    if (!(date instanceof Date) || isNaN(date.getTime()))
+      return new Date().toISOString().split("T")[0];
     return date.toISOString().split("T")[0];
   };
 
@@ -127,9 +141,14 @@ const CreateNewTime = () => {
       category: selectedCategory?.value,
       learner: userInfo?.user.id,
       is_recurring: recurrenceOption !== "Does not repeat",
-      recurrence_interval: recurrenceOption !== "Does not repeat" ? recurrenceOption.toLowerCase() : null,
+      recurrence_interval:
+        recurrenceOption !== "Does not repeat"
+          ? recurrenceOption.toLowerCase()
+          : null,
       recurrence_end_date:
-        recurrenceOption !== "Does not repeat" ? formatDate(recurrenceEndDate) : null,
+        recurrenceOption !== "Does not repeat"
+          ? formatDate(recurrenceEndDate)
+          : null,
     };
 
     createTaskMutation.mutate({
@@ -143,7 +162,9 @@ const CreateNewTime = () => {
     { label: "Daily", value: "Daily" },
     { label: "Weekly", value: "Weekly" },
   ];
-  const simplifiedRecurrenceOptions = recurrenceOptions.map((option) => option.value);
+  const simplifiedRecurrenceOptions = recurrenceOptions.map(
+    (option) => option.value
+  );
 
   const styles = StyleSheet.create({
     container: {
@@ -190,7 +211,10 @@ const CreateNewTime = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.sectionContainer}>
           <AnimatedRoundTextInput
             placeholderTextColor={themeColors.textSecondary}
@@ -255,7 +279,9 @@ const CreateNewTime = () => {
             options={categoriesData?.map((cat) => cat.label) || []}
             selectedValue={selectedCategory?.label || undefined}
             onValueChange={(value) =>
-              setSelectedCategory(categoriesData?.find((cat) => cat.label === value) || null)
+              setSelectedCategory(
+                categoriesData?.find((cat) => cat.label === value) || null
+              )
             }
           />
           <CustomPicker
@@ -266,7 +292,9 @@ const CreateNewTime = () => {
           />
           {recurrenceOption !== "Does not repeat" && (
             <Animated.View
-              entering={FadeInLeft.delay(200).randomDelay().reduceMotion(ReduceMotion.Never)}
+              entering={FadeInLeft.delay(200)
+                .randomDelay()
+                .reduceMotion(ReduceMotion.Never)}
               style={{ marginTop: rV(10) }}
             >
               <DateSelector
@@ -275,7 +303,9 @@ const CreateNewTime = () => {
                   if (!isNaN(newDate.getTime())) {
                     setRecurrenceEndDate(newDate);
                   } else {
-                    console.error(`Invalid recurrence end date: ${selectedDate}`);
+                    console.error(
+                      `Invalid recurrence end date: ${selectedDate}`
+                    );
                   }
                 }}
                 label="End Date for Recurrence"
@@ -302,7 +332,7 @@ const CreateNewTime = () => {
         <ErrorMessage
           message={errorMessage}
           visible={!!errorMessage}
-          onDismiss={() => setErrorMessage(null)}
+          onDismiss={useCallback(() => setErrorMessage(null), [])}
         />
       )}
     </View>

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -39,6 +39,8 @@ const ScorePage: React.FC = () => {
 
   const [showAnswers, setShowAnswers] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null); // State to manage error message
+
+  const handleDismissError = useCallback(() => setErrorMessage(null), []);
 
   const styles = StyleSheet.create({
     container: {
@@ -369,7 +371,7 @@ const ScorePage: React.FC = () => {
       <ErrorMessage
         message={errorMessage}
         visible={!!errorMessage}
-        onDismiss={() => setErrorMessage(null)}
+        onDismiss={handleDismissError}
       />
     </View>
   );

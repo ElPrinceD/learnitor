@@ -70,7 +70,7 @@ const CourseDetails: React.FC = () => {
     refetch: refetchEnrollmentStatus,
   } = useQuery({
     queryKey: ["enrollmentStatus", userInfo?.user?.id, parsedCourse?.id],
-  
+
     queryFn: () =>
       getEnrollmentStatus(
         userInfo?.user?.id,
@@ -132,7 +132,7 @@ const CourseDetails: React.FC = () => {
     },
   });
 
-  console.log("This: ",enrollmentData);
+  console.log("This: ", enrollmentData);
 
   const unenrollMutation = useMutation<any, any, any, any>({
     mutationFn: async ({ userId, courseId, token }) => {
@@ -176,7 +176,7 @@ const CourseDetails: React.FC = () => {
     }
   }, [topicsError, enrollmentError, progressError]);
 
-  const handleEnrollCourse = () => {
+  const handleEnrollCourse = useCallback(() => {
     const topicIds = selectedTopics.map((topic) => topic.id);
     enrollMutation.mutate({
       userId: userInfo?.user?.id,
@@ -184,29 +184,39 @@ const CourseDetails: React.FC = () => {
       topicIds,
       token: userToken?.token,
     });
-    setEnrollDisabled(false);
-  };
+  }, [
+    enrollMutation,
+    userInfo?.user?.id,
+    parsedCourse?.id,
+    selectedTopics,
+    userToken?.token,
+  ]);
 
-  const handleUnenrollCourse = () => {
+  const handleUnenrollCourse = useCallback(() => {
     unenrollMutation.mutate({
       userId: userInfo?.user?.id,
       courseId: parsedCourse?.id,
       token: userToken?.token,
     });
-  };
+  }, [
+    unenrollMutation,
+    userInfo?.user?.id,
+    parsedCourse?.id,
+    userToken?.token,
+  ]);
 
-  const handleContinue = () => {
+  const handleContinue = useCallback(() => {
     router.navigate("EnrolledCourse");
     router.setParams({
       course: JSON.stringify(parsedCourse),
     });
-  };
+  }, [parsedCourse]);
 
-  const handleSelectedTopicsChange = (selectedTopics: Topic[]) => {
+  const handleSelectedTopicsChange = useCallback((selectedTopics: Topic[]) => {
     setSelectedTopics(selectedTopics);
-  };
+  }, []);
 
-  const handleEnrolledDisabledPress = () => {
+  const handleEnrolledDisabledPress = useCallback(() => {
     if (enrollDisabled) {
       Toast.show("Select at least one topic", {
         duration: Toast.durations.LONG,
@@ -218,7 +228,7 @@ const CourseDetails: React.FC = () => {
         opacity: 0.8,
       });
     }
-  };
+  }, [enrollDisabled]);
 
   useEffect(() => {
     setEnrollDisabled(selectedTopics.length === 0);
@@ -488,8 +498,8 @@ const CourseDetails: React.FC = () => {
       </RNAnimated.ScrollView>
       <ErrorMessage
         message={errorMessage}
-        visible={!!errorMessage} // Control visibility based on errorMessage state
-        onDismiss={() => setErrorMessage(null)} // Clear error message when dismissed
+        visible={!!errorMessage}
+        onDismiss={useCallback(() => setErrorMessage(null), [])}
       />
     </View>
   );

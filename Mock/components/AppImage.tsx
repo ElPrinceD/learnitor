@@ -1,80 +1,97 @@
-import React, { useState, useEffect } from "react";
+import React, { memo, useRef } from "react";
 import {
+  Image,
   View,
-  ActivityIndicator,
   StyleSheet,
-  TouchableOpacity,
-  GestureResponderEvent,
-  StyleProp,
-  ViewStyle,
+  ActivityIndicator,
+  useColorScheme,
+  ImageProps,
 } from "react-native";
-import { Image } from "react-native-expo-image-cache";
+import { Image as CachedImage } from "react-native-expo-image-cache";
+import { isEqual } from "lodash";
+import Colors from "../constants/Colors";
+import { rS } from "../constants";
 
-interface AppImageProps {
-  uri?: string | null;
-  style?: StyleProp<ViewStyle>;
-  onPress?: (event: GestureResponderEvent) => void;
+// Define props for CachedImage based on react-native-expo-image-cache
+interface CachedImageProps {
+  uri: string;
+  style?: ImageProps["style"];
+  defaultSource?: ImageProps["defaultSource"];
+  preview?: { uri: string };
+  options?: object;
 }
 
-const AppImage: React.FC<AppImageProps> = ({ uri, style, onPress }) => {
-  const [loading, setLoading] = useState(true);
-  const [cachedUri, setCachedUri] = useState<string | null>(null);
-  const Wrapper = onPress ? TouchableOpacity : View;
-
-  // Cache the loaded image URI
-  useEffect(() => {
-    if (uri) {
-      setCachedUri(uri); // Set cached URI when the URI is provided
-    }
-  }, [uri]);
-
-  const handleLoadEnd = () => {
-    setLoading(false);
-  };
-
-  const handlePress = (event: GestureResponderEvent) => {
-    // Prevent reloading the image on tap by checking the cached URI
-    if (onPress && cachedUri) {
-      onPress(event);
-    }
-  };
-
-  return (
-    <Wrapper
-      style={[styles.container, style]}
-      onPress={handlePress}
-      activeOpacity={0.8}
-    >
-      {cachedUri ? (
-        <>
-          <Image
-            uri={cachedUri}
-            style={[styles.image, style]}
-            onLoadEnd={handleLoadEnd}
-          />
-        </>
-      ) : (
-        <ActivityIndicator size="small" color="#888" style={styles.loader} />
-      )}
-    </Wrapper>
-  );
-};
+interface AppImageProps {
+  uri?: string;
+  style?: ImageProps["style"];
+}
 
 const styles = StyleSheet.create({
   container: {
-    overflow: "hidden",
+    position: "relative",
+  },
+  placeholder: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#E0E0E0",
-    borderRadius: 8,
   },
   image: {
     width: "100%",
     height: "100%",
   },
-  loader: {
-    position: "absolute",
-  },
 });
 
-export default AppImage;
+const AppImage: React.FC<AppImageProps> = ({ uri, style }) => {
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
+  const isLoadingRef = useRef(true);
+
+  const handleLoad = () => {
+    isLoadingRef.current = false;
+  };
+
+  const handleError = () => {
+    isLoadingRef.current = false;
+  };
+
+  const isValidUri = uri && typeof uri === "string" && uri.startsWith("http");
+
+  return (
+    <View style={[styles.container, style]}>
+      {isValidUri ? (
+        <CachedImage
+          uri={uri}
+          style={[styles.image, style]}
+          // No onLoad/onError; rely on cache
+        />
+      ) : (
+        <Image
+          source={require("../assets/images/placeholder.png")} // Adjust path
+          style={[styles.image, style]}
+          onLoad={handleLoad}
+          onError={handleError}
+        />
+      )}
+      {!isValidUri && isLoadingRef.current && (
+        <View
+          style={[
+            styles.placeholder,
+            { backgroundColor: themeColors.background },
+          ]}
+        >
+          <ActivityIndicator size="small" color={themeColors.tint} />
+        </View>
+      )}
+    </View>
+  );
+};
+
+export default memo(AppImage, (prevProps, nextProps) => {
+  return (
+    isEqual(prevProps.style, nextProps.style) && prevProps.uri === nextProps.uri
+  );
+});

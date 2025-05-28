@@ -25,7 +25,6 @@ import AppImage from "../../../components/AppImage";
 
 const Profile = () => {
   const { logout, userToken, userInfo, setUserInformation } = useAuth();
-  console.log(userInfo)
   const { clear } = useCache(); // Access clear from CacheContext
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -37,7 +36,6 @@ const Profile = () => {
   const clearUserDataCache = async () => {
     try {
       await clear(); // Replace sqliteClear with clear from CacheContext
-      console.log("All SQLite storage data cleared.");
     } catch (e) {
       console.error("Error clearing SQLite storage:", e);
     }
@@ -46,7 +44,6 @@ const Profile = () => {
   const clearUserTokenDataCache = async () => {
     try {
       await AsyncStorage.multiRemove(["token", "user"]);
-      console.log("All AsyncStorage data cleared.");
     } catch (e) {
       console.error("Error clearing AsyncStorage:", e);
     }
@@ -80,7 +77,6 @@ const Profile = () => {
       };
       const result = await Share.share(shareOptions);
       if (result.action === Share.sharedAction) {
-        console.log("App shared successfully");
       } else if (result.action === Share.dismissedAction) {
         console.log("Share operation dismissed");
       }
@@ -99,7 +95,8 @@ const Profile = () => {
 
   const handleProfilePictureUpdate = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
         Alert.alert("Permission to access media library is required!");
         return;
@@ -132,7 +129,6 @@ const Profile = () => {
           },
         };
 
-        console.log("Forms:", formData);
         const response = await axios.patch(
           `${ApiUrl}/api/update/user/${userInfo?.user.id}/`,
           formData,
@@ -151,7 +147,10 @@ const Profile = () => {
       }
     } catch (error) {
       console.error("Error updating profile picture:", error);
-      Alert.alert("Error", "Failed to update profile picture. Please try again.");
+      Alert.alert(
+        "Error",
+        "Failed to update profile picture. Please try again."
+      );
     }
   };
 

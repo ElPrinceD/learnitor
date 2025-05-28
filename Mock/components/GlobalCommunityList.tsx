@@ -1,18 +1,16 @@
-import React from "react";
+import React, { useCallback } from "react";
 import {
   View,
   FlatList,
   Text,
   StyleSheet,
   useColorScheme,
-  ScrollView,
-  TouchableOpacity,
   Alert,
 } from "react-native";
-import CommunityListItem from "./CommunityListItem"; // Assuming you have this component for consistent display
+import CommunityListItem from "./CommunityListItem";
 import { Community } from "./types";
 import Colors from "../constants/Colors";
-import { rS, SIZES } from "../constants";
+import { rS, rV, SIZES } from "../constants";
 
 interface GlobalCommunityListProps {
   title?: string;
@@ -28,60 +26,72 @@ const GlobalCommunityList: React.FC<GlobalCommunityListProps> = ({
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
+  const handleJoinCommunity = useCallback(
+    (community: Community) => {
+      Alert.alert(
+        `Join ${community.name}?`,
+        `Do you want to join this community?`,
+        [
+          { text: "No", style: "cancel" },
+          { text: "Yes", onPress: () => onCommunityPress(community) },
+        ]
+      );
+    },
+    [onCommunityPress]
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: Community }) => (
+      <CommunityListItem
+        item={item}
+        onPress={() => handleJoinCommunity(item)}
+        showLastMessage={false}
+        lastMessage={null}
+        isGlobal={true}
+        showUnreadIndicator={false}
+      />
+    ),
+    [handleJoinCommunity]
+  );
+
   const styles = StyleSheet.create({
+    container: {
+      marginBottom: rV(20),
+    },
     sectionHeader: {
-      fontSize: SIZES.small,
-      color: themeColors.textSecondary,
-      marginBottom: 8,
-      marginTop: 6,
+      fontSize: SIZES.medium,
+      fontWeight: "600",
+      color: themeColors.text,
+      marginBottom: rV(8),
+      marginTop: rV(6),
+      paddingHorizontal: rS(16),
     },
     separator: {
-      borderBottomWidth: 0.3,
-      borderBottomColor: "#c0c0c0",
-      marginLeft: 63,
+      borderBottomWidth: 1,
+      borderBottomColor: themeColors.border,
+      marginHorizontal: rS(16),
     },
   });
 
-  const handleJoinCommunity = (community: Community) => {
-    Alert.alert(
-      "Join Community?",
-      `Do you want to join ${community.name}?`,
-      [
-        {
-          text: "No",
-          style: "cancel",
-        },
-        { 
-          text: "Yes", 
-          onPress: () => onCommunityPress(community)
-        }
-      ]
-    );
-  };
+  if (data.length === 0) return null;
 
-  return data.length > 0 ? (
-    <ScrollView>
-      {title ? <Text style={styles.sectionHeader}>{title}</Text> : null}
+  return (
+    <View style={styles.container}>
+      {title && <Text style={styles.sectionHeader}>{title}</Text>}
       <FlatList
         data={data}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <TouchableOpacity onPress={() => handleJoinCommunity(item)}>
-            <CommunityListItem
-              item={item}
-              onPress={() => handleJoinCommunity(item)} // This will trigger the Alert
-              showLastMessage={false} // No last message for global communities
-              lastMessage={null}
-              isGlobal={true}
-            />
-            
-          </TouchableOpacity>
-        )}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={renderItem}
         // ItemSeparatorComponent={() => <View style={styles.separator} />}
-        scrollEnabled={false}
+        showsVerticalScrollIndicator={false}
+        initialNumToRender={5}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        removeClippedSubviews={true}
+        contentContainerStyle={{ paddingBottom: 50 }}
       />
-    </ScrollView>
-  ) : null;
+    </View>
+  );
 };
 
-export default GlobalCommunityList;
+export default React.memo(GlobalCommunityList);

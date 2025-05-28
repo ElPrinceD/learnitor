@@ -7,13 +7,18 @@ import {
   useColorScheme,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import Colors from "../constants/Colors"; // Adjust the import path as necessary
+import Colors from "../constants/Colors";
 import { SIZES, rS, rV } from "../constants";
 import debounce from "lodash.debounce";
 
 interface Props {
   onSearch: (query: string) => void;
 }
+
+const arePropsEqual = (prevProps: Props, nextProps: Props) => {
+  // Only compare the functional reference of onSearch
+  return prevProps.onSearch === nextProps.onSearch;
+};
 
 const SearchBar2: React.FC<Props> = ({ onSearch }) => {
   const colorScheme = useColorScheme();
@@ -23,7 +28,7 @@ const SearchBar2: React.FC<Props> = ({ onSearch }) => {
   // Debounced search handler
   const debouncedSearch = useCallback(
     debounce((text: string) => onSearch(text), 300),
-    []
+    [onSearch] // Ensure onSearch is a dependency
   );
 
   const handleSearch = useCallback(
@@ -80,7 +85,7 @@ const styles = StyleSheet.create({
     width: "90%",
     marginBottom: rV(18),
     justifyContent: "center",
-    height: rV(40)
+    height: rV(40),
   },
   container: {
     height: rV(60),
@@ -97,4 +102,5 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SearchBar2;
+// Wrap SearchBar2 with React.memo and provide the custom comparison function
+export default React.memo(SearchBar2, arePropsEqual);

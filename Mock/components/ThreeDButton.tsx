@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { memo, useState } from "react";
 import {
   View,
   TouchableOpacity,
@@ -7,10 +7,16 @@ import {
   Animated,
   useColorScheme,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import Colors from "../constants/Colors";
-import { rMS, rS, rV } from "../constants";
+import { rMS, rS, rV, SIZES } from "../constants";
 
-const ThreeDButton = ({ title, onPress }) => {
+interface ThreeDButtonProps {
+  isQuestion: boolean;
+  onPress: () => void;
+}
+
+const ThreeDButton: React.FC<ThreeDButtonProps> = ({ isQuestion, onPress }) => {
   const [animatedValue] = useState(new Animated.Value(0));
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -40,7 +46,6 @@ const ThreeDButton = ({ title, onPress }) => {
       inputRange: [0, 1],
       outputRange: [-15, 0],
     }),
-
     paddingBottom: animatedValue.interpolate({
       inputRange: [0, 1],
       outputRange: [10, 0],
@@ -64,7 +69,6 @@ const ThreeDButton = ({ title, onPress }) => {
       borderRadius: 10,
       transform: [{ rotate: "45deg" }],
       backgroundColor: "#002968",
-      // backgroundColor: "#436A6E",
       shadowColor: "#000",
       shadowOffset: { width: 4, height: 9 },
       shadowOpacity: 1,
@@ -73,7 +77,6 @@ const ThreeDButton = ({ title, onPress }) => {
     },
     height: {
       borderRadius: 15,
-      // backgroundColor: "#023020",
       backgroundColor: "#001a43",
     },
     inner: {
@@ -93,15 +96,22 @@ const ThreeDButton = ({ title, onPress }) => {
       <TouchableOpacity
         onPressIn={onPressIn}
         onPressOut={onPressOut}
-        onPress={onPress} // Handle the onPress function here
-        // style={styles.buttonContainer}
+        onPress={onPress}
         activeOpacity={1}
       >
         <View style={styles.button}>
           <View style={styles.outer}>
             <Animated.View style={[styles.height, heightStyle]}>
               <Animated.View style={[styles.inner, innerStyle]}>
-                <Text style={styles.buttonText}>{title}</Text>
+                {isQuestion ? (
+                  <Ionicons
+                    name="play-circle-outline"
+                    size={SIZES.xxLarge}
+                    color="black"
+                  />
+                ) : (
+                  <Text style={styles.buttonText}></Text>
+                )}
               </Animated.View>
             </Animated.View>
           </View>
@@ -111,4 +121,4 @@ const ThreeDButton = ({ title, onPress }) => {
   );
 };
 
-export default ThreeDButton;
+export default memo(ThreeDButton);

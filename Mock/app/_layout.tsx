@@ -1,18 +1,19 @@
-import "../wdyr";
+// import "../wdyr";
 import React, { useEffect, useState } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { useFonts } from "expo-font";
-import { FontAwesome } from "@expo/vector-icons";
-import DeepLinkHandler from "../DeepLink";
 import {
   ThemeProvider,
   DarkTheme,
   DefaultTheme,
 } from "@react-navigation/native";
-import { Stack, router, useSegments } from "expo-router";
+import {
+  Stack,
+  router,
+  useSegments,
+  useNavigationContainerRef,
+} from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { AuthProvider, useAuth } from "../components/AuthContext"; // Update the path as needed
-import { usePushNotifications } from "../usePushNotifications";
 import { useColorScheme } from "../components/useColorScheme";
 import { RootSiblingParent } from "react-native-root-siblings";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -33,9 +34,14 @@ import { PortalProvider } from "@tamagui/portal";
 import config from "../tamagui.config";
 import { vexo } from "vexo-analytics";
 import * as Sentry from "@sentry/react-native";
+import { isRunningInExpoGo } from "expo";
+
+const navigationIntegration = Sentry.reactNavigationIntegration({
+  enableTimeToInitialDisplay: !isRunningInExpoGo(),
+});
 
 Sentry.init({
-  dsn: "https://181b6eaacd913139f0c11747d8a5ba59@o4509328707878912.ingest.us.sentry.io/4509328716464128",
+  dsn: "https://461367c99dea3ea65e615a0ad9e1ba7e@o4509328707878912.ingest.us.sentry.io/4509328782000128",
 
   // Adds more context data to events (IP address, cookies, user, etc.)
   // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
@@ -48,6 +54,7 @@ Sentry.init({
     Sentry.mobileReplayIntegration(),
     Sentry.feedbackIntegration(),
   ],
+  tracesSampleRate: 1.0,
 
   // uncomment the line below to enable Spotlight (https://spotlightjs.com)
   // spotlight: __DEV__,
@@ -150,6 +157,13 @@ const RootLayoutNav = () => {
 };
 
 const RootLayout = () => {
+  const ref = useNavigationContainerRef();
+
+  useEffect(() => {
+    if (ref?.current) {
+      navigationIntegration.registerNavigationContainer(ref);
+    }
+  }, [ref]);
   return (
     <AuthProvider>
       <RootSiblingParent>

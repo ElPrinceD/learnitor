@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, memo } from "react";
 import {
   TextInput,
   StyleSheet,
@@ -97,4 +97,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SearchBar;
+export default memo(SearchBar);

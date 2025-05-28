@@ -28,6 +28,12 @@ const CourseInformation = ({
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
+  const containerStyle = useMemo(
+    () => ({ backgroundColor: themeColors.text, height: 7 }),
+    []
+  );
+  const fillStyle = useMemo(() => ({ backgroundColor: themeColors.icon }), []);
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -157,11 +163,8 @@ const CourseInformation = ({
           <View style={styles.progressContainer}>
             <ProgressBar
               progress={progress}
-              containerStyle={{
-                backgroundColor: themeColors.text,
-                height: rV(8),
-              }}
-              fillStyle={{ backgroundColor: themeColors.icon }}
+              containerStyle={containerStyle}
+              fillStyle={fillStyle}
             />
             <Text style={styles.progressText}>{`${progress.toFixed(
               2

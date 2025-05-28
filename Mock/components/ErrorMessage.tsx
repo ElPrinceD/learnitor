@@ -1,35 +1,61 @@
-import React, { useState, useEffect, memo } from "react";
+import React, { useState, useEffect, useCallback, memo } from "react";
 import { Animated, StyleSheet, Text, TouchableOpacity } from "react-native";
 import { useColorScheme } from "react-native";
 import Colors from "../constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { SIZES, rMS, rS } from "../constants";
 
-const ErrorMessage = ({ message, visible, duration = 60000, onDismiss }) => {
+// Static styles
+const styles = StyleSheet.create({
+  container: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: rMS(16),
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  message: {
+    flex: 1,
+    fontSize: SIZES.large,
+  },
+  closeButton: {
+    marginLeft: rS(16),
+    padding: rMS(8),
+  },
+  closeButtonText: {
+    fontSize: SIZES.large,
+    fontWeight: "bold",
+  },
+});
+
+interface ErrorMessageProps {
+  message: string | null;
+  visible: boolean;
+  duration?: number;
+  onDismiss?: () => void;
+}
+
+const ErrorMessage: React.FC<ErrorMessageProps> = ({
+  message,
+  visible,
+  duration = 60000,
+  onDismiss,
+}) => {
   const [slideAnim] = useState(new Animated.Value(100)); // Initial position at the bottom
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
-  useEffect(() => {
-    if (visible) {
-      // Slide in from the bottom
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-
-      // Automatically dismiss after a few seconds
-      const timer = setTimeout(() => {
-        handleClose();
-      }, duration);
-
-      return () => clearTimeout(timer);
-    }
-  }, [visible]);
-
-  const handleClose = () => {
-    // Slide out to the bottom
+  const handleClose = useCallback(() => {
     Animated.timing(slideAnim, {
       toValue: 100,
       duration: 300,
@@ -39,43 +65,44 @@ const ErrorMessage = ({ message, visible, duration = 60000, onDismiss }) => {
         onDismiss();
       }
     });
-  };
+  }, [onDismiss, slideAnim, visible]);
 
-  if (!visible) {
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+
+    if (visible) {
+      // Slide in
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+
+      // Auto-dismiss
+      timer = setTimeout(() => {
+        handleClose();
+      }, duration);
+    } else {
+      // Ensure slide out if visible becomes false
+      Animated.timing(slideAnim, {
+        toValue: 100,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+
+    return () => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+      // Stop any ongoing animations
+      slideAnim.stopAnimation();
+    };
+  }, [visible, duration, slideAnim, handleClose]);
+
+  if (!visible || !message) {
     return null;
   }
-
-  const styles = StyleSheet.create({
-    container: {
-      position: "absolute",
-      bottom: 0,
-      left: 0,
-      right: 0,
-      padding: rMS(16),
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      borderTopLeftRadius: 10,
-      borderTopRightRadius: 10,
-      elevation: 5,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.3,
-      shadowRadius: 4,
-    },
-    message: {
-      flex: 1,
-      fontSize: SIZES.large,
-    },
-    closeButton: {
-      marginLeft: rS(16),
-      padding: rMS(8),
-    },
-    closeButtonText: {
-      fontSize: SIZES.large,
-      fontWeight: "bold",
-    },
-  });
 
   return (
     <Animated.View
@@ -94,7 +121,7 @@ const ErrorMessage = ({ message, visible, duration = 60000, onDismiss }) => {
         <Ionicons
           name="close"
           size={SIZES.xLarge}
-          style={styles.closeButtonText}
+          color={themeColors.errorText}
         />
       </TouchableOpacity>
     </Animated.View>

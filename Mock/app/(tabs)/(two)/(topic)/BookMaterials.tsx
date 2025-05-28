@@ -85,7 +85,7 @@ const BookMaterials: React.FC<BookMaterialsProps> = () => {
       <ErrorMessage
         message={errorMessage}
         visible={!!errorMessage}
-        onDismiss={() => setErrorMessage(null)}
+        onDismiss={useCallback(() => setErrorMessage(null), [])}
       />
     </View>
   );

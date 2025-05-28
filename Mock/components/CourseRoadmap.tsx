@@ -1,5 +1,4 @@
-// CourseRoadmap.js
-import React, { memo } from "react";
+import React, { memo, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,17 +6,14 @@ import {
   ScrollView,
   useColorScheme,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import ThreeDButton from "./ThreeDButton"; // Assuming ThreeDButton is in the same directory
+import ThreeDButton from "./ThreeDButton";
 import Colors from "../constants/Colors";
-import { Course, Topic } from "./types";
-import SvgComponent from "./SvgComponent"; // Importing the SvgComponent
-
-import { SIZES, rMS, rS, rV, images } from "../constants";
+import { Topic } from "./types";
+import { PathA, PathB } from "./SvgComponent";
+import { SIZES, rMS, rS, rV } from "../constants";
 
 interface CourseRoadmapProps {
   enrolledTopics: Topic[];
-  course: Course;
   handleTopicPress: (topic: Topic) => void;
   handleQuestionPress: (topic: Topic) => void;
 }
@@ -58,7 +54,7 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
       fontSize: 15,
       color: themeColors.text,
       marginTop: rV(18),
-      maxWidth: "80%", // now responsive instead of a fixed width
+      maxWidth: "80%",
     },
     backgroundContainer: {
       position: "absolute",
@@ -78,19 +74,19 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
       elevation: 0,
     },
   });
-  
 
   const renderTimelineItem = (
     topic: Topic,
     index: number,
     isQuestion: boolean
   ) => {
-    const cyclePosition = index % 10; // Determine the position in the cycle
+    const cyclePosition = index % 10;
+    let contentStyle:
+      | { flex: number; alignItems: "flex-start"; marginLeft: number }
+      | { flex: number; alignItems: "center" }
+      | { flex: number; alignItems: "flex-end"; marginRight: number } =
+      styles.timelineContentLeft;
 
-    let contentStyle: {
-      flex: number;
-      alignItems: "flex-start" | "center" | "flex-end";
-    } = styles.timelineContentLeft;
     if (
       cyclePosition === 0 ||
       cyclePosition === 2 ||
@@ -104,40 +100,25 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
     }
 
     const textAlign =
-      contentStyle === styles.timelineContentLeft
+      contentStyle.alignItems === "flex-start"
         ? "left"
-        : contentStyle === styles.timelineContentCenter
+        : contentStyle.alignItems === "center"
         ? "center"
         : "right";
 
+    const onPress = useCallback(
+      () => (isQuestion ? handleQuestionPress(topic) : handleTopicPress(topic)),
+      [isQuestion, topic.id, handleTopicPress, handleQuestionPress]
+    );
+
     return (
-      <View key={index} style={styles.timelineItem}>
+      <View key={`${topic.id}-${index}`} style={styles.timelineItem}>
         <View style={contentStyle}>
-          <ThreeDButton
-            title={
-              isQuestion ? (
-                <Ionicons
-                  name="play-circle-outline"
-                  size={SIZES.xxLarge}
-                  color="black"
-                />
-              ) : (
-                ""
-              )
-            }
-            onPress={() =>
-              isQuestion ? handleQuestionPress(topic) : handleTopicPress(topic)
-            }
-          />
+          <ThreeDButton isQuestion={isQuestion} onPress={onPress} />
           <Text
             numberOfLines={3}
             ellipsizeMode="tail"
-            style={[
-              styles.timelineText,
-              {
-                textAlign,
-              },
-            ]}
+            style={[styles.timelineText, { textAlign }]}
           >
             {isQuestion ? `Practice ${topic.title}` : topic.title}
           </Text>
@@ -150,18 +131,21 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {enrolledTopics.map((topic, index) => (
-          <View key={index}>
+          <View key={topic.id}>
             {renderTimelineItem(topic, index * 2, false)}
-            <View style={[styles.backgroundContainer]}>
-            <SvgComponent
-  paths={
-    (index % 2 === 0) === (Math.floor(index / 5) % 2 === 0)
-      ? ["M150 350L0 200M0 200L150 50"] // path A
-      : ["M150 50L300 200M300 200L150 350"] // path B
-  }
-/>
-
-
+            <View style={styles.backgroundContainer}>
+              {/* <SvgComponent
+                paths={
+                  (index % 2 === 0) === (Math.floor(index / 5) % 2 === 0)
+                    ? ["M150 350L0 200M0 200L150 50"]
+                    : ["M150 50L300 200M300 200L150 350"]
+                }
+              /> */}
+              {(index % 2 === 0) === (Math.floor(index / 5) % 2 === 0) ? (
+                <PathA />
+              ) : (
+                <PathB />
+              )}
             </View>
             {renderTimelineItem(topic, index * 2 + 1, true)}
           </View>

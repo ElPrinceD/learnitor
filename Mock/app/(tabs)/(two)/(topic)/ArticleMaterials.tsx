@@ -86,7 +86,7 @@ const ArticleMaterials: React.FC<ArticleMaterialsProps> = () => {
       <ErrorMessage
         message={errorMessage}
         visible={!!errorMessage}
-        onDismiss={() => setErrorMessage(null)}
+        onDismiss={useCallback(() => setErrorMessage(null), [])}
       />
     </View>
   );

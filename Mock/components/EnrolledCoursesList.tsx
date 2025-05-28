@@ -1,4 +1,4 @@
-import React, { memo, useCallback } from "react";
+import React, { memo, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -92,6 +92,11 @@ const EnrolledCoursesList: React.FC<Props> = ({
       margin: rMS(5),
     },
   });
+  const containerStyle = useMemo(
+    () => ({ backgroundColor: themeColors.text, height: 7 }),
+    []
+  );
+  const fillStyle = useMemo(() => ({ backgroundColor: themeColors.icon }), []);
 
   const renderItem = useCallback(
     ({ item }: { item: Course }) => (
@@ -115,11 +120,8 @@ const EnrolledCoursesList: React.FC<Props> = ({
             </Text>
             <ProgressBar
               progress={progressMap[item.id] || 0}
-              containerStyle={{
-                backgroundColor: themeColors.text,
-                height: 7,
-              }}
-              fillStyle={{ backgroundColor: themeColors.icon }}
+              containerStyle={containerStyle}
+              fillStyle={fillStyle}
             />
           </View>
         </View>

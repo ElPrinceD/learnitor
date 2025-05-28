@@ -1,4 +1,11 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  memo,
+  useRef,
+} from "react";
 import {
   View,
   StyleSheet,
@@ -7,6 +14,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import moment from "moment";
+import { debounce } from "lodash"; // Add lodash for debouncing
 import SearchBar from "../../../components/SearchBar2";
 import Colors from "../../../constants/Colors";
 import { useAuth } from "../../../components/AuthContext";
@@ -25,6 +33,35 @@ import {
   searchCommunities,
 } from "../../../services/CommunityApiCalls";
 
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingHorizontal: rS(16),
+  },
+  searchContainer: {
+    paddingVertical: rV(5),
+  },
+  listContainer: {
+    flex: 1,
+    paddingTop: rV(5),
+  },
+  noResultsText: {
+    alignSelf: "center",
+    marginTop: rV(20),
+  },
+  skeletonItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: rS(14),
+    paddingLeft: rS(1),
+    paddingVertical: rV(10),
+  },
+  skeletonTextContainer: {
+    flex: 1,
+    gap: rV(10),
+  },
+});
+
 const CommunityScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -37,10 +74,12 @@ const CommunityScreen: React.FC = () => {
   const { userToken, userInfo } = useAuth();
   const userId = userInfo?.user?.id;
   const colorScheme = useColorScheme();
-  const themeColors = Colors[colorScheme ?? "light"];
+  const themeColors = useMemo(
+    () => Colors[colorScheme ?? "light"],
+    [colorScheme]
+  );
   const colorMode = colorScheme === "dark" ? "dark" : "light";
   const params = useLocalSearchParams();
-
   const { isConnected, socket } = useWebSocket();
   const {
     unreadMessages,
@@ -48,164 +87,182 @@ const CommunityScreen: React.FC = () => {
     markMessageAsRead,
     setCurrentCommunityId,
   } = useCommunity();
-  const { getItem, setItem, removeItem,getAllKeys } = useCache();
+  const { getItem, setItem, getAllKeys } = useCache();
+  const hasProcessedNewCommunity = useRef(false);
 
-  const mapCommunities = (communities: Community[], lastMsgs: Record<string, any>) =>
-    communities
-      .map((community) => ({
-        ...community,
-        lastMessageTime: lastMsgs[community.id]?.sent_at || new Date(0).toISOString(),
-      }))
-      .sort((a, b) => moment(b.lastMessageTime).diff(moment(a.lastMessageTime)));
+  const mapCommunities = useCallback(
+    (communities: Community[], lastMsgs: Record<string, any>) =>
+      communities
+        .map((community) => ({
+          ...community,
+          lastMessageTime:
+            lastMsgs[community.id]?.sent_at || new Date(0).toISOString(),
+        }))
+        .sort((a, b) =>
+          moment(b.lastMessageTime).diff(moment(a.lastMessageTime))
+        ),
+    []
+  );
 
-      const loadCachedData = useCallback(async () => {
-        try {
-          // Get all cached keys
-          const keys = await getAllKeys();
-          const cachedCommunityKeys = keys.filter((key) => key.startsWith("community_"));
-      
-          if (cachedCommunityKeys.length > 0) {
-            // Fetch all cached communities
-            const cachedCommunities = await Promise.all(
-              cachedCommunityKeys.map(async (key) => {
-                const community = await getItem(key);
-                return community ? JSON.parse(community) : null;
-              })
-            );
-      
-            // Filter out any null values (in case of corrupted or missing data)
-            const validCommunities = cachedCommunities.filter((c) => c !== null);
-      
-            // Set communities to state
-            setMyCommunities(validCommunities);
-      
-            // Load last messages for each community
-            const messages = await Promise.all(
-              validCommunities.map(async (c: Community) => {
-                const msg = await getItem(`last_message_${c.id}`);
-                return [c.id.toString(), msg ? JSON.parse(msg) : null];
-              })
-            );
-      
-            setLastMessages(Object.fromEntries(messages));
-          } else {
-            setErrorMessage("No cached communities found");
-          }
-        } catch (e) {
-          setErrorMessage("Failed to load communities");
-        } finally {
-          setLoading(false);
-          setInitialLoad(false);
-        }
-      }, [getAllKeys, getItem]);
+  const loadCachedData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const keys = await getAllKeys();
+      const cachedCommunityKeys = keys.filter((key) =>
+        key.startsWith("community_")
+      );
+
+      if (cachedCommunityKeys.length > 0) {
+        const cachedCommunities = await Promise.all(
+          cachedCommunityKeys.map(async (key) => {
+            const community = await getItem(key);
+            return community ? JSON.parse(community) : null;
+          })
+        );
+        const validCommunities = cachedCommunities.filter(
+          (c): c is Community => c !== null
+        );
+        setMyCommunities(validCommunities);
+
+        const messages = await Promise.all(
+          validCommunities.map(async (c: Community) => {
+            const msg = await getItem(`last_message_${c.id}`);
+            return [c.id.toString(), msg ? JSON.parse(msg) : null];
+          })
+        );
+        setLastMessages(Object.fromEntries(messages));
+      } else {
+        setErrorMessage("No communities found.");
+      }
+    } catch (e) {
+      setErrorMessage("Failed to load communities.");
+      console.error("Cache load error:", e);
+    } finally {
+      setLoading(false);
+      setInitialLoad(false);
+    }
+  }, [getAllKeys, getItem]);
 
   useFocusEffect(
     useCallback(() => {
+      const handleNavParam = async () => {
+        const newCommunityParam = params.newCommunity;
+        if (
+          newCommunityParam &&
+          typeof newCommunityParam === "string" &&
+          !hasProcessedNewCommunity.current
+        ) {
+          try {
+            hasProcessedNewCommunity.current = true;
+            const parsed: Community = JSON.parse(newCommunityParam);
+            setMyCommunities((prev) => {
+              if (!prev.some((c) => c.id === parsed.id)) {
+                setItem(`community_${parsed.id}`, JSON.stringify(parsed));
+                return [...prev, parsed];
+              }
+              return prev;
+            });
+          } catch (e) {
+            console.warn("Failed to parse new community param:", e);
+          }
+          router.setParams({ newCommunity: undefined });
+        }
+      };
+
       loadCachedData();
-    }, [loadCachedData])
+      handleNavParam();
+    }, [loadCachedData, params.newCommunity, setItem])
   );
 
-  useEffect(() => {
-    if (!socket || !isConnected || !userToken) return;
-
-    const onMessage = async (event: MessageEvent) => {
+  const onMessage = useCallback(
+    async (event: MessageEvent) => {
       try {
         const data = JSON.parse(event.data);
-
-        const id = data.community?.id?.toString() || data.community_id?.toString();
+        const id =
+          data.community?.id?.toString() || data.community_id?.toString();
         if (!id) return;
 
         if (data.type === "community_updated" && data.community) {
           setMyCommunities((prev) => {
             const exists = prev.some((c) => c.id.toString() === id);
-            const updated = exists
-              ? prev.map((c) => (c.id.toString() === id ? { ...c, ...data.community } : c))
-              : [...prev, { ...data.community, id: parseInt(id) }];
-            
-            setItem(`community_${id}`, JSON.stringify(data.community));
-            return updated;
+            if (exists) {
+              const updated = prev.map((c) =>
+                c.id.toString() === id ? { ...c, ...data.community } : c
+              );
+              if (JSON.stringify(prev) !== JSON.stringify(updated)) {
+                setItem(`community_${id}`, JSON.stringify(data.community));
+                return updated;
+              }
+              return prev;
+            }
+            const newCommunity = { ...data.community, id: parseInt(id) };
+            setItem(`community_${id}`, JSON.stringify(newCommunity));
+            return [...prev, newCommunity];
           });
         } else if (data.type === "join_success") {
-          const community = await getCommunityDetails(id, userToken.token);
+          const community = await getCommunityDetails(id, userToken?.token);
           if (community) {
             setMyCommunities((prev) => {
               if (!prev.some((c) => c.id === community.id)) {
-                const updated = [...prev, community];
-                setItem("communities", JSON.stringify(updated));
                 setItem(`community_${id}`, JSON.stringify(community));
-                return updated;
+                return [...prev, community];
               }
               return prev;
             });
           }
-        }  else if (data.type === "message") {
+        } else if (data.type === "message") {
           const newMsg = {
             ...data,
             sent_at: new Date(data.sent_at).toISOString(),
             community_id: parseInt(id),
           };
           setLastMessages((prev) => {
-            const updated = { ...prev, [id]: newMsg };
-            console.log("Updated last messages:", updated);
-            setItem(`last_message_${id}`, JSON.stringify(newMsg));
-            return updated;
+            if (JSON.stringify(prev[id]) !== JSON.stringify(newMsg)) {
+              setItem(`last_message_${id}`, JSON.stringify(newMsg));
+              return { ...prev, [id]: newMsg };
+            }
+            return prev;
           });
         }
       } catch (e) {
         console.error("WebSocket error:", e);
       }
-    };
+    },
+    [userToken?.token, setItem]
+  );
+
+  useEffect(() => {
+    if (!socket || !isConnected || !userToken) return;
 
     socket.addEventListener("message", onMessage);
     return () => socket.removeEventListener("message", onMessage);
-  }, [socket, isConnected, userToken, getItem, setItem, removeItem]);
+  }, [socket, isConnected, userToken, onMessage]);
 
-  useEffect(() => {
-    const fetchGlobal = async () => {
-      if (searchQuery.length >= 3 && userToken?.token) {
+  const debouncedFetchGlobal = useCallback(
+    debounce(async (query: string) => {
+      if (query.length >= 3 && userToken?.token) {
         setIsFetching(true);
         try {
-          const result = await searchCommunities(searchQuery, userToken.token);
-          const filtered = result.filter(
-            (c) => !myCommunities.some((mc) => mc.id === c.id)
+          const result = await searchCommunities(query, userToken.token);
+          setGlobalCommunities(
+            result.filter((c) => !myCommunities.some((mc) => mc.id === c.id))
           );
-          setGlobalCommunities(filtered);
         } catch (e) {
-          setErrorMessage("Failed to search global communities");
+          setErrorMessage("Failed to search communities.");
+          console.error("Search error:", e);
         } finally {
           setIsFetching(false);
         }
       } else {
         setGlobalCommunities([]);
       }
-    };
-    fetchGlobal();
-  }, [searchQuery, userToken, myCommunities]);
-
- 
-
-  useFocusEffect(
-    useCallback(() => {
-      const handleNavParam = async () => {
-        const newCommunityParam = params.newCommunity;
-        if (newCommunityParam && typeof newCommunityParam === "string") {
-          try {
-            const parsed: Community = JSON.parse(newCommunityParam);
-            if (!myCommunities.some((c) => c.id === parsed.id)) {
-              const updated = [...myCommunities, parsed];
-              setMyCommunities(updated);
-              
-              await setItem(`community_${parsed.id}`, JSON.stringify(parsed));
-            }
-          } catch (e) {
-            console.warn("Failed to parse new community param:", e);
-          }
-        }
-        router.setParams({ newCommunity: undefined });
-      };
-      handleNavParam();
-    }, [params.newCommunity, myCommunities])
+    }, 300),
+    [userToken?.token, myCommunities]
   );
+
+  useEffect(() => {
+    debouncedFetchGlobal(searchQuery);
+  }, [searchQuery, debouncedFetchGlobal]);
 
   const handleSearch = useCallback((q: string) => setSearchQuery(q), []);
 
@@ -216,12 +273,13 @@ const CommunityScreen: React.FC = () => {
 
   const sortedMyCommunities = useMemo(
     () => mapCommunities(myCommunities, lastMessages),
-    [myCommunities, lastMessages]
+    [myCommunities, lastMessages, mapCommunities]
   );
 
   const filteredCommunities = useMemo(() => {
-    if (searchQuery.length < 3)
+    if (searchQuery.length < 3) {
       return { user: sortedMyCommunities, global: [] };
+    }
 
     return {
       user: mapCommunities(
@@ -234,63 +292,89 @@ const CommunityScreen: React.FC = () => {
         c.name.toLowerCase().includes(searchQuery.toLowerCase())
       ),
     };
-  }, [searchQuery, myCommunities, globalCommunities, lastMessages]);
+  }, [
+    searchQuery,
+    myCommunities,
+    globalCommunities,
+    lastMessages,
+    sortedMyCommunities,
+    mapCommunities,
+  ]);
 
-  const handleCommunityPress = useCallback(async (community: Community) => {
-    try {
-      const exists = myCommunities.some((c) => c.id === community.id);
-      if (!exists && isConnected) {
-        await joinAndSubscribeToCommunity(community.id.toString());
-        const details = await getCommunityDetails(community.id.toString(), userToken?.token);
-        setMyCommunities((prev) => {
-          if (!prev.some((c) => c.id === details.id)) {
-            const updated = [...prev, details];
-            setItem(`community_${details.id}`, JSON.stringify(community));
-            return updated;
-          }
-          return prev;
+  const handleCommunityPress = useCallback(
+    async (community: Community) => {
+      try {
+        const exists = myCommunities.some((c) => c.id === community.id);
+        if (!exists && isConnected) {
+          await joinAndSubscribeToCommunity(community.id.toString());
+          const details = await getCommunityDetails(
+            community.id.toString(),
+            userToken?.token
+          );
+          setMyCommunities((prev) => {
+            if (!prev.some((c) => c.id === details.id)) {
+              setItem(`community_${details.id}`, JSON.stringify(details));
+              return [...prev, details];
+            }
+            return prev;
+          });
+        }
+        setCurrentCommunityId(community.id.toString());
+        markMessageAsRead(community.id.toString());
+        router.navigate({
+          pathname: "/ChatScreen",
+          params: {
+            communityId: community.id,
+            name: community.name,
+            image: community.image_url,
+          },
         });
+        setSearchQuery("");
+      } catch (e) {
+        console.error("Join or navigate failed:", e);
+        setErrorMessage("Failed to join or open community.");
       }
-      setCurrentCommunityId(community.id.toString());
-      markMessageAsRead(community.id.toString());
-      router.navigate({
-        pathname: "ChatScreen",
-        params: { communityId: community.id, name: community.name, image: community.image_url },
-      });
-      setSearchQuery("");
-    } catch (e) {
-      console.error("Join or navigate failed:", e);
-      setErrorMessage("Failed to join or open community");
-    }
-  }, [myCommunities, isConnected, joinAndSubscribeToCommunity, markMessageAsRead, setCurrentCommunityId, userToken, setItem]);
-
-  const styles = StyleSheet.create({
-    container: { flex: 1, paddingHorizontal: 16, backgroundColor: themeColors.background },
-    searchContainer: { paddingVertical: 10, flex: 0.05 },
-    listContainer: { flex: 1, paddingTop: 15 },
-    noResultsText: { color: themeColors.textSecondary, alignSelf: "center" },
-    skeletonItem: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 14,
-      paddingLeft: rS(1),
-      paddingVertical: rV(10),
     },
-    skeletonTextContainer: { flex: 1, gap: 10 },
-  });
+    [
+      myCommunities,
+      isConnected,
+      joinAndSubscribeToCommunity,
+      markMessageAsRead,
+      setCurrentCommunityId,
+      userToken?.token,
+      setItem,
+    ]
+  );
 
-  const noResultsFound = searchQuery.length >= 3 && !filteredCommunities.user.length && !filteredCommunities.global.length;
+  const showUnreadIndicator = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(unreadMessages).map(([id, count]) => [id, count > 0])
+      ),
+    [unreadMessages]
+  );
+
+  const noResultsFound =
+    searchQuery.length >= 3 &&
+    !filteredCommunities.user.length &&
+    !filteredCommunities.global.length;
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[styles.container, { backgroundColor: themeColors.background }]}
+    >
       <View style={styles.searchContainer}>
         <SearchBar onSearch={handleSearch} />
       </View>
-
       {initialLoad || loading ? (
         Array.from({ length: 6 }).map((_, idx) => (
           <View key={`skeleton-${idx}`} style={styles.skeletonItem}>
-            <Skeleton colorMode={colorMode} width={50} height={50} radius={50} />
+            <Skeleton
+              colorMode={colorMode}
+              width={rS(50)}
+              height={rS(50)}
+              radius={50}
+            />
             <View style={styles.skeletonTextContainer}>
               <Skeleton colorMode={colorMode} height={rV(20)} width="60%" />
               <Skeleton colorMode={colorMode} height={rV(15)} width="80%" />
@@ -300,9 +384,19 @@ const CommunityScreen: React.FC = () => {
       ) : noResultsFound ? (
         <View style={styles.listContainer}>
           {isFetching ? (
-            <ActivityIndicator color="white" style={styles.noResultsText} />
+            <ActivityIndicator
+              color={themeColors.tint}
+              style={styles.noResultsText}
+            />
           ) : (
-            <Text style={[styles.noResultsText, { color: themeColors.placeholder }]}>No results found</Text>
+            <Text
+              style={[
+                styles.noResultsText,
+                { color: themeColors.textSecondary },
+              ]}
+            >
+              No communities found.
+            </Text>
           )}
         </View>
       ) : (
@@ -315,9 +409,7 @@ const CommunityScreen: React.FC = () => {
                 onCommunityPress={handleCommunityPress}
                 showLastMessage
                 getLastMessage={getLastMessage}
-                showUnreadIndicator={Object.fromEntries(
-                  Object.entries(unreadMessages).map(([id, count]) => [id, count > 0])
-                )}
+                showUnreadIndicator={showUnreadIndicator}
               />
               {filteredCommunities.global.length > 0 && (
                 <GlobalCommunityList
@@ -334,19 +426,18 @@ const CommunityScreen: React.FC = () => {
               onCommunityPress={handleCommunityPress}
               showLastMessage
               getLastMessage={getLastMessage}
-              showUnreadIndicator={Object.fromEntries(
-                Object.entries(unreadMessages).map(([id, count]) => [id, count > 0])
-              )}
+              showUnreadIndicator={showUnreadIndicator}
             />
           )}
         </View>
       )}
-
-      {errorMessage && (
-        <ErrorMessage message={errorMessage} visible onDismiss={() => setErrorMessage(null)} />
-      )}
+      <ErrorMessage
+        message={errorMessage}
+        visible={!!errorMessage}
+        onDismiss={() => setErrorMessage(null)}
+      />
     </View>
   );
 };
 
-export default CommunityScreen;
+export default memo(CommunityScreen);

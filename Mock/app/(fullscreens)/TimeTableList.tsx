@@ -434,7 +434,7 @@ const TimetableListPage: React.FC = memo(() => {
           <ErrorMessage
             message={errorMessage}
             visible={!!errorMessage}
-            onDismiss={() => setErrorMessage(null)}
+            onDismiss={useCallback(() => setErrorMessage(null), [])}
           />
         </View>
       )}
