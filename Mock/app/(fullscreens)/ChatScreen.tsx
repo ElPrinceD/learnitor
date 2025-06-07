@@ -942,26 +942,31 @@ const CommunityChatScreen: React.FC = () => {
   }, [selectedMessages, sendMessage, canEditDeleteOrReply]);
 
   const updateHeader = useCallback(() => {
-    console.log("Updating header", {
-      community: community,
+    console.log("updateHeader called", {
       selectedMessagesCount: selectedMessages.length,
+      community: community?.name || "Unknown",
+      headerState: selectedMessages.length > 0 ? "selected" : "default",
     });
   
     const headerOptions = {
       headerStyle: {
         backgroundColor: themeColors.reverseText,
       },
-      headerTitleAlign: "center",
+      headerTitleAlign: "center" as const, // Explicitly set to center
       headerTintColor: themeColors.text,
       headerShadowVisible: false,
       headerTitleContainerStyle: {
-        maxWidth: width * 0.9, // allow nearly full width
+        maxWidth: width * 0.9, // Allow nearly full width
         flexGrow: 1,
         flexShrink: 1,
+        alignItems: "center" as const, // Ensure title container is centered
       },
     };
   
     if (selectedMessages.length > 0) {
+      console.log("Rendering selected messages header", {
+        selectedMessagesCount: selectedMessages.length,
+      });
       const { canDelete, canEdit, canReply } = canEditDeleteOrReply();
       navigation.setOptions({
         ...headerOptions,
@@ -971,6 +976,7 @@ const CommunityChatScreen: React.FC = () => {
               color: themeColors.text,
               fontSize: rMS(18),
               fontWeight: "bold",
+              textAlign: "center", // Ensure text is centered
             }}
           >
             {`${selectedMessages.length} Selected`}
@@ -1052,6 +1058,10 @@ const CommunityChatScreen: React.FC = () => {
         ),
       });
     } else {
+      console.log("Rendering default header", {
+        communityName: community?.name || "Unknown",
+        communityId,
+      });
       navigation.setOptions({
         ...headerOptions,
         headerTitle: () => (
@@ -1065,11 +1075,11 @@ const CommunityChatScreen: React.FC = () => {
             style={{
               flexDirection: "row",
               alignItems: "center",
-              justifyContent: "center", // center the row itself
+              justifyContent: "center", // Center the row content
               flexGrow: 1,
               flexShrink: 1,
               paddingVertical: rV(4),
-              maxWidth: width * 0.9,
+              width: "100%", // Ensure full width to center properly
             }}
           >
             <AppImage
@@ -1087,8 +1097,7 @@ const CommunityChatScreen: React.FC = () => {
                 fontSize: rMS(16),
                 fontWeight: "600",
                 flexShrink: 1,
-                flexGrow: 1,
-                maxWidth: width * 0.75, // more space for the name
+                textAlign: "center", // Center the text
               }}
               numberOfLines={1}
               ellipsizeMode="tail"
