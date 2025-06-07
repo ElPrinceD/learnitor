@@ -37,35 +37,7 @@ export default function ChatScreenLayout() {
           options={({ route, navigation }) => ({
             headerShown: true,
             headerBackTitle: "Back",
-            headerTitle: () => (
-              <TouchableOpacity
-                onPressIn={() =>
-                  navigation.navigate("CommunityDetailScreen", {
-                    id: route.params?.communityId,
-                  })
-                }
-                style={{ flexDirection: "row", alignItems: "center" }}
-              >
-                <AppImage
-                  uri={route.params?.image}
-                  style={{
-                    width: rS(30),
-                    height: rV(30),
-                    marginRight: SIZES.small,
-                    borderRadius: rMS(SIZES.xSmall),
-                  }}
-                />
-                <Text
-                  style={{
-                    color: themeColors.text,
-                    fontSize: rMS(19),
-                    fontWeight: "bold",
-                  }}
-                >
-                  {route.params?.name ?? "Chat"}
-                </Text>
-              </TouchableOpacity>
-            ),
+          
             headerStyle: {
               backgroundColor: themeColors.reverseText,
             },

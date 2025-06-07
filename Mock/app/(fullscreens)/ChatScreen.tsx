@@ -932,7 +932,7 @@ const CommunityChatScreen: React.FC = () => {
       community: community,
       selectedMessagesCount: selectedMessages.length,
     });
-
+  
     const headerOptions = {
       headerStyle: {
         backgroundColor: themeColors.reverseText,
@@ -940,8 +940,13 @@ const CommunityChatScreen: React.FC = () => {
       headerTitleAlign: "center",
       headerTintColor: themeColors.text,
       headerShadowVisible: false,
+      headerTitleContainerStyle: {
+        maxWidth: width * 0.9, // allow nearly full width
+        flexGrow: 1,
+        flexShrink: 1,
+      },
     };
-
+  
     if (selectedMessages.length > 0) {
       const { canDelete, canEdit, canReply } = canEditDeleteOrReply();
       navigation.setOptions({
@@ -950,7 +955,7 @@ const CommunityChatScreen: React.FC = () => {
           <Text
             style={{
               color: themeColors.text,
-              fontSize: rMS(19),
+              fontSize: rMS(18),
               fontWeight: "bold",
             }}
           >
@@ -1043,24 +1048,36 @@ const CommunityChatScreen: React.FC = () => {
                 params: { id: communityId },
               })
             }
-            style={{ flexDirection: "row", alignItems: "center" }}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center", // center the row itself
+              flexGrow: 1,
+              flexShrink: 1,
+              paddingVertical: rV(4),
+              maxWidth: width * 0.9,
+            }}
           >
             <AppImage
-              uri={community?.image_url || "https://via.placeholder.com/30"}
+              uri={community?.image_url || "https://via.placeholder.com/28"}
               style={{
-                width: rS(30),
-                height: rV(30),
-                marginRight: SIZES.small,
-                borderRadius: rMS(SIZES.xSmall),
+                width: rS(28),
+                height: rV(28),
+                marginRight: rS(6),
+                borderRadius: rS(14),
               }}
             />
             <Text
               style={{
                 color: themeColors.text,
-                fontSize: rMS(19),
-                fontWeight: "bold",
+                fontSize: rMS(16),
+                fontWeight: "600",
+                flexShrink: 1,
+                flexGrow: 1,
+                maxWidth: width * 0.75, // more space for the name
               }}
               numberOfLines={1}
+              ellipsizeMode="tail"
             >
               {community?.name || "Chat"}
             </Text>
@@ -1092,7 +1109,12 @@ const CommunityChatScreen: React.FC = () => {
     canEditDeleteOrReply,
     handleDeselectAll,
     community,
+    width,
   ]);
+  
+  
+  
+  
 
   const handlePress = useCallback((message: IMessage) => {
     setSelectedMessages((prevSelected) => {
