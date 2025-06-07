@@ -105,6 +105,7 @@ const CommunityScreen: React.FC = () => {
   );
 
   const loadCachedData = useCallback(async () => {
+    if (myCommunities.length > 0) return; // Skip if data exists
     try {
       setLoading(true);
       const keys = await getAllKeys();
@@ -141,10 +142,12 @@ const CommunityScreen: React.FC = () => {
       setLoading(false);
       setInitialLoad(false);
     }
-  }, [getAllKeys, getItem]);
+  }, [getAllKeys, getItem, myCommunities.length]);
 
   useFocusEffect(
     useCallback(() => {
+      if (!initialLoad && myCommunities.length > 0) return;
+      loadCachedData();
       const handleNavParam = async () => {
         const newCommunityParam = params.newCommunity;
         if (
@@ -162,16 +165,32 @@ const CommunityScreen: React.FC = () => {
               }
               return prev;
             });
+            router.setParams({ newCommunity: undefined });
           } catch (e) {
             console.warn("Failed to parse new community param:", e);
           }
-          router.setParams({ newCommunity: undefined });
         }
       };
-
-      loadCachedData();
       handleNavParam();
-    }, [loadCachedData, params.newCommunity, setItem])
+    }, [
+      loadCachedData,
+      params.newCommunity,
+      setItem,
+      initialLoad,
+      myCommunities.length,
+    ])
+  );
+  const debouncedSetCommunities = useCallback(
+    debounce((newCommunities) => {
+      setMyCommunities(newCommunities);
+    }, 300),
+    []
+  );
+  const debouncedSetMessages = useCallback(
+    debounce((newMessages) => {
+      setLastMessages(newMessages);
+    }, 300),
+    []
   );
 
   const onMessage = useCallback(
@@ -191,13 +210,16 @@ const CommunityScreen: React.FC = () => {
               );
               if (JSON.stringify(prev) !== JSON.stringify(updated)) {
                 setItem(`community_${id}`, JSON.stringify(data.community));
+                debouncedSetCommunities(updated);
                 return updated;
               }
               return prev;
             }
             const newCommunity = { ...data.community, id: parseInt(id) };
             setItem(`community_${id}`, JSON.stringify(newCommunity));
-            return [...prev, newCommunity];
+            const newCommunities = [...prev, newCommunity];
+            debouncedSetCommunities(newCommunities);
+            return newCommunities;
           });
         } else if (data.type === "join_success") {
           const community = await getCommunityDetails(id, userToken?.token);
@@ -205,7 +227,9 @@ const CommunityScreen: React.FC = () => {
             setMyCommunities((prev) => {
               if (!prev.some((c) => c.id === community.id)) {
                 setItem(`community_${id}`, JSON.stringify(community));
-                return [...prev, community];
+                const newCommunities = [...prev, community];
+                debouncedSetCommunities(newCommunities);
+                return newCommunities;
               }
               return prev;
             });
@@ -219,7 +243,9 @@ const CommunityScreen: React.FC = () => {
           setLastMessages((prev) => {
             if (JSON.stringify(prev[id]) !== JSON.stringify(newMsg)) {
               setItem(`last_message_${id}`, JSON.stringify(newMsg));
-              return { ...prev, [id]: newMsg };
+              const newMessages = { ...prev, [id]: newMsg };
+              debouncedSetMessages(newMessages);
+              return newMessages;
             }
             return prev;
           });
