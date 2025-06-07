@@ -346,6 +346,35 @@ const CommunityChatScreen: React.FC = () => {
     isUpdatingMessages,
   ]);
 
+  useEffect(() => {
+    (async () => {
+      if (Platform.OS !== "web") {
+        const { status: existingStatus } =
+          await ImagePicker.getMediaLibraryPermissionsAsync();
+  
+        if (existingStatus !== "granted") {
+          const { status } =
+            await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (status !== "granted") {
+            alert("Sorry, we need camera roll permissions to make this work!");
+          }
+        }
+  
+        const { status: existingMediaStatus } =
+          await MediaLibrary.getPermissionsAsync();
+  
+        if (existingMediaStatus !== "granted") {
+          const { status: mediaStatus } =
+            await MediaLibrary.requestPermissionsAsync();
+          if (mediaStatus !== "granted") {
+            alert("Sorry, we need media library permissions to save images.");
+          }
+        }
+      }
+    })();
+  }, []);
+  
+
   useFocusEffect(
     useCallback(() => {
       // Set the current community ID when the screen is focused
@@ -482,22 +511,7 @@ const CommunityChatScreen: React.FC = () => {
     return socketCleanup;
   }, [socket, communityId, normalizeMessage]);
 
-  useEffect(() => {
-    (async () => {
-      if (Platform.OS !== "web") {
-        const { status } =
-          await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== "granted") {
-          alert("Sorry, we need camera roll permissions to make this work!");
-        }
-        const { status: mediaStatus } =
-          await MediaLibrary.requestPermissionsAsync();
-        if (mediaStatus !== "granted") {
-          alert("Sorry, we need media library permissions to save images.");
-        }
-      }
-    })();
-  }, []);
+
 
   useEffect(() => {
     if (isConnected) {
