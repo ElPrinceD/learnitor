@@ -38,9 +38,10 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
   const [isSendingImages, setIsSendingImages] = useState(false);
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+
   // Sync previewImage with images prop
   useEffect(() => {
-    console.log("Images prop:", images);
+    console.log("Images prop changed:", images);
     if (images.length > 0) {
       setPreviewImage(images[0]);
     } else {
@@ -49,8 +50,14 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
   }, [images]);
 
   const handleSend = useCallback(async () => {
-    if (!previewImage) return;
+    console.log("handleSend called, previewImage:", previewImage);
+    if (!previewImage) {
+      console.warn("No preview image available");
+      ToastAndroid.show("No image selected", ToastAndroid.SHORT);
+      return;
+    }
     setIsSendingImages(true);
+    console.log("isSendingImages set to true");
     try {
       await onSend(previewImage.uri);
       ToastAndroid.show("Image sent successfully", ToastAndroid.SHORT);
@@ -59,16 +66,28 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
       ToastAndroid.show("Failed to send image", ToastAndroid.SHORT);
     } finally {
       setIsSendingImages(false);
+      console.log("isSendingImages set to false");
       onClose();
-      setPreviewImage(null);
+      console.log("onClose called from handleSend");
     }
   }, [previewImage, onSend, onClose]);
+
+  const handleClose = useCallback(() => {
+    console.log("handleClose called");
+    setPreviewImage(null); // Clear preview image on close
+    onClose();
+  }, [onClose]);
 
   return (
     <Sheet
       modal
       open={visible}
-      onOpenChange={onClose}
+      onOpenChange={(isOpen) => {
+        console.log("Sheet onOpenChange, isOpen:", isOpen);
+        if (!isOpen) {
+          handleClose();
+        }
+      }}
       animationConfig={{
         type: "spring",
         damping: 22,
@@ -84,8 +103,9 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
             {/* Header */}
             <View style={styles.modalHeader}>
               <TouchableOpacity
-                onPress={onClose}
+                onPressIn={handleClose}
                 disabled={isSendingImages}
+                activeOpacity={0.7}
                 style={styles.closeButton}
               >
                 <Ionicons name="close" size={rS(28)} color={themeColors.text} />
@@ -128,12 +148,13 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
                 <View style={styles.previewActionContainer}>
                   {previewImage && (
                     <TouchableOpacity
-                      onPress={handleSend}
+                      onPressIn={handleSend}
                       style={[
                         styles.sendButton,
                         { backgroundColor: themeColors.tint },
                       ]}
                       disabled={isSendingImages}
+                      activeOpacity={0.7}
                     >
                       <Ionicons name="send" size={SIZES.large} color="#fff" />
                     </TouchableOpacity>
@@ -162,21 +183,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: rS(16),
     paddingVertical: rV(12),
-    backgroundColor: "transparent", // Transparent for sleek look
+    backgroundColor: "transparent",
   },
   closeButton: {
     width: rS(40),
     height: rS(40),
     borderRadius: rS(20),
-    backgroundColor: "rgba(0, 0, 0, 0.1)", // Subtle backdrop
+    backgroundColor: "rgba(0, 0, 0, 0.1)",
     justifyContent: "center",
     alignItems: "center",
-  },
-  previewModalTitle: {
-    fontSize: rMS(20),
-    fontWeight: "700",
-    marginLeft: rS(12),
-    letterSpacing: 0.5,
   },
   contentContainer: {
     flex: 1,
@@ -186,12 +201,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: rS(16),
-    backgroundColor: "rgba(0, 0, 0, 0.05)", // Subtle background for image
+    backgroundColor: "rgba(0, 0, 0, 0.05)",
     borderRadius: rS(12),
     margin: rS(16),
   },
   previewImage: {
-    width: width - rS(48), // Adjusted for padding and margin
+    width: width - rS(48),
     height: (width - rS(48)) * 1.5,
     maxHeight: Dimensions.get("window").height * 0.65,
     borderRadius: rS(8),
@@ -232,4 +247,11 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ImagePreviewModal;
+export default React.memo(ImagePreviewModal, (prevProps, nextProps) => {
+  return (
+    prevProps.visible === nextProps.visible &&
+    prevProps.images === nextProps.images &&
+    prevProps.onClose === nextProps.onClose &&
+    prevProps.onSend === nextProps.onSend
+  );
+});

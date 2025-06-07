@@ -822,6 +822,15 @@ const CommunityChatScreen: React.FC = () => {
     [sendMediaMessage]
   );
 
+  const onClose = useCallback(() => {
+    setIsImagePreviewVisible(false);
+    setSelectedImagesForPreview([]);
+  }, []);
+
+  const onRequestClose = useCallback(() => {
+    setIsImageViewerVisible(false);
+  }, []);
+
   const handleCopySelected = useCallback(async () => {
     const textToCopy = selectedMessages
       .map((msg) => msg.text)
@@ -932,7 +941,7 @@ const CommunityChatScreen: React.FC = () => {
       community: community,
       selectedMessagesCount: selectedMessages.length,
     });
-  
+
     const headerOptions = {
       headerStyle: {
         backgroundColor: themeColors.reverseText,
@@ -946,7 +955,7 @@ const CommunityChatScreen: React.FC = () => {
         flexShrink: 1,
       },
     };
-  
+
     if (selectedMessages.length > 0) {
       const { canDelete, canEdit, canReply } = canEditDeleteOrReply();
       navigation.setOptions({
@@ -1111,10 +1120,6 @@ const CommunityChatScreen: React.FC = () => {
     community,
     width,
   ]);
-  
-  
-  
-  
 
   const handlePress = useCallback((message: IMessage) => {
     setSelectedMessages((prevSelected) => {
@@ -2150,12 +2155,12 @@ const CommunityChatScreen: React.FC = () => {
         visible={isImageViewerVisible}
         images={imageViewerImages}
         currentIndex={currentImageIndex}
-        onRequestClose={() => setIsImageViewerVisible(false)}
+        onRequestClose={onRequestClose}
       />
       <ImagePreviewModal
         visible={isImagePreviewVisible}
         images={selectedImagesForPreview}
-        onClose={() => setIsImagePreviewVisible(false)}
+        onClose={onClose}
         onSend={handleSendImage}
       />
     </View>

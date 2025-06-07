@@ -6,6 +6,8 @@ import {
   ActivityIndicator,
   useColorScheme,
   ImageProps,
+  TouchableOpacity,
+  GestureResponderEvent,
 } from "react-native";
 import { Image as CachedImage } from "react-native-expo-image-cache";
 import { isEqual } from "lodash";
@@ -24,6 +26,7 @@ interface CachedImageProps {
 interface AppImageProps {
   uri?: string;
   style?: ImageProps["style"];
+  onPress?: (event: GestureResponderEvent) => void; // Add optional onPress prop
 }
 
 const styles = StyleSheet.create({
@@ -45,7 +48,7 @@ const styles = StyleSheet.create({
   },
 });
 
-const AppImage: React.FC<AppImageProps> = ({ uri, style }) => {
+const AppImage: React.FC<AppImageProps> = ({ uri, style, onPress }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const isLoadingRef = useRef(true);
@@ -60,21 +63,32 @@ const AppImage: React.FC<AppImageProps> = ({ uri, style }) => {
 
   const isValidUri = uri && typeof uri === "string" && uri.startsWith("http");
 
-  return (
-    <View style={[styles.container, style]}>
-      {isValidUri ? (
+  const renderImage = () => {
+    if (isValidUri) {
+      return (
         <CachedImage
           uri={uri}
           style={[styles.image, style]}
           // No onLoad/onError; rely on cache
         />
+      );
+    }
+    return (
+      <Image
+        source={require("../assets/images/placeholder.png")} // Adjust path
+        style={[styles.image, style]}
+        onLoad={handleLoad}
+        onError={handleError}
+      />
+    );
+  };
+
+  return (
+    <View style={[styles.container, style]}>
+      {onPress ? (
+        <TouchableOpacity onPress={onPress}>{renderImage()}</TouchableOpacity>
       ) : (
-        <Image
-          source={require("../assets/images/placeholder.png")} // Adjust path
-          style={[styles.image, style]}
-          onLoad={handleLoad}
-          onError={handleError}
-        />
+        renderImage()
       )}
       {!isValidUri && isLoadingRef.current && (
         <View
@@ -92,6 +106,8 @@ const AppImage: React.FC<AppImageProps> = ({ uri, style }) => {
 
 export default memo(AppImage, (prevProps, nextProps) => {
   return (
-    isEqual(prevProps.style, nextProps.style) && prevProps.uri === nextProps.uri
+    isEqual(prevProps.style, nextProps.style) &&
+    prevProps.uri === nextProps.uri &&
+    prevProps.onPress === nextProps.onPress // Include onPress in memo comparison
   );
 });
