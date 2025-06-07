@@ -231,7 +231,7 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
             <Text
               style={[
                 styles.lastMessageTime,
-                { color: themeColors.textSecondary },
+                { color: showUnreadIndicator ? 'green' : themeColors.textSecondary },
               ]}
             >
               {getLastMessageTimeDisplay(lastMessage.sent_at)}
