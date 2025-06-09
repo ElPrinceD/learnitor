@@ -148,6 +148,11 @@ const CustomDateTimeSelector: React.FC<CustomDateTimeSelectorProps> = ({
                       options={{
                         backgroundColor: themeColors.background,
                         mainColor: themeColors.tint,
+                        lang: "en",
+                        locale: "en",
+                        textHeaderColor: themeColors.text,
+                        textDefaultColor: themeColors.text,
+                        selectedTextColor: "#fff",
                       }}
                       minimumDate={minDate}
                       maximumDate={maxDate}
@@ -160,6 +165,11 @@ const CustomDateTimeSelector: React.FC<CustomDateTimeSelectorProps> = ({
                       options={{
                         backgroundColor: themeColors.background,
                         mainColor: themeColors.tint,
+                        lang: "en",
+                        locale: "en",
+                        textHeaderColor: themeColors.text,
+                        textDefaultColor: themeColors.text,
+                        selectedTextColor: "#fff",
                       }}
                     />
                   )}

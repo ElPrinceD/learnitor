@@ -14,7 +14,7 @@ import Colors from "../../constants/Colors";
 import TimetableDisplay from "../../components/TimetableDisplay";
 import { router, useLocalSearchParams } from "expo-router";
 import { rMS, rS, rV, SIZES } from "../../constants";
-import ErrorMessage from "../../components/ErrorMessage"; // Assuming you have this component
+import ErrorMessage from "../../components/ErrorMessage";
 import GameButton from "../../components/GameButton";
 import { FontAwesome6 } from "@expo/vector-icons";
 
@@ -46,12 +46,16 @@ const TimetableDetailPage = () => {
   const { userToken } = useAuth();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
-
   const { timetableId, isUserLeader } = useLocalSearchParams<{
     timetableId: string;
     isUserLeader?: string;
   }>();
   const isUserLeaderBool = isUserLeader === "true";
+
+  // Move useCallback to the top level, before any early returns
+  const handleDismissError = useCallback(() => {
+    setErrorMessage(null);
+  }, []);
 
   const {
     data: timetable,
@@ -98,12 +102,12 @@ const TimetableDetailPage = () => {
       bottom: rV(75),
       width: 60,
       height: 60,
-      borderRadius: 30, // Make it circular
+      borderRadius: 30,
       justifyContent: "center",
       alignItems: "center",
       backgroundColor: themeColors.tint,
-      elevation: 5, // For Android shadow
-      shadowColor: "#000", // For iOS shadow
+      elevation: 5,
+      shadowColor: "#000",
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.25,
       shadowRadius: 3.84,
@@ -133,9 +137,9 @@ const TimetableDetailPage = () => {
   const handleEditTimetable = () => {
     console.log("Here");
     router.push({
-      pathname: "TimeTable", // Adjust this path according to your routing setup
+      pathname: "TimeTable",
       params: {
-        id: timetable.id, // Pass the ID for editing
+        id: timetable.id,
         timetable: JSON.stringify({
           name: timetable.name,
           description: timetable.description,
@@ -153,13 +157,11 @@ const TimetableDetailPage = () => {
         periods={timetable.periods}
         isUserLeader={isUserLeaderBool}
       />
-
       <ErrorMessage
         message={errorMessage}
         visible={!!errorMessage}
-        onDismiss={useCallback(() => setErrorMessage(null), [])}
+        onDismiss={handleDismissError}
       />
-
       <TouchableOpacity style={styles.editButton} onPress={handleEditTimetable}>
         <FontAwesome6 name="file-pen" size={30} color={themeColors.text} />
       </TouchableOpacity>

@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useLayoutEffect,
   memo,
+  useRef,
 } from "react";
 import {
   View,
@@ -58,13 +59,23 @@ import FullScreenImageViewer from "../../components/FullScreenImageViewer";
 import ImagePreviewModal from "../../components/ImagePreviewModal";
 import { getCommunityMessages } from "../../services/CommunityApiCalls";
 
+// Add custom IMessage interface at the top of the file
+interface CustomIMessage extends IMessage {
+  status?: 'pending' | 'sending' | 'sent' | 'read';
+  tempId?: string;
+  document?: string;
+  isEdited?: boolean;
+  isSelected?: boolean;
+}
+
 const MemoizedGiftedChat = memo(GiftedChat, (prevProps, nextProps) => {
   return (
     prevProps.messages === nextProps.messages &&
     prevProps.text === nextProps.text &&
     prevProps.user === nextProps.user &&
     prevProps.loadEarlier === nextProps.loadEarlier &&
-    prevProps.isLoadingEarlier === nextProps.isLoadingEarlier
+    prevProps.isLoadingEarlier === nextProps.isLoadingEarlier &&
+    prevProps.scrollToBottom === nextProps.scrollToBottom
   );
 });
 
@@ -79,7 +90,7 @@ const CommunityChatScreen: React.FC = () => {
     useCommunity();
   const { getItem, setItem } = useCache();
   const navigation = useNavigation();
-  const [messages, setMessages] = useState<IMessage[]>([]);
+  const [messages, setMessages] = useState<CustomIMessage[]>([]);
   const [messageIds, setMessageIds] = useState(new Set<string>());
   const [loadEarlier, setLoadEarlier] = useState(true);
   const [isLoadingEarlier, setIsLoadingEarlier] = useState(false);
@@ -91,8 +102,8 @@ const CommunityChatScreen: React.FC = () => {
   const [messageInput, setMessageInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedMessages, setSelectedMessages] = useState<IMessage[]>([]);
-  const [replyToMessage, setReplyToMessage] = useState<IMessage | null>(null);
+  const [selectedMessages, setSelectedMessages] = useState<CustomIMessage[]>([]);
+  const [replyToMessage, setReplyToMessage] = useState<CustomIMessage | null>(null);
   const [mediaPreview, setMediaPreview] = useState<{
     type: "image" | "document" | null;
     uri: string | null;
@@ -108,7 +119,7 @@ const CommunityChatScreen: React.FC = () => {
   const [imageViewerImages, setImageViewerImages] = useState<string[]>([]);
   const [isVideoViewerVisible, setIsVideoViewerVisible] = useState(false);
   const [isDocumentViewerVisible, setIsDocumentViewerVisible] = useState(false);
-  const [editingMessage, setEditingMessage] = useState<IMessage | null>(null);
+  const [editingMessage, setEditingMessage] = useState<CustomIMessage | null>(null);
   const [profileImages, setProfileImages] = useState<Record<string, string>>(
     {}
   );
@@ -122,56 +133,89 @@ const CommunityChatScreen: React.FC = () => {
     image_url: string;
   } | null>(null);
   const [inputHeight, setInputHeight] = useState(rV(40));
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
+  const chatRef = useRef(null);
 
-  const normalizeMessage = useCallback((data) => {
-    if ("message" in data && "sent_at" in data) {
-      return {
-        _id: data.id || data.temp_id || uuidv4(),
-        text: data.message,
-        createdAt: new Date(data.sent_at),
-        user: {
-          _id: data.sender_id,
-          name: data.sender || "Unknown User",
-          avatar: data.sender_image,
-        },
-        status: data.status || "sent",
-        replyTo: data.reply_to
-          ? {
-              _id: data.reply_to.id || null,
-              text: data.reply_to.snippet || null,
-              user: {
-                _id: data.reply_to.sender_id || null,
-                name: data.reply_to.sender_name || "Unknown User",
-              },
-            }
-          : null,
-        image: data.image || null,
-        document: data.document || null,
-        isEdited: data.is_edited || false,
-        tempId: data.temp_id || undefined,
-      };
-    } else if ("_id" in data && "createdAt" in data) {
-      return {
-        _id: data._id,
-        text: data.text,
-        createdAt: new Date(data.createdAt),
-        user: data.user,
-        status: data.status || "sent",
-        replyTo: data.replyTo
-          ? {
-              _id: data.replyTo._id,
-              text: data.replyTo.text,
-              user: data.replyTo.user,
-            }
-          : null,
-        image: data.image || null,
-        document: data.document || null,
-        isEdited: data.isEdited || false,
-        tempId: data.tempId || undefined,
-      };
-    } else {
-      console.warn("Unknown message format received:", data);
-      return null;
+  const normalizeMessage = useCallback((data: any): CustomIMessage | null => {
+    if (!data) return null;
+    
+    try {
+      if ("message" in data && "sent_at" in data) {
+        return {
+          _id: data.id || data.temp_id || uuidv4(),
+          text: data.message,
+          createdAt: new Date(data.sent_at),
+          user: {
+            _id: data.sender_id,
+            name: data.sender || "Unknown User",
+            avatar: data.sender_image,
+          },
+          status: data.status || "sent",
+          replyTo: data.reply_to
+            ? {
+                _id: data.reply_to.id || null,
+                text: data.reply_to.snippet || null,
+                user: {
+                  _id: data.reply_to.sender_id || null,
+                  name: data.reply_to.sender_name || "Unknown User",
+                },
+              }
+            : null,
+          image: data.image || null,
+          document: data.document || null,
+          isEdited: data.is_edited || false,
+          tempId: data.temp_id || undefined,
+        };
+      } else if ("_id" in data && "createdAt" in data) {
+        return {
+          _id: data._id,
+          text: data.text,
+          createdAt: new Date(data.createdAt),
+          user: data.user,
+          status: data.status || "sent",
+          replyTo: data.replyTo
+            ? {
+                _id: data.replyTo._id,
+                text: data.replyTo.text,
+                user: data.replyTo.user,
+              }
+            : null,
+          image: data.image || null,
+          document: data.document || null,
+          isEdited: data.isEdited || false,
+          tempId: data.tempId || undefined,
+        };
+      }
+    } catch (error) {
+      console.error("Error normalizing message:", error);
+    }
+    return null;
+  }, []);
+
+  const updateMessages = useCallback((newMessages: CustomIMessage[]) => {
+    setMessages((prevMessages) => {
+      const messageMap = new Map(prevMessages.map(msg => [msg._id, msg]));
+      newMessages.forEach(msg => {
+        if (msg._id) {
+          messageMap.set(msg._id, msg);
+        }
+      });
+      return Array.from(messageMap.values()).sort((a, b) => {
+        const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+        const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+        return dateB.getTime() - dateA.getTime();
+      });
+    });
+  }, []);
+
+  const processMessageBatch = useCallback((messages: IMessage[]) => {
+    const imageUris = messages
+      .filter(msg => msg.image)
+      .map(msg => msg.image)
+      .filter((uri): uri is string => uri !== undefined && uri !== null);
+    
+    if (imageUris.length > 0) {
+      setImageViewerImages(prev => [...new Set([...imageUris, ...prev])]);
     }
   }, []);
 
@@ -209,7 +253,7 @@ const CommunityChatScreen: React.FC = () => {
 
         const transformedMessages = messages
           .map(normalizeMessage)
-          .filter((msg): msg is IMessage => msg !== null)
+          .filter((msg): msg is CustomIMessage => msg !== null)
           .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
         setMessages(transformedMessages);
         if (transformedMessages.length > 0) {
@@ -275,7 +319,7 @@ const CommunityChatScreen: React.FC = () => {
         if (olderMessages && olderMessages.length > 0) {
           const normalizedOlderMessages = olderMessages.map(normalizeMessage);
           const validOlderMessages = normalizedOlderMessages.filter(
-            (msg): msg is IMessage =>
+            (msg): msg is CustomIMessage =>
               msg !== null && msg._id && !isNaN(msg.createdAt.getTime())
           );
 
@@ -396,120 +440,67 @@ const CommunityChatScreen: React.FC = () => {
 
   useEffect(() => {
     let socketCleanup = () => {};
+    let messageBatch: CustomIMessage[] = [];
+    let batchTimeout: NodeJS.Timeout;
 
     if (socket) {
       const onMessage = (event: MessageEvent) => {
         try {
           const data = JSON.parse(event.data);
 
-          if (
-            data.type === "community_updated" &&
-            data.community?.id === communityId
-          ) {
-            setCommunity(data.community);
-          }
-
-          if (data.type === "history" && data.community_id === communityId) {
+          if (data.type === "message" && data.community_id === communityId) {
+            const newMessage = normalizeMessage(data);
+            if (newMessage) {
+              setShouldScrollToBottom(true);
+              
+              // Check if this is a status update for an existing message
+              if (newMessage.tempId) {
+                setMessages(prevMessages => 
+                  prevMessages.map(msg => 
+                    msg.tempId === newMessage.tempId 
+                      ? { ...msg, status: newMessage.status, _id: newMessage._id }
+                      : msg
+                  )
+                );
+              } else {
+                messageBatch.push(newMessage);
+                
+                if (batchTimeout) {
+                  clearTimeout(batchTimeout);
+                }
+                
+                batchTimeout = setTimeout(() => {
+                  if (messageBatch.length > 0) {
+                    updateMessages(messageBatch);
+                    processMessageBatch(messageBatch);
+                    messageBatch = [];
+                  }
+                }, 100);
+              }
+            }
+          } else if (data.type === "history" && data.community_id === communityId) {
             const transformedMessages = data.messages
               .map(normalizeMessage)
-              .filter((msg): msg is IMessage => msg !== null)
-              .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
-            setMessages((prevMessages) => {
-              const newMessages = transformedMessages.filter(
-                (newMsg) =>
-                  !prevMessages.some((prevMsg) => prevMsg._id === newMsg._id)
-              );
-              const pendingMessages = prevMessages.filter(
-                (m) => m.status === "pending" || m.tempId
-              );
-              const updatedMessages = data.before
-                ? [...prevMessages, ...newMessages]
-                : [...pendingMessages, ...transformedMessages];
-              const uniqueMessages = Array.from(
-                new Map(updatedMessages.map((msg) => [msg._id, msg])).values()
-              ).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
-              if (newMessages.length > 0 && data.before) {
-                setLastMessageTimestamp(
-                  uniqueMessages[uniqueMessages.length - 1].createdAt.getTime()
-                );
-              } else if (!data.before && uniqueMessages.length > 0) {
-                setLastMessageTimestamp(uniqueMessages[0].createdAt.getTime());
-              }
-              setLoadEarlier(newMessages.length === 20);
-              const imageUris = uniqueMessages
-                .filter((msg) => msg.image)
-                .map((msg) => msg.image);
-              setImageViewerImages(imageUris);
-              return uniqueMessages;
-            });
-          } else if (
-            data.type === "message" &&
-            data.community_id === communityId
-          ) {
-            const newMessage = normalizeMessage(data);
-            console.log("New message processed:", newMessage);
-            if (newMessage) {
-              setMessages((prevMessages) => {
-                const index = prevMessages.findIndex(
-                  (m) => m.tempId && m.tempId === data.temp_id
-                );
-                let updatedMessages;
-                if (index !== -1) {
-                  updatedMessages = [...prevMessages];
-                  updatedMessages[index] = { ...newMessage, tempId: undefined };
-                } else {
-                  updatedMessages = [newMessage, ...prevMessages];
-                }
-                const uniqueMessages = Array.from(
-                  new Map(updatedMessages.map((msg) => [msg._id, msg])).values()
-                );
-                const imageUris = uniqueMessages
-                  .filter((msg) => msg.image)
-                  .map((msg) => msg.image);
-                setImageViewerImages(imageUris);
-                return uniqueMessages;
-              });
-            }
-          } else if (
-            data.type === "message_delete" &&
-            data.community_id === communityId
-          ) {
-            setMessages((prevMessages) => {
-              const updatedMessages = prevMessages.filter(
-                (m) => m._id !== data.message_id
-              );
-              const imageUris = updatedMessages
-                .filter((msg) => msg.image)
-                .map((msg) => msg.image);
-              setImageViewerImages(imageUris);
-              return updatedMessages;
-            });
-          } else if (data.type === "message_edit") {
-            console.log("Message edit event received:", data);
-            setMessages((prevMessages) => {
-              const updatedMessages = prevMessages.map((m) =>
-                m._id === data.message_id
-                  ? { ...m, text: data.new_content, isEdited: true }
-                  : m
-              );
-              return updatedMessages;
-            });
+              .filter((msg): msg is CustomIMessage => msg !== null);
+            updateMessages(transformedMessages);
+            processMessageBatch(transformedMessages);
           }
         } catch (error) {
-          console.error("Error processing WebSocket message here:", error);
+          console.error("Error processing WebSocket message:", error);
         }
       };
 
       socket.addEventListener("message", onMessage);
       socketCleanup = () => {
         socket.removeEventListener("message", onMessage);
+        if (batchTimeout) {
+          clearTimeout(batchTimeout);
+        }
       };
     }
 
     return socketCleanup;
-  }, [socket, communityId, normalizeMessage]);
+  }, [socket, communityId, normalizeMessage, updateMessages, processMessageBatch]);
 
 
 
@@ -688,11 +679,12 @@ const CommunityChatScreen: React.FC = () => {
   }, [sendMediaMessage]);
 
   const onSend = useCallback(
-    async (newMessages: IMessage[] = []) => {
+    async (newMessages: CustomIMessage[] = []) => {
+      setShouldScrollToBottom(true);
       for (let message of newMessages) {
         console.log(message);
         const tempId = uuidv4();
-        const tempMessage: IMessage = {
+        const tempMessage: CustomIMessage = {
           _id: tempId,
           tempId,
           text: message.text,
@@ -854,7 +846,7 @@ const CommunityChatScreen: React.FC = () => {
     ToastAndroid.show("Messages copied to clipboard", ToastAndroid.SHORT);
   }, [selectedMessages]);
 
-  const handleLongPress = useCallback((message: IMessage) => {
+  const handleLongPress = useCallback((message: CustomIMessage) => {
     setSelectedMessages((prevSelected) => {
       if (!prevSelected.some((m) => m._id === message._id)) {
         return [...prevSelected, message];
@@ -1144,7 +1136,7 @@ const CommunityChatScreen: React.FC = () => {
     width,
   ]);
 
-  const handlePress = useCallback((message: IMessage) => {
+  const handlePress = useCallback((message: CustomIMessage) => {
     setSelectedMessages((prevSelected) => {
       if (prevSelected.length > 0) {
         const isSelected = prevSelected.some((m) => m._id === message._id);
@@ -1780,6 +1772,13 @@ const CommunityChatScreen: React.FC = () => {
     ]
   );
 
+  const handleScroll = useCallback(({ nativeEvent }) => {
+    const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+    const paddingToBottom = 20;
+    const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
+    setShouldScrollToBottom(isCloseToBottom);
+  }, []);
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -2111,21 +2110,33 @@ const CommunityChatScreen: React.FC = () => {
       color: themeColors.text,
       fontSize: rMS(16),
     },
+    scrollToBottomButton: {
+      width: rS(40),
+      height: rS(40),
+      borderRadius: rMS(20),
+      backgroundColor: themeColors.secondaryBackground,
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: "#000",
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 5,
+    },
   });
 
   return (
     <View style={{ flex: 1, paddingTop: rV(1) }}>
       {loading && messages.length === 0 ? (
-        <View
-          style={[
-            styles.container,
-            { justifyContent: "center", alignItems: "center" },
-          ]}
-        >
+        <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
           <ActivityIndicator size="large" color={themeColors.tint} />
         </View>
       ) : (
         <MemoizedGiftedChat
+          ref={chatRef}
           messages={messages}
           onSend={onSend}
           user={{ _id: user?.id || 1 }}
@@ -2144,33 +2155,31 @@ const CommunityChatScreen: React.FC = () => {
           renderMessageImage={renderMessageImage}
           renderDay={renderDay}
           minInputToolbarHeight={insets.bottom + rV(50)}
-          scrollToBottom={true} // Already set, keep this
-          scrollToBottomStyle={{
-            backgroundColor: "black",
-            borderRadius: rMS(20),
-            padding: rS(5),
-          }}
-          // inverted={true}
+          scrollToBottom={shouldScrollToBottom}
+          scrollToBottomComponent={() => (
+            <View style={styles.scrollToBottomButton}>
+              <MaterialCommunityIcons
+                name="chevron-double-down"
+                size={SIZES.large}
+                color={themeColors.text}
+              />
+            </View>
+          )}
           loadEarlier={loadEarlier}
           onLoadEarlier={handleLoadEarlier}
           isLoadingEarlier={isLoadingEarlier}
           listViewProps={{
-            scrollEventThrottle: 400,
+            scrollEventThrottle: 16,
             maintainVisibleContentPosition: {
               minIndexForVisible: 0,
+              autoscrollToTopThreshold: 10,
             },
             initialNumToRender: 20,
-            onScroll: ({ nativeEvent }) => {
-              const isCloseToTop = nativeEvent.contentOffset.y <= 50;
-              if (
-                isCloseToTop &&
-                loadEarlier &&
-                !isLoadingEarlier &&
-                !isUpdatingMessages
-              ) {
-                handleLoadEarlier();
-              }
-            },
+            maxToRenderPerBatch: 10,
+            windowSize: 10,
+            removeClippedSubviews: true,
+            onScroll: handleScroll,
+            scrollEnabled: true,
           }}
         />
       )}
@@ -2188,6 +2197,5 @@ const CommunityChatScreen: React.FC = () => {
       />
     </View>
   );
-};
-
+}
 export default CommunityChatScreen;

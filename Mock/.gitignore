@@ -45,3 +45,4 @@ expo-env.d.ts
 .env.local
 
 wdyr.js
+Mock/build-*.apk

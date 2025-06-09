@@ -468,76 +468,79 @@ const CreateTimetablePage: React.FC = () => {
 
   return (
     <>
-      <ScrollView
-        style={[styles.container, { backgroundColor: themeColors.background }]}
-        contentContainerStyle={{ paddingBottom: rV(20) }}
-      >
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionHeader}>Timetable Details</Text>
-          <Controller
-            control={control}
-            name="name"
-            rules={{ required: "Timetable name is required" }}
-            render={({ field: { onChange, value } }) => (
-              <AnimatedRoundTextInput
-                label="Timetable Name"
-                value={value}
-                onChangeText={onChange}
-                error={errors.name?.message}
-              />
-            )}
-          />
-          <Controller
-            control={control}
-            name="description"
-            render={({ field: { onChange, value } }) => (
-              <AnimatedRoundTextInput
-                label="Description (optional)"
-                value={value}
-                onChangeText={onChange}
-              />
-            )}
-          />
-        </View>
+      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: rV(20) }}
+          scrollEnabled={false}
+        >
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionHeader}>Timetable Details</Text>
+            <Controller
+              control={control}
+              name="name"
+              rules={{ required: "Timetable name is required" }}
+              render={({ field: { onChange, value } }) => (
+                <AnimatedRoundTextInput
+                  label="Timetable Name"
+                  value={value}
+                  onChangeText={onChange}
+                  error={errors.name?.message}
+                />
+              )}
+            />
+            <Controller
+              control={control}
+              name="description"
+              render={({ field: { onChange, value } }) => (
+                <AnimatedRoundTextInput
+                  label="Description (optional)"
+                  value={value}
+                  onChangeText={onChange}
+                />
+              )}
+            />
+          </View>
 
-        <View style={{ alignItems: "center" }}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={[
-              styles.progressBarContainer,
-              { justifyContent: "center" },
-            ]}
-          >
-            {daysOfWeek.map((shortDay, index) => {
-              const longDay = dayMapping[shortDay];
-              const dayCompleted = periods.filter((p) => p.days === longDay).length > 0;
-              return (
-                <React.Fragment key={shortDay}>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setCurrentDay(longDay);
-                      setNewPeriod((prev) => ({ ...prev, days: longDay }));
-                    }}
-                  >
-                    <View
-                      style={[
-                        styles.dayProgressChip,
-                        currentDay === longDay && styles.activeDayChip,
-                      ]}
+          <View style={{ alignItems: "center" }}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={[
+                styles.progressBarContainer,
+                { justifyContent: "center" },
+              ]}
+            >
+              {daysOfWeek.map((shortDay, index) => {
+                const longDay = dayMapping[shortDay];
+                const dayCompleted = periods.filter((p) => p.days === longDay).length > 0;
+                return (
+                  <React.Fragment key={shortDay}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setCurrentDay(longDay);
+                        setNewPeriod((prev) => ({ ...prev, days: longDay }));
+                      }}
                     >
-                      <Text style={styles.dayChipText}>{shortDay}</Text>
-                      {dayCompleted && <Text style={styles.checkMark}>✓</Text>}
-                    </View>
-                  </TouchableOpacity>
-                  {index < daysOfWeek.length - 1 && <View style={styles.progressBarLine} />}
-                </React.Fragment>
-              );
-            })}
-          </ScrollView>
-        </View>
+                      <View
+                        style={[
+                          styles.dayProgressChip,
+                          currentDay === longDay && styles.activeDayChip,
+                        ]}
+                      >
+                        <Text style={styles.dayChipText}>{shortDay}</Text>
+                        {dayCompleted && <Text style={styles.checkMark}>✓</Text>}
+                      </View>
+                    </TouchableOpacity>
+                    {index < daysOfWeek.length - 1 && <View style={styles.progressBarLine} />}
+                  </React.Fragment>
+                );
+              })}
+            </ScrollView>
+          </View>
 
-        <Text style={styles.subtitle}>Periods for {reverseDayMapping[currentDay]}</Text>
+          <Text style={styles.subtitle}>Periods for {reverseDayMapping[currentDay]}</Text>
+        </ScrollView>
+
         {filteredPeriods.length === 0 ? (
           <Text style={styles.noPeriodsText}>
             No periods added for {reverseDayMapping[currentDay]} yet.
@@ -567,94 +570,97 @@ const CreateTimetablePage: React.FC = () => {
                 </View>
               </View>
             )}
+            ListHeaderComponent={
+              <View>
+                <View style={styles.sectionContainer}>
+                  <Text style={styles.sectionHeader}>Add New Period</Text>
+                  <AnimatedRoundTextInput
+                    label="Course Name"
+                    value={newPeriod.course_name}
+                    onChangeText={(text) => setNewPeriod({ ...newPeriod, course_name: text })}
+                  />
+                  <AnimatedRoundTextInput
+                    label="Lecturer Name"
+                    value={newPeriod.lecturer}
+                    onChangeText={(text) => setNewPeriod({ ...newPeriod, lecturer: text })}
+                  />
+                  <AnimatedRoundTextInput
+                    label="Venue"
+                    value={newPeriod.venue}
+                    onChangeText={(text) => setNewPeriod({ ...newPeriod, venue: text })}
+                  />
+                </View>
+
+                <View style={styles.sectionContainer}>
+                  <Text style={styles.sectionHeader}>Select Times</Text>
+                  <Controller
+                    control={control}
+                    name="start_time"
+                    render={({ field: { onChange, value } }) => (
+                      <CustomDateTimeSelector
+                        mode="time"
+                        label="Start Time"
+                        value={formatTime(value)}
+                        onTimeChange={(time) => {
+                          onChange(parseTime(time));
+                          if (!isEditMode) {
+                            setNewPeriod({ ...newPeriod, start_time: parseTime(time) });
+                          }
+                        }}
+                        buttonTitle="Pick Start Time"
+                      />
+                    )}
+                  />
+
+                  <Controller
+                    control={control}
+                    name="end_time"
+                    render={({ field: { onChange, value } }) => (
+                      <CustomDateTimeSelector
+                        mode="time"
+                        label="End Time"
+                        value={formatTime(value)}
+                        onTimeChange={(time) => {
+                          onChange(parseTime(time));
+                          if (!isEditMode) {
+                            setNewPeriod({ ...newPeriod, end_time: parseTime(time) });
+                          }
+                        }}
+                        buttonTitle="Pick End Time"
+                      />
+                    )}
+                  />
+                </View>
+
+                <View style={{ marginTop: rV(20) }}>
+                  <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
+                    <GameButton
+                      title={editingPeriodId ? "Update Period" : "Add Period"}
+                      onPress={handleAddOrUpdatePeriod}
+                    />
+                  </View>
+                  <View style={{ width: "100%", marginTop: rV(20) }}>
+                    <GameButton
+                      title={isLoading ? "Saving..." : "Save Timetable"}
+                      onPress={handleSubmit(handleCreateTimetable)}
+                      disabled={isLoading}
+                      style={{ width: "100%" }}
+                    />
+                  </View>
+                </View>
+
+                {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+              </View>
+            }
           />
         )}
 
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionHeader}>Add New Period</Text>
-          <AnimatedRoundTextInput
-            label="Course Name"
-            value={newPeriod.course_name}
-            onChangeText={(text) => setNewPeriod({ ...newPeriod, course_name: text })}
-          />
-          <AnimatedRoundTextInput
-            label="Lecturer Name"
-            value={newPeriod.lecturer}
-            onChangeText={(text) => setNewPeriod({ ...newPeriod, lecturer: text })}
-          />
-          <AnimatedRoundTextInput
-            label="Venue"
-            value={newPeriod.venue}
-            onChangeText={(text) => setNewPeriod({ ...newPeriod, venue: text })}
-          />
-        </View>
-
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionHeader}>Select Times</Text>
-          <Controller
-  control={control}
-  name="start_time"
-  render={({ field: { onChange, value } }) => (
-    <CustomDateTimeSelector
-      mode="time"
-      label="Start Time"
-      value={formatTime(value)} // Convert Date to string "HH:mm"
-     
-      onTimeChange={(time) => {
-        onChange(parseTime(time)); // Convert string back to Date
-        if (!isEditMode) {
-          setNewPeriod({ ...newPeriod, start_time: parseTime(time) }); // Only update if not in edit mode
-        }
-      }}
-      buttonTitle="Pick Start Time"
-    />
-  )}
-/>
-
-<Controller
-  control={control}
-  name="end_time"
-  render={({ field: { onChange, value } }) => (
-    <CustomDateTimeSelector
-      mode="time"
-      label="End Time"
-      value={formatTime(value)} // Convert Date to string "HH:mm"
-      onTimeChange={(time) => {
-        onChange(parseTime(time)); // Convert string back to Date
-        if (!isEditMode) {
-          setNewPeriod({ ...newPeriod, end_time: parseTime(time) }); // Only update if not in edit mode
-        }
-      }}
-      buttonTitle="Pick End Time"
-    />
-  )}
-/>
-        </View>
-
-        <View style={{ marginTop: rV(20) }}>
-          <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
-            <GameButton
-              title={editingPeriodId ? "Update Period" : "Add Period"}
-              onPress={handleAddOrUpdatePeriod}
-            />
-          </View>
-          <View style={{ width: "100%", marginTop: rV(20) }}>
-            <GameButton
-              title={isLoading ? "Saving..." : "Save Timetable"}
-              onPress={handleSubmit(handleCreateTimetable)}
-              disabled={isLoading}
-              style={{ width: "100%" }}
-            />
-          </View>
-        </View>
-
-        {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
         {isLoading && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color={themeColors.tint} />
           </View>
         )}
-      </ScrollView>
+      </View>
     </>
   );
 };
