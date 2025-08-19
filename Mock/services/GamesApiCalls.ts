@@ -13,7 +13,7 @@ const apiClient = axios.create({
 
 export const getGameDetails = async (
   gameId,
-  token
+  token: string | null | undefined
 ): Promise<GameDetailsResponse> => {
     try {
 
@@ -32,7 +32,7 @@ export const getGameDetails = async (
 };
 
 
-export const startGame = async (gameId, token): Promise<void> => {
+export const startGame = async (gameId, token: string | null | undefined): Promise<void> => {
   await apiClient.post(
     `/games/${gameId}/start_game/`,
     {},

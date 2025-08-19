@@ -6,6 +6,7 @@ import React, {
   useLayoutEffect,
   memo,
   useRef,
+  Animated,
 } from "react";
 import {
   View,
@@ -61,7 +62,7 @@ import { getCommunityMessages } from "../../services/CommunityApiCalls";
 
 // Add custom IMessage interface at the top of the file
 interface CustomIMessage extends IMessage {
-  status?: 'pending' | 'sending' | 'sent' | 'read';
+  status?: "pending" | "sending" | "sent" | "read";
   tempId?: string;
   document?: string;
   isEdited?: boolean;
@@ -102,8 +103,12 @@ const CommunityChatScreen: React.FC = () => {
   const [messageInput, setMessageInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedMessages, setSelectedMessages] = useState<CustomIMessage[]>([]);
-  const [replyToMessage, setReplyToMessage] = useState<CustomIMessage | null>(null);
+  const [selectedMessages, setSelectedMessages] = useState<CustomIMessage[]>(
+    []
+  );
+  const [replyToMessage, setReplyToMessage] = useState<CustomIMessage | null>(
+    null
+  );
   const [mediaPreview, setMediaPreview] = useState<{
     type: "image" | "document" | null;
     uri: string | null;
@@ -119,7 +124,9 @@ const CommunityChatScreen: React.FC = () => {
   const [imageViewerImages, setImageViewerImages] = useState<string[]>([]);
   const [isVideoViewerVisible, setIsVideoViewerVisible] = useState(false);
   const [isDocumentViewerVisible, setIsDocumentViewerVisible] = useState(false);
-  const [editingMessage, setEditingMessage] = useState<CustomIMessage | null>(null);
+  const [editingMessage, setEditingMessage] = useState<CustomIMessage | null>(
+    null
+  );
   const [profileImages, setProfileImages] = useState<Record<string, string>>(
     {}
   );
@@ -135,10 +142,20 @@ const CommunityChatScreen: React.FC = () => {
   const [inputHeight, setInputHeight] = useState(rV(40));
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
   const chatRef = useRef(null);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  const fadeIn = useCallback(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [fadeAnim]);
 
   const normalizeMessage = useCallback((data: any): CustomIMessage | null => {
     if (!data) return null;
-    
+
     try {
       if ("message" in data && "sent_at" in data) {
         return {
@@ -194,15 +211,17 @@ const CommunityChatScreen: React.FC = () => {
 
   const updateMessages = useCallback((newMessages: CustomIMessage[]) => {
     setMessages((prevMessages) => {
-      const messageMap = new Map(prevMessages.map(msg => [msg._id, msg]));
-      newMessages.forEach(msg => {
+      const messageMap = new Map(prevMessages.map((msg) => [msg._id, msg]));
+      newMessages.forEach((msg) => {
         if (msg._id) {
           messageMap.set(msg._id, msg);
         }
       });
       return Array.from(messageMap.values()).sort((a, b) => {
-        const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
-        const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+        const dateA =
+          a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+        const dateB =
+          b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
         return dateB.getTime() - dateA.getTime();
       });
     });
@@ -210,12 +229,12 @@ const CommunityChatScreen: React.FC = () => {
 
   const processMessageBatch = useCallback((messages: IMessage[]) => {
     const imageUris = messages
-      .filter(msg => msg.image)
-      .map(msg => msg.image)
+      .filter((msg) => msg.image)
+      .map((msg) => msg.image)
       .filter((uri): uri is string => uri !== undefined && uri !== null);
-    
+
     if (imageUris.length > 0) {
-      setImageViewerImages(prev => [...new Set([...imageUris, ...prev])]);
+      setImageViewerImages((prev) => [...new Set([...imageUris, ...prev])]);
     }
   }, []);
 
@@ -243,6 +262,7 @@ const CommunityChatScreen: React.FC = () => {
   const fetchInitialMessages = useCallback(async () => {
     try {
       setLoading(true);
+      setIsInitialLoad(true);
 
       // Fetch messages using CommunityProvider
       if (userToken?.token) {
@@ -272,6 +292,8 @@ const CommunityChatScreen: React.FC = () => {
       setError("Failed to load message history");
     } finally {
       setLoading(false);
+      setIsInitialLoad(false);
+      fadeIn();
     }
   }, [
     communityId,
@@ -280,6 +302,7 @@ const CommunityChatScreen: React.FC = () => {
     isConnected,
     fetchAndCacheMessages,
     normalizeMessage,
+    fadeIn,
   ]);
 
   const handleLoadEarlier = useCallback(async () => {
@@ -390,34 +413,33 @@ const CommunityChatScreen: React.FC = () => {
     isUpdatingMessages,
   ]);
 
-  useEffect(() => {
-    (async () => {
-      if (Platform.OS !== "web") {
-        const { status: existingStatus } =
-          await ImagePicker.getMediaLibraryPermissionsAsync();
-  
-        if (existingStatus !== "granted") {
-          const { status } =
-            await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (status !== "granted") {
-            alert("Sorry, we need camera roll permissions to make this work!");
-          }
-        }
-  
-        const { status: existingMediaStatus } =
-          await MediaLibrary.getPermissionsAsync();
-  
-        if (existingMediaStatus !== "granted") {
-          const { status: mediaStatus } =
-            await MediaLibrary.requestPermissionsAsync();
-          if (mediaStatus !== "granted") {
-            alert("Sorry, we need media library permissions to save images.");
-          }
-        }
-      }
-    })();
-  }, []);
-  
+  // useEffect(() => {
+  //   (async () => {
+  //     if (Platform.OS !== "web") {
+  //       const { status: existingStatus } =
+  //         await ImagePicker.getMediaLibraryPermissionsAsync();
+
+  //       if (existingStatus !== "granted") {
+  //         const { status } =
+  //           await ImagePicker.requestMediaLibraryPermissionsAsync();
+  //         if (status !== "granted") {
+  //           alert("Sorry, we need camera roll permissions to make this work!");
+  //         }
+  //       }
+
+  //       const { status: existingMediaStatus } =
+  //         await MediaLibrary.getPermissionsAsync();
+
+  //       if (existingMediaStatus !== "granted") {
+  //         const { status: mediaStatus } =
+  //           await MediaLibrary.requestPermissionsAsync();
+  //         if (mediaStatus !== "granted") {
+  //           alert("Sorry, we need media library permissions to save images.");
+  //         }
+  //       }
+  //     }
+  //   })();
+  // }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -452,23 +474,27 @@ const CommunityChatScreen: React.FC = () => {
             const newMessage = normalizeMessage(data);
             if (newMessage) {
               setShouldScrollToBottom(true);
-              
+
               // Check if this is a status update for an existing message
               if (newMessage.tempId) {
-                setMessages(prevMessages => 
-                  prevMessages.map(msg => 
-                    msg.tempId === newMessage.tempId 
-                      ? { ...msg, status: newMessage.status, _id: newMessage._id }
+                setMessages((prevMessages) =>
+                  prevMessages.map((msg) =>
+                    msg.tempId === newMessage.tempId
+                      ? {
+                          ...msg,
+                          status: newMessage.status,
+                          _id: newMessage._id,
+                        }
                       : msg
                   )
                 );
               } else {
                 messageBatch.push(newMessage);
-                
+
                 if (batchTimeout) {
                   clearTimeout(batchTimeout);
                 }
-                
+
                 batchTimeout = setTimeout(() => {
                   if (messageBatch.length > 0) {
                     updateMessages(messageBatch);
@@ -478,7 +504,10 @@ const CommunityChatScreen: React.FC = () => {
                 }, 100);
               }
             }
-          } else if (data.type === "history" && data.community_id === communityId) {
+          } else if (
+            data.type === "history" &&
+            data.community_id === communityId
+          ) {
             const transformedMessages = data.messages
               .map(normalizeMessage)
               .filter((msg): msg is CustomIMessage => msg !== null);
@@ -500,9 +529,13 @@ const CommunityChatScreen: React.FC = () => {
     }
 
     return socketCleanup;
-  }, [socket, communityId, normalizeMessage, updateMessages, processMessageBatch]);
-
-
+  }, [
+    socket,
+    communityId,
+    normalizeMessage,
+    updateMessages,
+    processMessageBatch,
+  ]);
 
   useEffect(() => {
     if (isConnected) {
@@ -1775,7 +1808,9 @@ const CommunityChatScreen: React.FC = () => {
   const handleScroll = useCallback(({ nativeEvent }) => {
     const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
     const paddingToBottom = 20;
-    const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
+    const isCloseToBottom =
+      layoutMeasurement.height + contentOffset.y >=
+      contentSize.height - paddingToBottom;
     setShouldScrollToBottom(isCloseToBottom);
   }, []);
 
@@ -2115,8 +2150,8 @@ const CommunityChatScreen: React.FC = () => {
       height: rS(40),
       borderRadius: rMS(20),
       backgroundColor: themeColors.secondaryBackground,
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: "center",
+      alignItems: "center",
       shadowColor: "#000",
       shadowOffset: {
         width: 0,
@@ -2131,7 +2166,12 @@ const CommunityChatScreen: React.FC = () => {
   return (
     <View style={{ flex: 1, paddingTop: rV(1) }}>
       {loading && messages.length === 0 ? (
-        <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <View
+          style={[
+            styles.container,
+            { justifyContent: "center", alignItems: "center" },
+          ]}
+        >
           <ActivityIndicator size="large" color={themeColors.tint} />
         </View>
       ) : (
@@ -2197,5 +2237,5 @@ const CommunityChatScreen: React.FC = () => {
       />
     </View>
   );
-}
+};
 export default CommunityChatScreen;

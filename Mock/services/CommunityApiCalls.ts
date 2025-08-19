@@ -12,7 +12,7 @@ const apiClient = axios.create({
 const COMMUNITY_API_BASE_URL = '/api/communities';
 const MESSAGE_API_BASE_URL = '/api/messages';
 
-export const getCommunities = async (token: string) => {
+export const getCommunities = async (token: string | null | undefined) => {
     try {
         const response = await apiClient.get(`${COMMUNITY_API_BASE_URL}/`, {
             headers: {
@@ -27,7 +27,7 @@ export const getCommunities = async (token: string) => {
     }
 };
 
-export const searchCommunities = async (searchQuery: string, token: string) => {
+export const searchCommunities = async (searchQuery: string, token: string | null | undefined) => {
     try {
         const response = await apiClient.get(`${COMMUNITY_API_BASE_URL}/?search=${encodeURIComponent(searchQuery)}`, {
             headers: {
@@ -42,7 +42,7 @@ export const searchCommunities = async (searchQuery: string, token: string) => {
     }
 };
 
-export const getCommunityDetails = async (communityId: string | number, token: any) => {
+export const getCommunityDetails = async (communityId: string | number, token: string | null | undefined) => {
     try {
         const response = await apiClient.get(`${COMMUNITY_API_BASE_URL}/${communityId}/`, {
             headers: {
@@ -71,7 +71,7 @@ export const getCommunityTimetable = async (communityId: string, token: string) 
     }
 };
 
-export const updateCommunity = async (communityId: string, communityData: any, token: string | null) => {
+export const updateCommunity = async (communityId: string, communityData: any, token: string | null | undefined) => {
     console.log(communityId);
     console.log(communityData);
     try {
@@ -121,7 +121,7 @@ export const getCommunityMessages = async (
 };
 
 
-export const getUserCommunities = async (token: string) => {
+export const getUserCommunities = async (token: string | null | undefined) => {
     try {
         const response = await apiClient.get(`${COMMUNITY_API_BASE_URL}/user_communities/`, {
             headers: {
@@ -158,7 +158,7 @@ export const removeCommunityMember = async (
     }
 };
 
-export const shareCommunity = async (communityId: string, token: string) => {
+export const shareCommunity = async (communityId: string, token: string | null | undefined) => {
     console.log(communityId, token);
     try {
         const response = await apiClient.get(`${COMMUNITY_API_BASE_URL}/${communityId}/share/`, {
@@ -174,7 +174,7 @@ export const shareCommunity = async (communityId: string, token: string) => {
     }
 };
 
-export const joinCommunity = async (communityId: number, token: string) => {
+export const joinCommunity = async (communityId: number, token: string | null | undefined) => {
     try {
         const response = await apiClient.post(`${COMMUNITY_API_BASE_URL}/${communityId}/join/`, {}, {
             headers: {
@@ -188,7 +188,7 @@ export const joinCommunity = async (communityId: number, token: string) => {
     }
 };
 
-export const leaveCommunity = async (communityId: string, token: any) => {
+export const leaveCommunity = async (communityId: string, token: string | null | undefined) => {
     try {
         const response = await apiClient.post(`${COMMUNITY_API_BASE_URL}/${communityId}/leave/`, {}, {
             headers: {
@@ -202,7 +202,7 @@ export const leaveCommunity = async (communityId: string, token: any) => {
     }
 };
 
-export const getLastMessages = async (token: string) => {
+export const getLastMessages = async (token: string | null | undefined) => {
     try {
         const response = await apiClient.get(`${MESSAGE_API_BASE_URL}/last_messages/`, {
             headers: {

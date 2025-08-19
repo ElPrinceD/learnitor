@@ -385,6 +385,8 @@ const CommunityScreen: React.FC = () => {
     !filteredCommunities.user.length &&
     !filteredCommunities.global.length;
 
+  const handleDismissError = useCallback(() => setErrorMessage(null), []);
+
   return (
     <View
       style={[styles.container, { backgroundColor: themeColors.background }]}
@@ -460,7 +462,7 @@ const CommunityScreen: React.FC = () => {
       <ErrorMessage
         message={errorMessage}
         visible={!!errorMessage}
-        onDismiss={() => setErrorMessage(null)}
+        onDismiss={handleDismissError}
       />
     </View>
   );

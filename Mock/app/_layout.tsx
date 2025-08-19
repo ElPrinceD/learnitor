@@ -35,6 +35,8 @@ import config from "../tamagui.config";
 import { vexo } from "vexo-analytics";
 import * as Sentry from "@sentry/react-native";
 import { isRunningInExpoGo } from "expo";
+import { StatusBar } from "react-native";
+import Colors from "../constants/Colors";
 
 const navigationIntegration = Sentry.reactNavigationIntegration({
   enableTimeToInitialDisplay: !isRunningInExpoGo(),
@@ -77,6 +79,7 @@ const RootLayoutNav = () => {
   const colorScheme = useColorScheme();
   const segments = useSegments();
   const { userToken, isLoading } = useAuth();
+  const themeColors = Colors[colorScheme ?? "light"];
 
   const [navigationCompleted, setNavigationCompleted] = useState(false);
 
@@ -97,6 +100,14 @@ const RootLayoutNav = () => {
       SplashScreen.hideAsync();
     }
   }, [navigationCompleted]);
+
+  // Add StatusBar configuration
+  useEffect(() => {
+    StatusBar.setBarStyle(
+      colorScheme === "dark" ? "light-content" : "dark-content"
+    );
+    StatusBar.setBackgroundColor(themeColors.background);
+  }, [colorScheme, themeColors.background]);
 
   return (
     <TamaguiProvider config={config}>

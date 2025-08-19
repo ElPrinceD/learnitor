@@ -133,6 +133,8 @@ const Timeline = () => {
     return [];
   }, [todayPlans, plansStatus]);
 
+  const handleDismissError = useCallback(() => setErrorMessage(null), []);
+
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: themeColors.background },
     scrollViewContent: { flexGrow: 1 },
@@ -231,7 +233,7 @@ const Timeline = () => {
         <ErrorMessage
           message={errorMessage}
           visible={!!errorMessage}
-          onDismiss={useCallback(() => setErrorMessage(null), [])}
+          onDismiss={handleDismissError}
         />
       )}
     </View>

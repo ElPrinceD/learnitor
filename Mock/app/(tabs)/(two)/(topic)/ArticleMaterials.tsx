@@ -71,6 +71,8 @@ const ArticleMaterials: React.FC<ArticleMaterialsProps> = () => {
     }
   };
 
+  const handleDismissError = useCallback(() => setErrorMessage(null), []);
+
   return (
     <View style={{ flex: 1 }}>
       <ScrollView
@@ -86,7 +88,7 @@ const ArticleMaterials: React.FC<ArticleMaterialsProps> = () => {
       <ErrorMessage
         message={errorMessage}
         visible={!!errorMessage}
-        onDismiss={useCallback(() => setErrorMessage(null), [])}
+        onDismiss={handleDismissError}
       />
     </View>
   );

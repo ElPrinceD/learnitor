@@ -74,7 +74,7 @@ const LEARNER_API_BASE_URL = '/api/learner';
 
 // {GET APIs}
 
-export const getCourses = async (token: string): Promise<Course[]> => {
+export const getCourses = async (token: string | null | undefined): Promise<Course[]> => {
     try {
         const data = await api.get<Course[]>('/api/courses/', {
             headers: {
@@ -88,7 +88,7 @@ export const getCourses = async (token: string): Promise<Course[]> => {
     }
 };
 
-export const getCourseCategories = async (token: string): Promise<any[]> => { // Change any[] to the correct type if you have it
+export const getCourseCategories = async (token: string | null | undefined): Promise<any[]> => { // Change any[] to the correct type if you have it
     try {
         const data = await api.get<any[]>('/api/categories/', { // Change any[]
             headers: {
@@ -102,7 +102,7 @@ export const getCourseCategories = async (token: string): Promise<any[]> => { //
     }
 };
 
-export const getRecommendedCourses = async (token: string, categoryId: number): Promise<Course[]> => {
+export const getRecommendedCourses = async (token: string | null | undefined, categoryId: number): Promise<Course[]> => {
     try {
         const data = await api.get<Course[]>(`/api/courses/?category_id=${categoryId}`, {
             headers: {
@@ -116,7 +116,7 @@ export const getRecommendedCourses = async (token: string, categoryId: number): 
     }
 };
 
-export const getEnrolledCourses = async (userId: number, token: string): Promise<Course[]> => {
+export const getEnrolledCourses = async (userId: number, token: string | null | undefined): Promise<Course[]> => {
     try {
         const data = await api.get<Course[]>(`${LEARNER_API_BASE_URL}/${userId}/courses`, {
             headers: {
@@ -130,7 +130,7 @@ export const getEnrolledCourses = async (userId: number, token: string): Promise
     }
 };
 
-export const getCourseTopics = async (courseId: number, token: string): Promise<Topic[]> => {
+export const getCourseTopics = async (courseId: number, token: string | null | undefined): Promise<Topic[]> => {
     try {
         const data = await api.get<Topic[]>(`/api/topics/?course_id=${courseId}`, {
             headers: {
@@ -144,7 +144,7 @@ export const getCourseTopics = async (courseId: number, token: string): Promise<
     }
 };
 
-export const getEnrollmentStatus = async (userId: number, courseId: number, token: string): Promise<any> => { // replace any
+export const getEnrollmentStatus = async (userId: number, courseId: number, token: string | null | undefined): Promise<any> => { // replace any
     console.log(`${LEARNER_API_BASE_URL}/${userId}/course/${courseId}/enrollment/`);
     try {
         const data = await api.get<any>(`${LEARNER_API_BASE_URL}/${userId}/course/${courseId}/enrollment/`, { // replace any
@@ -159,7 +159,7 @@ export const getEnrollmentStatus = async (userId: number, courseId: number, toke
     }
 };
 
-export const getCourseProgress = async (userId: number, courseId: number, token: string): Promise<number> => {
+export const getCourseProgress = async (userId: number, courseId: number, token: string | null | undefined): Promise<number> => {
     try {
         const response = await apiClient.get(`${LEARNER_API_BASE_URL}/${userId}/course/${courseId}/progress/`, {
             headers: {
@@ -173,7 +173,7 @@ export const getCourseProgress = async (userId: number, courseId: number, token:
     }
 };
 
-export const getEnrolledCourseTopics = async (userId: number, courseId: number, token: string): Promise<Topic[]> => {
+export const getEnrolledCourseTopics = async (userId: number, courseId: number, token: string | null | undefined): Promise<Topic[]> => {
     try {
         const data = await api.get<Topic[]>(`${LEARNER_API_BASE_URL}/${userId}/course/${courseId}/topics/`,
             {
@@ -189,7 +189,7 @@ export const getEnrolledCourseTopics = async (userId: number, courseId: number, 
     }
 };
 
-export const getPracticeQuestions = async (topicId: number, token: string, level: string = "all"): Promise<Question[]> => {
+export const getPracticeQuestions = async (topicId: number, token: string | null | undefined, level: string = "all"): Promise<Question[]> => {
     try {
         const data = await api.get<Question[]>(`/api/questions/?topic_id=${topicId}`, {
             headers: {
@@ -203,7 +203,7 @@ export const getPracticeQuestions = async (topicId: number, token: string, level
     }
 };
 
-export const getPracticeAnswers = async (questionId: number, token: string): Promise<Answer[]> => {
+export const getPracticeAnswers = async (questionId: number, token: string | null | undefined): Promise<Answer[]> => {
     try {
         const data = await api.get<Answer[]>(`/api/answers/?question_id=${questionId}`,
             {
@@ -219,7 +219,7 @@ export const getPracticeAnswers = async (questionId: number, token: string): Pro
     }
 };
 
-export const fetchTopicMaterials = async (topicId: number, token: string): Promise<any[]> => { // Change any[]
+export const fetchTopicMaterials = async (topicId: number, token: string | null | undefined): Promise<any[]> => { // Change any[]
     try {
 
         const data = await api.get<any[]>(`/api/materials/?topic_id=${topicId}`, {  // Change any[]
@@ -237,7 +237,7 @@ export const fetchTopicMaterials = async (topicId: number, token: string): Promi
 
 // {POST APIs}
 
-export const enrollInCourse = async (userId: number, courseId: number, topicIds: number[], token: string): Promise<any> => {  // replace any
+export const enrollInCourse = async (userId: number, courseId: number, topicIds: number[], token: string | null | undefined): Promise<any> => {  // replace any
     try {
         const data = await api.post<any>(`${LEARNER_API_BASE_URL}/${userId}/course/${courseId}/enroll/`, { // replace any
             selectedTopics: topicIds,
@@ -254,7 +254,7 @@ export const enrollInCourse = async (userId: number, courseId: number, topicIds:
     }
 };
 
-export const unenrollFromCourse = async (userId: number, courseId: number, token: string): Promise<any> => { // replace any
+export const unenrollFromCourse = async (userId: number, courseId: number, token: string | null | undefined): Promise<any> => { // replace any
     try {
         const data = await api.post<any>(`${LEARNER_API_BASE_URL}/${userId}/course/${courseId}/unenroll/`, {}, { // replace any
             headers: {
@@ -269,7 +269,7 @@ export const unenrollFromCourse = async (userId: number, courseId: number, token
 };
 
 
-export const markTopicAsComplete = async (userId: number, courseId: number, topicId: number, token: string): Promise<any> => { // replace any
+export const markTopicAsComplete = async (userId: number, courseId: number, topicId: number, token: string | null | undefined): Promise<any> => { // replace any
     try {
         const data = await api.post<any>(
             `${LEARNER_API_BASE_URL}/${userId}/course/${courseId}/topic/${topicId}/mark-completed/`,

@@ -52,6 +52,8 @@ const GameCourses: React.FC = () => {
     }
   }, [queryClient, userToken?.token, refetchCourses]);
 
+  const handleDismissError = useCallback(() => setErrorMessage(null), []);
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -85,7 +87,7 @@ const GameCourses: React.FC = () => {
       <ErrorMessage
         message={errorMessage}
         visible={!!errorMessage}
-        onDismiss={useCallback(() => setErrorMessage(null), [])}
+        onDismiss={handleDismissError}
       />
     </View>
   );

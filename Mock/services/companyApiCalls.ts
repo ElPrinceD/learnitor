@@ -15,7 +15,7 @@ const ANNOUNCEMENT_API_BASE_URL = '/announcements/';
 /**
  * Fetch all announcements
  */
-export const getAnnouncements = async (token) => {
+export const getAnnouncements = async (token: string | null | undefined) => {
     try {
         const response = await apiClient.get(ANNOUNCEMENT_API_BASE_URL, {
         

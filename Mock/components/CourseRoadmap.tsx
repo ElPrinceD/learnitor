@@ -34,21 +34,30 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
     timelineItem: {
       flexDirection: "row",
       alignItems: "center",
-      marginBottom: rV(8),
+      // marginBottom: rV(8),
+      // marginTop: rV(-40),
+      position: "relative",
+      minHeight: rV(80),
     },
     timelineContentLeft: {
       flex: 1,
       alignItems: "flex-start",
-      marginLeft: rS(11),
+      marginLeft: rS(13),
+      position: "relative",
+      zIndex: 1,
     },
     timelineContentCenter: {
       flex: 1,
       alignItems: "center",
+      position: "relative",
+      zIndex: 1,
     },
     timelineContentRight: {
       flex: 1,
       alignItems: "flex-end",
       marginRight: rS(13),
+      position: "relative",
+      zIndex: 1,
     },
     timelineText: {
       fontSize: 15,
@@ -62,16 +71,27 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
       left: 0,
       right: 0,
       bottom: 0,
-      zIndex: -1,
+      zIndex: 0,
+      height: "100%",
+      width: "100%",
     },
-    backgroundSVG: {
+    pathContainer: {
       position: "absolute",
       top: 0,
       left: 0,
       right: 0,
       bottom: 0,
-      zIndex: -1,
-      elevation: 0,
+      zIndex: 0,
+      height: "100%",
+      width: "100%",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    topicContainer: {
+      position: "relative",
+      marginBottom: rV(20),
+      minHeight: rV(160),
+      paddingVertical: rV(10),
     },
   });
 
@@ -131,21 +151,16 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {enrolledTopics.map((topic, index) => (
-          <View key={topic.id}>
+          <View key={topic.id} style={styles.topicContainer}>
             {renderTimelineItem(topic, index * 2, false)}
             <View style={styles.backgroundContainer}>
-              {/* <SvgComponent
-                paths={
-                  (index % 2 === 0) === (Math.floor(index / 5) % 2 === 0)
-                    ? ["M150 350L0 200M0 200L150 50"]
-                    : ["M150 50L300 200M300 200L150 350"]
-                }
-              /> */}
-              {(index % 2 === 0) === (Math.floor(index / 5) % 2 === 0) ? (
-                <PathA />
-              ) : (
-                <PathB />
-              )}
+              <View style={styles.pathContainer}>
+                {(index % 2 === 0) === (Math.floor(index / 5) % 2 === 0) ? (
+                  <PathA />
+                ) : (
+                  <PathB />
+                )}
+              </View>
             </View>
             {renderTimelineItem(topic, index * 2 + 1, true)}
           </View>

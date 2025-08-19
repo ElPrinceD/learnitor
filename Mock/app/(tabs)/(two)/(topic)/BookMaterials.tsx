@@ -70,6 +70,8 @@ const BookMaterials: React.FC<BookMaterialsProps> = () => {
     }
   };
 
+  const handleDismissError = useCallback(() => setErrorMessage(null), []);
+
   return (
     <View style={{ flex: 1 }}>
       <ScrollView
@@ -85,7 +87,7 @@ const BookMaterials: React.FC<BookMaterialsProps> = () => {
       <ErrorMessage
         message={errorMessage}
         visible={!!errorMessage}
-        onDismiss={useCallback(() => setErrorMessage(null), [])}
+        onDismiss={handleDismissError}
       />
     </View>
   );

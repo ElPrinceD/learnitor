@@ -7,7 +7,7 @@ const apiClient = axios.create({
         'Content-Type': 'application/json',
     },
 });
-export const getTodayPlans = async (token, date, selectedCategory) => {
+export const getTodayPlans = async (token: string | null | undefined, date, selectedCategory) => {
   const currentDate = date.toISOString().split('T')[0];
   let apiUrl = `${ApiUrl}/api/learner/tasks/?due_date=${currentDate}`;
   if (selectedCategory !== null) {
@@ -74,7 +74,7 @@ export const getCategoryNames = async (token) => {
     throw error;
   }
 };
-export const getCategories = async (token) => {
+export const getCategories = async (token: string | null | undefined) => {
        try {
 
     const response = await apiClient.get('/api/task/categories/', {
@@ -93,7 +93,7 @@ export const getCategories = async (token) => {
   }
 };
   
-export const createTask = async (taskData, token) => {
+export const createTask = async (taskData, token: string | null | undefined) => {
   try {
     const response = await apiClient.post('/tasks/', taskData, {
       headers: {
@@ -154,7 +154,7 @@ export const createTimetable = async (timetableData, token) => {
     throw error;
   }
 };
-export const getTimetables = async (token: string) => {
+export const getTimetables = async (token: string | null | undefined) => {
   try {
     const response = await apiClient.get("/api/user/timetables/", {
       headers: {
@@ -213,7 +213,7 @@ export const deleteTimetable = async (id, token) => {
 };
 
 
-export const createPeriod = async (periodData, token) => {
+export const createPeriod = async (periodData, token: string | null | undefined) => {
   console.log("YO",periodData)
   try {
     const response = await apiClient.post('/periods/', 
@@ -232,7 +232,7 @@ export const createPeriod = async (periodData, token) => {
   }
 };
 
-export const getPeriod = async (periodId, token) => {
+export const getPeriod = async (periodId, token: string | null | undefined) => {
   try {
     const response = await apiClient.get(`/periods/${periodId}/`, {
       headers: {
@@ -245,7 +245,7 @@ export const getPeriod = async (periodId, token) => {
     throw error;
   }
 };
-export const updatePeriod = async (periodId, periodData, token) => {
+export const updatePeriod = async (periodId, periodData, token: string | null | undefined) => {
   try {
     const response = await apiClient.patch(`/periods/${periodId}/`, 
       periodData, // This should match the Period model structure
@@ -276,7 +276,7 @@ export const deletePeriod = async (periodId, token) => {
   }
 };
 
-export const getUserDetails = async (userId: number, token: string) => {
+export const getUserDetails = async (userId: number, token: string | null | undefined) => {
   try {
     const response = await apiClient.get(`/api/users/${userId}/`, {
       headers: {

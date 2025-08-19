@@ -264,6 +264,8 @@ const CourseDetails: React.FC = () => {
     }
   }, [queryClient, userInfo?.user.id, parsedCourse.id]);
 
+  const handleDismissError = useCallback(() => setErrorMessage(null), []);
+
   const { height } = Dimensions.get("window");
   const φ = (1 + Math.sqrt(5)) / 2;
   const MIN_HEADER_HEIGHT = 64 + Constants.statusBarHeight;
@@ -499,7 +501,7 @@ const CourseDetails: React.FC = () => {
       <ErrorMessage
         message={errorMessage}
         visible={!!errorMessage}
-        onDismiss={useCallback(() => setErrorMessage(null), [])}
+        onDismiss={handleDismissError}
       />
     </View>
   );

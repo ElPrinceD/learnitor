@@ -40,6 +40,8 @@ const EnrolledCourse: React.FC = () => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
+  const handleDismissError = useCallback(() => setErrorMessage(null), []);
+
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const parsedCourse: Course =
@@ -267,7 +269,7 @@ const EnrolledCourse: React.FC = () => {
       <ErrorMessage
         message={errorMessage}
         visible={!!errorMessage}
-        onDismiss={useCallback(() => setErrorMessage(null), [])}
+        onDismiss={handleDismissError}
       />
     </>
   );

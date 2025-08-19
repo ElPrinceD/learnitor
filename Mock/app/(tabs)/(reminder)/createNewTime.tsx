@@ -166,6 +166,8 @@ const CreateNewTime = () => {
     (option) => option.value
   );
 
+  const handleDismissError = useCallback(() => setErrorMessage(null), []);
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -332,7 +334,7 @@ const CreateNewTime = () => {
         <ErrorMessage
           message={errorMessage}
           visible={!!errorMessage}
-          onDismiss={useCallback(() => setErrorMessage(null), [])}
+          onDismiss={handleDismissError}
         />
       )}
     </View>

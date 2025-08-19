@@ -33,6 +33,8 @@ const CoursesScreen: React.FC<CoursesScreenProps> = ({ segment }) => {
   const { userToken, userInfo } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const handleDismissError = useCallback(() => setErrorMessage(null), []);
+
   const {
     status: coursesStatus,
     data: coursesData,
@@ -148,7 +150,7 @@ const CoursesScreen: React.FC<CoursesScreenProps> = ({ segment }) => {
       <ErrorMessage
         message={errorMessage}
         visible={!!errorMessage}
-        onDismiss={useCallback(() => setErrorMessage(null), [])}
+        onDismiss={handleDismissError}
       />
     </View>
   );
