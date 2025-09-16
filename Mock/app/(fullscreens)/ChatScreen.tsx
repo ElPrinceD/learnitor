@@ -6,8 +6,8 @@ import React, {
   useLayoutEffect,
   memo,
   useRef,
-  Animated,
 } from "react";
+import { Animated } from "react-native";
 import {
   View,
   StyleSheet,
@@ -45,6 +45,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
 import * as MediaLibrary from "expo-media-library";
+import * as Sharing from "expo-sharing";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useCommunity } from "../../contexts/CommunityContext";
@@ -59,6 +60,7 @@ import AppImage from "../../components/AppImage";
 import FullScreenImageViewer from "../../components/FullScreenImageViewer";
 import ImagePreviewModal from "../../components/ImagePreviewModal";
 import { getCommunityMessages } from "../../services/CommunityApiCalls";
+import * as IntentLauncher from "expo-intent-launcher";
 
 // Add custom IMessage interface at the top of the file
 interface CustomIMessage extends IMessage {
@@ -67,6 +69,15 @@ interface CustomIMessage extends IMessage {
   document?: string;
   isEdited?: boolean;
   isSelected?: boolean;
+  replyTo?: {
+    _id: string | null;
+    text: string | null;
+    user: {
+      _id: string | null;
+      name: string;
+    };
+    image?: string;
+  } | null;
 }
 
 const MemoizedGiftedChat = memo(GiftedChat, (prevProps, nextProps) => {
@@ -139,6 +150,11 @@ const CommunityChatScreen: React.FC = () => {
     name: string;
     image_url: string;
   } | null>(null);
+  // State to track downloaded PDFs
+  const [downloadedPDFs, setDownloadedPDFs] = useState<Set<string>>(new Set());
+  const [downloadingPDFs, setDownloadingPDFs] = useState<Set<string>>(
+    new Set()
+  );
   const [inputHeight, setInputHeight] = useState(rV(40));
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
   const chatRef = useRef(null);
@@ -176,6 +192,7 @@ const CommunityChatScreen: React.FC = () => {
                   _id: data.reply_to.sender_id || null,
                   name: data.reply_to.sender_name || "Unknown User",
                 },
+                image: data.reply_to.image || undefined,
               }
             : null,
           image: data.image || null,
@@ -195,6 +212,7 @@ const CommunityChatScreen: React.FC = () => {
                 _id: data.replyTo._id,
                 text: data.replyTo.text,
                 user: data.replyTo.user,
+                image: data.replyTo.image || undefined,
               }
             : null,
           image: data.image || null,
@@ -234,7 +252,7 @@ const CommunityChatScreen: React.FC = () => {
       .filter((uri): uri is string => uri !== undefined && uri !== null);
 
     if (imageUris.length > 0) {
-      setImageViewerImages((prev) => [...new Set([...imageUris, ...prev])]);
+      setImageViewerImages((prev) => [...new Set([...prev, ...imageUris])]);
     }
   }, []);
 
@@ -274,17 +292,26 @@ const CommunityChatScreen: React.FC = () => {
         const transformedMessages = messages
           .map(normalizeMessage)
           .filter((msg): msg is CustomIMessage => msg !== null)
-          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+          .sort((a, b) => {
+            const dateA =
+              a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+            const dateB =
+              b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+            return dateB.getTime() - dateA.getTime();
+          });
         setMessages(transformedMessages);
         if (transformedMessages.length > 0) {
-          setLastMessageId(
-            transformedMessages[transformedMessages.length - 1]._id
-          );
+          const lastMessage =
+            transformedMessages[transformedMessages.length - 1];
+          if (typeof lastMessage._id === "string") {
+            setLastMessageId(lastMessage._id);
+          }
         }
 
         const imageUris = transformedMessages
           .filter((msg) => msg.image)
-          .map((msg) => msg.image);
+          .map((msg) => msg.image)
+          .filter((uri): uri is string => uri !== undefined && uri !== null);
         setImageViewerImages(imageUris);
       }
     } catch (error) {
@@ -330,9 +357,13 @@ const CommunityChatScreen: React.FC = () => {
           "Fetching older messages with lastMessageId:",
           lastMessageId
         );
+        if (!userToken?.token) {
+          throw new Error("No user token available");
+        }
+
         const olderMessages = await getCommunityMessages(
           communityId,
-          userToken?.token,
+          userToken.token,
           50,
           lastMessageId, // No beforeMessageId
           undefined, // No beforeTimestamp
@@ -615,23 +646,30 @@ const CommunityChatScreen: React.FC = () => {
             const fileContent = await FileSystem.readAsStringAsync(fileUri, {
               encoding: FileSystem.EncodingType.Base64,
             });
+            // Only handle PDF documents
             const extension = fileUri.split(".").pop()?.toLowerCase();
-            let mimeType = "application/octet-stream";
-            if (extension === "pdf") mimeType = "application/pdf";
-            else if (["doc", "docx"].includes(extension || ""))
-              mimeType = "application/msword";
-            else if (extension === "txt") mimeType = "text/plain";
+            if (extension !== "pdf") {
+              ToastAndroid.show(
+                "Only PDF documents are supported",
+                ToastAndroid.SHORT
+              );
+              return;
+            }
+            const mimeType = "application/pdf";
             payloadUri = `data:${mimeType};base64,${fileContent}`;
           } catch (error) {
-            console.error("Error encoding document to base64:", error);
-            ToastAndroid.show("Failed to send document", ToastAndroid.SHORT);
+            console.error("Error encoding PDF document to base64:", error);
+            ToastAndroid.show(
+              "Failed to send PDF document",
+              ToastAndroid.SHORT
+            );
             return;
           }
         }
 
         const tempId = uuidv4();
 
-        const message = {
+        const message: CustomIMessage = {
           _id: tempId,
           tempId,
           text: "",
@@ -648,7 +686,7 @@ const CommunityChatScreen: React.FC = () => {
           setMessages((prev) => [message, ...prev]);
           setMessageIds((prev) => new Set([...prev, tempId]));
           if (type === "image") {
-            setImageViewerImages((prev) => [fileUri, ...prev]);
+            setImageViewerImages((prev) => [...prev, fileUri]);
           }
         }
 
@@ -695,7 +733,7 @@ const CommunityChatScreen: React.FC = () => {
   const pickDocument = useCallback(async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: "*/*",
+        type: "application/pdf",
         copyToCacheDirectory: true,
       });
 
@@ -707,7 +745,7 @@ const CommunityChatScreen: React.FC = () => {
       }
     } catch (error) {
       console.error("Error picking document:", error);
-      ToastAndroid.show("Failed to pick document", ToastAndroid.SHORT);
+      ToastAndroid.show("Failed to pick PDF document", ToastAndroid.SHORT);
     }
   }, [sendMediaMessage]);
 
@@ -737,7 +775,7 @@ const CommunityChatScreen: React.FC = () => {
           status: isConnected ? "sending" : "pending",
           ...(replyToMessage && {
             replyTo: {
-              _id: replyToMessage._id,
+              _id: String(replyToMessage._id),
               text:
                 replyToMessage.text ||
                 (replyToMessage.image
@@ -745,7 +783,10 @@ const CommunityChatScreen: React.FC = () => {
                   : replyToMessage.document
                   ? "Document"
                   : ""),
-              user: replyToMessage.user,
+              user: {
+                _id: String(replyToMessage.user._id),
+                name: replyToMessage.user.name || "Unknown User",
+              },
             },
           }),
         };
@@ -758,7 +799,7 @@ const CommunityChatScreen: React.FC = () => {
           setMessages((prevMessages) => [tempMessage, ...prevMessages]);
           setMessageIds((prev) => new Set([...prev, tempId]));
           if (tempMessage.image) {
-            setImageViewerImages((prev) => [tempMessage.image, ...prev]);
+            setImageViewerImages((prev) => [...prev, tempMessage.image!]);
           }
         }
 
@@ -1268,11 +1309,14 @@ const CommunityChatScreen: React.FC = () => {
               </Text>
             )}
 
-            {/* Render document preview if there is a document */}
+            {/* Render PDF document preview if there is a document */}
             {props.currentMessage.document && (
               <TouchableOpacity
                 onPress={() => {
-                  Linking.openURL(props.currentMessage.document);
+                  // Open PDF with proper handling for local files
+                  if (props.currentMessage.document) {
+                    openPDFDocument(props.currentMessage.document);
+                  }
                 }}
                 style={[
                   styles.documentContainer,
@@ -1289,12 +1333,44 @@ const CommunityChatScreen: React.FC = () => {
                 ]}
               >
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <MaterialCommunityIcons
-                    name="file-document-outline"
-                    size={SIZES.large}
-                    color={props.position === "right" ? "#fff" : "#007aff"}
-                    style={{ marginRight: rS(8) }}
-                  />
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      marginRight: rS(8),
+                    }}
+                  >
+                    <MaterialCommunityIcons
+                      name="file-pdf-box"
+                      size={SIZES.large}
+                      color={props.position === "right" ? "#fff" : "#FF4444"}
+                    />
+                    {/* Show download status icon */}
+                    {downloadingPDFs.has(props.currentMessage.document) && (
+                      <MaterialCommunityIcons
+                        name="download"
+                        size={SIZES.small}
+                        color={
+                          props.position === "right"
+                            ? "rgba(255,255,255,0.7)"
+                            : themeColors.textSecondary
+                        }
+                        style={{ marginLeft: rS(4) }}
+                      />
+                    )}
+                    {downloadedPDFs.has(props.currentMessage.document) && (
+                      <MaterialCommunityIcons
+                        name="check-circle"
+                        size={SIZES.small}
+                        color={
+                          props.position === "right"
+                            ? "rgba(255,255,255,0.7)"
+                            : themeColors.textSecondary
+                        }
+                        style={{ marginLeft: rS(4) }}
+                      />
+                    )}
+                  </View>
                   <View>
                     <Text
                       style={{
@@ -1310,7 +1386,7 @@ const CommunityChatScreen: React.FC = () => {
                     >
                       {decodeURIComponent(
                         props.currentMessage.document.split("/").pop() ||
-                          "Document"
+                          "PDF Document"
                       )}
                     </Text>
                     <Text
@@ -1322,7 +1398,11 @@ const CommunityChatScreen: React.FC = () => {
                         fontSize: SIZES.small,
                       }}
                     >
-                      Document
+                      {downloadedPDFs.has(props.currentMessage.document)
+                        ? "PDF Document (Downloaded)"
+                        : downloadingPDFs.has(props.currentMessage.document)
+                        ? "PDF Document (Downloading...)"
+                        : "PDF Document"}
                     </Text>
                   </View>
                 </View>
@@ -1433,7 +1513,15 @@ const CommunityChatScreen: React.FC = () => {
         </TouchableOpacity>
       );
     },
-    [selectedMessages, handlePress, handleLongPress, themeColors, user?.id]
+    [
+      selectedMessages,
+      handlePress,
+      handleLongPress,
+      themeColors,
+      user?.id,
+      downloadingPDFs,
+      downloadedPDFs,
+    ]
   );
 
   useEffect(() => {
@@ -1442,9 +1530,13 @@ const CommunityChatScreen: React.FC = () => {
       let hasChanges = false;
 
       messages.forEach((msg) => {
-        const userId = msg.user._id;
+        const userId = String(msg.user._id);
         const avatarUrl = msg.user.avatar || user?.profile_picture;
-        if (!newProfileImages[userId] && avatarUrl) {
+        if (
+          !newProfileImages[userId] &&
+          avatarUrl &&
+          typeof avatarUrl === "string"
+        ) {
           newProfileImages[userId] = avatarUrl;
           hasChanges = true;
         }
@@ -1535,6 +1627,184 @@ const CommunityChatScreen: React.FC = () => {
       }
     },
     [imageViewerImages]
+  );
+
+  // Platform-specific PDF opening function
+  const openLocalPDF = useCallback(async (localUri: string) => {
+    try {
+      if (Platform.OS === "android") {
+        // Android: Try intent launcher first, fallback to sharing
+        try {
+          const contentUri = await FileSystem.getContentUriAsync(localUri);
+          await IntentLauncher.startActivityAsync(
+            "android.intent.action.VIEW",
+            {
+              data: contentUri,
+              type: "application/pdf",
+              flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
+            }
+          );
+        } catch (intentError) {
+          console.error(
+            "Intent launcher failed, falling back to sharing:",
+            intentError
+          );
+          if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(localUri, {
+              mimeType: "application/pdf",
+              dialogTitle: "Open PDF Document",
+            });
+          } else {
+            Alert.alert(
+              "Error",
+              "Unable to open PDF. Please install a PDF viewer app."
+            );
+          }
+        }
+      } else {
+        // iOS: Use sharing
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(localUri, {
+            mimeType: "application/pdf",
+            dialogTitle: "Open PDF Document",
+          });
+        } else {
+          Alert.alert("Error", "Sharing is not available on this device");
+        }
+      }
+    } catch (error) {
+      console.error("Error opening local PDF:", error);
+      Alert.alert("Error", "Failed to open PDF. Please try again.");
+    }
+  }, []);
+
+  // Handle base64 data URIs
+  const handleBase64PDF = useCallback(
+    async (documentUri: string) => {
+      try {
+        const fileName = `document_${Date.now()}.pdf`;
+        const localUri = `${FileSystem.documentDirectory}${fileName}`;
+
+        // Extract base64 data from data URI
+        const base64Data = documentUri.split(",")[1];
+        if (!base64Data) {
+          throw new Error("Invalid data URI format");
+        }
+
+        // Write base64 data to file
+        await FileSystem.writeAsStringAsync(localUri, base64Data, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        // Add to downloaded set
+        setDownloadedPDFs((prev) => new Set([...prev, documentUri]));
+
+        // Open the saved file
+        await openLocalPDF(localUri);
+      } catch (error) {
+        console.error("Error handling base64 PDF:", error);
+        Alert.alert(
+          "Error",
+          "Unable to save the PDF to your device. Please try again."
+        );
+      }
+    },
+    [openLocalPDF, setDownloadedPDFs]
+  );
+
+  const openPDFDocument = useCallback(
+    async (documentUri: string) => {
+      try {
+        // Check if the URI is a local file or remote URL
+        if (documentUri.startsWith("file://")) {
+          // Local file - use platform-specific approach
+          await openLocalPDF(documentUri);
+        } else if (
+          documentUri.startsWith("https://") ||
+          documentUri.startsWith("http://")
+        ) {
+          // Check if already downloaded
+          if (downloadedPDFs.has(documentUri)) {
+            const urlFileName = documentUri.split("/").pop()?.split("?")[0];
+            const fileName = urlFileName
+              ? `${urlFileName}.pdf`
+              : `document_${Date.now()}.pdf`;
+            const localUri = `${FileSystem.documentDirectory}${fileName}`;
+
+            const fileInfo = await FileSystem.getInfoAsync(localUri);
+            if (fileInfo.exists) {
+              await openLocalPDF(localUri);
+              return;
+            }
+          }
+
+          // If not downloaded or file doesn't exist, download it
+          if (downloadingPDFs.has(documentUri)) {
+            return; // Already downloading
+          }
+
+          setDownloadingPDFs((prev) => new Set([...prev, documentUri]));
+
+          try {
+            const urlFileName = documentUri.split("/").pop()?.split("?")[0];
+            const fileName = urlFileName
+              ? `${urlFileName}.pdf`
+              : `document_${Date.now()}.pdf`;
+            const localUri = `${FileSystem.documentDirectory}${fileName}`;
+
+            // Download the PDF
+            const downloadResult = await FileSystem.downloadAsync(
+              documentUri,
+              localUri
+            );
+
+            if (downloadResult.status === 200) {
+              setDownloadedPDFs((prev) => new Set([...prev, documentUri]));
+              await openLocalPDF(localUri);
+            } else {
+              throw new Error(
+                `Download failed with status: ${downloadResult.status}`
+              );
+            }
+          } catch (downloadError) {
+            console.error("Error downloading PDF:", downloadError);
+            try {
+              await Linking.openURL(documentUri);
+            } catch (err) {
+              console.error("Failed to open external PDF:", err);
+              Alert.alert(
+                "Error",
+                "Unable to download or open the PDF. Please check your internet connection and try again."
+              );
+            }
+          } finally {
+            setDownloadingPDFs((prev) => {
+              const newSet = new Set(prev);
+              newSet.delete(documentUri);
+              return newSet;
+            });
+          }
+        } else if (documentUri.startsWith("data:")) {
+          // Handle base64 data URIs
+          await handleBase64PDF(documentUri);
+        } else {
+          // Unknown format - try Linking as fallback
+          try {
+            await Linking.openURL(documentUri);
+          } catch (err) {
+            console.error("Failed to open PDF:", err);
+            Alert.alert(
+              "Error",
+              "Unable to open PDF. Please ensure you have a PDF viewer app installed."
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Error opening PDF:", error);
+        Alert.alert("Error", "Failed to open PDF document. Please try again.");
+      }
+    },
+    [downloadedPDFs, downloadingPDFs, openLocalPDF, handleBase64PDF]
   );
 
   const renderMessageImage = useCallback(
@@ -1663,19 +1933,66 @@ const CommunityChatScreen: React.FC = () => {
               style={[styles.previewImage, { width: "100%", height: rV(150) }]}
             />
           ) : (
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <MaterialCommunityIcons
-                name="file-document-outline"
-                size={SIZES.medium}
-                color={themeColors.text}
-                style={{ marginRight: rS(8) }}
-              />
+            <TouchableOpacity
+              onPress={() => {
+                if (mediaPreview.uri) {
+                  openPDFDocument(mediaPreview.uri);
+                }
+              }}
+              style={{ flexDirection: "row", alignItems: "center" }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  marginRight: rS(8),
+                }}
+              >
+                <MaterialCommunityIcons
+                  name="file-pdf-box"
+                  size={SIZES.medium}
+                  color="#FF4444"
+                />
+                {/* Show download status icon */}
+                {mediaPreview.uri && downloadingPDFs.has(mediaPreview.uri) && (
+                  <MaterialCommunityIcons
+                    name="download"
+                    size={SIZES.small}
+                    color={themeColors.textSecondary}
+                    style={{ marginLeft: rS(4) }}
+                  />
+                )}
+                {mediaPreview.uri && downloadedPDFs.has(mediaPreview.uri) && (
+                  <MaterialCommunityIcons
+                    name="check-circle"
+                    size={SIZES.small}
+                    color={themeColors.textSecondary}
+                    style={{ marginLeft: rS(4) }}
+                  />
+                )}
+              </View>
               <Text style={styles.previewDocument}>
                 {decodeURIComponent(
-                  mediaPreview.uri.split("/").pop() || "Document"
+                  mediaPreview.uri.split("/").pop() || "PDF Document"
                 )}
               </Text>
-            </View>
+              <Text
+                style={[
+                  styles.previewDocument,
+                  {
+                    fontSize: SIZES.xSmall,
+                    color: themeColors.textSecondary,
+                    marginLeft: rS(8),
+                  },
+                ]}
+              >
+                {mediaPreview.uri && downloadedPDFs.has(mediaPreview.uri)
+                  ? "(PDF) - Downloaded"
+                  : mediaPreview.uri && downloadingPDFs.has(mediaPreview.uri)
+                  ? "(PDF) - Downloading..."
+                  : "(PDF) - Tap to open"}
+              </Text>
+            </TouchableOpacity>
           )}
           <TouchableOpacity
             style={styles.closeReplyButton}
@@ -1691,7 +2008,7 @@ const CommunityChatScreen: React.FC = () => {
       );
     }
     return null;
-  }, [mediaPreview, themeColors]);
+  }, [mediaPreview, themeColors, downloadingPDFs, downloadedPDFs]);
 
   const renderInputToolbar = useCallback(
     (props) => {
@@ -1770,9 +2087,9 @@ const CommunityChatScreen: React.FC = () => {
                     {
                       height: inputHeight,
                       maxHeight: MAX_INPUT_HEIGHT,
-                      scrollEnabled: inputHeight >= MAX_INPUT_HEIGHT,
                     },
                   ]}
+                  scrollEnabled={inputHeight >= MAX_INPUT_HEIGHT}
                   placeholder={
                     editingMessage
                       ? "Edit message"
@@ -2176,7 +2493,6 @@ const CommunityChatScreen: React.FC = () => {
         </View>
       ) : (
         <MemoizedGiftedChat
-          ref={chatRef}
           messages={messages}
           onSend={onSend}
           user={{ _id: user?.id || 1 }}

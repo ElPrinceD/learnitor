@@ -82,6 +82,19 @@ const Timeline = () => {
   });
 
   useEffect(() => {
+    if (categoriesStatus === "success" && categoryNames) {
+      console.log("Categories loaded successfully:", categoryNames);
+    }
+    if (categoriesStatus === "error" && categoriesError) {
+      console.error("Categories loading error:", categoriesError);
+    }
+  }, [categoriesStatus, categoryNames, categoriesError]);
+
+  const typedCategoryNames = categoryNames as
+    | Record<number, string>
+    | undefined;
+
+  useEffect(() => {
     if (userToken && selectedDate) {
       refetchTodayPlans();
       refetchCategoryNames();
@@ -109,6 +122,8 @@ const Timeline = () => {
 
   const handleEditPlan = (plan) => {
     console.log("Edit plan:", plan);
+    console.log("CategoryNames:", categoryNames);
+    console.log("Plan category:", plan.category);
     router.navigate("EditPlan");
     router.setParams({
       taskId: String(plan.id),
@@ -118,7 +133,7 @@ const Timeline = () => {
       category_id: String(plan.category),
       due_time_start: plan.due_time_start,
       due_time_end: plan.due_time_end,
-      category_name: categoryNames[plan.category],
+      category_name: typedCategoryNames?.[plan.category] || "Unknown Category",
     });
   };
 
@@ -127,11 +142,11 @@ const Timeline = () => {
   };
 
   const memoizedPlans = useMemo(() => {
-    if (plansStatus === "success") {
+    if (plansStatus === "success" && typedCategoryNames) {
       return todayPlans || [];
     }
     return [];
-  }, [todayPlans, plansStatus]);
+  }, [todayPlans, plansStatus, typedCategoryNames]);
 
   const handleDismissError = useCallback(() => setErrorMessage(null), []);
 
@@ -214,10 +229,10 @@ const Timeline = () => {
                 (plan, index) =>
                   plan && (
                     <View key={index} style={styles.planItemWrapper}>
-                      {categoryNames && (
+                      {typedCategoryNames && (
                         <PlanItem
                           plan={plan}
-                          categoryNames={categoryNames}
+                          categoryNames={typedCategoryNames}
                           getCategoryColor={getCategoryColor}
                           handleEditPlan={handleEditPlan}
                         />

@@ -50,13 +50,13 @@ const AccountSettings = () => {
 
   const handleUpdateInfo = async () => {
     setLoading(true);
-  
+
     const config = {
       headers: {
         Authorization: `Token ${userToken?.token}`,
       },
     };
-  
+
     // Build only fields that were provided
     const updatedFields = {
       ...(formData.firstName && { first_name: formData.firstName }),
@@ -64,14 +64,14 @@ const AccountSettings = () => {
       ...(formData.email && { email: formData.email }),
       ...(formData.dob && { dob: formData.dob }),
     };
-  
+
     try {
       await axios.put(
         `${ApiUrl}/api/update/user/${userInfo?.user.id}/`,
         updatedFields,
         config
       );
-  
+
       if (userInfo) {
         const updatedUser = {
           ...userInfo.user,
@@ -88,7 +88,7 @@ const AccountSettings = () => {
             ...(formData.country && { country: formData.country }),
           },
         };
-      
+
         setUserInformation({
           ...userInfo,
           user: updatedUser,
@@ -98,8 +98,7 @@ const AccountSettings = () => {
           user: updatedUser,
         });
       }
-      
-  
+
       Alert.alert("Success", "Your information has been updated.", [
         {
           text: "OK",
@@ -115,7 +114,6 @@ const AccountSettings = () => {
       setLoading(false);
     }
   };
-  
 
   const styles = StyleSheet.create({
     container: {
@@ -126,7 +124,7 @@ const AccountSettings = () => {
       flexGrow: 1,
       paddingHorizontal: rS(20),
       paddingTop: rV(20),
-      alignItems: "center",
+      paddingBottom: rV(20),
     },
     title: {
       fontSize: SIZES.xLarge,
@@ -139,20 +137,23 @@ const AccountSettings = () => {
       flexDirection: "row",
       justifyContent: "space-between",
       width: "100%",
+      gap: rS(10),
     },
     halfWidth: {
-      width: "45%",
+      flex: 1,
     },
     inputContainer: {
       flexDirection: "row",
       alignItems: "center",
       borderWidth: 1,
       borderRadius: rMS(10),
-      paddingHorizontal: rS(10),
+      paddingHorizontal: rS(12),
+      paddingVertical: rV(2),
       marginBottom: rV(15),
-      borderColor: themeColors.text,
-      backgroundColor: themeColors.reverseText,
+      borderColor: themeColors.border,
+      backgroundColor: themeColors.card,
       width: "100%",
+      minHeight: rV(44),
     },
     icon: {
       marginRight: rS(10),
@@ -162,6 +163,11 @@ const AccountSettings = () => {
       flex: 1,
       height: rV(40),
       color: themeColors.text,
+      fontSize: SIZES.medium,
+    },
+    dateSelectorWrapper: {
+      flex: 1,
+      marginLeft: rS(0),
     },
     subTitle: {
       fontSize: SIZES.large,
@@ -173,12 +179,12 @@ const AccountSettings = () => {
     },
     footer: {
       paddingHorizontal: rS(20),
-      paddingVertical: rV(10),
+      paddingVertical: rV(15),
       backgroundColor: themeColors.background,
     },
     button: {
       borderRadius: rMS(10),
-      paddingVertical: rV(10),
+      paddingVertical: rV(12),
       alignItems: "center",
       backgroundColor: themeColors.buttonBackground,
       width: "100%",
@@ -196,7 +202,11 @@ const AccountSettings = () => {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       {/* Form fields scroll area */}
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <Text style={styles.title}>Personal Info</Text>
         <View style={styles.row}>
           <View style={styles.halfWidth}>
@@ -240,11 +250,14 @@ const AccountSettings = () => {
             size={rMS(18)}
             style={styles.icon}
           />
-          <DateSelector
-            label="Date of Birth"
-            initialDate={formData.dob}
-            onDateChange={(selectedDate) => handleChange("dob", selectedDate)}
-          />
+          <View style={styles.dateSelectorWrapper}>
+            <DateSelector
+              label="Date of Birth"
+              initialDate={formData.dob}
+              onDateChange={(selectedDate) => handleChange("dob", selectedDate)}
+              minDate={false}
+            />
+          </View>
         </View>
 
         <View style={styles.inputContainer}>

@@ -77,17 +77,29 @@ const CommunityDetailScreen: React.FC = () => {
   const themeColors = Colors[colorScheme ?? "light"];
 
   const sortedMembers = useMemo(() => {
-    return (
-      community?.members?.sort((a, b) =>
-        a.first_name.localeCompare(b.first_name)
-      ) || []
+    if (!community?.members) return [];
+
+    // Sort members alphabetically first
+    const sorted = [...community.members].sort((a, b) =>
+      a.first_name.localeCompare(b.first_name)
     );
-  }, [community?.members]);
+
+    // Find current user and move them to the front
+    const currentUserIndex = sorted.findIndex(
+      (member) => member.email === user?.email
+    );
+    if (currentUserIndex > -1) {
+      const currentUser = sorted.splice(currentUserIndex, 1)[0];
+      return [currentUser, ...sorted];
+    }
+
+    return sorted;
+  }, [community?.members, user?.email]);
 
   const memberData = useMemo(() => {
     const members = sortedMembers || [];
-    let displayed = showAllMembers ? members : members.slice(0, 5);
-    if (!showAllMembers && members.length > 5) {
+    let displayed = showAllMembers ? members : members.slice(0, 10);
+    if (!showAllMembers && members.length > 10) {
       displayed = [...displayed, { id: "view-all", type: "view-all" } as any];
     }
     return displayed;
@@ -180,6 +192,30 @@ const CommunityDetailScreen: React.FC = () => {
       }
     }, [id, fetchCommunityData])
   );
+
+  // Set navigation options to show edit button only for leaders
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () =>
+        isUserLeader ? (
+          <TouchableOpacity
+            onPress={() =>
+              router.push({
+                pathname: "EditCommunityScreen",
+                params: { id },
+              })
+            }
+            style={{ marginRight: 16 }}
+          >
+            <Ionicons
+              name="settings-outline"
+              size={24}
+              color={themeColors.text}
+            />
+          </TouchableOpacity>
+        ) : null,
+    });
+  }, [navigation, isUserLeader, id, themeColors.text]);
 
   useEffect(() => {
     let socketCleanup = () => {};
@@ -327,17 +363,20 @@ const CommunityDetailScreen: React.FC = () => {
             }}
             onPress={() => setShowAllMembers(true)}
           >
-            <Text style={{ color: themeColors.tint }}>View all members</Text>
+            <Text style={{ color: themeColors.tint }}>
+              View all {sortedMembers.length} members
+            </Text>
           </TouchableOpacity>
         );
       }
       const isLeader = item.email === community?.created_by;
+      const isCurrentUser = item.email === user?.email;
       const memberItem = (
         <View style={styles.memberItem}>
           {renderAvatar(item)}
           <View style={styles.memberInfo}>
             <Text style={[styles.memberName, { color: themeColors.text }]}>
-              {item.first_name} {item.last_name}
+              {isCurrentUser ? "You" : `${item.first_name} ${item.last_name}`}
             </Text>
             {isLeader && <Text style={styles.adminText}>Admin</Text>}
           </View>
@@ -435,9 +474,36 @@ const CommunityDetailScreen: React.FC = () => {
             source={{ uri: community?.image_url }}
             style={styles.channelImage}
           />
-          <Text style={[styles.channelName, { color: themeColors.text }]}>
-            {community?.name}
-          </Text>
+          <View style={styles.channelHeader}>
+            <Text style={[styles.channelName, { color: themeColors.text }]}>
+              {community?.name}
+            </Text>
+            <View style={styles.publicBadge}>
+              <Ionicons
+                name="globe-outline"
+                size={16}
+                color={themeColors.background}
+              />
+              <Text style={styles.publicBadgeText}>Public</Text>
+            </View>
+            {isUserLeader && (
+              <TouchableOpacity
+                onPress={() =>
+                  router.push({
+                    pathname: "EditCommunityScreen",
+                    params: { id },
+                  })
+                }
+                style={styles.editButton}
+              >
+                <Ionicons
+                  name="create-outline"
+                  size={20}
+                  color={themeColors.textSecondary}
+                />
+              </TouchableOpacity>
+            )}
+          </View>
           <Text
             style={[styles.followerCount, { color: themeColors.textSecondary }]}
           >
@@ -451,20 +517,25 @@ const CommunityDetailScreen: React.FC = () => {
             <FontAwesome6
               name={isUserLeader ? "crown" : "user"}
               size={SIZES.large}
-              color={themeColors.text}
+              color={isUserLeader ? themeColors.tint : themeColors.text}
             />
             <Text
               style={[styles.statText, { color: themeColors.textSecondary }]}
             >
               {isUserLeader ? "Leader" : "Member"}
             </Text>
+            {isUserLeader && (
+              <Text style={[styles.leaderNote, { color: themeColors.tint }]}>
+                Can edit
+              </Text>
+            )}
           </View>
           <View style={[styles.statItem, styles.statDivider]}>
             <FontAwesome6 name="users" size={16} color={themeColors.text} />
             <Text
               style={[styles.statText, { color: themeColors.textSecondary }]}
             >
-              {community?.members?.length}+ Member
+              {community?.members?.length} Members
             </Text>
           </View>
           <TouchableOpacity
@@ -523,14 +594,14 @@ const CommunityDetailScreen: React.FC = () => {
 
           <TouchableOpacity style={styles.sectionItem}>
             <Ionicons
-              name="lock-closed"
+              name="search-outline"
               size={24}
               color={themeColors.text}
               style={styles.icon}
             />
             <View style={styles.sectionTextContainer}>
               <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
-                Encryption
+                Channel Visibility
               </Text>
               <Text
                 style={[
@@ -538,10 +609,45 @@ const CommunityDetailScreen: React.FC = () => {
                   { color: themeColors.textSecondary },
                 ]}
               >
-                Messages and calls are end-to-end encrypted.
+                Public - Anyone can find and join
               </Text>
             </View>
+            <TouchableOpacity
+              onPress={() =>
+                Alert.alert(
+                  "Channel Privacy",
+                  "This channel is public and can be found by anyone searching for it. Users can join directly without an invitation."
+                )
+              }
+              style={styles.helpButton}
+            >
+              <Ionicons
+                name="help-circle-outline"
+                size={20}
+                color={themeColors.textSecondary}
+              />
+            </TouchableOpacity>
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.infoRow}>
+          <View style={styles.infoLeft}>
+            <Ionicons
+              name="information-circle-outline"
+              size={22}
+              color={themeColors.textSecondary}
+              style={{ marginRight: 10 }}
+            />
+            <Text style={[styles.infoTitle, { color: themeColors.text }]}>
+              Channel Privacy
+            </Text>
+          </View>
+          <Text
+            style={[styles.infoSubtitle, { color: themeColors.textSecondary }]}
+          >
+            This channel is public and can be found by anyone searching for it.
+            Users can join directly without an invitation.
+          </Text>
         </View>
 
         <View style={styles.sectionHeader}>
@@ -603,7 +709,7 @@ const CommunityDetailScreen: React.FC = () => {
                     onPress={() => setShowAllCalendar(true)}
                   >
                     <Text style={{ color: themeColors.tint }}>
-                      View all events
+                      View all {timetable.length} events
                     </Text>
                   </TouchableOpacity>
                 );
@@ -635,26 +741,6 @@ const CommunityDetailScreen: React.FC = () => {
             style={[styles.infoSubtitle, { color: themeColors.textSecondary }]}
           >
             Anyone can find this channel and see what's been shared.
-          </Text>
-        </View>
-
-        <View style={styles.infoRow}>
-          <View style={styles.infoLeft}>
-            <Ionicons
-              name="lock-closed"
-              size={22}
-              color={themeColors.textSecondary}
-              style={{ marginRight: 10 }}
-            />
-            <Text style={[styles.infoTitle, { color: themeColors.text }]}>
-              Profile privacy
-            </Text>
-          </View>
-          <Text
-            style={[styles.infoSubtitle, { color: themeColors.textSecondary }]}
-          >
-            This channel has a reduced profile for your phone number. Tap to
-            learn more.
           </Text>
         </View>
 
@@ -860,6 +946,46 @@ const CommunityDetailScreen: React.FC = () => {
           color: themeColors.background,
           fontSize: SIZES.medium,
           fontWeight: "600",
+        },
+        channelHeader: {
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
+          marginBottom: rV(4),
+        },
+        publicBadge: {
+          flexDirection: "row",
+          alignItems: "center",
+          backgroundColor: themeColors.tint,
+          paddingHorizontal: rS(8),
+          paddingVertical: rV(4),
+          borderRadius: rMS(12),
+          marginLeft: rS(8),
+        },
+        publicBadgeText: {
+          color: themeColors.background,
+          fontSize: SIZES.xSmall,
+          fontWeight: "600",
+          marginLeft: rS(4),
+        },
+        helpButton: {
+          padding: rS(4),
+          marginLeft: rS(8),
+        },
+        editButton: {
+          padding: rS(4),
+          marginLeft: rS(8),
+        },
+        leaderNote: {
+          fontSize: SIZES.xSmall,
+          fontWeight: "600",
+          marginTop: rV(2),
+        },
+        youText: {
+          color: themeColors.tint,
+          fontSize: SIZES.xSmall,
+          fontWeight: "600",
+          marginLeft: rS(8),
         },
       }),
     [themeColors]

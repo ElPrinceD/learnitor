@@ -68,7 +68,7 @@ const Home: React.FC = () => {
       const date = new Date();
       return {
         categories: await getCategoryNames(token!),
-        tasks: await getTodayPlans(token!, date, getCategoryNames(token!)),
+        tasks: await getTodayPlans(token!, date, null),
       };
     },
     enabled: !!token,

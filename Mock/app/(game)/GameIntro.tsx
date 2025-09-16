@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Image,
   useColorScheme,
+  BackHandler,
 } from "react-native";
 import { router } from "expo-router";
 import axios from "axios";
@@ -61,6 +62,18 @@ export default function GameIntro() {
   useEffect(() => {
     setJoinGameDisabled(gameCode.length !== 6);
   }, [gameCode]);
+
+  // Handle back navigation to home tab
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        router.replace("/(tabs)/home");
+        return true; // Returning true prevents the default back action
+      }
+    );
+    return () => backHandler.remove(); // Clean up the event listener
+  }, []);
 
   const handleJoinGameDisabledPress = () => {
     if (joinGameDisabled) {

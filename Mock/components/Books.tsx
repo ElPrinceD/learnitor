@@ -1,22 +1,16 @@
 import React, { memo } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  useColorScheme,
-} from "react-native";
+import { View, Text, StyleSheet, useColorScheme } from "react-native";
 import Entypo from "@expo/vector-icons/Entypo"; // Importing the icon for books
 import { BookMaterial } from "./types";
 import Colors from "../constants/Colors"; // Adjusting Colors import
 import { rMS, SIZES, rV } from "../constants";
+import InAppBrowserLink from "./InAppBrowserLink";
 
 interface BooksProps {
   bookMaterials: BookMaterial[];
-  handleBookPress: (bookMaterial: BookMaterial) => void;
 }
 
-const Books: React.FC<BooksProps> = ({ bookMaterials, handleBookPress }) => {
+const Books: React.FC<BooksProps> = ({ bookMaterials }) => {
   const books = bookMaterials.filter(
     (bookMaterial) => bookMaterial.type === "book"
   );
@@ -49,10 +43,10 @@ const Books: React.FC<BooksProps> = ({ bookMaterials, handleBookPress }) => {
   return (
     <View style={styles.container}>
       {books.map((bookMaterial, index) => (
-        <TouchableOpacity
+        <InAppBrowserLink
           key={index}
-          activeOpacity={0.5}
-          onPress={() => handleBookPress(bookMaterial)}
+          url={bookMaterial.link || ""}
+          style={{ marginBottom: rV(10) }}
         >
           <View style={styles.materialCard}>
             <Entypo name="book" size={27} color={themeColors.icon} />
@@ -60,7 +54,7 @@ const Books: React.FC<BooksProps> = ({ bookMaterials, handleBookPress }) => {
               <Text style={styles.materialName}>{bookMaterial.name}</Text>
             </View>
           </View>
-        </TouchableOpacity>
+        </InAppBrowserLink>
       ))}
     </View>
   );

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { View, Linking, RefreshControl, ScrollView } from "react-native";
+import { View, RefreshControl, ScrollView } from "react-native";
 import { useGlobalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 
@@ -54,16 +54,6 @@ const VideoMaterials: React.FC = () => {
     }
   }, [queryClient, userToken?.token, refetchSelectedTopicMaterials]);
 
-  const handleVideoPress = (material: Material) => {
-    if (material.link) {
-      Linking.openURL(material.link).catch((error) =>
-        console.error("Error opening link:", error)
-      );
-    } else {
-      console.log("No link available for this material");
-    }
-  };
-
   return (
     <View style={{ flex: 1 }}>
       <ScrollView
@@ -72,10 +62,7 @@ const VideoMaterials: React.FC = () => {
         }
       >
         {/* <TopicInformation topic={parsedTopic} /> */}
-        <Videos
-          videoMaterials={selectedTopicMaterials || []}
-          handleVideoPress={handleVideoPress}
-        />
+        <Videos videoMaterials={selectedTopicMaterials || []} />
       </ScrollView>
       <ErrorMessage
         message={errorMessage}

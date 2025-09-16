@@ -24,11 +24,15 @@ export default function ResultsScreen() {
     scores: string;
   }>();
 
-  // Prevent back navigation on Android
+  // Allow back navigation to home tab
   useEffect(() => {
-    const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
-      return true; // Returning true prevents the default back action
-    });
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        router.replace("/(tabs)/home");
+        return true; // Returning true prevents the default back action
+      }
+    );
     return () => backHandler.remove(); // Clean up the event listener
   }, []);
 
@@ -72,7 +76,13 @@ export default function ResultsScreen() {
   }, [gameDetails, scores, userInfo]);
 
   const handleCreateNewGame = () => {
-    router.push("GameIntro");
+    // Navigate to GameIntro to create a new game
+    router.dismissTo("GameIntro");
+  };
+
+  const handleBackToHome = () => {
+    // Add a back to home option
+    router.replace("/(tabs)/home");
   };
 
   const styles = StyleSheet.create({
@@ -158,12 +168,12 @@ export default function ResultsScreen() {
       />
       <View style={styles.buttonContainer}>
         <GameButton
-          title="Replay"
-          // onPress={handleReplayGame}
+          title="Back to Home"
+          onPress={handleBackToHome}
           style={styles.button}
         />
         <GameButton
-          title="Create a New Game"
+          title="Create New Game"
           onPress={handleCreateNewGame}
           style={styles.button}
         />

@@ -8,6 +8,8 @@ import {
 } from "react-native";
 import Colors from "../constants/Colors";
 import { SIZES, rMS, rS, rV, useShadows } from "../constants";
+import LatexRenderer from "./LatexRenderer";
+import { containsLatex } from "../utils/latexUtils";
 
 type QuestionProps = {
   practiceQuestions: any[];
@@ -48,6 +50,21 @@ const Questions: React.FC<QuestionProps> = ({
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const shadow = useShadows();
+
+  // Helper function to render text with LaTeX support
+  const renderTextWithLatex = (text: string, style: any) => {
+    if (containsLatex(text)) {
+      return (
+        <LatexRenderer
+          latex={text}
+          fontSize={style.fontSize || SIZES.medium}
+          color={style.color || themeColors.text}
+          style={style}
+        />
+      );
+    }
+    return <Text style={style}>{text}</Text>;
+  };
 
   const styles = StyleSheet.create({
     container: {
@@ -154,11 +171,11 @@ const Questions: React.FC<QuestionProps> = ({
       <View style={styles.questionContainer}>
         {practiceQuestions[currentQuestion] && (
           <View key={currentQuestion}>
-            {practiceQuestions[currentQuestion].text && (
-              <Text style={styles.questionText}>
-                {practiceQuestions[currentQuestion].text}
-              </Text>
-            )}
+            {practiceQuestions[currentQuestion].text &&
+              renderTextWithLatex(
+                practiceQuestions[currentQuestion].text,
+                styles.questionText
+              )}
           </View>
         )}
       </View>
@@ -175,7 +192,7 @@ const Questions: React.FC<QuestionProps> = ({
                 answer.id
               );
               const isCorrect = answer.isRight;
-             
+
               const answerStyle = isSelected
                 ? isCorrect
                   ? [styles.answerTouchable, styles.correctAnswer]
@@ -214,16 +231,12 @@ const Questions: React.FC<QuestionProps> = ({
                       style={[styles.checkBox, isSelected && styles.checkedBox]}
                     />
                   )}
-                  {answer && answer.text && (
-                    <Text
-                      style={[
-                        styles.answerText,
-                        isSelected && styles.selectedAnswerText,
-                      ]}
-                    >
-                      {answer.text}
-                    </Text>
-                  )}
+                  {answer &&
+                    answer.text &&
+                    renderTextWithLatex(answer.text, [
+                      styles.answerText,
+                      isSelected && styles.selectedAnswerText,
+                    ])}
                 </TouchableOpacity>
               );
             })}

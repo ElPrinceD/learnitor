@@ -1,39 +1,60 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Switch, useColorScheme } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  ScrollView,
+  Switch,
+  useColorScheme,
+} from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useAuth } from "../../../components/AuthContext";
 import Colors from "../../../constants/Colors";
 import { rMS, rS, rV } from "../../../constants/responsive";
 import { SIZES } from "../../../constants/theme";
 import AnimatedRoundTextInput from "../../../components/AnimatedRoundTextInput.tsx";
-import { deleteTask, updateTask, getCategories } from "../../../services/TimelineApiCalls.ts";
+import {
+  deleteTask,
+  updateTask,
+  getCategories,
+} from "../../../services/TimelineApiCalls.ts";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import ErrorMessage from "../../../components/ErrorMessage.tsx";
 import GameButton from "../../../components/GameButton.tsx";
 import CustomPicker from "../../../components/CustomPicker";
 import DateSelector from "../../../components/DateSelector.tsx";
 import CustomDateTimeSelector from "../../../components/CustomDateTimeSelector.tsx";
-import Animated, { FadeInLeft, FadeInRight, FadeOutRight, ReduceMotion } from "react-native-reanimated";
+import Animated, {
+  FadeInLeft,
+  FadeInRight,
+  FadeOutRight,
+  ReduceMotion,
+} from "react-native-reanimated";
 import { useTimeline } from "../../../contexts/TimelineContext"; // Added for TimelineContext
 import { useCache } from "../../../contexts/CacheContext"; // Added for CacheContext
 
-interface Category { value: number; label: string; }
+interface Category {
+  value: number;
+  label: string;
+}
 interface UpdateTaskData {
-  title?: string; 
-  description?: string; 
-  due_date?: string; 
-  due_time_start?: string; 
+  learner?: number;
+  title?: string;
+  description?: string;
+  due_date?: string;
+  due_time_start?: string;
   due_time_end?: string;
-  category?: number | null; 
-  is_recurring?: boolean; 
-  recurrence_interval?: string | null; 
+  category?: number | null;
+  is_recurring?: boolean;
+  recurrence_interval?: string | null;
   recurrence_end_date?: string | null;
   affect_all_recurring?: boolean;
 }
 
 const EditPlan = () => {
   const params = useLocalSearchParams();
-  console.log(params)
+  console.log(params);
   const id = params.taskId as string;
   const oldTitle = params.title as string;
   const oldDescription = params.description as string;
@@ -44,10 +65,14 @@ const EditPlan = () => {
   const oldIsRecurring = params.is_recurring === "true";
   const oldRecurrenceInterval = (params.recurrence_interval as string) || null;
   const oldRecurrenceEndDate = (params.recurrence_end_date as string) || null;
-  console.log(oldCategoryId)
+  console.log(oldCategoryId);
 
-  const { userToken } = useAuth();
-  const { scheduleTaskNotification, cancelTaskNotification, storeNotificationId } = useTimeline(); // Use TimelineContext
+  const { userToken, userInfo } = useAuth();
+  const {
+    scheduleTaskNotification,
+    cancelTaskNotification,
+    storeNotificationId,
+  } = useTimeline(); // Use TimelineContext
   const { removeItem } = useCache(); // Use CacheContext for cache invalidation
 
   // Initialize dueDate with the plan's oldDate
@@ -60,7 +85,14 @@ const EditPlan = () => {
   const [startTime, setStartTime] = useState(() => {
     if (oldStartTime) {
       const [hours, minutes] = oldStartTime.split(":").map(Number);
-      if (!isNaN(hours) && !isNaN(minutes) && hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+      if (
+        !isNaN(hours) &&
+        !isNaN(minutes) &&
+        hours >= 0 &&
+        hours <= 23 &&
+        minutes >= 0 &&
+        minutes <= 59
+      ) {
         const date = new Date(dueDate);
         date.setHours(hours, minutes, 0, 0);
         return date;
@@ -75,7 +107,14 @@ const EditPlan = () => {
   const [endTime, setEndTime] = useState(() => {
     if (oldEndTime) {
       const [hours, minutes] = oldEndTime.split(":").map(Number);
-      if (!isNaN(hours) && !isNaN(minutes) && hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+      if (
+        !isNaN(hours) &&
+        !isNaN(minutes) &&
+        hours >= 0 &&
+        hours <= 23 &&
+        minutes >= 0 &&
+        minutes <= 59
+      ) {
         const date = new Date(dueDate);
         date.setHours(hours, minutes, 0, 0);
         return date;
@@ -88,16 +127,24 @@ const EditPlan = () => {
 
   const [title, setTitle] = useState(oldTitle || "");
   const [description, setDescription] = useState(oldDescription || "");
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
+    null
+  );
   const [isRecurring, setIsRecurring] = useState(oldIsRecurring);
   const [recurrenceOption, setRecurrenceOption] = useState(
-    oldRecurrenceInterval ? oldRecurrenceInterval.charAt(0).toUpperCase() + oldRecurrenceInterval.slice(1) : "Does not repeat"
+    oldRecurrenceInterval
+      ? oldRecurrenceInterval.charAt(0).toUpperCase() +
+          oldRecurrenceInterval.slice(1)
+      : "Does not repeat"
   );
   const [recurrenceEndDate, setRecurrenceEndDate] = useState(() => {
-    const date = oldRecurrenceEndDate ? new Date(oldRecurrenceEndDate) : new Date();
+    const date = oldRecurrenceEndDate
+      ? new Date(oldRecurrenceEndDate)
+      : new Date();
     return isNaN(date.getTime()) ? new Date() : date;
   });
   const [affectAllRecurring, setAffectAllRecurring] = useState(false);
+  const [deleteAllRecurring, setDeleteAllRecurring] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const colorScheme = useColorScheme();
@@ -111,7 +158,9 @@ const EditPlan = () => {
 
   useEffect(() => {
     if (categoriesData && oldCategoryId) {
-      const category = categoriesData.find((cat) => cat.value.toString() === oldCategoryId);
+      const category = categoriesData.find(
+        (cat) => cat.value.toString() === oldCategoryId
+      );
       if (category) setSelectedCategory(category);
     }
   }, [categoriesData, oldCategoryId]);
@@ -127,18 +176,23 @@ const EditPlan = () => {
   }, [dueDate]);
 
   const updateTaskMutation = useMutation<any, any, any>({
-    mutationFn: async ({ taskId, taskData, token }) => updateTask(taskId, taskData, token),
+    mutationFn: async ({ taskId, taskData, token, updateScope }) =>
+      updateTask(taskId, taskData, token, updateScope),
     onSuccess: async (updatedTask) => {
       const oldDateString = new Date(oldDate).toISOString().split("T")[0];
       const newDateString = formatDate(dueDate);
-      const newCategoryId = selectedCategory?.value?.toString() || oldCategoryId;
+      const newCategoryId =
+        selectedCategory?.value?.toString() || oldCategoryId;
       await removeItem(`todayPlans_${oldDateString}_all`);
-      if (oldCategoryId) await removeItem(`todayPlans_${oldDateString}_${oldCategoryId}`);
+      if (oldCategoryId)
+        await removeItem(`todayPlans_${oldDateString}_${oldCategoryId}`);
       if (oldDateString !== newDateString) {
         await removeItem(`todayPlans_${newDateString}_all`);
-        if (newCategoryId) await removeItem(`todayPlans_${newDateString}_${newCategoryId}`);
+        if (newCategoryId)
+          await removeItem(`todayPlans_${newDateString}_${newCategoryId}`);
       } else if (oldCategoryId !== newCategoryId) {
-        if (newCategoryId) await removeItem(`todayPlans_${newDateString}_${newCategoryId}`);
+        if (newCategoryId)
+          await removeItem(`todayPlans_${newDateString}_${newCategoryId}`);
       }
       try {
         await cancelTaskNotification(id);
@@ -150,16 +204,19 @@ const EditPlan = () => {
       router.dismiss(1);
       setErrorMessage(null);
     },
-    onError: (error) => setErrorMessage(error.message || "Error updating schedule"),
+    onError: (error) =>
+      setErrorMessage(error.message || "Error updating schedule"),
   });
 
   const deleteTaskMutation = useMutation<any, any, any>({
-    mutationFn: async ({ taskId, token }) => deleteTask(taskId, token),
+    mutationFn: async ({ taskId, token, deleteScope }) =>
+      deleteTask(taskId, token, deleteScope),
     onSuccess: async () => {
       const dateString = new Date(oldDate).toISOString().split("T")[0];
       const categoryId = params.category_id as string;
       await removeItem(`todayPlans_${dateString}_all`);
-      if (categoryId) await removeItem(`todayPlans_${dateString}_${categoryId}`);
+      if (categoryId)
+        await removeItem(`todayPlans_${dateString}_${categoryId}`);
       try {
         await cancelTaskNotification(id);
       } catch (error) {
@@ -168,7 +225,8 @@ const EditPlan = () => {
       router.dismiss(1);
       setErrorMessage(null);
     },
-    onError: (error) => setErrorMessage(error.message || "Error deleting schedule"),
+    onError: (error) =>
+      setErrorMessage(error.message || "Error deleting schedule"),
   });
 
   const parseTime = (timeString: string): Date => {
@@ -178,7 +236,14 @@ const EditPlan = () => {
       return defaultDate;
     }
     const [hours, minutes] = timeString.split(":").map(Number);
-    if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+    if (
+      isNaN(hours) ||
+      isNaN(minutes) ||
+      hours < 0 ||
+      hours > 23 ||
+      minutes < 0 ||
+      minutes > 59
+    ) {
       console.error(`Invalid time string: ${timeString}`);
       const defaultDate = new Date(dueDate);
       defaultDate.setHours(12, 0, 0, 0);
@@ -191,38 +256,103 @@ const EditPlan = () => {
 
   const formatTime = (date: Date): string => {
     if (!(date instanceof Date) || isNaN(date.getTime())) return "12:00";
-    return `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`;
+    return `${date.getHours().toString().padStart(2, "0")}:${date
+      .getMinutes()
+      .toString()
+      .padStart(2, "0")}`;
   };
 
   const formatDate = (date: Date): string => {
-    if (!(date instanceof Date) || isNaN(date.getTime())) return new Date().toISOString().split("T")[0];
+    if (!(date instanceof Date) || isNaN(date.getTime()))
+      return new Date().toISOString().split("T")[0];
     return date.toISOString().split("T")[0];
   };
 
   const handleSaveTime = () => {
     const dataToSave: UpdateTaskData = {};
-    if (title !== oldTitle) dataToSave.title = title;
+
+    // Always include learner ID and title as they're required
+    if (userInfo?.user?.id) {
+      dataToSave.learner = userInfo.user.id;
+    }
+
+    // Always include title as it's required by the server
+    dataToSave.title = title;
     if (description !== oldDescription) dataToSave.description = description;
-    if (formatDate(dueDate) !== oldDate) dataToSave.due_date = formatDate(dueDate);
-    if (formatTime(startTime) !== oldStartTime) dataToSave.due_time_start = formatTime(startTime);
-    if (formatTime(endTime) !== oldEndTime && formatTime(endTime) !== "12:00") dataToSave.due_time_end = formatTime(endTime);
-    if (selectedCategory?.value?.toString() !== oldCategoryId && selectedCategory !== null) dataToSave.category = selectedCategory?.value || null;
+    if (formatDate(dueDate) !== oldDate)
+      dataToSave.due_date = formatDate(dueDate);
+    if (formatTime(startTime) !== oldStartTime)
+      dataToSave.due_time_start = formatTime(startTime);
+    if (formatTime(endTime) !== oldEndTime && formatTime(endTime) !== "12:00")
+      dataToSave.due_time_end = formatTime(endTime);
+    if (
+      selectedCategory?.value?.toString() !== oldCategoryId &&
+      selectedCategory !== null
+    )
+      dataToSave.category = selectedCategory?.value || null;
     if (isRecurring !== oldIsRecurring) dataToSave.is_recurring = isRecurring;
-    if (recurrenceOption !== "Does not repeat" && recurrenceOption.toLowerCase() !== oldRecurrenceInterval)
+    if (
+      recurrenceOption !== "Does not repeat" &&
+      recurrenceOption.toLowerCase() !== oldRecurrenceInterval
+    )
       dataToSave.recurrence_interval = recurrenceOption.toLowerCase();
-    if (recurrenceOption !== "Does not repeat" && formatDate(recurrenceEndDate) !== oldRecurrenceEndDate)
+    if (
+      recurrenceOption !== "Does not repeat" &&
+      formatDate(recurrenceEndDate) !== oldRecurrenceEndDate
+    )
       dataToSave.recurrence_end_date = formatDate(recurrenceEndDate);
-    if (affectAllRecurring && isRecurring) dataToSave.affect_all_recurring = affectAllRecurring;
+
+    console.log("Data to save:", dataToSave);
+    console.log("Data to save keys:", Object.keys(dataToSave));
+    console.log("affectAllRecurring state:", affectAllRecurring);
+    console.log("isRecurring:", isRecurring);
 
     if (Object.keys(dataToSave).length > 0) {
-      updateTaskMutation.mutate({ taskId: id, taskData: dataToSave, token: userToken?.token! });
+      // Determine update scope based on affectAllRecurring and isRecurring
+      let updateScope = "single"; // Default to single task
+
+      if (affectAllRecurring && isRecurring) {
+        updateScope = "all"; // Update all recurring tasks
+      } else if (isRecurring && !affectAllRecurring) {
+        updateScope = "future"; // Update future tasks only
+      }
+
+      console.log("Update scope determined:", updateScope);
+
+      console.log("Mutation parameters:", {
+        taskId: id,
+        taskData: dataToSave,
+        updateScope: updateScope,
+      });
+
+      updateTaskMutation.mutate({
+        taskId: id,
+        taskData: dataToSave,
+        token: userToken?.token!,
+        updateScope: updateScope,
+      });
     } else {
       setErrorMessage("No changes to save.");
     }
   };
 
   const handleDeletePlan = () => {
-    deleteTaskMutation.mutate({ taskId: id, token: userToken?.token! });
+    // Determine delete scope based on deleteAllRecurring and isRecurring
+    let deleteScope = "single"; // Default to single task
+
+    if (deleteAllRecurring && isRecurring) {
+      deleteScope = "all"; // Delete all recurring tasks
+    } else if (isRecurring && !deleteAllRecurring) {
+      deleteScope = "future"; // Delete future tasks only
+    }
+
+    console.log("Delete scope determined:", deleteScope);
+
+    deleteTaskMutation.mutate({
+      taskId: id,
+      token: userToken?.token!,
+      deleteScope: deleteScope,
+    });
   };
 
   const recurrenceOptions = [
@@ -230,27 +360,84 @@ const EditPlan = () => {
     { label: "Daily", value: "Daily" },
     { label: "Weekly", value: "Weekly" },
   ];
-  const simplifiedRecurrenceOptions = recurrenceOptions.map((option) => option.value);
+  const simplifiedRecurrenceOptions = recurrenceOptions.map(
+    (option) => option.value
+  );
 
   const styles = StyleSheet.create({
-    container: { flex: 1, paddingHorizontal: rMS(20), paddingBottom: rV(50), backgroundColor: themeColors.background },
-    sectionContainer: { backgroundColor: themeColors.secondaryBackground, padding: rV(15), borderRadius: rMS(8), marginBottom: rV(15) },
-    toggleContainer: { flexDirection: "row", alignItems: "center", marginVertical: rV(10), justifyContent: "space-between", paddingHorizontal: rS(16) },
-    toggleLabel: { fontSize: SIZES.large, color: themeColors.text, fontWeight: "bold" },
+    container: {
+      flex: 1,
+      paddingHorizontal: rMS(20),
+      paddingBottom: rV(50),
+      backgroundColor: themeColors.background,
+    },
+    sectionContainer: {
+      backgroundColor: themeColors.secondaryBackground,
+      padding: rV(15),
+      borderRadius: rMS(8),
+      marginBottom: rV(15),
+    },
+    toggleContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginVertical: rV(10),
+      justifyContent: "space-between",
+      paddingHorizontal: rS(16),
+    },
+    toggleLabel: {
+      fontSize: SIZES.large,
+      color: themeColors.text,
+      fontWeight: "bold",
+    },
     buttonContainer: { alignItems: "center", marginVertical: rV(20) },
-    button: { width: rS(150), paddingVertical: rV(10), borderRadius: 10, backgroundColor: themeColors.tint, alignItems: "center", marginHorizontal: rS(5) },
-    deleteButton: { width: rS(150), paddingVertical: rV(10), borderRadius: 10, backgroundColor: themeColors.errorBackground, alignItems: "center", marginHorizontal: rS(5) },
+    button: {
+      width: rS(150),
+      paddingVertical: rV(10),
+      borderRadius: 10,
+      backgroundColor: themeColors.tint,
+      alignItems: "center",
+      marginHorizontal: rS(5),
+    },
+    deleteButton: {
+      width: rS(150),
+      paddingVertical: rV(10),
+      borderRadius: 10,
+      backgroundColor: themeColors.errorBackground,
+      alignItems: "center",
+      marginHorizontal: rS(5),
+    },
   });
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.sectionContainer}>
-          <Animated.View key={`title-${title}`} entering={FadeInRight} exiting={FadeOutRight}>
-            <AnimatedRoundTextInput placeholderTextColor={themeColors.textSecondary} label="Title" value={title} onChangeText={setTitle} />
+          <Animated.View
+            key={`title-${title}`}
+            entering={FadeInRight}
+            exiting={FadeOutRight}
+          >
+            <AnimatedRoundTextInput
+              placeholderTextColor={themeColors.textSecondary}
+              label="Title"
+              value={title}
+              onChangeText={setTitle}
+            />
           </Animated.View>
-          <Animated.View key={`description-${description}`} entering={FadeInRight} exiting={FadeOutRight}>
-            <AnimatedRoundTextInput placeholderTextColor={themeColors.textSecondary} label="Description" value={description} onChangeText={setDescription} />
+          <Animated.View
+            key={`description-${description}`}
+            entering={FadeInRight}
+            exiting={FadeOutRight}
+          >
+            <AnimatedRoundTextInput
+              placeholderTextColor={themeColors.textSecondary}
+              label="Description"
+              value={description}
+              onChangeText={setDescription}
+            />
           </Animated.View>
         </View>
         <View style={styles.sectionContainer}>
@@ -294,7 +481,11 @@ const EditPlan = () => {
             label="Category"
             options={categoriesData?.map((cat) => cat.label) || []}
             selectedValue={selectedCategory?.label || undefined}
-            onValueChange={(value) => setSelectedCategory(categoriesData?.find((cat) => cat.label === value) || null)}
+            onValueChange={(value) =>
+              setSelectedCategory(
+                categoriesData?.find((cat) => cat.label === value) || null
+              )
+            }
           />
           <CustomPicker
             label="Recurrence"
@@ -306,12 +497,20 @@ const EditPlan = () => {
             }}
           />
           {recurrenceOption !== "Does not repeat" && (
-            <Animated.View entering={FadeInLeft.delay(200).randomDelay().reduceMotion(ReduceMotion.Never)} style={{ marginTop: rV(10) }}>
+            <Animated.View
+              entering={FadeInLeft.delay(200)
+                .randomDelay()
+                .reduceMotion(ReduceMotion.Never)}
+              style={{ marginTop: rV(10) }}
+            >
               <DateSelector
                 onDateChange={(selectedDate: string) => {
                   const newDate = new Date(selectedDate);
                   if (!isNaN(newDate.getTime())) setRecurrenceEndDate(newDate);
-                  else console.error(`Invalid recurrence end date: ${selectedDate}`);
+                  else
+                    console.error(
+                      `Invalid recurrence end date: ${selectedDate}`
+                    );
                 }}
                 label="End Date for Recurrence"
                 initialDate={oldRecurrenceEndDate || formatDate(new Date())} // Use plan's recurrence end date
@@ -319,28 +518,66 @@ const EditPlan = () => {
               />
             </Animated.View>
           )}
+          <View style={styles.toggleContainer}>
+            <Text style={styles.toggleLabel}>Affect All Recurring Tasks</Text>
+            <Switch
+              value={affectAllRecurring}
+              onValueChange={setAffectAllRecurring}
+              trackColor={{ false: "#767577", true: themeColors.tint }}
+              thumbColor={
+                affectAllRecurring ? themeColors.background : "#f4f3f4"
+              }
+            />
+          </View>
           {isRecurring && (
             <View style={styles.toggleContainer}>
-              <Text style={styles.toggleLabel}>Affect All Recurring Tasks</Text>
+              <Text style={styles.toggleLabel}>Delete All Recurring Tasks</Text>
               <Switch
-                value={affectAllRecurring}
-                onValueChange={setAffectAllRecurring}
+                value={deleteAllRecurring}
+                onValueChange={setDeleteAllRecurring}
                 trackColor={{ false: "#767577", true: themeColors.tint }}
-                thumbColor={affectAllRecurring ? themeColors.background : "#f4f3f4"}
+                thumbColor={
+                  deleteAllRecurring ? themeColors.background : "#f4f3f4"
+                }
               />
             </View>
           )}
         </View>
-        <View style={[styles.buttonContainer, { flexDirection: "row", justifyContent: "space-between" }]}>
-          <GameButton onPress={handleSaveTime} title="Save" style={styles.button} disabled={updateTaskMutation.isPending}>
-            {updateTaskMutation.isPending && <ActivityIndicator size="small" color={themeColors.text} />}
+        <View
+          style={[
+            styles.buttonContainer,
+            { flexDirection: "row", justifyContent: "space-between" },
+          ]}
+        >
+          <GameButton
+            onPress={handleSaveTime}
+            title="Save"
+            style={styles.button}
+            disabled={updateTaskMutation.isPending}
+          >
+            {updateTaskMutation.isPending && (
+              <ActivityIndicator size="small" color={themeColors.text} />
+            )}
           </GameButton>
-          <GameButton onPress={handleDeletePlan} title="Delete" style={styles.deleteButton} disabled={deleteTaskMutation.isPending}>
-            {deleteTaskMutation.isPending && <ActivityIndicator size="small" color={themeColors.text} />}
+          <GameButton
+            onPress={handleDeletePlan}
+            title="Delete"
+            style={styles.deleteButton}
+            disabled={deleteTaskMutation.isPending}
+          >
+            {deleteTaskMutation.isPending && (
+              <ActivityIndicator size="small" color={themeColors.text} />
+            )}
           </GameButton>
         </View>
       </ScrollView>
-      {errorMessage && <ErrorMessage message={errorMessage} visible={!!errorMessage} onDismiss={() => setErrorMessage(null)} />}
+      {errorMessage && (
+        <ErrorMessage
+          message={errorMessage}
+          visible={!!errorMessage}
+          onDismiss={() => setErrorMessage(null)}
+        />
+      )}
     </View>
   );
 };

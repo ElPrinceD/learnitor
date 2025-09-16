@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { View, Linking, ScrollView, RefreshControl } from "react-native";
+import { View, ScrollView, RefreshControl } from "react-native";
 import { useGlobalSearchParams } from "expo-router";
 
 import { useAuth } from "../../../../components/AuthContext";
@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchTopicMaterials } from "../../../../services/CoursesApiCalls";
 import { queryClient } from "../../../../QueryClient";
 import ErrorMessage from "../../../../components/ErrorMessage";
+import InAppBrowserLink from "../../../../components/InAppBrowserLink";
 
 interface BookMaterialsProps {
   topic: Topic[];
@@ -60,16 +61,6 @@ const BookMaterials: React.FC<BookMaterialsProps> = () => {
     }
   }, [queryClient, userToken?.token, refetchSelectedBookMaterials]);
 
-  const handleBookPress = (bookMaterial: BookMaterial) => {
-    if (bookMaterial.link) {
-      Linking.openURL(bookMaterial.link).catch((error) =>
-        console.error("Error opening link:", error)
-      );
-    } else {
-      console.log("No link available for this bookMaterial");
-    }
-  };
-
   const handleDismissError = useCallback(() => setErrorMessage(null), []);
 
   return (
@@ -79,10 +70,7 @@ const BookMaterials: React.FC<BookMaterialsProps> = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <Books
-          bookMaterials={selectedBookMaterials || []}
-          handleBookPress={handleBookPress}
-        />
+        <Books bookMaterials={selectedBookMaterials || []} />
       </ScrollView>
       <ErrorMessage
         message={errorMessage}

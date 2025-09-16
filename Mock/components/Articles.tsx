@@ -1,25 +1,16 @@
 import React, { memo } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  useColorScheme,
-} from "react-native";
+import { View, Text, StyleSheet, useColorScheme } from "react-native";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import { ArticleMaterial } from "./types";
 import Colors from "../constants/Colors"; // Adjusting Colors import
 import { rMS, SIZES, rV } from "../constants";
+import InAppBrowserLink from "./InAppBrowserLink";
 
 interface ArticlesProps {
   articleMaterials: ArticleMaterial[];
-  handleArticlePress: (articleMaterial: ArticleMaterial) => void;
 }
 
-const Articles: React.FC<ArticlesProps> = ({
-  articleMaterials,
-  handleArticlePress,
-}) => {
+const Articles: React.FC<ArticlesProps> = ({ articleMaterials }) => {
   const articles = articleMaterials.filter(
     (articleMaterial) => articleMaterial.type === "journal"
   );
@@ -52,10 +43,10 @@ const Articles: React.FC<ArticlesProps> = ({
   return (
     <View style={styles.container}>
       {articles.map((articleMaterial, index) => (
-        <TouchableOpacity
+        <InAppBrowserLink
           key={index}
-          activeOpacity={0.5}
-          onPress={() => handleArticlePress(articleMaterial)}
+          url={articleMaterial.link || ""}
+          style={{ marginBottom: rV(10) }}
         >
           <View style={styles.materialCard}>
             <FontAwesome6 name="newspaper" size={27} color={themeColors.icon} />
@@ -63,7 +54,7 @@ const Articles: React.FC<ArticlesProps> = ({
               <Text style={styles.materialName}>{articleMaterial.name}</Text>
             </View>
           </View>
-        </TouchableOpacity>
+        </InAppBrowserLink>
       ))}
     </View>
   );

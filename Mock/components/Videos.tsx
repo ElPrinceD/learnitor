@@ -1,25 +1,16 @@
 import React, { memo } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  useColorScheme,
-} from "react-native";
+import { View, Text, StyleSheet, useColorScheme } from "react-native";
 import Entypo from "@expo/vector-icons/Entypo";
 import { Material } from "./types";
 import Colors from "../constants/Colors";
 import { rMS, rV, SIZES } from "../constants";
+import InAppBrowserLink from "./InAppBrowserLink";
 
 interface VideosProps {
   videoMaterials: Material[];
-  handleVideoPress: (material: Material) => void;
 }
 
-const Videos: React.FC<VideosProps> = ({
-  videoMaterials,
-  handleVideoPress,
-}) => {
+const Videos: React.FC<VideosProps> = ({ videoMaterials }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const videos = videoMaterials.filter((material) => material.type === "video");
@@ -50,10 +41,10 @@ const Videos: React.FC<VideosProps> = ({
   return (
     <View style={styles.container}>
       {videos.map((material, index) => (
-        <TouchableOpacity
+        <InAppBrowserLink
           key={index}
-          activeOpacity={0.5}
-          onPress={() => handleVideoPress(material)}
+          url={material.link || ""}
+          style={{ marginBottom: rV(10) }}
         >
           <View style={styles.materialCard}>
             <Entypo name="video" size={27} color={themeColors.icon} />
@@ -61,7 +52,7 @@ const Videos: React.FC<VideosProps> = ({
               <Text style={styles.materialName}>{material.name}</Text>
             </View>
           </View>
-        </TouchableOpacity>
+        </InAppBrowserLink>
       ))}
     </View>
   );

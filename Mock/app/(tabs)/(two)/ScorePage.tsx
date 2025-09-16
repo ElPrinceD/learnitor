@@ -313,12 +313,13 @@ const ScorePage: React.FC = () => {
 
             <GameButton
               onPress={handleDone}
-              title={"Done"}
               style={styles.button}
               disabled={markTopicAsCompletedMutation.isPending}
             >
-              {markTopicAsCompletedMutation.isPending && (
+              {markTopicAsCompletedMutation.isPending ? (
                 <ActivityIndicator size="small" color={themeColors.text} />
+              ) : (
+                <Text style={styles.buttonText}>Done</Text>
               )}
             </GameButton>
           </View>

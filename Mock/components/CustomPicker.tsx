@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Modal,
+  TouchableOpacity,
+  ScrollView,
+} from "react-native";
 import { Select } from "@tamagui/select";
 import { Adapt } from "@tamagui/adapt";
 import { Sheet } from "@tamagui/sheet";
@@ -45,6 +52,61 @@ const CustomPicker: React.FC<CustomPickerProps> = ({
     selectContainer: {
       flex: 1, // Allow the select to take up remaining space
     },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      justifyContent: "flex-end",
+    },
+    modalContent: {
+      backgroundColor: themeColors.background,
+      borderTopLeftRadius: rMS(20),
+      borderTopRightRadius: rMS(20),
+      paddingTop: rV(20),
+      maxHeight: "80%",
+    },
+    modalHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: rS(20),
+      paddingBottom: rV(15),
+      borderBottomWidth: 1,
+      borderBottomColor: themeColors.border,
+    },
+    modalTitle: {
+      fontSize: SIZES.large,
+      fontWeight: "bold",
+      color: themeColors.text,
+    },
+    closeButton: {
+      padding: rMS(5),
+    },
+    closeButtonText: {
+      fontSize: SIZES.large,
+      color: themeColors.text,
+      fontWeight: "bold",
+    },
+    optionsContainer: {
+      maxHeight: 300,
+    },
+    optionItem: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: rV(15),
+      paddingHorizontal: rS(20),
+    },
+    selectedOption: {
+      backgroundColor: themeColors.tint + "20",
+    },
+    optionText: {
+      fontSize: SIZES.medium,
+      color: themeColors.text,
+    },
+    selectedOptionText: {
+      color: themeColors.tint,
+      fontWeight: "bold",
+    },
   });
 
   return (
@@ -83,37 +145,57 @@ const CustomPicker: React.FC<CustomPickerProps> = ({
             </Select.Value>
           </Select.Trigger>
 
-          <Adapt when={true} platform="touch">
-            <Sheet
-              native={!!selectProps.native}
-              modal
-              dismissOnSnapToBottom
-              open={isOpen}
-              onOpenChange={setIsOpen}
-              animationConfig={{
-                type: "spring",
-                damping: 22,
-                mass: 1.2,
-                stiffness: 220,
-              }}
-              snapPoints={[40]}
-            >
-              <Sheet.Frame
-                style={{
-                  backgroundColor: themeColors.background,
-                }}
-              >
-                <Sheet.ScrollView>
-                  <Adapt.Contents />
-                </Sheet.ScrollView>
-              </Sheet.Frame>
-              <Sheet.Overlay
-                animation="lazy"
-                enterStyle={{ opacity: 0 }}
-                exitStyle={{ opacity: 0 }}
-              />
-            </Sheet>
-          </Adapt>
+          <Modal
+            visible={isOpen}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={() => setIsOpen(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Select {label}</Text>
+                  <TouchableOpacity
+                    onPress={() => setIsOpen(false)}
+                    style={styles.closeButton}
+                  >
+                    <Text style={styles.closeButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+                <ScrollView style={styles.optionsContainer}>
+                  {options?.map((option, index) => (
+                    <TouchableOpacity
+                      key={option}
+                      style={[
+                        styles.optionItem,
+                        selectedValue === option && styles.selectedOption,
+                      ]}
+                      onPress={() => {
+                        onValueChange(option);
+                        setIsOpen(false);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.optionText,
+                          selectedValue === option && styles.selectedOptionText,
+                        ]}
+                      >
+                        {option}
+                      </Text>
+                      {selectedValue === option && (
+                        <AntDesign
+                          name="checkcircleo"
+                          size={16}
+                          color={themeColors.tint}
+                        />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+          </Modal>
 
           <Select.Content>
             <Select.Viewport

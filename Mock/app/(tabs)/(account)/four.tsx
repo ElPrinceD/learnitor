@@ -22,6 +22,7 @@ import { SIZES, rMS, rS, rV } from "../../../constants";
 import { useCache } from "../../../contexts/CacheContext"; // New import for caching
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import AppImage from "../../../components/AppImage";
+import InAppBrowserLink from "../../../components/InAppBrowserLink";
 
 const Profile = () => {
   const { logout, userToken, userInfo, setUserInformation } = useAuth();
@@ -58,14 +59,6 @@ const Profile = () => {
     } catch (error) {
       console.error("Error logging out:", error);
     }
-  };
-
-  const handleTerms = () => {
-    Linking.openURL(`${ApiUrl}/terms-and-conditions/`);
-  };
-
-  const handlePrivacy = () => {
-    Linking.openURL(`${ApiUrl}/privacy-policy/`);
   };
 
   const handleTellAFriend = async () => {
@@ -241,7 +234,7 @@ const Profile = () => {
       marginRight: rS(10),
     },
     logoutContainer: {
-      marginTop: "auto",
+      marginTop: rV(30),
       paddingHorizontal: rS(25),
       paddingBottom: rV(25),
     },
@@ -307,31 +300,35 @@ const Profile = () => {
         </TouchableOpacity>
 
         <Text style={styles.sectionTitle}>Terms</Text>
-        <TouchableOpacity style={styles.option} onPress={handleTerms}>
-          <Ionicons
-            name="document-text-outline"
-            size={24}
-            color={themeColors.icon}
-            style={styles.icon}
-          />
-          <Text style={styles.optionText}>Terms of Use</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.option} onPress={handlePrivacy}>
-          <Ionicons
-            name="shield-checkmark-outline"
-            size={24}
-            color={themeColors.icon}
-            style={styles.icon}
-          />
-          <Text style={styles.optionText}>Privacy</Text>
-        </TouchableOpacity>
+        <InAppBrowserLink url={`${ApiUrl}/terms-and-conditions/`}>
+          <View style={styles.option}>
+            <Ionicons
+              name="document-text-outline"
+              size={24}
+              color={themeColors.icon}
+              style={styles.icon}
+            />
+            <Text style={styles.optionText}>Terms of Use</Text>
+          </View>
+        </InAppBrowserLink>
+        <InAppBrowserLink url={`${ApiUrl}/privacy-policy/`}>
+          <View style={styles.option}>
+            <Ionicons
+              name="shield-checkmark-outline"
+              size={24}
+              color={themeColors.icon}
+              style={styles.icon}
+            />
+            <Text style={styles.optionText}>Privacy</Text>
+          </View>
+        </InAppBrowserLink>
       </View>
       <View style={styles.logoutContainer}>
         <TouchableOpacity style={styles.option} onPress={handleLogout}>
           <Ionicons
             name="log-out-outline"
             size={24}
-            color={themeColors.icon}
+            color={themeColors.errorBackground}
             style={styles.icon}
           />
           <Text style={styles.optionText}>Log Out</Text>

@@ -10,9 +10,7 @@ import {
   ScrollView,
 } from "react-native";
 import { router } from "expo-router";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import { Picker } from "@react-native-picker/picker"; // Import Picker for Android
-import { ActionSheetIOS } from "react-native"; // Import ActionSheetIOS for iOS
+import DateSelector from "../../components/DateSelector";
 import axios from "axios";
 import ApiUrl from "../../config";
 import { SIZES, rMS, rS, rV } from "../../constants";
@@ -28,7 +26,7 @@ const ContinueWithEmail = () => {
   const [surname, setSurname] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [dob, setDob] = useState<Date | null>(null);
+  const [dob, setDob] = useState<string>("");
   const [institution, setInstitution] = useState("");
 
   const [user, setUser] = useState("");
@@ -40,15 +38,8 @@ const ContinueWithEmail = () => {
   const themeColors = Colors[colorScheme ?? "light"];
   const [showSecondText, setShowSecondText] = useState(false);
 
-  const onChange = (event: any, selectedDate: Date | undefined) => {
-    const currentDate = selectedDate || dateOfBirth;
-    setShow(false);
-    setDateOfBirth(currentDate);
-    setDob(currentDate);
-  };
-
-  const showDatePicker = () => {
-    setShow(true);
+  const handleDateChange = (dateString: string) => {
+    setDob(dateString);
   };
 
   const handleKeyboardDismiss = () => {
@@ -111,7 +102,7 @@ const ContinueWithEmail = () => {
           last_name: surname,
           email: email,
           password: password,
-          dob: dob?.toISOString().substring(0, 10),
+          dob: dob,
         })
         .then((response) => {
           setUser(response.data.user);
@@ -132,8 +123,6 @@ const ContinueWithEmail = () => {
 
   const [showInstitutionPicker, setShowInstitutionPicker] = useState(false);
   const [showProgramPicker, setShowProgramPicker] = useState(false);
-  const [show, setShow] = useState(false);
-  const [dateOfBirth, setDateOfBirth] = useState(new Date(2000, 0, 1));
 
   const styles = StyleSheet.create({
     scrollContainer: {
@@ -163,6 +152,19 @@ const ContinueWithEmail = () => {
 
     inputContainer: {
       width: rS(270),
+    },
+    dateContainer: {
+      borderWidth: 1,
+      borderColor: themeColors.border,
+      borderRadius: rMS(8),
+      paddingHorizontal: rS(16),
+      paddingVertical: rV(8),
+      backgroundColor: themeColors.background,
+      width: rS(270),
+      alignSelf: "center",
+    },
+    spacing: {
+      height: rV(24),
     },
     picker: {
       height: 50,
@@ -241,25 +243,16 @@ const ContinueWithEmail = () => {
             </View>
           </View>
 
-          {show && (
-            <DateTimePicker
-              testID="dateTimePicker"
-              value={dateOfBirth}
-              mode="date"
-              is24Hour={true}
-              onChange={onChange}
-            />
-          )}
-          <TouchableOpacity onPress={showDatePicker}>
-            <AnimatedTextInput
+          <View style={styles.dateContainer}>
+            <DateSelector
               label="Date of Birth"
-              value={dateOfBirth ? dateOfBirth.toDateString() : ""}
-              placeholderTextColor={themeColors.textSecondary}
-              editable={false}
-              style={styles.inputContainer}
+              initialDate={dob}
+              onDateChange={handleDateChange}
+              minDate={false}
             />
-          </TouchableOpacity>
+          </View>
 
+          <View style={styles.spacing} />
           <VerificationButton onPress={handleSignUp} title="Register" />
         </View>
         <View style={styles.bottomContainer}>

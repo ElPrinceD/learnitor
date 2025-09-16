@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { View, Linking, ScrollView, RefreshControl } from "react-native";
+import { View, ScrollView, RefreshControl } from "react-native";
 import { useGlobalSearchParams } from "expo-router";
 
 import { useAuth } from "../../../../components/AuthContext";
@@ -61,16 +61,6 @@ const ArticleMaterials: React.FC<ArticleMaterialsProps> = () => {
     }
   }, [queryClient, userToken?.token, refetchSelectedArticleMaterials]);
 
-  const handleArticlePress = (articleMaterial: ArticleMaterial) => {
-    if (articleMaterial.link) {
-      Linking.openURL(articleMaterial.link).catch((error) =>
-        console.error("Error opening link:", error)
-      );
-    } else {
-      console.log("No link available for this articleMaterial");
-    }
-  };
-
   const handleDismissError = useCallback(() => setErrorMessage(null), []);
 
   return (
@@ -80,10 +70,7 @@ const ArticleMaterials: React.FC<ArticleMaterialsProps> = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <Articles
-          articleMaterials={selectedArticleMaterials || []}
-          handleArticlePress={handleArticlePress}
-        />
+        <Articles articleMaterials={selectedArticleMaterials || []} />
       </ScrollView>
       <ErrorMessage
         message={errorMessage}

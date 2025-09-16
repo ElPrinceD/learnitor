@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Modal,
+  TouchableOpacity,
+  ScrollView,
+} from "react-native";
 import { Select } from "@tamagui/select";
 import { Adapt } from "@tamagui/adapt";
 import { Sheet } from "@tamagui/sheet";
@@ -8,6 +15,7 @@ import { useColorScheme } from "./useColorScheme";
 import Colors from "../constants/Colors";
 import { rMS, rS, rV, SIZES } from "../constants";
 import { Calendar } from "react-native-calendars";
+import { Ionicons } from "@expo/vector-icons";
 
 interface DateSelectorProps extends SelectProps {
   onDateChange: (date: string) => void;
@@ -26,6 +34,32 @@ const getTodayDate = (): string => {
     .padStart(2, "0")}-${today.getDate().toString().padStart(2, "0")}`;
 };
 
+// Month names array
+const monthNames = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+// Generate years array (from 1950 to current year + 10)
+const generateYears = () => {
+  const currentYear = new Date().getFullYear();
+  const years = [];
+  for (let year = 1950; year <= currentYear + 10; year++) {
+    years.push(year);
+  }
+  return years;
+};
+
 const DateSelector: React.FC<DateSelectorProps> = ({
   onDateChange,
   label,
@@ -41,6 +75,10 @@ const DateSelector: React.FC<DateSelectorProps> = ({
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(defaultDate);
   const [selected, setSelected] = useState(defaultDateStr);
+  const [currentMonth, setCurrentMonth] = useState(defaultDate.getMonth() + 1);
+  const [currentYear, setCurrentYear] = useState(defaultDate.getFullYear());
+  const [showYearPicker, setShowYearPicker] = useState(false);
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -59,12 +97,27 @@ const DateSelector: React.FC<DateSelectorProps> = ({
   const [isOpen, setIsOpen] = useState(false);
 
   const handleDateChange = (day: any) => {
-    if (!day?.timestamp) return;
-    const date = new Date(day.timestamp);
+    console.log("Date selected:", day); // Debug log
+    if (!day?.dateString) return;
+    const date = new Date(day.dateString);
     setSelectedDate(date);
     setSelected(day.dateString);
     onDateChange(day.dateString);
     setIsOpen(false);
+  };
+
+  const handleYearChange = (year: number) => {
+    setCurrentYear(year);
+    setShowYearPicker(false);
+  };
+
+  const handleMonthChange = (month: number) => {
+    setCurrentMonth(month);
+    setShowMonthPicker(false);
+  };
+
+  const getCurrentDateString = () => {
+    return `${currentYear}-${currentMonth.toString().padStart(2, "0")}-01`;
   };
 
   const styles = StyleSheet.create({
@@ -82,6 +135,85 @@ const DateSelector: React.FC<DateSelectorProps> = ({
     },
     selectContainer: {
       flex: 1,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      justifyContent: "flex-end",
+    },
+    modalContent: {
+      backgroundColor: themeColors.background,
+      borderTopLeftRadius: rMS(20),
+      borderTopRightRadius: rMS(20),
+      paddingTop: rV(20),
+      maxHeight: "80%",
+    },
+    modalHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: rS(20),
+      paddingBottom: rV(15),
+      borderBottomWidth: 1,
+      borderBottomColor: themeColors.border,
+    },
+    modalTitle: {
+      fontSize: SIZES.large,
+      fontWeight: "bold",
+      color: themeColors.text,
+    },
+    closeButton: {
+      padding: rMS(5),
+    },
+    closeButtonText: {
+      fontSize: SIZES.large,
+      color: themeColors.text,
+      fontWeight: "bold",
+    },
+    pickerHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: rS(20),
+      paddingVertical: rV(10),
+      borderBottomWidth: 1,
+      borderBottomColor: themeColors.border,
+    },
+    pickerButton: {
+      paddingHorizontal: rS(15),
+      paddingVertical: rV(8),
+      borderRadius: rMS(8),
+      backgroundColor: themeColors.card,
+      borderWidth: 1,
+      borderColor: themeColors.border,
+    },
+    pickerButtonText: {
+      fontSize: SIZES.medium,
+      color: themeColors.text,
+      fontWeight: "500",
+    },
+    pickerContainer: {
+      maxHeight: rV(200),
+      paddingHorizontal: rS(20),
+      paddingVertical: rV(10),
+    },
+    pickerItem: {
+      paddingVertical: rV(12),
+      paddingHorizontal: rS(15),
+      borderRadius: rMS(8),
+      marginVertical: rV(2),
+    },
+    pickerItemSelected: {
+      backgroundColor: themeColors.tint,
+    },
+    pickerItemText: {
+      fontSize: SIZES.medium,
+      color: themeColors.text,
+      textAlign: "center",
+    },
+    pickerItemTextSelected: {
+      color: "#fff",
+      fontWeight: "600",
     },
   });
 
@@ -123,38 +255,135 @@ const DateSelector: React.FC<DateSelectorProps> = ({
             </Select.Value>
           </Select.Trigger>
 
-          <Adapt when={true} platform="touch">
-            <Sheet
-              modal
-              open={isOpen}
-              onOpenChange={setIsOpen}
-              animationConfig={{
-                type: "spring",
-                damping: 22,
-                mass: 1.2,
-                stiffness: 220,
-              }}
-              snapPoints={[40]}
-            >
-              <Sheet.Frame style={{ backgroundColor: themeColors.background }}>
-                <Sheet.ScrollView>
-                  <Adapt.Contents />
+          <Modal
+            visible={isOpen}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={() => setIsOpen(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Select Date</Text>
+                  <TouchableOpacity
+                    onPress={() => setIsOpen(false)}
+                    style={styles.closeButton}
+                  >
+                    <Text style={styles.closeButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Year and Month Picker Header */}
+                <View style={styles.pickerHeader}>
+                  <TouchableOpacity
+                    style={styles.pickerButton}
+                    onPress={() => setShowYearPicker(!showYearPicker)}
+                  >
+                    <Text style={styles.pickerButtonText}>
+                      {currentYear}{" "}
+                      <Ionicons
+                        name="chevron-down"
+                        size={16}
+                        color={themeColors.text}
+                      />
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.pickerButton}
+                    onPress={() => setShowMonthPicker(!showMonthPicker)}
+                  >
+                    <Text style={styles.pickerButtonText}>
+                      {monthNames[currentMonth - 1]}{" "}
+                      <Ionicons
+                        name="chevron-down"
+                        size={16}
+                        color={themeColors.text}
+                      />
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Year Picker */}
+                {showYearPicker && (
+                  <View style={styles.pickerContainer}>
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                      {generateYears().map((year) => (
+                        <TouchableOpacity
+                          key={year}
+                          style={[
+                            styles.pickerItem,
+                            currentYear === year && styles.pickerItemSelected,
+                          ]}
+                          onPress={() => handleYearChange(year)}
+                        >
+                          <Text
+                            style={[
+                              styles.pickerItemText,
+                              currentYear === year &&
+                                styles.pickerItemTextSelected,
+                            ]}
+                          >
+                            {year}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+
+                {/* Month Picker */}
+                {showMonthPicker && (
+                  <View style={styles.pickerContainer}>
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                      {monthNames.map((month, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          style={[
+                            styles.pickerItem,
+                            currentMonth === index + 1 &&
+                              styles.pickerItemSelected,
+                          ]}
+                          onPress={() => handleMonthChange(index + 1)}
+                        >
+                          <Text
+                            style={[
+                              styles.pickerItemText,
+                              currentMonth === index + 1 &&
+                                styles.pickerItemTextSelected,
+                            ]}
+                          >
+                            {month}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+
+                {/* Calendar */}
+                {!showYearPicker && !showMonthPicker && (
                   <Calendar
-                    onDayPress={handleDateChange}
+                    onDayPress={(day) => {
+                      console.log("Calendar day pressed:", day);
+                      handleDateChange(day);
+                    }}
                     enableSwipeMonths={true}
+                    current={getCurrentDateString()}
                     markedDates={{
                       [selected]: {
                         selected: true,
-                        selectedColor: themeColors.background,
+                        selectedColor: themeColors.tint,
+                        selectedTextColor: themeColors.background,
                       },
                     }}
                     minDate={minDate ? getTodayDate() : undefined}
                     theme={{
-                      backgroundColor: themeColors.tint,
+                      backgroundColor: themeColors.background,
                       calendarBackground: themeColors.background,
                       textSectionTitleColor: themeColors.text,
-                      selectedDayTextColor: "#1434A4",
-                      todayTextColor: "#FF6347",
+                      selectedDayTextColor: themeColors.background,
+                      todayTextColor: themeColors.tint,
                       dayTextColor: themeColors.text,
                       textDisabledColor: themeColors.textSecondary,
                       monthTextColor: themeColors.text,
@@ -164,15 +393,10 @@ const DateSelector: React.FC<DateSelectorProps> = ({
                       textDayHeaderFontWeight: "bold",
                     }}
                   />
-                </Sheet.ScrollView>
-              </Sheet.Frame>
-              <Sheet.Overlay
-                animation="lazy"
-                enterStyle={{ opacity: 0 }}
-                exitStyle={{ opacity: 0 }}
-              />
-            </Sheet>
-          </Adapt>
+                )}
+              </View>
+            </View>
+          </Modal>
         </Select>
       </View>
     </View>

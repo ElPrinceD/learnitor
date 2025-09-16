@@ -25,7 +25,7 @@ const PracticeInstructions = () => {
 
   const handleStartQuiz = () => {
     router.navigate({
-      pathname: "PracticeQuestions",
+      pathname: "/(tabs)/(two)/PracticeQuestions",
       params: {
         level: level?.toString(), // Ensure level is treated as a string
         topic: topic?.toString(),
