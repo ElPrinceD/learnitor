@@ -40,8 +40,7 @@ const CustomPicker: React.FC<CustomPickerProps> = ({
       alignItems: "center",
       // paddingVertical: rV(10),
       justifyContent: "space-between", // Spread label and select apart
-      borderBottomWidth: rMS(1),
-      borderBottomColor: themeColors.textSecondary,
+      // Removed border - was only meant for ContinueWithEmail page
     },
     label: {
       fontSize: SIZES.large,
@@ -71,7 +70,7 @@ const CustomPicker: React.FC<CustomPickerProps> = ({
       paddingHorizontal: rS(20),
       paddingBottom: rV(15),
       borderBottomWidth: 1,
-      borderBottomColor: themeColors.border,
+      borderBottomColor: themeColors.text,
     },
     modalTitle: {
       fontSize: SIZES.large,
@@ -125,6 +124,11 @@ const CustomPicker: React.FC<CustomPickerProps> = ({
             style={{
               backgroundColor: "transparent",
               borderColor: "transparent",
+              borderWidth: 0,
+              borderTopWidth: 0,
+              borderBottomWidth: 0,
+              borderLeftWidth: 0,
+              borderRightWidth: 0,
               borderRadius: rMS(6),
               paddingVertical: rV(12),
               paddingHorizontal: rS(16),
@@ -185,7 +189,7 @@ const CustomPicker: React.FC<CustomPickerProps> = ({
                       </Text>
                       {selectedValue === option && (
                         <AntDesign
-                          name="checkcircleo"
+                          name="check-circle"
                           size={16}
                           color={themeColors.tint}
                         />
@@ -232,7 +236,7 @@ const CustomPicker: React.FC<CustomPickerProps> = ({
                     </Select.ItemText>
                     <Select.ItemIndicator>
                       <AntDesign
-                        name="checkcircleo"
+                        name="check-circle"
                         size={16}
                         color={themeColors.tint}
                       />

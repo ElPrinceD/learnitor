@@ -51,6 +51,7 @@ const Home: React.FC = () => {
     data: enrolledCoursesData,
     error: enrolledError,
     status: enrolledStatus,
+    isLoading: enrolledLoading,
   } = useQuery({
     queryKey: ["enrolledCourses", userId, token],
     queryFn: () => getEnrolledCourses(userId!, token!),
@@ -176,7 +177,7 @@ const Home: React.FC = () => {
               <EnrolledCoursesList
                 enrolledCoursesData={enrolledCoursesData}
                 progressMap={progressMap || {}}
-                loading={enrolledStatus === "pending"}
+                loading={enrolledLoading}
               />
               <View style={styles(themeColors).tasksContainer}>
                 <View style={styles(themeColors).taskCountContainer}>

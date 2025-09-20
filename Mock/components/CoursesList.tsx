@@ -30,7 +30,7 @@ const styles = StyleSheet.create({
     padding: rMS(10),
   },
   courseList: {
-    paddingBottom: rMS(20),
+    paddingBottom: rMS(40),
   },
   courseListContainer: {
     backgroundColor: Colors.light.card, // Fallback
@@ -81,38 +81,50 @@ const CourseItem: React.FC<{
   item: Course;
   onCoursePress: (course: Course) => void;
   themeColors: any;
-}> = memo(({ item, onCoursePress, themeColors }) => {
-  const handlePress = useCallback(() => {
-    onCoursePress(item);
-  }, [onCoursePress, item]);
+}> = memo(
+  ({ item, onCoursePress, themeColors }) => {
+    const handlePress = useCallback(() => {
+      onCoursePress(item);
+    }, [onCoursePress, item]);
 
-  return (
-    <TouchableOpacity
-      onPress={handlePress}
-      activeOpacity={0.5}
-      style={styles.courseItem}
-    >
-      <View
-        style={[
-          styles.courseListContainer,
-          { backgroundColor: themeColors.card },
-        ]}
+    return (
+      <TouchableOpacity
+        onPress={handlePress}
+        activeOpacity={0.5}
+        style={styles.courseItem}
       >
-        <View style={styles.imageContainer}>
-          <AppImage uri={item.url} style={styles.image} />
+        <View
+          style={[
+            styles.courseListContainer,
+            { backgroundColor: themeColors.card },
+          ]}
+        >
+          <View style={styles.imageContainer}>
+            <AppImage uri={item.url} style={styles.image} />
+          </View>
+          <View style={styles.textContainer}>
+            <Text
+              style={[styles.name, { color: themeColors.text }]}
+              numberOfLines={1}
+            >
+              {item.title}
+            </Text>
+          </View>
         </View>
-        <View style={styles.textContainer}>
-          <Text
-            style={[styles.name, { color: themeColors.text }]}
-            numberOfLines={1}
-          >
-            {item.title}
-          </Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-});
+      </TouchableOpacity>
+    );
+  },
+  (prevProps, nextProps) => {
+    return (
+      prevProps.item.id === nextProps.item.id &&
+      prevProps.item.title === nextProps.item.title &&
+      prevProps.item.url === nextProps.item.url &&
+      prevProps.onCoursePress === nextProps.onCoursePress &&
+      prevProps.themeColors.card === nextProps.themeColors.card &&
+      prevProps.themeColors.text === nextProps.themeColors.text
+    );
+  }
+);
 
 const CoursesList: React.FC<Props> = ({
   courses,
@@ -193,15 +205,20 @@ const CoursesList: React.FC<Props> = ({
       <FlatList
         data={sortedCourses}
         numColumns={2}
-        initialNumToRender={5}
-        maxToRenderPerBatch={10}
-        windowSize={10}
+        initialNumToRender={6}
+        maxToRenderPerBatch={6}
+        windowSize={5}
         removeClippedSubviews={true}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         contentContainerStyle={styles.courseList}
         showsVerticalScrollIndicator={false}
         refreshControl={refreshControl}
+        getItemLayout={(data, index) => ({
+          length: rV(120) + rMS(20), // height + margin
+          offset: (rV(120) + rMS(20)) * Math.floor(index / 2),
+          index,
+        })}
       />
     </View>
   );

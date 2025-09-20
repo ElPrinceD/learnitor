@@ -29,8 +29,46 @@ const GameTopics: React.FC = () => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
-  const parsedCourse: Course =
-    typeof course === "string" ? JSON.parse(course) : course;
+  const parsedCourse: Course | null = useMemo(() => {
+    try {
+      if (!course) {
+        console.log("GameTopics - No course parameter provided");
+        return null;
+      }
+      console.log("GameTopics - Parsing course:", course);
+      const parsed = typeof course === "string" ? JSON.parse(course) : course;
+      console.log("GameTopics - Parsed course:", parsed);
+      return parsed;
+    } catch (error) {
+      console.error("GameTopics - Error parsing course:", error);
+      console.error("GameTopics - Course value that failed to parse:", course);
+      return null;
+    }
+  }, [course]);
+
+  // Early return if no course data
+  if (!parsedCourse) {
+    return (
+      <View
+        style={[
+          {
+            flex: 1,
+            backgroundColor: themeColors.background,
+          },
+        ]}
+      >
+        <Text
+          style={{
+            color: themeColors.text,
+            textAlign: "center",
+            marginTop: 50,
+          }}
+        >
+          Course data not found. Please try again.
+        </Text>
+      </View>
+    );
+  }
 
   const fetchTopics = async (): Promise<Topic[]> => {
     const topics = await getCourseTopics(parsedCourse.id, userToken?.token);

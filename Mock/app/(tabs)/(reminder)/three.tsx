@@ -121,19 +121,32 @@ const Timeline = () => {
   }, [plansStatus, categoriesStatus]);
 
   const handleEditPlan = (plan) => {
-    console.log("Edit plan:", plan);
+    console.log("Edit plan - Full plan object:", plan);
     console.log("CategoryNames:", categoryNames);
     console.log("Plan category:", plan.category);
-    router.navigate("EditPlan");
-    router.setParams({
-      taskId: String(plan.id),
-      title: plan.title,
-      description: plan.description,
-      duedate: plan.due_date,
-      category_id: String(plan.category),
-      due_time_start: plan.due_time_start,
-      due_time_end: plan.due_time_end,
-      category_name: typedCategoryNames?.[plan.category] || "Unknown Category",
+
+    // Handle different possible time field names
+    const startTime = plan.due_time_start || plan.due_time || "12:00";
+    const endTime = plan.due_time_end || plan.due_time || "13:00";
+
+    // Pass parameters directly in the navigation call
+    router.navigate({
+      pathname: "EditPlan",
+      params: {
+        taskId: String(plan.id),
+        title: plan.title,
+        description: plan.description,
+        duedate: plan.due_date,
+        category_id: String(plan.category),
+        due_time_start: startTime,
+        due_time_end: endTime,
+        category_name:
+          typedCategoryNames?.[plan.category] || "Unknown Category",
+        // Add recurring task information
+        is_recurring: String(plan.is_recurring || false),
+        recurrence_interval: plan.recurrence_interval || null,
+        recurrence_end_date: plan.recurrence_end_date || null,
+      },
     });
   };
 

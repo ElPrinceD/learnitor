@@ -44,8 +44,45 @@ const EnrolledCourse: React.FC = () => {
 
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  const parsedCourse: Course =
-    typeof course === "string" ? JSON.parse(course) : course;
+  const parsedCourse: Course | null = useMemo(() => {
+    try {
+      if (!course) {
+        console.log("EnrolledCourse - No course parameter provided");
+        return null;
+      }
+      console.log("EnrolledCourse - Parsing course:", course);
+      const parsed = typeof course === "string" ? JSON.parse(course) : course;
+      console.log("EnrolledCourse - Parsed course:", parsed);
+      return parsed;
+    } catch (error) {
+      console.error("EnrolledCourse - Error parsing course:", error);
+      console.error(
+        "EnrolledCourse - Course value that failed to parse:",
+        course
+      );
+      return null;
+    }
+  }, [course]);
+
+  // Early return if no course data
+  if (!parsedCourse) {
+    return (
+      <View
+        style={[
+          {
+            flex: 1,
+            backgroundColor: themeColors.background,
+          },
+        ]}
+      >
+        <ErrorMessage
+          message="Course data not found. Please try again."
+          visible={true}
+          onDismiss={() => router.back()}
+        />
+      </View>
+    );
+  }
 
   const {
     status: enrolledTopicsStatus,

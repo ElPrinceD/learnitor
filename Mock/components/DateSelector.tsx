@@ -53,7 +53,7 @@ const monthNames = [
 // Generate years array (from 1950 to current year + 10)
 const generateYears = () => {
   const currentYear = new Date().getFullYear();
-  const years = [];
+  const years: number[] = [];
   for (let year = 1950; year <= currentYear + 10; year++) {
     years.push(year);
   }
@@ -125,7 +125,7 @@ const DateSelector: React.FC<DateSelectorProps> = ({
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      // No border here.
+      // Removed border - was only meant for ContinueWithEmail page
     },
     label: {
       fontSize: SIZES.large,
@@ -155,7 +155,7 @@ const DateSelector: React.FC<DateSelectorProps> = ({
       paddingHorizontal: rS(20),
       paddingBottom: rV(15),
       borderBottomWidth: 1,
-      borderBottomColor: themeColors.border,
+      borderBottomColor: themeColors.text,
     },
     modalTitle: {
       fontSize: SIZES.large,
@@ -177,7 +177,7 @@ const DateSelector: React.FC<DateSelectorProps> = ({
       paddingHorizontal: rS(20),
       paddingVertical: rV(10),
       borderBottomWidth: 1,
-      borderBottomColor: themeColors.border,
+      borderBottomColor: themeColors.text,
     },
     pickerButton: {
       paddingHorizontal: rS(15),
@@ -222,8 +222,6 @@ const DateSelector: React.FC<DateSelectorProps> = ({
       <Text style={styles.label}>{label}</Text>
       <View style={styles.selectContainer}>
         <Select
-          // Remove any default Select border by providing an empty style object.
-          style={{ borderWidth: 0, backgroundColor: "transparent" }}
           value={selected}
           onValueChange={() => {}}
           open={isOpen}
@@ -236,6 +234,10 @@ const DateSelector: React.FC<DateSelectorProps> = ({
               backgroundColor: "transparent",
               borderColor: "transparent",
               borderWidth: 0,
+              borderTopWidth: 0,
+              borderBottomWidth: 0,
+              borderLeftWidth: 0,
+              borderRightWidth: 0,
               borderRadius: rMS(6),
               paddingVertical: rV(12),
               paddingHorizontal: rS(16),

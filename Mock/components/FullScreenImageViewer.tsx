@@ -11,7 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import ImageViewing from "react-native-image-viewing";
 import * as MediaLibrary from "expo-media-library";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import Colors from "../constants/Colors"; // Adjust path as needed
 import { SIZES, rS, rV } from "../constants"; // Adjust path as needed
 

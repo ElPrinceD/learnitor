@@ -68,7 +68,7 @@ const GlobalCommunityList: React.FC<GlobalCommunityListProps> = ({
     },
     separator: {
       borderBottomWidth: 1,
-      borderBottomColor: themeColors.border,
+      borderBottomColor: themeColors.text,
       marginHorizontal: rS(16),
     },
   });

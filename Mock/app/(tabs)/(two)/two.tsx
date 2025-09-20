@@ -97,10 +97,11 @@ const CoursesScreen: React.FC<CoursesScreenProps> = ({ segment }) => {
   );
 
   const handleCoursePress = useCallback((course: Course) => {
-    console.log(course);
-    router.navigate("CourseDetails");
-    router.setParams({
-      course: JSON.stringify(course),
+    router.navigate({
+      pathname: "CourseDetails",
+      params: {
+        course: JSON.stringify(course),
+      },
     });
   }, []);
 

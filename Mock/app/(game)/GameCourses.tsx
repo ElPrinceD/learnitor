@@ -29,9 +29,11 @@ const GameCourses: React.FC = () => {
   });
 
   const handleCoursePress = (course: Course) => {
-    router.navigate("GameTopics");
-    router.setParams({
-      course: JSON.stringify(course),
+    router.navigate({
+      pathname: "GameTopics",
+      params: {
+        course: JSON.stringify(course),
+      },
     });
   };
 
@@ -59,10 +61,9 @@ const GameCourses: React.FC = () => {
       StyleSheet.create({
         container: {
           flex: 1,
-          marginTop: rV(55),
+          paddingTop: rV(55),
         },
         header: {
-          flex: 1,
           color: themeColors.text,
           fontSize: SIZES.xLarge,
           fontWeight: "bold",

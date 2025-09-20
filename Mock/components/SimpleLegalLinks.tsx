@@ -29,7 +29,7 @@ const SimpleLegalLinks: React.FC<SimpleLegalLinksProps> = ({
       paddingVertical: rV(15),
       paddingHorizontal: rS(20),
       borderBottomWidth: 1,
-      borderBottomColor: themeColors.border,
+      borderBottomColor: themeColors.text,
     },
     linkContent: {
       flexDirection: "row",

@@ -18,8 +18,8 @@ import { SIZES } from "../../../constants/theme";
 import { useMutation } from "@tanstack/react-query";
 import { createCommunity } from "../../../services/CommunityApiCalls";
 import { router } from "expo-router";
-import * as FileSystem from "expo-file-system";
-import * as ImageManipulator from 'expo-image-manipulator';
+import * as FileSystem from "expo-file-system/legacy";
+import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useCommunity } from "../../../contexts/CommunityContext";
 import { useCache } from "../../../contexts/CacheContext";
@@ -50,7 +50,9 @@ const CreateCommunity = () => {
 
         const fileName = imageUrl.split("/").pop() || "image.jpg";
         const fileType = fileName.split(".").pop() || "jpeg";
-        const mimeType = `image/${fileType.toLowerCase() === "jpg" ? "jpeg" : fileType.toLowerCase()}`;
+        const mimeType = `image/${
+          fileType.toLowerCase() === "jpg" ? "jpeg" : fileType.toLowerCase()
+        }`;
 
         const fileData = {
           uri: imageUrl,
@@ -94,29 +96,30 @@ const CreateCommunity = () => {
 
   const pickImage = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
         Alert.alert("Permission to access media library is required!");
         return;
       }
-  
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 1, // pick highest to retain quality pre-compression
       });
-  
+
       if (!result.canceled) {
         const originalUri = result.assets[0].uri;
-  
+
         // Compress image to 50% quality
         const compressedImage = await ImageManipulator.manipulateAsync(
           originalUri,
           [{ resize: { width: 800 } }], // Resize if needed
           { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG }
         );
-  
+
         setImageUrl(compressedImage.uri);
       }
     } catch (error) {
@@ -131,7 +134,7 @@ const CreateCommunity = () => {
       // Store the new community using the key `community_<id>`
       const communityKey = `community_${newCommunity.id}`;
       const existingCommunity = await getItem(communityKey);
-  
+
       if (!existingCommunity) {
         await setItem(communityKey, JSON.stringify(newCommunity));
         console.log(`Community ${newCommunity.id} added to cache.`);
@@ -170,7 +173,9 @@ const CreateCommunity = () => {
       width: rMS(150),
       paddingVertical: rV(15),
       borderRadius: 10,
-      backgroundColor: isButtonDisabled ? themeColors.buttonDisabled : themeColors.tint,
+      backgroundColor: isButtonDisabled
+        ? themeColors.buttonDisabled
+        : themeColors.tint,
       alignItems: "center",
       justifyContent: "center",
     },
@@ -211,9 +216,9 @@ const CreateCommunity = () => {
     },
     loadingOverlay: {
       ...StyleSheet.absoluteFillObject,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      justifyContent: 'center',
-      alignItems: 'center',
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      justifyContent: "center",
+      alignItems: "center",
       zIndex: 10,
     },
   });
@@ -235,7 +240,10 @@ const CreateCommunity = () => {
             }}
             style={styles.profilePicture}
           />
-          <TouchableOpacity style={styles.selectImageButton} onPress={pickImage}>
+          <TouchableOpacity
+            style={styles.selectImageButton}
+            onPress={pickImage}
+          >
             <Text style={styles.selectImageButtonText}>Select Photo</Text>
           </TouchableOpacity>
         </View>
@@ -267,7 +275,9 @@ const CreateCommunity = () => {
             <Text style={styles.buttonText}>Create Community</Text>
           </TouchableOpacity>
         </View>
-        {errorMessage && <Text style={styles.errorMessage}>{errorMessage}</Text>}
+        {errorMessage && (
+          <Text style={styles.errorMessage}>{errorMessage}</Text>
+        )}
       </ScrollView>
     </View>
   );

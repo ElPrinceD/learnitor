@@ -1,4 +1,4 @@
-import React, { memo, useRef } from "react";
+import React, { memo, useRef, useState } from "react";
 import {
   Image,
   View,
@@ -52,24 +52,37 @@ const AppImage: React.FC<AppImageProps> = ({ uri, style, onPress }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const isLoadingRef = useRef(true);
+  const [useFallback, setUseFallback] = useState(false);
 
   const handleLoad = () => {
     isLoadingRef.current = false;
   };
 
-  const handleError = () => {
+  const handleError = (error: any) => {
     isLoadingRef.current = false;
+    setUseFallback(true);
   };
 
   const isValidUri = uri && typeof uri === "string" && uri.startsWith("http");
 
   const renderImage = () => {
-    if (isValidUri) {
+    if (isValidUri && !useFallback) {
       return (
         <CachedImage
           uri={uri}
           style={[styles.image, style]}
-          // No onLoad/onError; rely on cache
+          onLoad={handleLoad}
+          onError={handleError}
+        />
+      );
+    } else if (isValidUri && useFallback) {
+      return (
+        <Image
+          source={{ uri }}
+          style={[styles.image, style]}
+          onLoad={handleLoad}
+          onError={handleError}
+          resizeMode="cover"
         />
       );
     }
@@ -106,8 +119,8 @@ const AppImage: React.FC<AppImageProps> = ({ uri, style, onPress }) => {
 
 export default memo(AppImage, (prevProps, nextProps) => {
   return (
-    isEqual(prevProps.style, nextProps.style) &&
     prevProps.uri === nextProps.uri &&
-    prevProps.onPress === nextProps.onPress // Include onPress in memo comparison
+    prevProps.onPress === nextProps.onPress &&
+    isEqual(prevProps.style, nextProps.style)
   );
 });

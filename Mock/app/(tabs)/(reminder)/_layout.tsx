@@ -53,17 +53,17 @@ export default function Tab3Layout() {
             headerTitleAlign: "center",
             headerTitleStyle: {
               fontWeight: "bold",
+              color: themeColors.text,
             },
             headerShadowVisible: false,
           }}
         />
-       
+
         <Stack.Screen
           name="createNewTime"
           options={{
             headerShown: true,
             presentation: "card",
-            headerLeft: () => <CustomBackButton label="Back"  />,
             // animation: "fade_from_bottom",
             headerStyle: {
               backgroundColor: themeColors.background,
@@ -72,11 +72,11 @@ export default function Tab3Layout() {
             headerTitleAlign: "center",
             headerTitleStyle: {
               fontWeight: "bold",
+              color: themeColors.text,
             },
             headerShadowVisible: false,
           }}
         />
-    
       </Stack>
     </SafeAreaProvider>
   );

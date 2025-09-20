@@ -82,8 +82,7 @@ const CustomDateTimeSelector: React.FC<CustomDateTimeSelectorProps> = ({
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      borderBottomWidth: rMS(1),
-      borderBottomColor: themeColors.textSecondary,
+      // Removed border - was only meant for ContinueWithEmail page
     },
     label: {
       fontSize: SIZES.large,
@@ -113,7 +112,7 @@ const CustomDateTimeSelector: React.FC<CustomDateTimeSelectorProps> = ({
       paddingHorizontal: rS(20),
       paddingBottom: rV(15),
       borderBottomWidth: 1,
-      borderBottomColor: themeColors.border,
+      borderBottomColor: themeColors.text,
     },
     headerButtons: {
       flexDirection: "row",
@@ -209,6 +208,11 @@ const CustomDateTimeSelector: React.FC<CustomDateTimeSelectorProps> = ({
             style={{
               backgroundColor: "transparent",
               borderColor: "transparent",
+              borderWidth: 0,
+              borderTopWidth: 0,
+              borderBottomWidth: 0,
+              borderLeftWidth: 0,
+              borderRightWidth: 0,
               borderRadius: rMS(6),
               paddingVertical: rV(12),
               paddingHorizontal: rS(16),

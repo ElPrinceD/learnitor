@@ -2,7 +2,7 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
-    "typeRoots" : ["node_modules/@types", "mock/.expo/types", "mock/declaration.d.ts"],
+    "typeRoots" : ["node_modules/@types", "mock/.expo/types", "mock/declaration.d.ts", "types"],
     "paths": {
       "@/*": [
         "./*"

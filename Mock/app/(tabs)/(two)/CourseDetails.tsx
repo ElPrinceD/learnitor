@@ -40,6 +40,10 @@ import { Topic, Course } from "../../../components/types";
 const CourseDetails: React.FC = () => {
   const { course } = useLocalSearchParams();
   const { userToken, userInfo } = useAuth();
+
+  // Debug logging
+  console.log("CourseDetails - Raw course param:", course);
+  console.log("CourseDetails - Course type:", typeof course);
   const [selectedTopics, setSelectedTopics] = useState<Topic[]>([]);
   const [progress, setProgress] = useState<number>(0);
   const [refreshing, setRefreshing] = useState(false);
@@ -49,8 +53,42 @@ const CourseDetails: React.FC = () => {
   const themeColors = Colors[colorScheme ?? "light"];
   const scrollY = useRef(new RNAnimated.Value(0)).current;
 
-  const parsedCourse: Course =
-    typeof course === "string" ? JSON.parse(course) : course;
+  const parsedCourse: Course | null = useMemo(() => {
+    try {
+      if (!course) {
+        console.log("No course parameter provided");
+        return null;
+      }
+      console.log("Parsing course:", course);
+      const parsed = typeof course === "string" ? JSON.parse(course) : course;
+      console.log("Parsed course:", parsed);
+      return parsed;
+    } catch (error) {
+      console.error("Error parsing course:", error);
+      console.error("Course value that failed to parse:", course);
+      return null;
+    }
+  }, [course]);
+
+  // Early return if no course data
+  if (!parsedCourse) {
+    return (
+      <View
+        style={[
+          {
+            flex: 1,
+            backgroundColor: themeColors.background,
+          },
+        ]}
+      >
+        <ErrorMessage
+          message="Course data not found. Please try again."
+          visible={true}
+          onDismiss={() => router.back()}
+        />
+      </View>
+    );
+  }
 
   const {
     status: topicsStatus,
@@ -58,9 +96,9 @@ const CourseDetails: React.FC = () => {
     error: topicsError,
     refetch: refetchTopics,
   } = useQuery({
-    queryKey: ["courseTopics", parsedCourse?.id],
-    queryFn: () => getCourseTopics(parsedCourse?.id, userToken?.token),
-    enabled: !!parsedCourse?.id && !!userInfo?.user?.id && !!userToken?.token,
+    queryKey: ["courseTopics", parsedCourse.id],
+    queryFn: () => getCourseTopics(parsedCourse.id, userToken?.token),
+    enabled: !!parsedCourse.id && !!userInfo?.user?.id && !!userToken?.token,
   });
 
   const {
@@ -69,15 +107,15 @@ const CourseDetails: React.FC = () => {
     error: enrollmentError,
     refetch: refetchEnrollmentStatus,
   } = useQuery({
-    queryKey: ["enrollmentStatus", userInfo?.user?.id, parsedCourse?.id],
+    queryKey: ["enrollmentStatus", userInfo?.user?.id, parsedCourse.id],
 
     queryFn: () =>
       getEnrollmentStatus(
         userInfo?.user?.id,
-        parsedCourse?.id,
+        parsedCourse.id,
         userToken?.token
       ),
-    enabled: !!parsedCourse?.id && !!userInfo?.user?.id && !!userToken?.token,
+    enabled: !!parsedCourse.id && !!userInfo?.user?.id && !!userToken?.token,
   });
 
   const {
@@ -86,12 +124,12 @@ const CourseDetails: React.FC = () => {
     error: progressError,
     refetch: refetchProgress,
   } = useQuery({
-    queryKey: ["courseProgress", userInfo?.user?.id, parsedCourse?.id],
+    queryKey: ["courseProgress", userInfo?.user?.id, parsedCourse.id],
     queryFn: () => {
       // Check if user is enrolled before fetching progress
       if (
         userAlreadyEnrolled &&
-        parsedCourse?.id &&
+        parsedCourse.id &&
         userInfo?.user?.id &&
         userToken?.token
       ) {
@@ -105,7 +143,7 @@ const CourseDetails: React.FC = () => {
         return Promise.resolve(null); // or any other suitable placeholder
       }
     },
-    enabled: !!parsedCourse?.id && !!userInfo?.user?.id && !!userToken?.token,
+    enabled: !!parsedCourse.id && !!userInfo?.user?.id && !!userToken?.token,
   });
 
   const userAlreadyEnrolled = enrollmentData?.enrolled;
@@ -120,10 +158,10 @@ const CourseDetails: React.FC = () => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({
-        queryKey: ["enrollmentStatus", userInfo?.user?.id, parsedCourse?.id],
+        queryKey: ["enrollmentStatus", userInfo?.user?.id, parsedCourse.id],
       });
       queryClient.invalidateQueries({
-        queryKey: ["courseProgress", userInfo?.user?.id, parsedCourse?.id],
+        queryKey: ["courseProgress", userInfo?.user?.id, parsedCourse.id],
       });
       setErrorMessage(null); // Clear error message on successful enrollment
     },
@@ -140,10 +178,10 @@ const CourseDetails: React.FC = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["enrollmentStatus", userInfo?.user?.id, parsedCourse?.id],
+        queryKey: ["enrollmentStatus", userInfo?.user?.id, parsedCourse.id],
       });
       queryClient.invalidateQueries({
-        queryKey: ["courseProgress", userInfo?.user?.id, parsedCourse?.id],
+        queryKey: ["courseProgress", userInfo?.user?.id, parsedCourse.id],
       });
       setErrorMessage(null); // Clear error message on successful unenrollment
     },
@@ -180,14 +218,14 @@ const CourseDetails: React.FC = () => {
     const topicIds = selectedTopics.map((topic) => topic.id);
     enrollMutation.mutate({
       userId: userInfo?.user?.id,
-      courseId: parsedCourse?.id,
+      courseId: parsedCourse.id,
       topicIds,
       token: userToken?.token,
     });
   }, [
     enrollMutation,
     userInfo?.user?.id,
-    parsedCourse?.id,
+    parsedCourse.id,
     selectedTopics,
     userToken?.token,
   ]);
@@ -195,20 +233,17 @@ const CourseDetails: React.FC = () => {
   const handleUnenrollCourse = useCallback(() => {
     unenrollMutation.mutate({
       userId: userInfo?.user?.id,
-      courseId: parsedCourse?.id,
+      courseId: parsedCourse.id,
       token: userToken?.token,
     });
-  }, [
-    unenrollMutation,
-    userInfo?.user?.id,
-    parsedCourse?.id,
-    userToken?.token,
-  ]);
+  }, [unenrollMutation, userInfo?.user?.id, parsedCourse.id, userToken?.token]);
 
   const handleContinue = useCallback(() => {
-    router.navigate("EnrolledCourse");
-    router.setParams({
-      course: JSON.stringify(parsedCourse),
+    router.navigate({
+      pathname: "EnrolledCourse",
+      params: {
+        course: JSON.stringify(parsedCourse),
+      },
     });
   }, [parsedCourse]);
 
@@ -236,27 +271,27 @@ const CourseDetails: React.FC = () => {
 
   useEffect(() => {
     queryClient.invalidateQueries({
-      queryKey: ["courseTopics", parsedCourse?.id],
+      queryKey: ["courseTopics", parsedCourse.id],
     });
     queryClient.invalidateQueries({
-      queryKey: ["courseProgress", userInfo?.user?.id, parsedCourse?.id],
+      queryKey: ["courseProgress", userInfo?.user?.id, parsedCourse.id],
     });
     queryClient.invalidateQueries({
-      queryKey: ["enrollmentStatus", userInfo?.user?.id, parsedCourse?.id],
+      queryKey: ["enrollmentStatus", userInfo?.user?.id, parsedCourse.id],
     });
-  }, [parsedCourse?.id]);
+  }, [parsedCourse.id]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
       await queryClient.invalidateQueries({
-        queryKey: ["courseTopics", parsedCourse?.id],
+        queryKey: ["courseTopics", parsedCourse.id],
       });
       queryClient.invalidateQueries({
-        queryKey: ["courseProgress", userInfo?.user?.id, parsedCourse?.id],
+        queryKey: ["courseProgress", userInfo?.user?.id, parsedCourse.id],
       });
       queryClient.invalidateQueries({
-        queryKey: ["enrollmentStatus", userInfo?.user?.id, parsedCourse?.id],
+        queryKey: ["enrollmentStatus", userInfo?.user?.id, parsedCourse.id],
       });
     } finally {
       setRefreshing(false);
@@ -286,7 +321,7 @@ const CourseDetails: React.FC = () => {
 
   const imageOpacity = scrollY.interpolate({
     inputRange: [-64, 0, HEADER_DELTA],
-    outputRange: [0, 0.1, 1],
+    outputRange: [0, 0, 0.3],
     extrapolate: "clamp",
   });
 
@@ -413,6 +448,12 @@ const CourseDetails: React.FC = () => {
           style={styles.image}
           resizeMode="cover"
           onError={(error) => console.log("Image error:", error)}
+          onLoad={() =>
+            console.log("Image loaded successfully:", parsedCourse.url)
+          }
+          onLoadStart={() =>
+            console.log("Image loading started:", parsedCourse.url)
+          }
         />
         <RNAnimated.View
           style={{

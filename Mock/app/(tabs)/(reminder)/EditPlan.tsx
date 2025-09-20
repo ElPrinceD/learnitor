@@ -7,6 +7,8 @@ import {
   ScrollView,
   Switch,
   useColorScheme,
+  Alert,
+  TouchableOpacity,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useAuth } from "../../../components/AuthContext";
@@ -39,7 +41,6 @@ interface Category {
   label: string;
 }
 interface UpdateTaskData {
-  learner?: number;
   title?: string;
   description?: string;
   due_date?: string;
@@ -50,11 +51,17 @@ interface UpdateTaskData {
   recurrence_interval?: string | null;
   recurrence_end_date?: string | null;
   affect_all_recurring?: boolean;
+  learner?: number;
+}
+
+interface DeleteOptions {
+  deleteScope: "single" | "future" | "all";
+  showConfirmation: boolean;
 }
 
 const EditPlan = () => {
   const params = useLocalSearchParams();
-  console.log(params);
+  console.log("EditPlan params:", params);
   const id = params.taskId as string;
   const oldTitle = params.title as string;
   const oldDescription = params.description as string;
@@ -65,7 +72,19 @@ const EditPlan = () => {
   const oldIsRecurring = params.is_recurring === "true";
   const oldRecurrenceInterval = (params.recurrence_interval as string) || null;
   const oldRecurrenceEndDate = (params.recurrence_end_date as string) || null;
-  console.log(oldCategoryId);
+
+  console.log("Task details:", {
+    id,
+    oldTitle,
+    oldDescription,
+    oldDate,
+    oldStartTime,
+    oldEndTime,
+    oldCategoryId,
+    oldIsRecurring,
+    oldRecurrenceInterval,
+    oldRecurrenceEndDate,
+  });
 
   const { userToken, userInfo } = useAuth();
   const {
@@ -144,8 +163,12 @@ const EditPlan = () => {
     return isNaN(date.getTime()) ? new Date() : date;
   });
   const [affectAllRecurring, setAffectAllRecurring] = useState(false);
-  const [deleteAllRecurring, setDeleteAllRecurring] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showDeleteOptions, setShowDeleteOptions] = useState(false);
+  const [deleteOptions, setDeleteOptions] = useState<DeleteOptions>({
+    deleteScope: "single",
+    showConfirmation: true,
+  });
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -269,15 +292,13 @@ const EditPlan = () => {
   };
 
   const handleSaveTime = () => {
-    const dataToSave: UpdateTaskData = {};
+    const dataToSave: UpdateTaskData = {
+      // Always include required fields
+      title: title,
+      learner: userInfo?.user?.id,
+    };
 
-    // Always include learner ID and title as they're required
-    if (userInfo?.user?.id) {
-      dataToSave.learner = userInfo.user.id;
-    }
-
-    // Always include title as it's required by the server
-    dataToSave.title = title;
+    // Add changed fields
     if (description !== oldDescription) dataToSave.description = description;
     if (formatDate(dueDate) !== oldDate)
       dataToSave.due_date = formatDate(dueDate);
@@ -301,29 +322,27 @@ const EditPlan = () => {
       formatDate(recurrenceEndDate) !== oldRecurrenceEndDate
     )
       dataToSave.recurrence_end_date = formatDate(recurrenceEndDate);
+    if (affectAllRecurring && isRecurring)
+      dataToSave.affect_all_recurring = affectAllRecurring;
 
-    console.log("Data to save:", dataToSave);
-    console.log("Data to save keys:", Object.keys(dataToSave));
-    console.log("affectAllRecurring state:", affectAllRecurring);
-    console.log("isRecurring:", isRecurring);
+    // Check if there are any changes beyond the required fields
+    const hasChanges =
+      Object.keys(dataToSave).length > 2 ||
+      title !== oldTitle ||
+      description !== oldDescription ||
+      formatDate(dueDate) !== oldDate ||
+      formatTime(startTime) !== oldStartTime ||
+      formatTime(endTime) !== oldEndTime ||
+      selectedCategory?.value?.toString() !== oldCategoryId ||
+      isRecurring !== oldIsRecurring ||
+      (recurrenceOption !== "Does not repeat" &&
+        recurrenceOption.toLowerCase() !== oldRecurrenceInterval) ||
+      (recurrenceOption !== "Does not repeat" &&
+        formatDate(recurrenceEndDate) !== oldRecurrenceEndDate);
 
-    if (Object.keys(dataToSave).length > 0) {
-      // Determine update scope based on affectAllRecurring and isRecurring
-      let updateScope = "single"; // Default to single task
-
-      if (affectAllRecurring && isRecurring) {
-        updateScope = "all"; // Update all recurring tasks
-      } else if (isRecurring && !affectAllRecurring) {
-        updateScope = "future"; // Update future tasks only
-      }
-
-      console.log("Update scope determined:", updateScope);
-
-      console.log("Mutation parameters:", {
-        taskId: id,
-        taskData: dataToSave,
-        updateScope: updateScope,
-      });
+    if (hasChanges) {
+      // Determine update scope based on recurring status and user choice
+      const updateScope = isRecurring && affectAllRecurring ? "all" : "single";
 
       updateTaskMutation.mutate({
         taskId: id,
@@ -337,22 +356,43 @@ const EditPlan = () => {
   };
 
   const handleDeletePlan = () => {
-    // Determine delete scope based on deleteAllRecurring and isRecurring
-    let deleteScope = "single"; // Default to single task
-
-    if (deleteAllRecurring && isRecurring) {
-      deleteScope = "all"; // Delete all recurring tasks
-    } else if (isRecurring && !deleteAllRecurring) {
-      deleteScope = "future"; // Delete future tasks only
+    if (isRecurring) {
+      setShowDeleteOptions(true);
+    } else {
+      showDeleteConfirmation("single");
     }
+  };
 
-    console.log("Delete scope determined:", deleteScope);
+  const showDeleteConfirmation = (scope: "single" | "future" | "all") => {
+    const messages = {
+      single: "Are you sure you want to delete this task?",
+      future:
+        "Are you sure you want to delete this task and all future occurrences?",
+      all: "Are you sure you want to delete this task and all its occurrences?",
+    };
 
-    deleteTaskMutation.mutate({
-      taskId: id,
-      token: userToken?.token!,
-      deleteScope: deleteScope,
-    });
+    Alert.alert("Delete Task", messages[scope], [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => {
+          deleteTaskMutation.mutate({
+            taskId: id,
+            token: userToken?.token!,
+            deleteScope: scope,
+          });
+        },
+      },
+    ]);
+  };
+
+  const handleDeleteOptionSelect = (scope: "single" | "future" | "all") => {
+    setShowDeleteOptions(false);
+    showDeleteConfirmation(scope);
   };
 
   const recurrenceOptions = [
@@ -371,11 +411,36 @@ const EditPlan = () => {
       paddingBottom: rV(50),
       backgroundColor: themeColors.background,
     },
+    headerContainer: {
+      backgroundColor: themeColors.secondaryBackground,
+      padding: rV(20),
+      borderRadius: rMS(12),
+      marginBottom: rV(20),
+      borderLeftWidth: 4,
+      borderLeftColor: themeColors.tint,
+    },
+    headerTitle: {
+      fontSize: SIZES.xLarge,
+      fontWeight: "bold",
+      color: themeColors.text,
+      marginBottom: rV(8),
+    },
+    headerSubtitle: {
+      fontSize: SIZES.medium,
+      color: themeColors.textSecondary,
+      marginBottom: rV(4),
+    },
     sectionContainer: {
       backgroundColor: themeColors.secondaryBackground,
       padding: rV(15),
       borderRadius: rMS(8),
       marginBottom: rV(15),
+    },
+    sectionTitle: {
+      fontSize: SIZES.large,
+      fontWeight: "bold",
+      color: themeColors.text,
+      marginBottom: rV(10),
     },
     toggleContainer: {
       flexDirection: "row",
@@ -389,7 +454,46 @@ const EditPlan = () => {
       color: themeColors.text,
       fontWeight: "bold",
     },
-    buttonContainer: { alignItems: "center", marginVertical: rV(20) },
+    deleteOptionsContainer: {
+      backgroundColor: themeColors.errorBackground,
+      padding: rV(15),
+      borderRadius: rMS(8),
+      marginBottom: rV(15),
+    },
+    deleteOptionsTitle: {
+      fontSize: SIZES.large,
+      fontWeight: "bold",
+      color: themeColors.text,
+      marginBottom: rV(10),
+    },
+    deleteOptionButton: {
+      paddingVertical: rV(12),
+      paddingHorizontal: rS(16),
+      borderRadius: rMS(6),
+      marginBottom: rV(8),
+      backgroundColor: themeColors.background,
+      borderWidth: 1,
+      borderColor: themeColors.text,
+    },
+    deleteOptionButtonActive: {
+      backgroundColor: themeColors.tint,
+      borderColor: themeColors.tint,
+    },
+    deleteOptionText: {
+      fontSize: SIZES.medium,
+      color: themeColors.text,
+      textAlign: "center",
+    },
+    deleteOptionTextActive: {
+      color: themeColors.background,
+      fontWeight: "bold",
+    },
+    buttonContainer: {
+      alignItems: "center",
+      marginVertical: rV(20),
+      flexDirection: "row",
+      justifyContent: "space-between",
+    },
     button: {
       width: rS(150),
       paddingVertical: rV(10),
@@ -406,6 +510,26 @@ const EditPlan = () => {
       alignItems: "center",
       marginHorizontal: rS(5),
     },
+    infoRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: rV(8),
+      borderBottomWidth: 1,
+      borderBottomColor: themeColors.text,
+    },
+    infoLabel: {
+      fontSize: SIZES.medium,
+      color: themeColors.textSecondary,
+      fontWeight: "500",
+    },
+    infoValue: {
+      fontSize: SIZES.medium,
+      color: themeColors.text,
+      fontWeight: "bold",
+      flex: 1,
+      textAlign: "right",
+    },
   });
 
   return (
@@ -414,7 +538,9 @@ const EditPlan = () => {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Edit Task Form */}
         <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Edit Task Details</Text>
           <Animated.View
             key={`title-${title}`}
             entering={FadeInRight}
@@ -518,40 +644,124 @@ const EditPlan = () => {
               />
             </Animated.View>
           )}
-          <View style={styles.toggleContainer}>
-            <Text style={styles.toggleLabel}>Affect All Recurring Tasks</Text>
-            <Switch
-              value={affectAllRecurring}
-              onValueChange={setAffectAllRecurring}
-              trackColor={{ false: "#767577", true: themeColors.tint }}
-              thumbColor={
-                affectAllRecurring ? themeColors.background : "#f4f3f4"
-              }
-            />
-          </View>
           {isRecurring && (
             <View style={styles.toggleContainer}>
-              <Text style={styles.toggleLabel}>Delete All Recurring Tasks</Text>
+              <Text style={styles.toggleLabel}>Affect All Recurring Tasks</Text>
               <Switch
-                value={deleteAllRecurring}
-                onValueChange={setDeleteAllRecurring}
+                value={affectAllRecurring}
+                onValueChange={setAffectAllRecurring}
                 trackColor={{ false: "#767577", true: themeColors.tint }}
                 thumbColor={
-                  deleteAllRecurring ? themeColors.background : "#f4f3f4"
+                  affectAllRecurring ? themeColors.background : "#f4f3f4"
                 }
               />
             </View>
           )}
         </View>
-        <View
-          style={[
-            styles.buttonContainer,
-            { flexDirection: "row", justifyContent: "space-between" },
-          ]}
-        >
+
+        {/* Delete Options for Recurring Tasks */}
+        {showDeleteOptions && isRecurring && (
+          <View style={styles.deleteOptionsContainer}>
+            <Text style={styles.deleteOptionsTitle}>Delete Options</Text>
+            <Text style={[styles.infoLabel, { marginBottom: rV(10) }]}>
+              This is a recurring task. Choose what you want to delete:
+            </Text>
+
+            <TouchableOpacity
+              style={[
+                styles.deleteOptionButton,
+                deleteOptions.deleteScope === "single" &&
+                  styles.deleteOptionButtonActive,
+              ]}
+              onPress={() =>
+                setDeleteOptions({ ...deleteOptions, deleteScope: "single" })
+              }
+            >
+              <Text
+                style={[
+                  styles.deleteOptionText,
+                  deleteOptions.deleteScope === "single" &&
+                    styles.deleteOptionTextActive,
+                ]}
+              >
+                Delete this task only
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.deleteOptionButton,
+                deleteOptions.deleteScope === "future" &&
+                  styles.deleteOptionButtonActive,
+              ]}
+              onPress={() =>
+                setDeleteOptions({ ...deleteOptions, deleteScope: "future" })
+              }
+            >
+              <Text
+                style={[
+                  styles.deleteOptionText,
+                  deleteOptions.deleteScope === "future" &&
+                    styles.deleteOptionTextActive,
+                ]}
+              >
+                Delete this task and all future occurrences
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.deleteOptionButton,
+                deleteOptions.deleteScope === "all" &&
+                  styles.deleteOptionButtonActive,
+              ]}
+              onPress={() =>
+                setDeleteOptions({ ...deleteOptions, deleteScope: "all" })
+              }
+            >
+              <Text
+                style={[
+                  styles.deleteOptionText,
+                  deleteOptions.deleteScope === "all" &&
+                    styles.deleteOptionTextActive,
+                ]}
+              >
+                Delete all occurrences of this task
+              </Text>
+            </TouchableOpacity>
+
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                marginTop: rV(10),
+              }}
+            >
+              <GameButton
+                onPress={() => setShowDeleteOptions(false)}
+                title="Cancel"
+                style={[styles.button, { width: rS(100) }]}
+              />
+              <GameButton
+                onPress={() =>
+                  handleDeleteOptionSelect(deleteOptions.deleteScope)
+                }
+                title="Confirm Delete"
+                style={[styles.deleteButton, { width: rS(120) }]}
+                disabled={deleteTaskMutation.isPending}
+              >
+                {deleteTaskMutation.isPending && (
+                  <ActivityIndicator size="small" color={themeColors.text} />
+                )}
+              </GameButton>
+            </View>
+          </View>
+        )}
+
+        <View style={styles.buttonContainer}>
           <GameButton
             onPress={handleSaveTime}
-            title="Save"
+            title="Save Changes"
             style={styles.button}
             disabled={updateTaskMutation.isPending}
           >
@@ -561,9 +771,9 @@ const EditPlan = () => {
           </GameButton>
           <GameButton
             onPress={handleDeletePlan}
-            title="Delete"
+            title="Delete Task"
             style={styles.deleteButton}
-            disabled={deleteTaskMutation.isPending}
+            disabled={deleteTaskMutation.isPending || showDeleteOptions}
           >
             {deleteTaskMutation.isPending && (
               <ActivityIndicator size="small" color={themeColors.text} />

@@ -1,7 +1,3 @@
-import {
-  useResponsiveHeight,
-  useResponsiveWidth, useResponsiveFontSize
-} from "react-native-responsive-dimensions";
 import { rMS } from "./responsive";
 import { useColorScheme } from "react-native";
 import Colors from "./Colors";
