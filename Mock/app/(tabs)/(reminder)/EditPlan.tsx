@@ -613,6 +613,7 @@ const EditPlan = () => {
               )
             }
           />
+          {/* Temporarily disabled recurring task editing
           <CustomPicker
             label="Recurrence"
             options={simplifiedRecurrenceOptions}
@@ -622,6 +623,8 @@ const EditPlan = () => {
               setIsRecurring(value !== "Does not repeat");
             }}
           />
+          */}
+          {/* Temporarily disabled recurring task editing
           {recurrenceOption !== "Does not repeat" && (
             <Animated.View
               entering={FadeInLeft.delay(200)
@@ -644,6 +647,8 @@ const EditPlan = () => {
               />
             </Animated.View>
           )}
+          */}
+          {/* Temporarily disabled recurring task editing
           {isRecurring && (
             <View style={styles.toggleContainer}>
               <Text style={styles.toggleLabel}>Affect All Recurring Tasks</Text>
@@ -657,6 +662,7 @@ const EditPlan = () => {
               />
             </View>
           )}
+          */}
         </View>
 
         {/* Delete Options for Recurring Tasks */}
