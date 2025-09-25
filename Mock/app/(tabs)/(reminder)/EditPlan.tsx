@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   ScrollView,
   Switch,
   useColorScheme,
-  Alert,
   TouchableOpacity,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -35,6 +34,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { useTimeline } from "../../../contexts/TimelineContext"; // Added for TimelineContext
 import { useCache } from "../../../contexts/CacheContext"; // Added for CacheContext
+import { useAlert } from "../../../contexts/AlertContext"; // Added for custom alerts
 
 interface Category {
   value: number;
@@ -61,7 +61,6 @@ interface DeleteOptions {
 
 const EditPlan = () => {
   const params = useLocalSearchParams();
-  console.log("EditPlan params:", params);
   const id = params.taskId as string;
   const oldTitle = params.title as string;
   const oldDescription = params.description as string;
@@ -73,19 +72,6 @@ const EditPlan = () => {
   const oldRecurrenceInterval = (params.recurrence_interval as string) || null;
   const oldRecurrenceEndDate = (params.recurrence_end_date as string) || null;
 
-  console.log("Task details:", {
-    id,
-    oldTitle,
-    oldDescription,
-    oldDate,
-    oldStartTime,
-    oldEndTime,
-    oldCategoryId,
-    oldIsRecurring,
-    oldRecurrenceInterval,
-    oldRecurrenceEndDate,
-  });
-
   const { userToken, userInfo } = useAuth();
   const {
     scheduleTaskNotification,
@@ -93,6 +79,7 @@ const EditPlan = () => {
     storeNotificationId,
   } = useTimeline(); // Use TimelineContext
   const { removeItem } = useCache(); // Use CacheContext for cache invalidation
+  const { showDeleteAlert } = useAlert(); // Use custom alert
 
   // Initialize dueDate with the plan's oldDate
   const [dueDate, setDueDate] = useState(() => {
@@ -196,7 +183,13 @@ const EditPlan = () => {
     const newEndTime = new Date(dueDate);
     newEndTime.setHours(endTime.getHours(), endTime.getMinutes(), 0, 0);
     setEndTime(newEndTime);
-  }, [dueDate]);
+  }, [
+    dueDate,
+    startTime.getHours(),
+    startTime.getMinutes(),
+    endTime.getHours(),
+    endTime.getMinutes(),
+  ]);
 
   const updateTaskMutation = useMutation<any, any, any>({
     mutationFn: async ({ taskId, taskData, token, updateScope }) =>
@@ -252,46 +245,48 @@ const EditPlan = () => {
       setErrorMessage(error.message || "Error deleting schedule"),
   });
 
-  const parseTime = (timeString: string): Date => {
-    if (!timeString) {
-      const defaultDate = new Date(dueDate);
-      defaultDate.setHours(12, 0, 0, 0);
-      return defaultDate;
-    }
-    const [hours, minutes] = timeString.split(":").map(Number);
-    if (
-      isNaN(hours) ||
-      isNaN(minutes) ||
-      hours < 0 ||
-      hours > 23 ||
-      minutes < 0 ||
-      minutes > 59
-    ) {
-      console.error(`Invalid time string: ${timeString}`);
-      const defaultDate = new Date(dueDate);
-      defaultDate.setHours(12, 0, 0, 0);
-      return defaultDate;
-    }
-    const newDate = new Date(dueDate);
-    newDate.setHours(hours, minutes, 0, 0);
-    return newDate;
-  };
+  const parseTime = useCallback(
+    (timeString: string): Date => {
+      if (!timeString) {
+        const defaultDate = new Date(dueDate);
+        defaultDate.setHours(12, 0, 0, 0);
+        return defaultDate;
+      }
+      const [hours, minutes] = timeString.split(":").map(Number);
+      if (
+        isNaN(hours) ||
+        isNaN(minutes) ||
+        hours < 0 ||
+        hours > 23 ||
+        minutes < 0 ||
+        minutes > 59
+      ) {
+        const defaultDate = new Date(dueDate);
+        defaultDate.setHours(12, 0, 0, 0);
+        return defaultDate;
+      }
+      const newDate = new Date(dueDate);
+      newDate.setHours(hours, minutes, 0, 0);
+      return newDate;
+    },
+    [dueDate]
+  );
 
-  const formatTime = (date: Date): string => {
+  const formatTime = useCallback((date: Date): string => {
     if (!(date instanceof Date) || isNaN(date.getTime())) return "12:00";
     return `${date.getHours().toString().padStart(2, "0")}:${date
       .getMinutes()
       .toString()
       .padStart(2, "0")}`;
-  };
+  }, []);
 
-  const formatDate = (date: Date): string => {
+  const formatDate = useCallback((date: Date): string => {
     if (!(date instanceof Date) || isNaN(date.getTime()))
       return new Date().toISOString().split("T")[0];
     return date.toISOString().split("T")[0];
-  };
+  }, []);
 
-  const handleSaveTime = () => {
+  const handleSaveTime = useCallback(() => {
     const dataToSave: UpdateTaskData = {
       // Always include required fields
       title: title,
@@ -353,184 +348,219 @@ const EditPlan = () => {
     } else {
       setErrorMessage("No changes to save.");
     }
-  };
+  }, [
+    title,
+    description,
+    oldDescription,
+    dueDate,
+    oldDate,
+    startTime,
+    oldStartTime,
+    endTime,
+    oldEndTime,
+    selectedCategory,
+    oldCategoryId,
+    isRecurring,
+    oldIsRecurring,
+    recurrenceOption,
+    oldRecurrenceInterval,
+    recurrenceEndDate,
+    oldRecurrenceEndDate,
+    affectAllRecurring,
+    userInfo?.user?.id,
+    updateTaskMutation,
+    formatDate,
+    formatTime,
+  ]);
 
-  const handleDeletePlan = () => {
+  const handleDeletePlan = useCallback(() => {
     if (isRecurring) {
       setShowDeleteOptions(true);
     } else {
       showDeleteConfirmation("single");
     }
-  };
+  }, [isRecurring]);
 
-  const showDeleteConfirmation = (scope: "single" | "future" | "all") => {
-    const messages = {
-      single: "Are you sure you want to delete this task?",
-      future:
-        "Are you sure you want to delete this task and all future occurrences?",
-      all: "Are you sure you want to delete this task and all its occurrences?",
-    };
+  const showDeleteConfirmation = useCallback(
+    (scope: "single" | "future" | "all") => {
+      const messages = {
+        single: "Are you sure you want to delete this task?",
+        future:
+          "Are you sure you want to delete this task and all future occurrences?",
+        all: "Are you sure you want to delete this task and all its occurrences?",
+      };
 
-    Alert.alert("Delete Task", messages[scope], [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: () => {
+      showDeleteAlert(
+        "Delete task?",
+        messages[scope],
+        () => {
           deleteTaskMutation.mutate({
             taskId: id,
             token: userToken?.token!,
             deleteScope: scope,
           });
         },
-      },
-    ]);
-  };
-
-  const handleDeleteOptionSelect = (scope: "single" | "future" | "all") => {
-    setShowDeleteOptions(false);
-    showDeleteConfirmation(scope);
-  };
-
-  const recurrenceOptions = [
-    { label: "Does not repeat", value: "Does not repeat" },
-    { label: "Daily", value: "Daily" },
-    { label: "Weekly", value: "Weekly" },
-  ];
-  const simplifiedRecurrenceOptions = recurrenceOptions.map(
-    (option) => option.value
+        undefined,
+        "Delete",
+        "Cancel"
+      );
+    },
+    [id, userToken?.token, deleteTaskMutation, showDeleteAlert]
   );
 
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      paddingHorizontal: rMS(20),
-      paddingBottom: rV(50),
-      backgroundColor: themeColors.background,
+  const handleDeleteOptionSelect = useCallback(
+    (scope: "single" | "future" | "all") => {
+      setShowDeleteOptions(false);
+      showDeleteConfirmation(scope);
     },
-    headerContainer: {
-      backgroundColor: themeColors.secondaryBackground,
-      padding: rV(20),
-      borderRadius: rMS(12),
-      marginBottom: rV(20),
-      borderLeftWidth: 4,
-      borderLeftColor: themeColors.tint,
-    },
-    headerTitle: {
-      fontSize: SIZES.xLarge,
-      fontWeight: "bold",
-      color: themeColors.text,
-      marginBottom: rV(8),
-    },
-    headerSubtitle: {
-      fontSize: SIZES.medium,
-      color: themeColors.textSecondary,
-      marginBottom: rV(4),
-    },
-    sectionContainer: {
-      backgroundColor: themeColors.secondaryBackground,
-      padding: rV(15),
-      borderRadius: rMS(8),
-      marginBottom: rV(15),
-    },
-    sectionTitle: {
-      fontSize: SIZES.large,
-      fontWeight: "bold",
-      color: themeColors.text,
-      marginBottom: rV(10),
-    },
-    toggleContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      marginVertical: rV(10),
-      justifyContent: "space-between",
-      paddingHorizontal: rS(16),
-    },
-    toggleLabel: {
-      fontSize: SIZES.large,
-      color: themeColors.text,
-      fontWeight: "bold",
-    },
-    deleteOptionsContainer: {
-      backgroundColor: themeColors.errorBackground,
-      padding: rV(15),
-      borderRadius: rMS(8),
-      marginBottom: rV(15),
-    },
-    deleteOptionsTitle: {
-      fontSize: SIZES.large,
-      fontWeight: "bold",
-      color: themeColors.text,
-      marginBottom: rV(10),
-    },
-    deleteOptionButton: {
-      paddingVertical: rV(12),
-      paddingHorizontal: rS(16),
-      borderRadius: rMS(6),
-      marginBottom: rV(8),
-      backgroundColor: themeColors.background,
-      borderWidth: 1,
-      borderColor: themeColors.text,
-    },
-    deleteOptionButtonActive: {
-      backgroundColor: themeColors.tint,
-      borderColor: themeColors.tint,
-    },
-    deleteOptionText: {
-      fontSize: SIZES.medium,
-      color: themeColors.text,
-      textAlign: "center",
-    },
-    deleteOptionTextActive: {
-      color: themeColors.background,
-      fontWeight: "bold",
-    },
-    buttonContainer: {
-      alignItems: "center",
-      marginVertical: rV(20),
-      flexDirection: "row",
-      justifyContent: "space-between",
-    },
-    button: {
-      width: rS(150),
-      paddingVertical: rV(10),
-      borderRadius: 10,
-      backgroundColor: themeColors.tint,
-      alignItems: "center",
-      marginHorizontal: rS(5),
-    },
-    deleteButton: {
-      width: rS(150),
-      paddingVertical: rV(10),
-      borderRadius: 10,
-      backgroundColor: themeColors.errorBackground,
-      alignItems: "center",
-      marginHorizontal: rS(5),
-    },
-    infoRow: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      paddingVertical: rV(8),
-      borderBottomWidth: 1,
-      borderBottomColor: themeColors.text,
-    },
-    infoLabel: {
-      fontSize: SIZES.medium,
-      color: themeColors.textSecondary,
-      fontWeight: "500",
-    },
-    infoValue: {
-      fontSize: SIZES.medium,
-      color: themeColors.text,
-      fontWeight: "bold",
-      flex: 1,
-      textAlign: "right",
-    },
-  });
+    [showDeleteConfirmation]
+  );
+
+  const recurrenceOptions = useMemo(
+    () => [
+      { label: "Does not repeat", value: "Does not repeat" },
+      { label: "Daily", value: "Daily" },
+      { label: "Weekly", value: "Weekly" },
+    ],
+    []
+  );
+
+  const simplifiedRecurrenceOptions = useMemo(
+    () => recurrenceOptions.map((option) => option.value),
+    [recurrenceOptions]
+  );
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          paddingHorizontal: rMS(20),
+          paddingBottom: rV(50),
+          backgroundColor: themeColors.background,
+        },
+        headerContainer: {
+          backgroundColor: themeColors.secondaryBackground,
+          padding: rV(20),
+          borderRadius: rMS(12),
+          marginBottom: rV(20),
+          borderLeftWidth: 4,
+          borderLeftColor: themeColors.tint,
+        },
+        headerTitle: {
+          fontSize: SIZES.xLarge,
+          fontWeight: "bold",
+          color: themeColors.text,
+          marginBottom: rV(8),
+        },
+        headerSubtitle: {
+          fontSize: SIZES.medium,
+          color: themeColors.textSecondary,
+          marginBottom: rV(4),
+        },
+        sectionContainer: {
+          backgroundColor: themeColors.secondaryBackground,
+          padding: rV(15),
+          borderRadius: rMS(8),
+          marginBottom: rV(15),
+        },
+        sectionTitle: {
+          fontSize: SIZES.large,
+          fontWeight: "bold",
+          color: themeColors.text,
+          marginBottom: rV(10),
+        },
+        toggleContainer: {
+          flexDirection: "row",
+          alignItems: "center",
+          marginVertical: rV(10),
+          justifyContent: "space-between",
+          paddingHorizontal: rS(16),
+        },
+        toggleLabel: {
+          fontSize: SIZES.large,
+          color: themeColors.text,
+          fontWeight: "bold",
+        },
+        deleteOptionsContainer: {
+          backgroundColor: themeColors.errorBackground,
+          padding: rV(15),
+          borderRadius: rMS(8),
+          marginBottom: rV(15),
+        },
+        deleteOptionsTitle: {
+          fontSize: SIZES.large,
+          fontWeight: "bold",
+          color: themeColors.text,
+          marginBottom: rV(10),
+        },
+        deleteOptionButton: {
+          paddingVertical: rV(12),
+          paddingHorizontal: rS(16),
+          borderRadius: rMS(6),
+          marginBottom: rV(8),
+          backgroundColor: themeColors.background,
+          borderWidth: 1,
+          borderColor: themeColors.text,
+        },
+        deleteOptionButtonActive: {
+          backgroundColor: themeColors.tint,
+          borderColor: themeColors.tint,
+        },
+        deleteOptionText: {
+          fontSize: SIZES.medium,
+          color: themeColors.text,
+          textAlign: "center",
+        },
+        deleteOptionTextActive: {
+          color: themeColors.background,
+          fontWeight: "bold",
+        },
+        buttonContainer: {
+          alignItems: "center",
+          marginVertical: rV(20),
+          flexDirection: "row",
+          justifyContent: "space-between",
+        },
+        button: {
+          width: rS(150),
+          paddingVertical: rV(10),
+          borderRadius: 10,
+          backgroundColor: themeColors.tint,
+          alignItems: "center",
+          marginHorizontal: rS(5),
+        },
+        deleteButton: {
+          width: rS(150),
+          paddingVertical: rV(10),
+          borderRadius: 10,
+          backgroundColor: themeColors.errorBackground,
+          alignItems: "center",
+          marginHorizontal: rS(5),
+        },
+        infoRow: {
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          paddingVertical: rV(8),
+          borderBottomWidth: 1,
+          borderBottomColor: themeColors.text,
+        },
+        infoLabel: {
+          fontSize: SIZES.medium,
+          color: themeColors.textSecondary,
+          fontWeight: "500",
+        },
+        infoValue: {
+          fontSize: SIZES.medium,
+          color: themeColors.text,
+          fontWeight: "bold",
+          flex: 1,
+          textAlign: "right",
+        },
+      }),
+    [themeColors]
+  );
 
   return (
     <View style={styles.container}>
@@ -541,30 +571,18 @@ const EditPlan = () => {
         {/* Edit Task Form */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Edit Task Details</Text>
-          <Animated.View
-            key={`title-${title}`}
-            entering={FadeInRight}
-            exiting={FadeOutRight}
-          >
-            <AnimatedRoundTextInput
-              placeholderTextColor={themeColors.textSecondary}
-              label="Title"
-              value={title}
-              onChangeText={setTitle}
-            />
-          </Animated.View>
-          <Animated.View
-            key={`description-${description}`}
-            entering={FadeInRight}
-            exiting={FadeOutRight}
-          >
-            <AnimatedRoundTextInput
-              placeholderTextColor={themeColors.textSecondary}
-              label="Description"
-              value={description}
-              onChangeText={setDescription}
-            />
-          </Animated.View>
+          <AnimatedRoundTextInput
+            placeholderTextColor={themeColors.textSecondary}
+            label="Title"
+            value={title}
+            onChangeText={setTitle}
+          />
+          <AnimatedRoundTextInput
+            placeholderTextColor={themeColors.textSecondary}
+            label="Description"
+            value={description}
+            onChangeText={setDescription}
+          />
         </View>
         <View style={styles.sectionContainer}>
           <DateSelector

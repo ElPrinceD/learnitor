@@ -1,8 +1,8 @@
-import React, { createContext, useContext, useCallback } from 'react';
-import { useCache } from './CacheContext';
-import { getCourseCategories, getCourses } from '../services/CoursesApiCalls';
-import { getCategoryNames, getTodayPlans } from '../services/TimelineApiCalls';
-import * as Notifications from 'expo-notifications';
+import React, { createContext, useContext, useCallback } from "react";
+import { useCache } from "./CacheContext";
+import { getCourseCategories, getCourses } from "../services/CoursesApiCalls";
+import { getCategoryNames, getTodayPlans } from "../services/TimelineApiCalls";
+import * as Notifications from "expo-notifications";
 
 interface Task {
   id: number;
@@ -12,11 +12,12 @@ interface Task {
 }
 
 interface TimelineContextType {
- 
- 
   scheduleTaskNotification: (task: Task) => Promise<string | null>;
   cancelTaskNotification: (taskId: string) => Promise<void>;
-  storeNotificationId: (taskId: string | number, notificationId: string) => Promise<void>;
+  storeNotificationId: (
+    taskId: string | number,
+    notificationId: string
+  ) => Promise<void>;
   getNotificationId: (taskId: string | number) => Promise<string | null>;
 }
 
@@ -27,36 +28,37 @@ interface TimelineProviderProps {
   children: React.ReactNode;
 }
 
-export const TimelineProvider: React.FC<TimelineProviderProps> = ({ token, children }) => {
+export const TimelineProvider: React.FC<TimelineProviderProps> = ({
+  token,
+  children,
+}) => {
   const { setItem, getItem, removeItem } = useCache();
 
   const scheduleTaskNotification = useCallback(
     async (task: Task): Promise<string | null> => {
       try {
-        const [year, month, day] = task.due_date.split('-').map(Number);
-        const [hours, minutes] = task.due_time_start.split(':').map(Number);
+        const [year, month, day] = task.due_date.split("-").map(Number);
+        const [hours, minutes] = task.due_time_start.split(":").map(Number);
         const triggerDate = new Date(year, month - 1, day, hours, minutes);
 
         if (triggerDate <= new Date()) {
-          console.log(`Task ${task.id} is in the past, skipping notification`);
           return null;
         }
 
         const notificationId = await Notifications.scheduleNotificationAsync({
           content: {
-            title: 'Plan Reminder',
+            title: "Plan Reminder",
             body: `Your plan "${task.title}" is due now!`,
             data: { taskId: task.id },
-            sound: 'default',
+            sound: "default",
           },
           trigger: triggerDate,
         });
 
-        console.log(`Scheduled notification for task ${task.id} at ${triggerDate.toISOString()}`);
         await setItem(`notification_${task.id}`, notificationId);
         return notificationId;
       } catch (error) {
-        console.error('Failed to schedule notification:', error);
+        console.error("Failed to schedule notification:", error);
         return null;
       }
     },
@@ -70,10 +72,9 @@ export const TimelineProvider: React.FC<TimelineProviderProps> = ({ token, child
         if (notificationId) {
           await Notifications.cancelScheduledNotificationAsync(notificationId);
           await removeItem(`notification_${taskId}`);
-          console.log(`Canceled notification for task ${taskId}`);
         }
       } catch (error) {
-        console.error('Failed to cancel notification:', error);
+        console.error("Failed to cancel notification:", error);
       }
     },
     [getItem, removeItem]
@@ -82,7 +83,6 @@ export const TimelineProvider: React.FC<TimelineProviderProps> = ({ token, child
   const storeNotificationId = useCallback(
     async (taskId: string | number, notificationId: string): Promise<void> => {
       await setItem(`notification_${taskId}`, notificationId);
-      console.log(`Stored notification ID ${notificationId} for task ${taskId}`);
     },
     [setItem]
   );
@@ -95,7 +95,6 @@ export const TimelineProvider: React.FC<TimelineProviderProps> = ({ token, child
   );
 
   const contextValue: TimelineContextType = {
-   
     scheduleTaskNotification,
     cancelTaskNotification,
     storeNotificationId,
@@ -112,7 +111,7 @@ export const TimelineProvider: React.FC<TimelineProviderProps> = ({ token, child
 export const useTimeline = () => {
   const context = useContext(TimelineContext);
   if (context === null) {
-    throw new Error('useTimeline must be used within a TimelineProvider');
+    throw new Error("useTimeline must be used within a TimelineProvider");
   }
   return context;
 };

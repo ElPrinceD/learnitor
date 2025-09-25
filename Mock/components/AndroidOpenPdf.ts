@@ -1,8 +1,8 @@
 import React from 'react';
-import { Alert } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as IntentLauncher from 'expo-intent-launcher';
+import { useAlert } from '../contexts/AlertContext';
 
 interface AndroidOpenPdfExampleProps {
   url: string;
@@ -10,6 +10,8 @@ interface AndroidOpenPdfExampleProps {
 }
 
 const AndroidOpenPdfExample: React.FC<AndroidOpenPdfExampleProps> = ({ url, filename }) => {
+  const { showErrorAlert } = useAlert();
+  
   const openPdf = async () => {
     try {
       // Download PDF to document directory
@@ -37,15 +39,14 @@ const AndroidOpenPdfExample: React.FC<AndroidOpenPdfExampleProps> = ({ url, file
               dialogTitle: 'Open PDF Document',
             });
           } else {
-            Alert.alert('Error', 'Unable to open PDF. Please install a PDF viewer app.');
+            showErrorAlert('Error', 'Unable to open PDF. Please install a PDF viewer app.');
           }
         }
       } else {
         throw new Error(`Download failed with status: ${downloadResult.status}`);
       }
     } catch (error) {
-      console.error('Error opening PDF:', error);
-      Alert.alert('Error', 'Failed to download or open PDF. Please try again.');
+      showErrorAlert('Error', 'Failed to download or open PDF. Please try again.');
     }
   };
 

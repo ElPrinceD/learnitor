@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
   ActivityIndicator,
   useColorScheme,
 } from "react-native";
@@ -16,6 +15,8 @@ import apiUrl from "../../../config";
 import { useAuth } from "../../../components/AuthContext";
 import Colors from "../../../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../../../constants";
+import { useAlert } from "../../../contexts/AlertContext";
+import { useErrorHandler } from "../../../hooks/useErrorHandler";
 
 const ReportProblem: React.FC = () => {
   const [problemType, setProblemType] = useState("");
@@ -25,6 +26,8 @@ const ReportProblem: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const { userToken, userInfo } = useAuth();
+  const { showSuccessAlert } = useAlert();
+  const { handleError } = useErrorHandler();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
@@ -42,11 +45,9 @@ const ReportProblem: React.FC = () => {
           Authorization: `Token ${userToken?.token}`,
         },
       });
-      console.log("Issue reported:", response.data);
-      Alert.alert("Success", "Your issue has been reported.");
+      showSuccessAlert("Success", "Your issue has been reported.");
     } catch (error) {
-      console.error("Error reporting issue:", error);
-      Alert.alert("Error", "There was an error reporting your issue.");
+      handleError(error, "Report Failed");
     } finally {
       setLoading(false);
     }

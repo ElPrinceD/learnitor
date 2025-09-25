@@ -1,16 +1,10 @@
 import React, { useCallback } from "react";
-import {
-  View,
-  FlatList,
-  Text,
-  StyleSheet,
-  useColorScheme,
-  Alert,
-} from "react-native";
+import { View, FlatList, Text, StyleSheet, useColorScheme } from "react-native";
 import CommunityListItem from "./CommunityListItem";
 import { Community } from "./types";
 import Colors from "../constants/Colors";
 import { rS, rV, SIZES } from "../constants";
+import { useAlert } from "../contexts/AlertContext";
 
 interface GlobalCommunityListProps {
   title?: string;
@@ -23,25 +17,25 @@ const GlobalCommunityList: React.FC<GlobalCommunityListProps> = ({
   data,
   onCommunityPress,
 }) => {
+  const { showAlert } = useAlert();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
   const handleJoinCommunity = useCallback(
     (community: Community) => {
-      Alert.alert(
+      showAlert(
         `Join ${community.name}?`,
         `Do you want to join this community and start chatting?`,
         [
-          { text: "Cancel", style: "cancel" },
+          { text: "Cancel", onPress: () => {} },
           {
             text: "Join",
-            style: "default",
             onPress: () => onCommunityPress(community),
           },
         ]
       );
     },
-    [onCommunityPress]
+    [onCommunityPress, showAlert]
   );
 
   const renderItem = useCallback(

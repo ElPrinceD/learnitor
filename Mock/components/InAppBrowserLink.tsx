@@ -1,6 +1,7 @@
 import React from "react";
-import { TouchableOpacity, Linking, Alert } from "react-native";
+import { TouchableOpacity, Linking } from "react-native";
 import * as WebBrowser from "expo-web-browser";
+import { useAlert } from "../contexts/AlertContext";
 
 interface InAppBrowserLinkProps {
   url: string;
@@ -13,6 +14,8 @@ const InAppBrowserLink: React.FC<InAppBrowserLinkProps> = ({
   children,
   style,
 }) => {
+  const { showErrorAlert } = useAlert();
+
   const handlePress = async () => {
     try {
       // Open URL using native browser (SFSafariViewController on iOS, Chrome Custom Tabs on Android)
@@ -25,13 +28,11 @@ const InAppBrowserLink: React.FC<InAppBrowserLinkProps> = ({
         showInRecents: true, // Show in recent apps
       });
     } catch (error) {
-      console.error("WebBrowser error:", error);
       // Fallback to system browser if expo-web-browser fails
       try {
         await Linking.openURL(url);
       } catch (linkingError) {
-        console.error("Linking error:", linkingError);
-        Alert.alert("Error", "Could not open the link");
+        showErrorAlert("Error", "Could not open the link");
       }
     }
   };

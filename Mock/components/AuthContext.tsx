@@ -75,9 +75,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       const token = await getItem("token");
       const user = await getItem("user");
 
-      console.log("Token received:", token);
-      console.log("User received:", user);
-
       if (token && user) {
         setUserToken({ token });
         setUserInfo(JSON.parse(user));
@@ -96,17 +93,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     await setItem("token", token);
     await setItem("user", JSON.stringify(user));
 
-    console.log("Token stored:", token);
-    console.log("User stored:", user);
-
     setUserToken({ token });
     setUserInfo(user);
   };
   const setUserInformation = async (userInfo: any) => {
     try {
-      await setItem('user', JSON.stringify(userInfo));
+      await setItem("user", JSON.stringify(userInfo));
     } catch (error) {
-      console.error('Error setting userInfo:', error);
+      console.error("Error setting userInfo:", error);
     }
   };
 
@@ -120,7 +114,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   return (
     <AuthContext.Provider
-      value={{ userInfo, userToken, login, logout, setUserInfo,setUserInformation, isLoading }}
+      value={{
+        userInfo,
+        userToken,
+        login,
+        logout,
+        setUserInfo,
+        setUserInformation,
+        isLoading,
+      }}
     >
       {children}
     </AuthContext.Provider>

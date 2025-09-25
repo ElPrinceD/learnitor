@@ -208,17 +208,16 @@ const CoursesList: React.FC<Props> = ({
         initialNumToRender={6}
         maxToRenderPerBatch={6}
         windowSize={5}
-        removeClippedSubviews={true}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         contentContainerStyle={styles.courseList}
         showsVerticalScrollIndicator={false}
         refreshControl={refreshControl}
-        getItemLayout={(data, index) => ({
-          length: rV(120) + rMS(20), // height + margin
-          offset: (rV(120) + rMS(20)) * Math.floor(index / 2),
-          index,
-        })}
+        maintainVisibleContentPosition={{
+          minIndexForVisible: 0,
+          autoscrollToTopThreshold: 10,
+        }}
+        onEndReachedThreshold={0.5}
       />
     </View>
   );

@@ -6,7 +6,6 @@ import {
   FlatList,
   TouchableOpacity,
   Animated,
-  Alert,
   useColorScheme,
   ScrollView,
 } from "react-native";
@@ -20,6 +19,8 @@ import {
 import { useAuth } from "./AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { rMS, rS, rV, SIZES } from "../constants";
+import { useAlert } from "../contexts/AlertContext";
+import { useErrorHandler } from "../hooks/useErrorHandler";
 
 interface Period {
   id: string;
@@ -54,6 +55,8 @@ const TimetableDisplay: React.FC<TimetableDisplayProps> = ({
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const { userToken } = useAuth(); // Replace with actual user token
+  const { showDeleteAlert, showAlert } = useAlert();
+  const { handleError } = useErrorHandler();
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -100,8 +103,7 @@ const TimetableDisplay: React.FC<TimetableDisplayProps> = ({
         prev.filter((period) => period.id !== periodToDelete.id)
       );
     } catch (error) {
-      console.error("Error deleting period:", error);
-      Alert.alert("Error", "Failed to delete period. Please try again.");
+      handleError(error, "Delete Failed");
     } finally {
       // Clear loading state
       setLoadingStates((prev) => ({ ...prev, [loadingKey]: false }));
@@ -138,8 +140,7 @@ const TimetableDisplay: React.FC<TimetableDisplayProps> = ({
         )
       );
     } catch (error) {
-      console.error("Error toggling cancel state:", error);
-      Alert.alert("Error", "Failed to update period. Please try again.");
+      handleError(error, "Update Failed");
     } finally {
       // Clear loading state
       setLoadingStates((prev) => ({ ...prev, [loadingKey]: false }));
@@ -147,32 +148,29 @@ const TimetableDisplay: React.FC<TimetableDisplayProps> = ({
   };
 
   const confirmDelete = (period: Period) => {
-    Alert.alert(
-      "Delete Period",
+    showDeleteAlert(
+      "Delete period?",
       "Are you sure you want to delete this period?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "OK", onPress: () => handleDelete(period) },
-      ]
+      () => handleDelete(period)
     );
   };
 
   const confirmToggleCancel = (period: Period) => {
     if (period.cancelled) {
-      Alert.alert(
-        "Uncancel Period",
+      showAlert(
+        "Uncancel period?",
         "Are you sure you want to uncancel this period?",
         [
-          { text: "Cancel", style: "cancel" },
+          { text: "Cancel", onPress: () => {} },
           { text: "OK", onPress: () => handleToggleCancel(period) },
         ]
       );
     } else {
-      Alert.alert(
-        "Cancel Period",
+      showAlert(
+        "Cancel period?",
         "Are you sure you want to cancel this period?",
         [
-          { text: "Cancel", style: "cancel" },
+          { text: "Cancel", onPress: () => {} },
           { text: "OK", onPress: () => handleToggleCancel(period) },
         ]
       );

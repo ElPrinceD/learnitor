@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   ScrollView,
   useColorScheme,
-  Alert,
   Switch,
 } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
@@ -24,6 +23,8 @@ import * as ImagePicker from "expo-image-picker";
 import { rMS, rS, rV, SIZES } from "../../constants";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useAlert } from "../../contexts/AlertContext";
+import { useErrorHandler } from "../../hooks/useErrorHandler";
 
 type RouteParams = {
   id: string;
@@ -36,6 +37,8 @@ const EditCommunityScreen: React.FC = () => {
   const { userToken } = useAuth();
   const { getItem } = useCache();
   const { socket, isConnected, sendMessage } = useWebSocket(); // Use WebSocket context
+  const { showErrorAlert, showSuccessAlert, showAlert } = useAlert();
+  const { handleError } = useErrorHandler();
   const [community, setCommunity] = useState<Community | null>(null);
   const [name, setName] = useState<string>("");
   const [currentCommunityData, setCurrentCommunityData] = useState<any | null>(
@@ -109,7 +112,7 @@ const EditCommunityScreen: React.FC = () => {
 
   const handleSave = async () => {
     if (!userToken || !community || !isConnected || !socket) {
-      Alert.alert("Error", "Not connected or missing authentication.");
+      showErrorAlert("Error", "Not connected or missing authentication.");
       return;
     }
 
@@ -162,16 +165,13 @@ const EditCommunityScreen: React.FC = () => {
           community: changedData, // Send only the changed fields
         });
 
-        console.log("Update community request sent for community ID:", id);
         router.back();
-        Alert.alert("Success", "Community updated successfully.");
+        showSuccessAlert("Success", "Community updated successfully.");
       } else {
-        console.log("No changes detected, skipping update.");
-        Alert.alert("Info", "No changes detected.");
+        showAlert("Info", "No changes detected.");
       }
     } catch (error) {
-      console.error("Failed to save community:", error);
-      Alert.alert("Error", "Failed to save community.");
+      handleError(error, "Save Failed");
     }
   };
 

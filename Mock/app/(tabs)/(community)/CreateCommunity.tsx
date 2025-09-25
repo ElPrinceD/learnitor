@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   TextInput,
   Image,
-  Alert,
 } from "react-native";
 import { useAuth } from "../../../components/AuthContext";
 import Colors from "../../../constants/Colors";
@@ -23,9 +22,11 @@ import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useCommunity } from "../../../contexts/CommunityContext";
 import { useCache } from "../../../contexts/CacheContext";
+import { useAlert } from "../../../contexts/AlertContext";
 
 const CreateCommunity = () => {
   const { userToken } = useAuth();
+  const { showErrorAlert } = useAlert();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -99,7 +100,10 @@ const CreateCommunity = () => {
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Permission to access media library is required!");
+        showErrorAlert(
+          "Permission Required",
+          "Permission to access media library is required!"
+        );
         return;
       }
 

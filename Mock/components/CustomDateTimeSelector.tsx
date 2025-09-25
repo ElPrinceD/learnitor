@@ -54,7 +54,6 @@ const CustomDateTimeSelector: React.FC<CustomDateTimeSelectorProps> = ({
     if (mode === "date") {
       return selectedDate || buttonTitle;
     } else if (mode === "time") {
-      console.log("Displaying time:", selectedTime || buttonTitle);
       return selectedTime || buttonTitle;
     }
     return buttonTitle;
@@ -69,7 +68,6 @@ const CustomDateTimeSelector: React.FC<CustomDateTimeSelectorProps> = ({
   };
 
   const handleTimeChange = (time: string) => {
-    console.log("Time received from DatePicker:", time);
     setSelectedTime(time);
     if (onTimeChange) {
       onTimeChange(time);

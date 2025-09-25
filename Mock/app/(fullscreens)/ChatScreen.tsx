@@ -19,7 +19,6 @@ import {
   Image,
   ToastAndroid,
   Platform,
-  Alert,
   Dimensions,
   Linking,
 } from "react-native";
@@ -28,6 +27,8 @@ import * as Clipboard from "expo-clipboard";
 import { useFocusEffect, useRoute } from "@react-navigation/native";
 
 import { useAuth } from "../../components/AuthContext";
+import { useAlert } from "../../contexts/AlertContext";
+import { useErrorHandler } from "../../hooks/useErrorHandler";
 import { Message } from "../../components/types";
 import {
   GiftedChat,
@@ -96,6 +97,8 @@ const CommunityChatScreen: React.FC = () => {
   const { communityId } = route.params as { communityId: string };
   const [isUpdatingMessages, setIsUpdatingMessages] = useState(false);
   const { userToken, userInfo } = useAuth();
+  const { showDeleteAlert, showErrorAlert } = useAlert();
+  const { handleError } = useErrorHandler();
   const user = userInfo?.user;
   const { socket, isConnected, sendMessage } = useWebSocket();
   const { setCurrentCommunityId, markMessageAsRead, fetchAndCacheMessages } =
@@ -1005,36 +1008,28 @@ const CommunityChatScreen: React.FC = () => {
   const handleDeleteMessage = useCallback(() => {
     const { canDelete } = canEditDeleteOrReply();
     if (canDelete) {
-      Alert.alert(
-        "Confirm Delete",
+      showDeleteAlert(
+        "Delete messages?",
         "Are you sure you want to delete these messages?",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "OK",
-            onPress: () => {
-              selectedMessages.forEach((message) => {
-                sendMessage({
-                  type: "delete_message",
-                  message_id: message._id,
-                });
-                console.log("Message deleted!", message._id);
-              });
+        () => {
+          selectedMessages.forEach((message) => {
+            sendMessage({
+              type: "delete_message",
+              message_id: message._id,
+            });
+          });
 
-              setMessages((prevMessages) => {
-                const updatedMessages = prevMessages.filter(
-                  (m) =>
-                    !selectedMessages.some((selMsg) => selMsg._id === m._id)
-                );
-                return updatedMessages;
-              });
-              setSelectedMessages([]);
-            },
-          },
-        ]
+          setMessages((prevMessages) => {
+            const updatedMessages = prevMessages.filter(
+              (m) => !selectedMessages.some((selMsg) => selMsg._id === m._id)
+            );
+            return updatedMessages;
+          });
+          setSelectedMessages([]);
+        }
       );
     }
-  }, [selectedMessages, sendMessage, canEditDeleteOrReply]);
+  }, [selectedMessages, sendMessage, canEditDeleteOrReply, showDeleteAlert]);
 
   const updateHeader = useCallback(() => {
     console.log("updateHeader called", {
@@ -1675,7 +1670,7 @@ const CommunityChatScreen: React.FC = () => {
               dialogTitle: "Open PDF Document",
             });
           } else {
-            Alert.alert(
+            showErrorAlert(
               "Error",
               "Unable to open PDF. Please install a PDF viewer app."
             );
@@ -1689,12 +1684,11 @@ const CommunityChatScreen: React.FC = () => {
             dialogTitle: "Open PDF Document",
           });
         } else {
-          Alert.alert("Error", "Sharing is not available on this device");
+          showErrorAlert("Error", "Sharing is not available on this device");
         }
       }
     } catch (error) {
-      console.error("Error opening local PDF:", error);
-      Alert.alert("Error", "Failed to open PDF. Please try again.");
+      handleError(error, "PDF Open Failed");
     }
   }, []);
 
@@ -1722,11 +1716,7 @@ const CommunityChatScreen: React.FC = () => {
         // Open the saved file
         await openLocalPDF(localUri);
       } catch (error) {
-        console.error("Error handling base64 PDF:", error);
-        Alert.alert(
-          "Error",
-          "Unable to save the PDF to your device. Please try again."
-        );
+        handleError(error, "PDF Save Failed");
       }
     },
     [openLocalPDF, setDownloadedPDFs]
@@ -1791,11 +1781,7 @@ const CommunityChatScreen: React.FC = () => {
             try {
               await Linking.openURL(documentUri);
             } catch (err) {
-              console.error("Failed to open external PDF:", err);
-              Alert.alert(
-                "Error",
-                "Unable to download or open the PDF. Please check your internet connection and try again."
-              );
+              handleError(err, "PDF Download Failed");
             }
           } finally {
             setDownloadingPDFs((prev) => {
@@ -1812,16 +1798,11 @@ const CommunityChatScreen: React.FC = () => {
           try {
             await Linking.openURL(documentUri);
           } catch (err) {
-            console.error("Failed to open PDF:", err);
-            Alert.alert(
-              "Error",
-              "Unable to open PDF. Please ensure you have a PDF viewer app installed."
-            );
+            handleError(err, "PDF Open Failed");
           }
         }
       } catch (error) {
-        console.error("Error opening PDF:", error);
-        Alert.alert("Error", "Failed to open PDF document. Please try again.");
+        handleError(error, "PDF Open Failed");
       }
     },
     [downloadedPDFs, downloadingPDFs, openLocalPDF, handleBase64PDF]

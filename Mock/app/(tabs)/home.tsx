@@ -153,9 +153,6 @@ const Home: React.FC = () => {
   const themeColors = Colors[colorScheme ?? "light"];
 
   const carouselItems = useMemo(() => {
-    console.log("Announcements data:", announcementsData);
-    console.log("Announcements results:", announcementsData?.results);
-
     // The data is directly an array, not wrapped in a results property
     const items = (announcementsData || []).map((announcement) => ({
       title: announcement.title,
@@ -163,7 +160,6 @@ const Home: React.FC = () => {
       image: announcement.image,
     }));
 
-    console.log("Carousel items:", items);
     return items;
   }, [announcementsData]);
 

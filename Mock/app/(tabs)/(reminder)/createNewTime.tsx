@@ -75,7 +75,6 @@ const CreateNewTime = () => {
       return await createTask(taskData, token);
     },
     onSuccess: async (createdTask) => {
-      console.log("Task created successfully:", createdTask);
       const dateString = formatDate(dueDate);
       const categoryId = selectedCategory?.value?.toString();
 
@@ -86,14 +85,25 @@ const CreateNewTime = () => {
           await storeNotificationId(createdTask.id, notificationId);
         }
       } catch (error) {
-        console.error("Error scheduling notification:", error);
+        // Silently handle notification errors - don't block the user
       }
 
       router.dismiss(1);
       setErrorMessage(null);
     },
     onError: (error) => {
-      setErrorMessage(error.message || "Error creating schedule");
+      // Use ErrorMessage instead of alert for better UX
+      if (error?.response?.status === 400) {
+        setErrorMessage("Please check your input and try again.");
+      } else if (error?.response?.status === 401) {
+        setErrorMessage("Please log in again to continue.");
+      } else if (error?.response?.status >= 500) {
+        setErrorMessage(
+          "Something went wrong on our end. Please try again later."
+        );
+      } else {
+        setErrorMessage("Something went wrong. Please try again.");
+      }
     },
   });
 
@@ -108,9 +118,6 @@ const CreateNewTime = () => {
       minutes < 0 ||
       minutes > 59
     ) {
-      console.error(
-        `Invalid time string: ${timeString}, Hours: ${hours}, Minutes: ${minutes}`
-      );
       return new Date();
     }
     const newDate = new Date();
@@ -132,9 +139,55 @@ const CreateNewTime = () => {
   };
 
   const handleSaveTime = () => {
+    // Clear any previous error messages
+    setErrorMessage(null);
+
+    // Validate required fields
+    if (!title.trim()) {
+      setErrorMessage("Please enter a title for your task.");
+      return;
+    }
+
+    if (!selectedCategory) {
+      setErrorMessage("Please select a category for your task.");
+      return;
+    }
+
+    if (!dueDate || isNaN(dueDate.getTime())) {
+      setErrorMessage("Please select a valid due date for your task.");
+      return;
+    }
+
+    if (!startTime || isNaN(startTime.getTime())) {
+      setErrorMessage("Please select a valid start time for your task.");
+      return;
+    }
+
+    if (!endTime || isNaN(endTime.getTime())) {
+      setErrorMessage("Please select a valid end time for your task.");
+      return;
+    }
+
+    // Check if end time is after start time
+    if (endTime <= startTime) {
+      setErrorMessage("End time must be after start time.");
+      return;
+    }
+
+    // Check if due date is not in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedDate = new Date(dueDate);
+    selectedDate.setHours(0, 0, 0, 0);
+
+    if (selectedDate < today) {
+      setErrorMessage("Due date cannot be in the past.");
+      return;
+    }
+
     const dataToSave: CreateTaskData = {
-      title,
-      description,
+      title: title.trim(),
+      description: description.trim() || "", // Description is optional
       due_date: formatDate(dueDate),
       due_time_start: formatTime(startTime),
       due_time_end: formatTime(endTime),
@@ -167,6 +220,50 @@ const CreateNewTime = () => {
   );
 
   const handleDismissError = useCallback(() => setErrorMessage(null), []);
+
+  // Check if form is valid for visual feedback
+  const isFormValid = useCallback(() => {
+    return !!(
+      title.trim() &&
+      selectedCategory &&
+      dueDate &&
+      !isNaN(dueDate.getTime()) &&
+      startTime &&
+      !isNaN(startTime.getTime()) &&
+      endTime &&
+      !isNaN(endTime.getTime()) &&
+      endTime > startTime
+    );
+  }, [title, selectedCategory, dueDate, startTime, endTime]);
+
+  // Check individual field validity for visual feedback
+  const getFieldError = useCallback(
+    (field: string) => {
+      switch (field) {
+        case "title":
+          return !title.trim() ? "Title is required" : null;
+        case "category":
+          return !selectedCategory ? "Category is required" : null;
+        case "dueDate":
+          return !dueDate || isNaN(dueDate.getTime())
+            ? "Due date is required"
+            : null;
+        case "startTime":
+          return !startTime || isNaN(startTime.getTime())
+            ? "Start time is required"
+            : null;
+        case "endTime":
+          if (!endTime || isNaN(endTime.getTime()))
+            return "End time is required";
+          if (startTime && endTime <= startTime)
+            return "End time must be after start time";
+          return null;
+        default:
+          return null;
+      }
+    },
+    [title, selectedCategory, dueDate, startTime, endTime]
+  );
 
   const styles = StyleSheet.create({
     container: {
@@ -220,7 +317,7 @@ const CreateNewTime = () => {
         <View style={styles.sectionContainer}>
           <AnimatedRoundTextInput
             placeholderTextColor={themeColors.textSecondary}
-            label="Title"
+            label="Title *"
             value={title}
             onChangeText={setTitle}
           />
@@ -238,16 +335,14 @@ const CreateNewTime = () => {
               const newDate = new Date(selectedDate);
               if (!isNaN(newDate.getTime())) {
                 setDueDate(newDate);
-              } else {
-                console.error(`Invalid due date: ${selectedDate}`);
               }
             }}
-            label="Start Date"
+            label="Start Date *"
             minDate={true}
           />
           <CustomDateTimeSelector
             mode="time"
-            label="Start Time"
+            label="Start Time *"
             value={formatTime(startTime)}
             onTimeChange={(time) => {
               const newTime = parseTime(time);
@@ -261,7 +356,7 @@ const CreateNewTime = () => {
           />
           <CustomDateTimeSelector
             mode="time"
-            label="End Time"
+            label="End Time *"
             value={formatTime(endTime)}
             onTimeChange={(time) => {
               const newTime = parseTime(time);
@@ -277,7 +372,7 @@ const CreateNewTime = () => {
 
         <View style={styles.sectionContainer}>
           <CustomPicker
-            label="Category"
+            label="Category *"
             options={categoriesData?.map((cat) => cat.label) || []}
             selectedValue={selectedCategory?.label || undefined}
             onValueChange={(value) =>
@@ -304,10 +399,6 @@ const CreateNewTime = () => {
                   const newDate = new Date(selectedDate);
                   if (!isNaN(newDate.getTime())) {
                     setRecurrenceEndDate(newDate);
-                  } else {
-                    console.error(
-                      `Invalid recurrence end date: ${selectedDate}`
-                    );
                   }
                 }}
                 label="End Date for Recurrence"
@@ -318,11 +409,26 @@ const CreateNewTime = () => {
         </View>
 
         <View style={styles.buttonContainer}>
+          {!isFormValid() && (
+            <Text
+              style={[
+                {
+                  fontSize: SIZES.small,
+                  textAlign: "center",
+                  marginBottom: rV(10),
+                  fontStyle: "italic",
+                },
+                { color: themeColors.textSecondary },
+              ]}
+            >
+              Please fill in all required fields marked with *
+            </Text>
+          )}
           <GameButton
             onPress={handleSaveTime}
-            title="Save"
-            style={styles.button}
-            disabled={createTaskMutation.isPending}
+            title={isFormValid() ? "Save" : "Fill Required Fields"}
+            style={[styles.button, !isFormValid() ? { opacity: 0.6 } : {}]}
+            disabled={createTaskMutation.isPending || !isFormValid()}
           >
             {createTaskMutation.isPending && (
               <ActivityIndicator size="small" color={themeColors.text} />

@@ -2,12 +2,13 @@ import { useState, useEffect, useRef } from "react";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
-import { Platform, Alert, Linking } from "react-native";
+import { Platform, Linking } from "react-native";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { useAuth } from "./components/AuthContext";
 import ApiUrl from "./config";
+import { useAlert } from "./contexts/AlertContext";
 
 export interface PushNotificationState {
   expoPushToken?: Notifications.ExpoPushToken;
@@ -26,6 +27,7 @@ export const usePushNotifications = (): PushNotificationState => {
   >();
 
   const { userToken } = useAuth();
+  const { showAlert } = useAlert();
 
   const notificationListener = useRef<Notifications.Subscription | null>(null);
   const responseListener = useRef<Notifications.Subscription | null>(null);
@@ -75,11 +77,11 @@ export const usePushNotifications = (): PushNotificationState => {
 
       if (finalStatus !== "granted") {
         if (showSettingsPrompt) {
-          Alert.alert(
+          showAlert(
             "Enable Notifications",
             "Please enable notifications in Settings to stay updated.",
             [
-              { text: "Cancel", style: "cancel" },
+              { text: "Cancel", onPress: () => {} },
               {
                 text: "Open Settings",
                 onPress: () => {

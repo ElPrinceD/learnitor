@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Image,
   Share,
-  Alert,
   useColorScheme,
   ScrollView,
   Linking,
@@ -23,10 +22,14 @@ import { useCache } from "../../../contexts/CacheContext"; // New import for cac
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import AppImage from "../../../components/AppImage";
 import InAppBrowserLink from "../../../components/InAppBrowserLink";
+import { useAlert } from "../../../contexts/AlertContext";
+import { useErrorHandler } from "../../../hooks/useErrorHandler";
 
 const Profile = () => {
   const { logout, userToken, userInfo, setUserInformation } = useAuth();
   const { clear } = useCache(); // Access clear from CacheContext
+  const { showErrorAlert } = useAlert();
+  const { handleError } = useErrorHandler();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
@@ -91,12 +94,15 @@ const Profile = () => {
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Permission to access media library is required!");
+        showErrorAlert(
+          "Permission Required",
+          "Permission to access media library is required!"
+        );
         return;
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: "images",
         allowsEditing: true,
         aspect: [1, 1],
         quality: 1,
@@ -106,8 +112,8 @@ const Profile = () => {
         const uri = result.assets[0].uri;
         const formData = new FormData();
 
-        const fileName = uri.split("/").pop();
-        const fileType = fileName.split(".").pop();
+        const fileName = uri.split("/").pop() || "image";
+        const fileType = fileName.split(".").pop() || "jpg";
 
         formData.append("profile_picture", {
           uri,
@@ -139,11 +145,7 @@ const Profile = () => {
         }
       }
     } catch (error) {
-      console.error("Error updating profile picture:", error);
-      Alert.alert(
-        "Error",
-        "Failed to update profile picture. Please try again."
-      );
+      handleError(error, "Update Failed");
     }
   };
 
@@ -296,7 +298,7 @@ const Profile = () => {
             color={themeColors.icon}
             style={styles.icon}
           />
-          <Text style={styles.optionText}>FAQ</Text>
+          <Text style={styles.optionText}>FAQs</Text>
         </TouchableOpacity>
 
         <Text style={styles.sectionTitle}>Terms</Text>

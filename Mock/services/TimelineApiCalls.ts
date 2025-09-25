@@ -92,7 +92,6 @@ export const getCategories = async (token: string | null | undefined) => {
       },
     })
  
-    console.log('Categories API response:', response.data);
     
     // Handle different possible response structures
     const categories = response.data.results || response.data || [];
@@ -137,7 +136,6 @@ export const updateTask = async (taskId, taskData, token, updateScope = 'single'
   }
   // For 'single' scope, no query parameter is needed
   
-  console.log('Update Task Request:', { url, updateScope, taskId });
   
   try {
     const response = await apiClient.patch(url, taskData, {
@@ -145,7 +143,6 @@ export const updateTask = async (taskId, taskData, token, updateScope = 'single'
         Authorization: `Token ${token}`,
       },
     });
-    console.log('Update Task Success:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error updating task:', error);
@@ -168,7 +165,6 @@ export const deleteTask = async (taskId, token, deleteScope = 'single') => {
   }
   // For 'single' scope, no query parameter is needed
   
-  console.log('Delete Task Request:', { url, deleteScope, taskId });
   
   try {
     const response = await apiClient.delete(url, {
@@ -176,7 +172,6 @@ export const deleteTask = async (taskId, token, deleteScope = 'single') => {
         Authorization: `Token ${token}`,
       },
     });
-    console.log('Delete Task Success:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error deleting task:', error);
@@ -190,7 +185,6 @@ export const deleteTask = async (taskId, token, deleteScope = 'single') => {
 
   
 export const createTimetable = async (timetableData, token) => {
-  console.log(timetableData)
   try {
     const response = await apiClient.post('/timetables/', 
       timetableData,
@@ -233,7 +227,6 @@ export const getTimetable = async (timetableId: any, token: string) => {
   }
 };
 export const updateTimetable = async ( id, name, description , token) => {
-  console.log(name)
   try {
     const response = await apiClient.patch(`/timetables/${id}/`, 
       { name, description },  // Only name and description are sent as per your PUT endpoint
@@ -266,7 +259,6 @@ export const deleteTimetable = async (id, token) => {
 
 
 export const createPeriod = async (periodData, token: string | null | undefined) => {
-  console.log("YO",periodData)
   try {
     const response = await apiClient.post('/periods/', 
       periodData,

@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   useColorScheme,
   Share,
-  Alert,
   Switch,
   FlatList,
   Modal,
@@ -40,6 +39,8 @@ import { rMS, rS, rV, SIZES } from "../../constants";
 import { router } from "expo-router";
 import TimetableItem from "../../components/TimetableItem";
 import AppImage from "../../components/AppImage";
+import { useAlert } from "../../contexts/AlertContext";
+import { useErrorHandler } from "../../hooks/useErrorHandler";
 
 type RouteParams = { id: string };
 
@@ -48,6 +49,9 @@ const CommunityDetailScreen: React.FC = () => {
   const { id } = route.params as RouteParams;
   const navigation = useNavigation();
   const { userToken, userInfo } = useAuth();
+  const { showSuccessAlert, showErrorAlert, showDeleteAlert, showAlert } =
+    useAlert();
+  const { handleError } = useErrorHandler();
   const user = userInfo?.user;
   const { unsubscribeFromCommunity, removeMemberFromCommunity } =
     useCommunity();
@@ -350,10 +354,9 @@ const CommunityDetailScreen: React.FC = () => {
           return updatedCommunity;
         });
 
-        Alert.alert("Success", "Member removed from the channel.");
+        showSuccessAlert("Success", "Member removed from the channel.");
       } catch (err) {
-        console.error("Error removing member:", err);
-        Alert.alert("Error", "Failed to remove member.");
+        handleError(err, "Remove Failed");
       }
     },
     [id, userToken?.token, setCachedData]
@@ -367,17 +370,10 @@ const CommunityDetailScreen: React.FC = () => {
           { backgroundColor: themeColors.errorText },
         ]}
         onPress={() => {
-          Alert.alert(
-            "Remove Member",
+          showDeleteAlert(
+            "Remove member?",
             "Are you sure you want to remove this member from the channel?",
-            [
-              { text: "Cancel", style: "cancel" },
-              {
-                text: "Remove",
-                style: "destructive",
-                onPress: () => handleRemoveMember(userId),
-              },
-            ]
+            () => handleRemoveMember(userId)
           );
         }}
       >
@@ -510,8 +506,7 @@ const CommunityDetailScreen: React.FC = () => {
         url: shareableLink,
       });
     } catch (err) {
-      console.error("Error sharing community:", err);
-      Alert.alert("Error", "Failed to generate or share the channel link.");
+      handleError(err, "Share Failed");
     }
   }, [id, community?.name, userToken?.token]);
 
@@ -521,15 +516,14 @@ const CommunityDetailScreen: React.FC = () => {
 
       unsubscribeFromCommunity(id, false);
       setIsFollowing(false);
-      Alert.alert("Success", "You have left the channel.");
+      showSuccessAlert("Success", "You have left the channel.");
 
       router.replace({
         pathname: "/CommunityScreen",
         params: { leftCommunityId: id },
       });
     } catch (err) {
-      console.error("Error leaving community:", err);
-      Alert.alert("Error", "Failed to leave the channel.");
+      handleError(err, "Leave Failed");
     }
   }, [
     id,
@@ -543,15 +537,12 @@ const CommunityDetailScreen: React.FC = () => {
   ]);
 
   const confirmLeaveCommunity = useCallback(() => {
-    Alert.alert(
-      "Leave Channel",
+    showDeleteAlert(
+      "Leave channel?",
       "Are you sure you want to leave (unfollow) this channel?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Leave", style: "destructive", onPress: leaveCommunityHandler },
-      ]
+      leaveCommunityHandler
     );
-  }, [leaveCommunityHandler]);
+  }, [leaveCommunityHandler, showDeleteAlert]);
 
   const renderHeader = useCallback(
     () => (
@@ -696,7 +687,7 @@ const CommunityDetailScreen: React.FC = () => {
             </View>
             <TouchableOpacity
               onPress={() =>
-                Alert.alert(
+                showAlert(
                   "Channel Privacy",
                   "This channel is public and can be found by anyone searching for it. Users can join directly without an invitation."
                 )

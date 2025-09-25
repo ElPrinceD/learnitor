@@ -85,9 +85,8 @@ export default function Tab2Layout() {
             presentation: "modal",
           }}
         />
-         <Stack.Screen
+        <Stack.Screen
           name="FAQScreen"
-          
           options={{
             headerShown: true,
             headerTitle: () => (
@@ -98,7 +97,7 @@ export default function Tab2Layout() {
                   fontWeight: "bold",
                 }}
               >
-                FAQ
+                FAQs
               </Text>
             ),
             headerStyle: {

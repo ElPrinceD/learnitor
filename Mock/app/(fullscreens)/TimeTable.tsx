@@ -8,7 +8,6 @@ import {
   useColorScheme,
   ActivityIndicator,
   TouchableOpacity,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -27,6 +26,8 @@ import AnimatedRoundTextInput from "../../components/AnimatedRoundTextInput";
 import GameButton from "../../components/GameButton";
 import CustomDateTimeSelector from "../../components/CustomDateTimeSelector";
 import { useRoute } from "@react-navigation/native";
+import { useAlert } from "../../contexts/AlertContext";
+import { useErrorHandler } from "../../hooks/useErrorHandler";
 
 interface Period {
   id?: string;
@@ -83,6 +84,8 @@ const CreateTimetablePage: React.FC = () => {
   const navigation = useNavigation();
   const { id } = route.params as RouteParams;
   const { userToken, userInfo } = useAuth();
+  const { showSuccessAlert, showDeleteAlert } = useAlert();
+  const { handleError } = useErrorHandler();
   const params = useLocalSearchParams<{
     timetable?: string;
     periods?: string;
@@ -200,11 +203,11 @@ const CreateTimetablePage: React.FC = () => {
       ),
     onSuccess: () => {
       setIsLoading(false);
-      Alert.alert(
+      showSuccessAlert(
         "Success",
-        "Timetable updated successfully! Your changes have been saved.",
-        [{ text: "OK", onPress: () => router.back() }]
+        "Timetable updated successfully! Your changes have been saved."
       );
+      router.back();
     },
     onError: (error: any) => {
       setErrorMessage(error?.message || "Error updating timetable");
@@ -218,11 +221,11 @@ const CreateTimetablePage: React.FC = () => {
     },
     onSuccess: () => {
       setIsLoading(false);
-      Alert.alert(
+      showSuccessAlert(
         "Success",
-        "Timetable created successfully! You can now view it in your timetables list.",
-        [{ text: "OK", onPress: () => router.back() }]
+        "Timetable created successfully! You can now view it in your timetables list."
       );
+      router.back();
     },
     onError: (error: any) => {
       setErrorMessage(error?.message || "Error creating periods");

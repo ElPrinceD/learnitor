@@ -26,6 +26,7 @@ import { CacheProvider } from "../contexts/CacheContext"; // Update the path
 import { WebSocketProvider } from "../contexts/webSocketProvider"; // Update the path
 import { CommunityProvider } from "../contexts/CommunityContext"; // Update the path
 import { TimelineProvider } from "../contexts/TimelineContext"; // Update the path
+import { AlertProvider } from "../contexts/AlertContext"; // Update the path
 import {
   configureReanimatedLogger,
   ReanimatedLogLevel,
@@ -123,37 +124,41 @@ const RootLayoutNav = () => {
                     <WebSocketProvider token={userToken?.token}>
                       <CommunityProvider token={userToken?.token}>
                         <TimelineProvider token={userToken?.token}>
-                          <ThemeProvider
-                            value={
-                              colorScheme === "dark" ? DarkTheme : DefaultTheme
-                            }
-                          >
-                            <Stack>
-                              <Stack.Screen
-                                name="index"
-                                options={{ headerShown: false }}
-                              />
-                              <Stack.Screen
-                                name="(verification)"
-                                options={{ headerShown: false }}
-                              />
-                              <Stack.Screen
-                                name="(tabs)"
-                                options={{
-                                  headerShown: false,
-                                  headerShadowVisible: false,
-                                }}
-                              />
-                              <Stack.Screen
-                                name="(game)"
-                                options={{ headerShown: false }}
-                              />
-                              <Stack.Screen
-                                name="(fullscreens)"
-                                options={{ headerShown: false }}
-                              />
-                            </Stack>
-                          </ThemeProvider>
+                          <AlertProvider>
+                            <ThemeProvider
+                              value={
+                                colorScheme === "dark"
+                                  ? DarkTheme
+                                  : DefaultTheme
+                              }
+                            >
+                              <Stack>
+                                <Stack.Screen
+                                  name="index"
+                                  options={{ headerShown: false }}
+                                />
+                                <Stack.Screen
+                                  name="(verification)"
+                                  options={{ headerShown: false }}
+                                />
+                                <Stack.Screen
+                                  name="(tabs)"
+                                  options={{
+                                    headerShown: false,
+                                    headerShadowVisible: false,
+                                  }}
+                                />
+                                <Stack.Screen
+                                  name="(game)"
+                                  options={{ headerShown: false }}
+                                />
+                                <Stack.Screen
+                                  name="(fullscreens)"
+                                  options={{ headerShown: false }}
+                                />
+                              </Stack>
+                            </ThemeProvider>
+                          </AlertProvider>
                         </TimelineProvider>
                       </CommunityProvider>
                     </WebSocketProvider>

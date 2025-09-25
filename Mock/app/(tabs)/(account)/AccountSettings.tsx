@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   useColorScheme,
   KeyboardAvoidingView,
@@ -20,11 +19,15 @@ import Colors from "../../../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../../../constants";
 import DateSelector from "../../../components/DateSelector"; // DateSelector component import
 import { router } from "expo-router"; // Import the router from Expo Router
+import { useAlert } from "../../../contexts/AlertContext";
+import { useErrorHandler } from "../../../hooks/useErrorHandler";
 
 const AccountSettings = () => {
   const { userInfo, userToken, setUserInformation, setUserInfo } = useAuth();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+  const { showSuccessAlert } = useAlert();
+  const { handleError } = useErrorHandler();
 
   const [formData, setFormData] = useState({
     firstName: userInfo?.user.first_name || "",
@@ -99,17 +102,11 @@ const AccountSettings = () => {
         });
       }
 
-      Alert.alert("Success", "Your information has been updated.", [
-        {
-          text: "OK",
-          onPress: () => {
-            router.back();
-          },
-        },
-      ]);
+      showSuccessAlert("Success", "Your information has been updated.", () => {
+        router.back();
+      });
     } catch (error) {
-      console.error("Error updating information:", error);
-      Alert.alert("Error", "There was an error updating your information.");
+      handleError(error, "Update Failed");
     } finally {
       setLoading(false);
     }
