@@ -349,6 +349,8 @@ const CommunityScreen: React.FC = () => {
         setIsRefreshing(true);
         try {
           const result = await searchCommunities(query, userToken.token);
+          console.log("Search result:", result);
+
           setGlobalCommunities(
             result.filter((c) => !myCommunities.some((mc) => mc.id === c.id))
           );
@@ -410,12 +412,22 @@ const CommunityScreen: React.FC = () => {
     async (community: Community) => {
       try {
         const exists = myCommunities.some((c) => c.id === community.id);
+
         if (!exists && isConnected) {
+          console.log(`Joining community ${community.id} (${community.name})`);
+
+          // Join the community
           await joinAndSubscribeToCommunity(community.id.toString());
+
+          // Fetch updated community details
           const details = await getCommunityDetails(
             community.id.toString(),
             userToken?.token
           );
+
+          console.log("Community details after join:", details);
+
+          // Add to local communities list
           setMyCommunities((prev) => {
             if (!prev.some((c) => c.id === details.id)) {
               setItem(`community_${details.id}`, JSON.stringify(details));
@@ -423,7 +435,12 @@ const CommunityScreen: React.FC = () => {
             }
             return prev;
           });
+
+          // Show success feedback
+          console.log(`Successfully joined ${community.name}`);
         }
+
+        // Navigate to chat
         setCurrentCommunityId(community.id.toString());
         markMessageAsRead(community.id.toString());
         router.navigate({
@@ -437,7 +454,17 @@ const CommunityScreen: React.FC = () => {
         setSearchQuery("");
       } catch (e) {
         console.error("Join or navigate failed:", e);
-        setErrorMessage("Failed to join or open community.");
+
+        // Provide specific error messages
+        if (e.response?.status === 403) {
+          setErrorMessage("You don't have permission to join this community.");
+        } else if (e.response?.status === 404) {
+          setErrorMessage("Community not found.");
+        } else if (e.message?.includes("network")) {
+          setErrorMessage("Network error. Please check your connection.");
+        } else {
+          setErrorMessage("Failed to join community. Please try again.");
+        }
       }
     },
     [

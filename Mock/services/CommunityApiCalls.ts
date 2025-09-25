@@ -35,10 +35,12 @@ export const searchCommunities = async (searchQuery: string, token: string | nul
                 Authorization: `Token ${token}`,
             },
         });
-        return response.data.results;
+        // Ensure we always return an array
+        return response.data?.results || response.data || [];
     } catch (error) {
         console.error('Error searching communities:', error);
-        throw error;
+        // Return empty array instead of throwing to prevent crashes
+        return [];
     }
 };
 
@@ -140,6 +142,14 @@ export const getCommunityMessages = async (
         return response.data;
     } catch (error) {
         console.error('Error fetching community messages:', error);
+        
+        // Handle 403 Forbidden - user might not be a member
+        if (error.response?.status === 403) {
+            console.warn(`Access denied to community ${communityId}. User might not be a member.`);
+            // Return empty array instead of throwing to prevent crashes
+            return [];
+        }
+        
         throw error;
     }
 };

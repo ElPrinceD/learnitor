@@ -316,7 +316,17 @@ const CommunityChatScreen: React.FC = () => {
       }
     } catch (error) {
       console.error("Error fetching initial messages:", error);
-      setError("Failed to load message history");
+
+      // Handle specific error types
+      if (error.response?.status === 403) {
+        setError(
+          "You don't have permission to access this community's messages"
+        );
+      } else if (error.response?.status === 404) {
+        setError("Community not found");
+      } else {
+        setError("Failed to load message history");
+      }
     } finally {
       setLoading(false);
       setIsInitialLoad(false);
@@ -428,7 +438,17 @@ const CommunityChatScreen: React.FC = () => {
       }
     } catch (error) {
       console.error("Error loading earlier messages:", error);
-      setError("Failed to load earlier messages");
+
+      // Handle specific error types
+      if (error.response?.status === 403) {
+        setError(
+          "You don't have permission to access this community's messages"
+        );
+      } else if (error.response?.status === 404) {
+        setError("Community not found");
+      } else {
+        setError("Failed to load earlier messages");
+      }
     } finally {
       setIsLoadingEarlier(false);
       setIsUpdatingMessages(false);

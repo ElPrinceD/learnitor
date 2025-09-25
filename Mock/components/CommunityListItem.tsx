@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useMemo } from "react";
+import React, { memo, useCallback, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   useColorScheme,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import moment from "moment";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -39,6 +40,7 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
   isGlobal = false,
   showUnreadIndicator = false,
 }) => {
+  const [isJoining, setIsJoining] = useState(false);
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const { userInfo } = useAuth();
@@ -72,6 +74,17 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
       ? `${message.substring(0, MAX_MESSAGE_LENGTH)}...`
       : message;
   }, []);
+
+  const handleJoinPress = useCallback(async () => {
+    if (isJoining) return;
+
+    setIsJoining(true);
+    try {
+      await onPress();
+    } finally {
+      setIsJoining(false);
+    }
+  }, [onPress, isJoining]);
 
   const styles = StyleSheet.create({
     communityItem: {
@@ -123,15 +136,29 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
       paddingRight: rS(10),
     },
     joinButton: {
-      backgroundColor: themeColors.buttonBackground,
-      paddingVertical: 5,
-      paddingHorizontal: 10,
-      borderRadius: 5,
+      backgroundColor: themeColors.tint,
+      paddingVertical: rV(8),
+      paddingHorizontal: rS(16),
+      borderRadius: rS(20),
       marginLeft: "auto",
+      shadowColor: themeColors.tint,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      elevation: 3,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      minWidth: rS(80),
     },
     joinButtonText: {
       color: themeColors.background,
       fontSize: SIZES.medium,
+      fontWeight: "600",
+      marginLeft: rS(4),
+    },
+    joinIcon: {
+      marginRight: rS(4),
     },
     photoIcon: {
       marginRight: 4,
@@ -213,16 +240,27 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
         </View>
         {isGlobal ? (
           <TouchableOpacity
-            style={[
-              styles.joinButton,
-              { backgroundColor: themeColors.buttonBackground },
-            ]}
-            onPress={onPress}
+            style={[styles.joinButton, isJoining && { opacity: 0.7 }]}
+            onPress={handleJoinPress}
+            activeOpacity={0.8}
+            disabled={isJoining}
           >
-            <Text
-              style={[styles.joinButtonText, { color: themeColors.background }]}
-            >
-              Join
+            {isJoining ? (
+              <ActivityIndicator
+                size="small"
+                color={themeColors.background}
+                style={styles.joinIcon}
+              />
+            ) : (
+              <MaterialCommunityIcons
+                name="plus"
+                size={16}
+                color={themeColors.background}
+                style={styles.joinIcon}
+              />
+            )}
+            <Text style={styles.joinButtonText}>
+              {isJoining ? "Joining..." : "Join"}
             </Text>
           </TouchableOpacity>
         ) : (
@@ -231,7 +269,11 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
             <Text
               style={[
                 styles.lastMessageTime,
-                { color: showUnreadIndicator ? 'green' : themeColors.textSecondary },
+                {
+                  color: showUnreadIndicator
+                    ? "green"
+                    : themeColors.textSecondary,
+                },
               ]}
             >
               {getLastMessageTimeDisplay(lastMessage.sent_at)}

@@ -30,10 +30,14 @@ const GlobalCommunityList: React.FC<GlobalCommunityListProps> = ({
     (community: Community) => {
       Alert.alert(
         `Join ${community.name}?`,
-        `Do you want to join this community?`,
+        `Do you want to join this community and start chatting?`,
         [
-          { text: "No", style: "cancel" },
-          { text: "Yes", onPress: () => onCommunityPress(community) },
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Join",
+            style: "default",
+            onPress: () => onCommunityPress(community),
+          },
         ]
       );
     },
