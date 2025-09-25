@@ -59,12 +59,36 @@ export const getCommunityDetails = async (communityId: string | number, token: s
 export const getCommunityTimetable = async (communityId: string, token: string) => {
     
     try {
-        const response = await apiClient.get(`api/timetables/community/${communityId}/`, {
-            headers: {
-                Authorization: `Token ${token}`,
-            },
-        });
-        return response.data.results;
+        // Try multiple possible endpoints
+        const endpoints = [
+            `/api/timetables/?community=${communityId}`,
+            `/api/timetables/community/${communityId}/`,
+            `/api/user/timetables/?community=${communityId}`,
+            `/timetables/?community=${communityId}`
+        ];
+        
+        for (const endpoint of endpoints) {
+            try {
+                console.log(`Trying endpoint: ${endpoint}`);
+                const response = await apiClient.get(endpoint, {
+                    headers: {
+                        Authorization: `Token ${token}`,
+                    },
+                });
+                console.log(`API Response for ${endpoint}:`, response.data);
+                const data = response.data.results || response.data;
+                if (data && (Array.isArray(data) ? data.length > 0 : data)) {
+                    console.log(`Success with endpoint: ${endpoint}`);
+                    return data;
+                }
+            } catch (err) {
+                console.log(`Failed with endpoint: ${endpoint}`, err.message);
+                continue;
+            }
+        }
+        
+        console.log('All endpoints failed, returning empty array');
+        return [];
     } catch (error) {
         console.error('Error fetching community timetable:', error);
         throw error;

@@ -153,7 +153,7 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
         {enrolledTopics.map((topic, index) => (
           <View key={topic.id} style={styles.topicContainer}>
             {renderTimelineItem(topic, index * 2, false)}
-            <View style={styles.backgroundContainer}>
+            {/* <View style={styles.backgroundContainer}>
               <View style={styles.pathContainer}>
                 {(index % 2 === 0) === (Math.floor(index / 5) % 2 === 0) ? (
                   <PathA />
@@ -161,7 +161,7 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
                   <PathB />
                 )}
               </View>
-            </View>
+            </View> */}
             {renderTimelineItem(topic, index * 2 + 1, true)}
           </View>
         ))}

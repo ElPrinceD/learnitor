@@ -4,6 +4,7 @@ import {
   useColorScheme,
   RefreshControl,
   ScrollView,
+  Dimensions,
 } from "react-native";
 import { Text, View } from "../../components/Themed";
 import { useAuth } from "../../components/AuthContext";
@@ -40,6 +41,7 @@ const Home: React.FC = () => {
     data: announcementsData = [],
     error: announcementsError,
     status: announcementsStatus,
+    isLoading: announcementsLoading,
   } = useQuery({
     queryKey: ["announcements", token],
     queryFn: () => getAnnouncements(token!),
@@ -85,7 +87,11 @@ const Home: React.FC = () => {
     queryFn: async () => {
       const progressArray = await Promise.all(
         enrolledCoursesData!.map(async (course) => {
-          const progress = await getCourseProgress(userId!, course.id, token!);
+          const progress = await getCourseProgress(
+            userId!,
+            Number(course.id),
+            token!
+          );
           return { courseId: course.id, progress };
         })
       );
@@ -146,15 +152,20 @@ const Home: React.FC = () => {
 
   const themeColors = Colors[colorScheme ?? "light"];
 
-  const carouselItems = useMemo(
-    () =>
-      (announcementsData?.results || []).map((announcement) => ({
-        title: announcement.title,
-        description: announcement.description,
-        image: announcement.image,
-      })),
-    [announcementsData]
-  );
+  const carouselItems = useMemo(() => {
+    console.log("Announcements data:", announcementsData);
+    console.log("Announcements results:", announcementsData?.results);
+
+    // The data is directly an array, not wrapped in a results property
+    const items = (announcementsData || []).map((announcement) => ({
+      title: announcement.title,
+      description: announcement.description,
+      image: announcement.image,
+    }));
+
+    console.log("Carousel items:", items);
+    return items;
+  }, [announcementsData]);
 
   return (
     <View style={styles(themeColors).container}>
@@ -170,7 +181,13 @@ const Home: React.FC = () => {
           />
         }
       >
-        <ReanimatedCarousel data={carouselItems} />
+        {announcementsLoading ? (
+          <View style={styles(themeColors).loadingContainer}>
+            <Text style={styles(themeColors).loadingText}></Text>
+          </View>
+        ) : carouselItems.length > 0 ? (
+          <ReanimatedCarousel data={carouselItems} />
+        ) : null}
         <View style={styles(themeColors).coursesContainer}>
           {enrolledCoursesData?.length ? (
             <View style={styles(themeColors).taskAndCoursesRow}>
@@ -258,6 +275,18 @@ const styles = (themeColors: (typeof Colors)["light"]) =>
     taskListContainer: {
       flex: 1,
       margin: rMS(10),
+    },
+    loadingContainer: {
+      height: Dimensions.get("window").width * 0.5,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: themeColors.background,
+      borderRadius: 10,
+      marginVertical: 10,
+    },
+    loadingText: {
+      fontSize: SIZES.medium,
+      color: themeColors.text,
     },
   });
 

@@ -70,8 +70,8 @@ const CommunityDetailScreen: React.FC = () => {
   const [profileImages, setProfileImages] = useState<Record<string, string>>(
     {}
   );
-  const [showAllMembers, setShowAllMembers] = useState(false);
   const [showAllCalendar, setShowAllCalendar] = useState(false);
+  const [renderKey, setRenderKey] = useState(0);
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -98,20 +98,35 @@ const CommunityDetailScreen: React.FC = () => {
 
   const memberData = useMemo(() => {
     const members = sortedMembers || [];
-    let displayed = showAllMembers ? members : members.slice(0, 10);
-    if (!showAllMembers && members.length > 10) {
+    let displayed = members.slice(0, 5);
+    if (members.length > 5) {
       displayed = [...displayed, { id: "view-all", type: "view-all" } as any];
     }
     return displayed;
-  }, [sortedMembers, showAllMembers]);
+  }, [sortedMembers]);
 
   const limitedTimetable = useMemo(() => {
-    let items = showAllCalendar ? timetable : timetable.slice(0, 5);
-    if (!showAllCalendar && timetable.length > 5) {
-      items = [...items, { id: "view-all-cal", type: "view-all-cal" }];
+    console.log(
+      "Computing limitedTimetable - showAllCalendar:",
+      showAllCalendar,
+      "timetable.length:",
+      timetable.length
+    );
+
+    if (showAllCalendar) {
+      // When showing all, return all timetable items without the "view-all" button
+      console.log("Showing all timetables:", timetable);
+      return timetable;
+    } else {
+      // When showing limited, return first 5 items plus "view-all" button if there are more than 5
+      let items = timetable.slice(0, 5);
+      if (timetable.length > 5) {
+        items = [...items, { id: "view-all-cal", type: "view-all-cal" }];
+      }
+      console.log("Showing limited timetables:", items);
+      return items;
     }
-    return items;
-  }, [timetable, showAllCalendar]);
+  }, [timetable, showAllCalendar, renderKey]);
 
   const getCachedData = useCallback(
     async (key: string) => {
@@ -143,11 +158,44 @@ const CommunityDetailScreen: React.FC = () => {
       const cachedImages = await getCachedData(`images_${id}`);
 
       if (cachedCommunity && cachedImages && cachedTimetable) {
+        console.log(
+          "Using cached data - Community timetable:",
+          cachedTimetable
+        );
+        console.log("Cached timetable type:", typeof cachedTimetable);
+        console.log(
+          "Cached timetable length:",
+          Array.isArray(cachedTimetable)
+            ? cachedTimetable.length
+            : "Not an array"
+        );
+
         setCommunity(cachedCommunity);
         setIsUserLeader(cachedCommunity?.created_by === user?.email);
         setTimetable(Array.isArray(cachedTimetable) ? cachedTimetable : []);
         setCommunityImages(Array.isArray(cachedImages) ? cachedImages : []);
         setLoading(false);
+
+        // If cached timetable is empty, try to fetch fresh data
+        if (Array.isArray(cachedTimetable) && cachedTimetable.length === 0) {
+          console.log("Cached timetable is empty, fetching fresh data...");
+          try {
+            const freshTimetableData = await getCommunityTimetable(
+              id,
+              userToken?.token!
+            );
+            console.log("Fresh timetable data:", freshTimetableData);
+            setTimetable(
+              Array.isArray(freshTimetableData) ? freshTimetableData : []
+            );
+            await setCachedData(
+              `timetable_${id}`,
+              Array.isArray(freshTimetableData) ? freshTimetableData : []
+            );
+          } catch (err) {
+            console.error("Error fetching fresh timetable data:", err);
+          }
+        }
         return;
       }
 
@@ -166,9 +214,19 @@ const CommunityDetailScreen: React.FC = () => {
 
       const timetableData =
         (await getCommunityTimetable(id, userToken.token)) || [];
-      console.log(timetableData);
-      setTimetable(timetableData);
-      await setCachedData(`timetable_${id}`, timetableData);
+      console.log("Community timetable data:", timetableData);
+      console.log("Timetable data type:", typeof timetableData);
+      console.log(
+        "Timetable data length:",
+        Array.isArray(timetableData) ? timetableData.length : "Not an array"
+      );
+
+      // Ensure we have an array and handle the data structure properly
+      const processedTimetable = Array.isArray(timetableData)
+        ? timetableData
+        : [];
+      setTimetable(processedTimetable);
+      await setCachedData(`timetable_${id}`, processedTimetable);
 
       const memberImages = data?.members?.reduce((acc, member) => {
         if (member.profile_picture)
@@ -244,13 +302,20 @@ const CommunityDetailScreen: React.FC = () => {
           ) {
             setCommunity((prev) => {
               if (!prev) return prev;
-              const updatedMembers = prev.members.filter(
-                (member) => member.id !== data.user_id
-              );
+              const updatedMembers =
+                prev.members?.filter((member) => member.id !== data.user_id) ||
+                [];
               const updatedCommunity = { ...prev, members: updatedMembers };
               setCachedData(`community_${id}`, updatedCommunity);
               return updatedCommunity;
             });
+          } else if (
+            data.type === "timetable_created" &&
+            data.community_id.toString() === id
+          ) {
+            // Clear cached timetable data and refetch
+            removeCachedData(`timetable_${id}`);
+            fetchCommunityData();
           }
         } catch (error) {
           console.error("Error processing WebSocket message:", error);
@@ -272,7 +337,7 @@ const CommunityDetailScreen: React.FC = () => {
         if (!userToken?.token) throw new Error("User not authenticated.");
 
         // Call API to remove member
-        await removeMemberFromCommunity(id, userId);
+        await removeMemberFromCommunity(id, userId.toString());
 
         // Immediately update local state
         setCommunity((prev) => {
@@ -357,15 +422,37 @@ const CommunityDetailScreen: React.FC = () => {
       if (item.type === "view-all") {
         return (
           <TouchableOpacity
-            style={{
-              marginLeft: rS(16),
-              marginVertical: rV(8),
-            }}
-            onPress={() => setShowAllMembers(true)}
+            style={[
+              styles.viewAllMembersButton,
+              {
+                backgroundColor: themeColors.tint + "10",
+                borderColor: themeColors.tint + "30",
+              },
+            ]}
+            onPress={() =>
+              router.push({
+                pathname: "AllMembersScreen",
+                params: {
+                  communityId: id,
+                  communityName: community?.name,
+                },
+              })
+            }
           >
-            <Text style={{ color: themeColors.tint }}>
-              View all {sortedMembers.length} members
+            <Ionicons name="people" size={20} color={themeColors.tint} />
+            <Text
+              style={[
+                styles.viewAllMembersButtonText,
+                { color: themeColors.tint },
+              ]}
+            >
+              View All {sortedMembers.length} Members
             </Text>
+            <Ionicons
+              name="chevron-forward"
+              size={16}
+              color={themeColors.tint}
+            />
           </TouchableOpacity>
         );
       }
@@ -405,7 +492,7 @@ const CommunityDetailScreen: React.FC = () => {
     (item) => {
       router.push({
         pathname: "TimeTableDetails",
-        params: { timetableId: item.id, isUserLeader },
+        params: { timetableId: item.id, isUserLeader: isUserLeader.toString() },
       });
     },
     [isUserLeader]
@@ -524,11 +611,6 @@ const CommunityDetailScreen: React.FC = () => {
             >
               {isUserLeader ? "Leader" : "Member"}
             </Text>
-            {isUserLeader && (
-              <Text style={[styles.leaderNote, { color: themeColors.tint }]}>
-                Can edit
-              </Text>
-            )}
           </View>
           <View style={[styles.statItem, styles.statDivider]}>
             <FontAwesome6 name="users" size={16} color={themeColors.text} />
@@ -559,7 +641,7 @@ const CommunityDetailScreen: React.FC = () => {
         >
           <TouchableOpacity
             style={styles.sectionItem}
-            onPressIn={() => {
+            onPress={() => {
               router.push({
                 pathname: "CommunityImageScreen",
                 params: { id, images: communityImages },
@@ -670,58 +752,205 @@ const CommunityDetailScreen: React.FC = () => {
     () => (
       <>
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionHeaderText, { color: themeColors.text }]}>
-            Calendar
-          </Text>
-          {isUserLeader && (
-            <TouchableOpacity
-              onPressIn={() =>
-                router.push({ pathname: "TimeTable", params: { id } })
-              }
-            >
-              <Text style={[styles.viewAllText, { color: themeColors.tint }]}>
-                Add
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-        {timetable.length === 0 ? (
-          <Text
+          <View
             style={{
-              color: themeColors.textSecondary,
-              marginLeft: rV(16),
-              marginBottom: rV(10),
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
             }}
           >
-            No events found.
-          </Text>
-        ) : (
-          <View style={styles.calendarContainer}>
-            {limitedTimetable.map((item) => {
-              if (item.type === "view-all-cal") {
-                return (
-                  <TouchableOpacity
-                    key="view-all-cal"
-                    style={{
-                      marginLeft: rS(16),
-                      marginVertical: rV(8),
-                    }}
-                    onPress={() => setShowAllCalendar(true)}
+            <Text
+              style={[styles.sectionHeaderText, { color: themeColors.text }]}
+            >
+              Calendar ({timetable.length} events)
+            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <TouchableOpacity
+                onPress={async () => {
+                  console.log("Manual refresh triggered");
+                  try {
+                    await removeCachedData(`timetable_${id}`);
+                    const freshData = await getCommunityTimetable(
+                      id,
+                      userToken?.token!
+                    );
+                    console.log("Manual refresh - Fresh data:", freshData);
+                    setTimetable(Array.isArray(freshData) ? freshData : []);
+                    await setCachedData(
+                      `timetable_${id}`,
+                      Array.isArray(freshData) ? freshData : []
+                    );
+                  } catch (err) {
+                    console.error("Manual refresh error:", err);
+                  }
+                }}
+                style={{
+                  marginRight: 10,
+                  padding: 8,
+                  backgroundColor: themeColors.secondaryBackground,
+                  borderRadius: 6,
+                }}
+              >
+                <Ionicons name="refresh" size={18} color={themeColors.tint} />
+              </TouchableOpacity>
+              {isUserLeader && (
+                <TouchableOpacity
+                  onPress={() =>
+                    router.push({ pathname: "TimeTable", params: { id } })
+                  }
+                  style={{
+                    backgroundColor: themeColors.tint,
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 6,
+                  }}
+                >
+                  <Text
+                    style={{ color: themeColors.background, fontWeight: "600" }}
                   >
-                    <Text style={{ color: themeColors.tint }}>
-                      View all {timetable.length} events
-                    </Text>
-                  </TouchableOpacity>
-                );
-              }
-              return (
-                <TimetableItem
+                    + Add Event
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+        {timetable.length === 0 ? (
+          <View style={styles.emptyStateContainer}>
+            <Ionicons
+              name="calendar-outline"
+              size={48}
+              color={themeColors.textSecondary}
+            />
+            <Text
+              style={[
+                styles.emptyStateText,
+                { color: themeColors.textSecondary },
+              ]}
+            >
+              No events scheduled yet
+            </Text>
+            {isUserLeader && (
+              <Text
+                style={[
+                  styles.emptyStateSubtext,
+                  { color: themeColors.textSecondary },
+                ]}
+              >
+                Tap "Add Event" to create the first event
+              </Text>
+            )}
+          </View>
+        ) : (
+          <View style={styles.eventsContainer}>
+            {/* Show only first 5 events */}
+            <View style={styles.eventsGrid}>
+              {timetable.slice(0, 5).map((item, index) => (
+                <TouchableOpacity
                   key={item.id}
-                  plan={{ ...item, logo: community?.image_url }}
+                  style={[
+                    styles.eventCard,
+                    {
+                      backgroundColor: themeColors.secondaryBackground,
+                      borderColor: themeColors.tint + "20",
+                    },
+                  ]}
                   onPress={() => handleTimetableItemPress(item)}
+                >
+                  <View style={styles.eventHeader}>
+                    <View
+                      style={[
+                        styles.eventIcon,
+                        { backgroundColor: themeColors.tint + "20" },
+                      ]}
+                    >
+                      <Ionicons
+                        name="calendar"
+                        size={20}
+                        color={themeColors.tint}
+                      />
+                    </View>
+                    <View style={styles.eventInfo}>
+                      <Text
+                        style={[styles.eventTitle, { color: themeColors.text }]}
+                        numberOfLines={1}
+                      >
+                        {item.name}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.eventDescription,
+                          { color: themeColors.textSecondary },
+                        ]}
+                        numberOfLines={2}
+                      >
+                        {item.description}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.eventFooter}>
+                    <View style={styles.eventStats}>
+                      <Ionicons
+                        name="time-outline"
+                        size={14}
+                        color={themeColors.textSecondary}
+                      />
+                      <Text
+                        style={[
+                          styles.eventStatText,
+                          { color: themeColors.textSecondary },
+                        ]}
+                      >
+                        {item.periods?.length || 0} periods
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={16}
+                      color={themeColors.textSecondary}
+                    />
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* View All Events Button */}
+            {timetable.length > 5 && (
+              <TouchableOpacity
+                style={[
+                  styles.viewAllButton,
+                  {
+                    backgroundColor: themeColors.tint + "10",
+                    borderColor: themeColors.tint + "30",
+                  },
+                ]}
+                onPress={() =>
+                  router.push({
+                    pathname: "AllEventsScreen",
+                    params: {
+                      communityId: id,
+                      communityName: community?.name,
+                    },
+                  })
+                }
+              >
+                <Ionicons name="list" size={20} color={themeColors.tint} />
+                <Text
+                  style={[
+                    styles.viewAllButtonText,
+                    { color: themeColors.tint },
+                  ]}
+                >
+                  View All {timetable.length} Events
+                </Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={16}
+                  color={themeColors.tint}
                 />
-              );
-            })}
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -986,6 +1215,110 @@ const CommunityDetailScreen: React.FC = () => {
           fontSize: SIZES.xSmall,
           fontWeight: "600",
           marginLeft: rS(8),
+        },
+        // New Calendar UI Styles
+        emptyStateContainer: {
+          alignItems: "center",
+          paddingVertical: rV(40),
+          paddingHorizontal: rS(20),
+        },
+        emptyStateText: {
+          fontSize: SIZES.medium,
+          fontWeight: "600",
+          marginTop: rV(12),
+          textAlign: "center",
+        },
+        emptyStateSubtext: {
+          fontSize: SIZES.small,
+          marginTop: rV(8),
+          textAlign: "center",
+          lineHeight: 20,
+        },
+        eventsContainer: {
+          paddingHorizontal: rS(16),
+        },
+        eventsGrid: {
+          gap: rV(12),
+        },
+        eventCard: {
+          borderRadius: rMS(12),
+          padding: rV(16),
+          borderWidth: 1,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+          elevation: 3,
+        },
+        eventHeader: {
+          flexDirection: "row",
+          alignItems: "flex-start",
+          marginBottom: rV(12),
+        },
+        eventIcon: {
+          width: rMS(40),
+          height: rMS(40),
+          borderRadius: rMS(20),
+          alignItems: "center",
+          justifyContent: "center",
+          marginRight: rS(12),
+        },
+        eventInfo: {
+          flex: 1,
+        },
+        eventTitle: {
+          fontSize: SIZES.medium,
+          fontWeight: "600",
+          marginBottom: rV(4),
+        },
+        eventDescription: {
+          fontSize: SIZES.small,
+          lineHeight: 18,
+        },
+        eventFooter: {
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+        },
+        eventStats: {
+          flexDirection: "row",
+          alignItems: "center",
+        },
+        eventStatText: {
+          fontSize: SIZES.xSmall,
+          marginLeft: rS(4),
+          fontWeight: "500",
+        },
+        viewAllButton: {
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
+          paddingVertical: rV(16),
+          paddingHorizontal: rS(20),
+          borderRadius: rMS(12),
+          borderWidth: 1,
+          marginTop: rV(12),
+        },
+        viewAllButtonText: {
+          fontSize: SIZES.medium,
+          fontWeight: "600",
+          marginHorizontal: rS(8),
+        },
+        viewAllMembersButton: {
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
+          paddingVertical: rV(16),
+          paddingHorizontal: rS(20),
+          borderRadius: rMS(12),
+          borderWidth: 1,
+          marginHorizontal: rS(16),
+          marginVertical: rV(12),
+        },
+        viewAllMembersButtonText: {
+          fontSize: SIZES.medium,
+          fontWeight: "600",
+          marginHorizontal: rS(8),
         },
       }),
     [themeColors]

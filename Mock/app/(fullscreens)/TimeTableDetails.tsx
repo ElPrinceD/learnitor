@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
+import { useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../../components/AuthContext";
 import { getTimetable } from "../../services/TimelineApiCalls";
 import Colors from "../../constants/Colors";
@@ -61,10 +62,18 @@ const TimetableDetailPage = () => {
     data: timetable,
     isLoading,
     isError,
+    refetch,
   } = useQuery<Timetable, Error>({
     queryKey: ["timetable", timetableId],
     queryFn: () => getTimetable(Number(timetableId), userToken?.token!),
   });
+
+  // Refetch data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   React.useEffect(() => {
     if (isError) {

@@ -12,6 +12,7 @@ import {
   Text,
   useColorScheme,
   ActivityIndicator,
+  TouchableOpacity,
 } from "react-native";
 import moment from "moment";
 import { debounce } from "lodash"; // Add lodash for debouncing
@@ -20,7 +21,7 @@ import Colors from "../../../constants/Colors";
 import { useAuth } from "../../../components/AuthContext";
 import ErrorMessage from "../../../components/ErrorMessage";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { SIZES, rS, rV } from "../../../constants";
+import { SIZES, rS, rV, rMS } from "../../../constants";
 import { Community } from "../../../components/types";
 import CommunityList from "../../../components/CommunityList";
 import GlobalCommunityList from "../../../components/GlobalCommunityList";
@@ -31,6 +32,7 @@ import { useCache } from "../../../contexts/CacheContext";
 import {
   getCommunityDetails,
   searchCommunities,
+  getUserCommunities,
 } from "../../../services/CommunityApiCalls";
 
 const styles = StyleSheet.create({
@@ -60,6 +62,41 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: rV(10),
   },
+  emptyStateContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: rV(60),
+    paddingHorizontal: rS(20),
+  },
+  emptyStateIcon: {
+    marginBottom: rV(20),
+  },
+  emptyStateEmoji: {
+    fontSize: 64,
+    textAlign: "center",
+  },
+  emptyStateTitle: {
+    fontSize: SIZES.large,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: rV(8),
+  },
+  emptyStateSubtitle: {
+    fontSize: SIZES.medium,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: rV(24),
+  },
+  emptyStateButton: {
+    paddingHorizontal: rS(24),
+    paddingVertical: rV(12),
+    borderRadius: rMS(8),
+  },
+  emptyStateButtonText: {
+    color: "white",
+    fontWeight: "600",
+    fontSize: SIZES.medium,
+  },
 });
 
 const CommunityScreen: React.FC = () => {
@@ -67,8 +104,7 @@ const CommunityScreen: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [myCommunities, setMyCommunities] = useState<Community[]>([]);
   const [globalCommunities, setGlobalCommunities] = useState<Community[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isFetching, setIsFetching] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastMessages, setLastMessages] = useState<Record<string, any>>({});
   const [initialLoad, setInitialLoad] = useState(true);
   const { userToken, userInfo } = useAuth();
@@ -105,9 +141,7 @@ const CommunityScreen: React.FC = () => {
   );
 
   const loadCachedData = useCallback(async () => {
-    if (myCommunities.length > 0) return; // Skip if data exists
     try {
-      setLoading(true);
       const keys = await getAllKeys();
       const cachedCommunityKeys = keys.filter((key) =>
         key.startsWith("community_")
@@ -132,22 +166,67 @@ const CommunityScreen: React.FC = () => {
           })
         );
         setLastMessages(Object.fromEntries(messages));
-      } else {
-        setErrorMessage("No communities found.");
       }
     } catch (e) {
-      setErrorMessage("Failed to load communities.");
       console.error("Cache load error:", e);
     } finally {
-      setLoading(false);
       setInitialLoad(false);
     }
-  }, [getAllKeys, getItem, myCommunities.length]);
+  }, [getAllKeys, getItem]);
+
+  const fetchCommunitiesFromAPI = useCallback(
+    async (silent = false) => {
+      if (!userToken?.token) return;
+
+      try {
+        if (!silent) setIsRefreshing(true);
+        console.log("Fetching communities from API...");
+        const communities = await getUserCommunities(userToken.token);
+        console.log("API communities response:", communities);
+
+        if (communities && communities.length > 0) {
+          setMyCommunities(communities);
+
+          // Cache the communities
+          await Promise.all(
+            communities.map(async (community: Community) => {
+              await setItem(
+                `community_${community.id}`,
+                JSON.stringify(community)
+              );
+            })
+          );
+        } else if (!silent) {
+          console.log("No communities returned from API");
+          setErrorMessage("No communities found.");
+        }
+      } catch (e) {
+        console.error("API fetch error:", e);
+        if (!silent) {
+          setErrorMessage("Failed to load communities from server.");
+        }
+      } finally {
+        if (!silent) setIsRefreshing(false);
+        setInitialLoad(false);
+      }
+    },
+    [userToken?.token, setItem]
+  );
 
   useFocusEffect(
     useCallback(() => {
-      if (!initialLoad && myCommunities.length > 0) return;
-      loadCachedData();
+      const loadData = async () => {
+        // Always load cached data first (instant display)
+        await loadCachedData();
+
+        // Then silently fetch fresh data in background
+        if (userToken?.token) {
+          fetchCommunitiesFromAPI(true); // Silent fetch
+        }
+      };
+
+      loadData();
+
       const handleNavParam = async () => {
         const newCommunityParam = params.newCommunity;
         if (
@@ -174,10 +253,10 @@ const CommunityScreen: React.FC = () => {
       handleNavParam();
     }, [
       loadCachedData,
+      fetchCommunitiesFromAPI,
       params.newCommunity,
       setItem,
-      initialLoad,
-      myCommunities.length,
+      userToken?.token,
     ])
   );
   const debouncedSetCommunities = useCallback(
@@ -267,7 +346,7 @@ const CommunityScreen: React.FC = () => {
   const debouncedFetchGlobal = useCallback(
     debounce(async (query: string) => {
       if (query.length >= 3 && userToken?.token) {
-        setIsFetching(true);
+        setIsRefreshing(true);
         try {
           const result = await searchCommunities(query, userToken.token);
           setGlobalCommunities(
@@ -277,7 +356,7 @@ const CommunityScreen: React.FC = () => {
           setErrorMessage("Failed to search communities.");
           console.error("Search error:", e);
         } finally {
-          setIsFetching(false);
+          setIsRefreshing(false);
         }
       } else {
         setGlobalCommunities([]);
@@ -387,6 +466,11 @@ const CommunityScreen: React.FC = () => {
 
   const handleDismissError = useCallback(() => setErrorMessage(null), []);
 
+  const handleRefresh = useCallback(async () => {
+    setErrorMessage(null);
+    await fetchCommunitiesFromAPI(false); // Show loading for manual refresh
+  }, [fetchCommunitiesFromAPI]);
+
   return (
     <View
       style={[styles.container, { backgroundColor: themeColors.background }]}
@@ -394,38 +478,89 @@ const CommunityScreen: React.FC = () => {
       <View style={styles.searchContainer}>
         <SearchBar onSearch={handleSearch} />
       </View>
-      {initialLoad || loading ? (
-        Array.from({ length: 6 }).map((_, idx) => (
-          <View key={`skeleton-${idx}`} style={styles.skeletonItem}>
-            <Skeleton
-              colorMode={colorMode}
-              width={rS(50)}
-              height={rS(50)}
-              radius={50}
-            />
-            <View style={styles.skeletonTextContainer}>
-              <Skeleton colorMode={colorMode} height={rV(20)} width="60%" />
-              <Skeleton colorMode={colorMode} height={rV(15)} width="80%" />
-            </View>
-          </View>
-        ))
-      ) : noResultsFound ? (
+      {noResultsFound ? (
         <View style={styles.listContainer}>
-          {isFetching ? (
-            <ActivityIndicator
-              color={themeColors.tint}
-              style={styles.noResultsText}
-            />
-          ) : (
+          <View style={styles.emptyStateContainer}>
+            <View style={styles.emptyStateIcon}>
+              <Text
+                style={[
+                  styles.emptyStateEmoji,
+                  { color: themeColors.textSecondary },
+                ]}
+              >
+                🏘️
+              </Text>
+            </View>
+            <Text style={[styles.emptyStateTitle, { color: themeColors.text }]}>
+              No communities found
+            </Text>
             <Text
               style={[
-                styles.noResultsText,
+                styles.emptyStateSubtitle,
                 { color: themeColors.textSecondary },
               ]}
             >
-              No communities found.
+              {searchQuery.length >= 3
+                ? `No communities match "${searchQuery}"`
+                : "You haven't joined any communities yet"}
             </Text>
-          )}
+            <TouchableOpacity
+              style={[
+                styles.emptyStateButton,
+                { backgroundColor: themeColors.tint },
+              ]}
+              onPress={handleRefresh}
+              disabled={isRefreshing}
+            >
+              {isRefreshing ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <Text style={styles.emptyStateButtonText}>
+                  {searchQuery.length >= 3 ? "Clear Search" : "Refresh"}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : myCommunities.length === 0 && !searchQuery ? (
+        <View style={styles.listContainer}>
+          <View style={styles.emptyStateContainer}>
+            <View style={styles.emptyStateIcon}>
+              <Text
+                style={[
+                  styles.emptyStateEmoji,
+                  { color: themeColors.textSecondary },
+                ]}
+              >
+                🏘️
+              </Text>
+            </View>
+            <Text style={[styles.emptyStateTitle, { color: themeColors.text }]}>
+              No communities yet
+            </Text>
+            <Text
+              style={[
+                styles.emptyStateSubtitle,
+                { color: themeColors.textSecondary },
+              ]}
+            >
+              Join communities to start connecting with others
+            </Text>
+            <TouchableOpacity
+              style={[
+                styles.emptyStateButton,
+                { backgroundColor: themeColors.tint },
+              ]}
+              onPress={handleRefresh}
+              disabled={isRefreshing}
+            >
+              {isRefreshing ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <Text style={styles.emptyStateButtonText}>Refresh</Text>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
       ) : (
         <View style={styles.listContainer}>
