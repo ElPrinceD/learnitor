@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   useColorScheme,
   ScrollView,
   Linking,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -20,7 +21,7 @@ import Colors from "../../../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../../../constants";
 import { useCache } from "../../../contexts/CacheContext"; // New import for caching
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import AppImage from "../../../components/AppImage";
+// import AppImage from "../../../components/AppImage"; // Commented out for profile page
 import InAppBrowserLink from "../../../components/InAppBrowserLink";
 import { useAlert } from "../../../contexts/AlertContext";
 import { useErrorHandler } from "../../../hooks/useErrorHandler";
@@ -32,6 +33,12 @@ const Profile = () => {
   const { handleError } = useErrorHandler();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+  const [imageUpdateKey, setImageUpdateKey] = useState(0); // Track image updates
+  const [imageLoading, setImageLoading] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [currentImageUri, setCurrentImageUri] = useState<string | undefined>(
+    userInfo?.user.profile_picture
+  );
 
   const handleAccountSettings = () => {
     router.navigate("AccountSettings");
@@ -135,6 +142,12 @@ const Profile = () => {
         );
 
         if (userInfo) {
+          // Clear current image first
+          setCurrentImageUri(undefined);
+          setImageLoading(true);
+          setImageError(false);
+
+          // Update user info
           setUserInformation({
             ...userInfo,
             user: {
@@ -142,6 +155,18 @@ const Profile = () => {
               profile_picture: response.data.profile_picture,
             },
           });
+
+          // Force image cache invalidation and set new URI
+          setImageUpdateKey((prev) => prev + 1);
+
+          // Set new image URI after a small delay to ensure the old one is cleared
+          setTimeout(() => {
+            setCurrentImageUri(
+              `${
+                response.data.profile_picture
+              }?t=${Date.now()}&v=${Math.random()}`
+            );
+          }, 100);
         }
       }
     } catch (error) {
@@ -177,6 +202,17 @@ const Profile = () => {
       backgroundColor: themeColors.background,
       borderRadius: 15,
       padding: 6,
+    },
+    imageLoadingOverlay: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "rgba(0,0,0,0.3)",
+      borderRadius: rMS(50),
+      justifyContent: "center",
+      alignItems: "center",
     },
     title: {
       marginLeft: rS(20),
@@ -249,10 +285,30 @@ const Profile = () => {
           onPress={handleProfilePictureUpdate}
           style={styles.profileImageContainer}
         >
-          <AppImage
-            uri={userInfo?.user.profile_picture}
-            style={styles.profileImage}
-          />
+          <View key={`profile-image-${imageUpdateKey}`}>
+            <Image
+              source={{
+                uri: currentImageUri,
+              }}
+              style={styles.profileImage}
+              defaultSource={require("../../../assets/images/placeholder.png")}
+              resizeMode="cover"
+              onLoadStart={() => setImageLoading(true)}
+              onLoad={() => {
+                setImageLoading(false);
+                setImageError(false);
+              }}
+              onError={() => {
+                setImageLoading(false);
+                setImageError(true);
+              }}
+            />
+            {imageLoading && (
+              <View style={styles.imageLoadingOverlay}>
+                <ActivityIndicator size="small" color={themeColors.tint} />
+              </View>
+            )}
+          </View>
           <Ionicons
             name="camera-outline"
             size={SIZES.large}

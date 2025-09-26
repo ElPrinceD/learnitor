@@ -133,9 +133,9 @@ const RootLayoutNav = () => {
                 {/* Wrap all contexts with SQLiteProvider */}
                 <SQLiteProvider databaseName="slate.db">
                   <CacheProvider>
-                    <WebSocketProvider token={userToken?.token ?? null}>
-                      <CommunityProvider token={userToken?.token ?? null}>
-                        <TimelineProvider token={userToken?.token ?? null}>
+                    <WebSocketProvider token={userToken?.token}>
+                      <CommunityProvider token={userToken?.token}>
+                        <TimelineProvider token={userToken?.token}>
                           <AlertProvider>
                             <AdManagerProvider>
                               <ThemeProvider

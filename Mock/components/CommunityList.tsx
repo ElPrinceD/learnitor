@@ -41,14 +41,13 @@ const CommunityList: React.FC<CommunityListProps> = ({
 
   useEffect(() => {
     if (showLastMessage && getLastMessage) {
-      const fetchLastMessages = async () => {
-        const messages = await Promise.all(
-          data.map(async (item) => {
-            const message = await getLastMessage(item.id);
-            return [item.id, message];
-          })
-        );
-        setLastMessages(Object.fromEntries(messages));
+      const fetchLastMessages = () => {
+        const messages = data.map((item) => {
+          const message = getLastMessage(item.id);
+          return [item.id, message];
+        });
+        const messagesMap = Object.fromEntries(messages);
+        setLastMessages(messagesMap);
       };
       fetchLastMessages();
     }

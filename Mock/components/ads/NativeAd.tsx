@@ -175,47 +175,21 @@ const NativeAdComponent: React.FC<NativeAdComponentProps> = ({
       textShadowOffset: { width: 0, height: 1 },
       textShadowRadius: 2,
     },
-    loadingContainer: {
-      height: rV(240),
-      backgroundColor: themeColors.card,
-      justifyContent: "center",
-      alignItems: "center",
-      borderRadius: 10,
-    },
-    loadingText: {
-      fontSize: SIZES.medium,
-      color: themeColors.tabIconDefault,
-    },
-    errorContainer: {
-      height: rV(80),
-      backgroundColor: themeColors.card,
-      justifyContent: "center",
-      alignItems: "center",
-      borderRadius: 10,
-    },
-    errorText: {
-      fontSize: SIZES.medium,
-      color: themeColors.tabIconDefault,
-    },
   });
 
-  // Show loading state
+  // Don't render if ad is loading
   if (adState === AdLoadingState.LOADING) {
-    return (
-      <View style={[styles.container, styles.loadingContainer]}>
-        <Text style={styles.loadingText}>Loading ad...</Text>
-      </View>
-    );
+    return <View style={{ height: 0, width: 0 }} />;
   }
 
   // Don't render if ad failed to load
   if (adState === AdLoadingState.ERROR) {
-    return null;
+    return <View style={{ height: 0, width: 0 }} />;
   }
 
   // Don't render if no native ad
   if (!nativeAd) {
-    return null;
+    return <View style={{ height: 0, width: 0 }} />;
   }
 
   return (

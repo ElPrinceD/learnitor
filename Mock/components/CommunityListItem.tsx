@@ -167,8 +167,8 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
 
   return (
     <TouchableHighlight
-      activeOpacity={0.8}
-      underlayColor={themeColors.shadow}
+      activeOpacity={0.7}
+      underlayColor={themeColors.secondaryBackground}
       onPress={onPress}
     >
       <View style={styles.communityItem}>

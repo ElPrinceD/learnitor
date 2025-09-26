@@ -136,15 +136,18 @@ const CustomAlert: React.FC<CustomAlertProps> = memo(
             textAlign: "left",
           },
           buttonContainer: {
-            flexDirection: "row",
-            justifyContent: "flex-end",
-            gap: rS(24),
+            flexDirection: buttons.length <= 2 ? "row" : "column",
+            alignItems: buttons.length <= 2 ? "flex-end" : "flex-end",
+            justifyContent: buttons.length <= 2 ? "flex-end" : "flex-start",
+            gap: buttons.length <= 2 ? rS(24) : rS(8),
           },
           button: {
-            paddingHorizontal: rS(8),
+            paddingHorizontal: rS(12),
             paddingVertical: rV(8),
             alignItems: "center",
             justifyContent: "center",
+            minWidth: buttons.length <= 2 ? rS(80) : rS(100),
+            borderRadius: rMS(4),
           },
           buttonText: {
             fontSize: SIZES.small,

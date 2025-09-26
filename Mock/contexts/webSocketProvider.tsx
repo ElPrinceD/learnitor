@@ -6,10 +6,10 @@ import React, {
   useMemo,
   useRef,
   useState,
-} from 'react';
-import { InteractionManager } from 'react-native';
-import WsUrl from '../configWs';
-import { useAuth } from '../components/AuthContext';
+} from "react";
+import { InteractionManager } from "react-native";
+import WsUrl from "../configWs";
+import { useAuth } from "../components/AuthContext";
 
 type MessageListener = (message: any) => void;
 
@@ -28,7 +28,10 @@ interface WebSocketProviderProps {
   children: React.ReactNode;
 }
 
-export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ token, children }) => {
+export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
+  token,
+  children,
+}) => {
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const reconnectAttemptsRef = useRef(0);
@@ -39,7 +42,12 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ token, chi
   const { userInfo } = useAuth();
 
   const connectWebSocket = useCallback(() => {
-    if (!token || isConnectingRef.current || socket?.readyState === WebSocket.OPEN) return;
+    if (
+      !token ||
+      isConnectingRef.current ||
+      socket?.readyState === WebSocket.OPEN
+    )
+      return;
 
     isConnectingRef.current = true;
 
@@ -47,7 +55,6 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ token, chi
     setSocket(ws);
 
     ws.onopen = () => {
-      console.log('WebSocket connected');
       setIsConnected(true);
       reconnectAttemptsRef.current = 0;
       isConnectingRef.current = false;
@@ -55,18 +62,18 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ token, chi
 
     ws.onmessage = (event) => {
       console.log(`Message from server (${userInfo?.user.first_name}):`, event);
-      listenersRef.current.forEach(listener => listener(event));
+      listenersRef.current.forEach((listener) => listener(event));
     };
 
     ws.onclose = (event) => {
-      console.log('WebSocket disconnected:', event.reason || event.code);
+      console.log("WebSocket disconnected:", event.reason || event.code);
       setIsConnected(false);
       isConnectingRef.current = false;
       reconnectWebSocket();
     };
 
     ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
+      console.error("WebSocket error:", error);
       ws.close(); // Ensure proper closure on error
     };
   }, [token, socket, userInfo]);
@@ -77,9 +84,13 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ token, chi
     const attempt = reconnectAttemptsRef.current;
     const baseDelay = 1000;
     const maxDelay = 30000;
-    const backoff = Math.min(baseDelay * Math.pow(2, attempt), maxDelay) + Math.random() * 1000;
+    const backoff =
+      Math.min(baseDelay * Math.pow(2, attempt), maxDelay) +
+      Math.random() * 1000;
 
-    console.log(`Reconnecting in ${Math.round(backoff / 1000)}s (attempt ${attempt + 1})`);
+    console.log(
+      `Reconnecting in ${Math.round(backoff / 1000)}s (attempt ${attempt + 1})`
+    );
     reconnectTimeout.current = setTimeout(() => {
       reconnectAttemptsRef.current++;
       reconnectTimeout.current = null;
@@ -107,14 +118,17 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ token, chi
     };
   }, [token, connectWebSocket]);
 
-  const sendMessage = useCallback((message: any) => {
-    if (socket?.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify(message));
-      console.log('WebSocket sent:', message);
-    } else {
-      console.warn('WebSocket is not connected.');
-    }
-  }, [socket]);
+  const sendMessage = useCallback(
+    (message: any) => {
+      if (socket?.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify(message));
+        console.log("WebSocket sent:", message);
+      } else {
+        console.warn("WebSocket is not connected.");
+      }
+    },
+    [socket]
+  );
 
   const addMessageListener = useCallback((listener: MessageListener) => {
     listenersRef.current.push(listener);
@@ -124,13 +138,22 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ token, chi
     listenersRef.current = listenersRef.current.filter((l) => l !== listener);
   }, []);
 
-  const contextValue = useMemo(() => ({
-    socket,
-    isConnected,
-    sendMessage,
-    addMessageListener,
-    removeMessageListener,
-  }), [socket, isConnected, sendMessage, addMessageListener, removeMessageListener]);
+  const contextValue = useMemo(
+    () => ({
+      socket,
+      isConnected,
+      sendMessage,
+      addMessageListener,
+      removeMessageListener,
+    }),
+    [
+      socket,
+      isConnected,
+      sendMessage,
+      addMessageListener,
+      removeMessageListener,
+    ]
+  );
 
   return (
     <WebSocketContext.Provider value={contextValue}>
@@ -142,7 +165,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ token, chi
 export const useWebSocket = () => {
   const context = useContext(WebSocketContext);
   if (!context) {
-    throw new Error('useWebSocket must be used within a WebSocketProvider');
+    throw new Error("useWebSocket must be used within a WebSocketProvider");
   }
   return context;
 };

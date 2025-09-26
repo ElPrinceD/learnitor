@@ -27,6 +27,7 @@ interface AppImageProps {
   uri?: string;
   style?: ImageProps["style"];
   onPress?: (event: GestureResponderEvent) => void; // Add optional onPress prop
+  cacheKey?: string; // Add cache key for forcing cache invalidation
 }
 
 const styles = StyleSheet.create({
@@ -48,7 +49,12 @@ const styles = StyleSheet.create({
   },
 });
 
-const AppImage: React.FC<AppImageProps> = ({ uri, style, onPress }) => {
+const AppImage: React.FC<AppImageProps> = ({
+  uri,
+  style,
+  onPress,
+  cacheKey,
+}) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const isLoadingRef = useRef(true);
@@ -67,9 +73,11 @@ const AppImage: React.FC<AppImageProps> = ({ uri, style, onPress }) => {
 
   const renderImage = () => {
     if (isValidUri && !useFallback) {
+      // Use cacheKey to force cache invalidation if provided
+      const imageUri = cacheKey ? `${uri}?cacheKey=${cacheKey}` : uri;
       return (
         <CachedImage
-          uri={uri}
+          uri={imageUri}
           style={[styles.image, style]}
           onLoad={handleLoad}
           onError={handleError}

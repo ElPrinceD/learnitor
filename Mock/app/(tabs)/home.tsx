@@ -9,7 +9,7 @@ import {
 import { Text, View } from "../../components/Themed";
 import { useAuth } from "../../components/AuthContext";
 import Colors from "../../constants/Colors";
-import { SIZES, rMS, rS } from "../../constants";
+import { SIZES, rMS, rS, rV, useShadows } from "../../constants";
 import TaskList from "../../components/TaskList";
 import {
   getTodayPlans,
@@ -223,8 +223,8 @@ const Home: React.FC = () => {
   );
 };
 
-const styles = (themeColors: (typeof Colors)["light"]) =>
-  StyleSheet.create({
+const styles = (themeColors: (typeof Colors)["light"]) => {
+  return StyleSheet.create({
     container: {
       flex: 1,
       padding: rMS(12),
@@ -244,33 +244,39 @@ const styles = (themeColors: (typeof Colors)["light"]) =>
     },
     tasksContainer: {
       backgroundColor: themeColors.background,
-      borderRadius: rMS(5),
+      // borderRadius: rMS(12),
+      padding: rMS(16),
+      marginTop: rMS(16),
       flexDirection: "row",
+      alignItems: "stretch",
     },
     taskCountContainer: {
-      backgroundColor: "#EF643B",
-      marginVertical: rMS(10),
-      borderRadius: rMS(10),
-      alignItems: "flex-end",
+      backgroundColor: "transparent",
+      borderWidth: 2,
+      borderColor: "#EF643B",
+      borderRadius: rMS(12),
+      alignItems: "center",
       justifyContent: "center",
-      padding: rMS(28),
+      padding: rMS(20),
+      marginRight: rMS(16),
+      width: "35%",
+      flex: 0,
     },
     taskCountNumber: {
       fontSize: SIZES.xxxLarge,
-      color: "white",
+      color: "#EF643B",
       fontWeight: "bold",
-      paddingHorizontal: rS(10),
     },
     taskCountText: {
-      fontSize: SIZES.small,
-      fontWeight: "bold",
-      color: "white",
-      marginLeft: rMS(40),
-      paddingHorizontal: rS(10),
+      fontSize: SIZES.medium,
+      fontWeight: "600",
+      color: "#EF643B",
+      marginTop: rV(4),
     },
     taskListContainer: {
       flex: 1,
-      margin: rMS(10),
+      width: "65%",
+      justifyContent: "flex-start",
     },
     loadingContainer: {
       height: Dimensions.get("window").width * 0.5,
@@ -285,5 +291,6 @@ const styles = (themeColors: (typeof Colors)["light"]) =>
       color: themeColors.text,
     },
   });
+};
 
 export default Home;

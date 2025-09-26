@@ -8,6 +8,14 @@ import React, {
   useRef,
 } from "react";
 import { Animated } from "react-native";
+import Reanimated, {
+  FadeIn,
+  FadeInUp,
+  SlideInUp,
+  SlideInDown,
+  FadeInLeft,
+  FadeInRight,
+} from "react-native-reanimated";
 import {
   View,
   StyleSheet,
@@ -94,21 +102,44 @@ const MemoizedGiftedChat = memo(GiftedChat, (prevProps, nextProps) => {
 
 const CommunityChatScreen: React.FC = () => {
   const route = useRoute();
-  const { communityId } = route.params as { communityId: string };
+  const { communityId, name, image } = route.params as {
+    communityId: string;
+    name: string;
+    image: string;
+  };
   const [isUpdatingMessages, setIsUpdatingMessages] = useState(false);
   const { userToken, userInfo } = useAuth();
   const { showDeleteAlert, showErrorAlert } = useAlert();
   const { handleError } = useErrorHandler();
   const user = userInfo?.user;
   const { socket, isConnected, sendMessage } = useWebSocket();
+
+  // Debug WebSocket connection
+  useEffect(() => {
+    console.log("ChatScreen WebSocket status:", {
+      isConnected,
+      socket: !!socket,
+      socketState: socket?.readyState,
+      userToken: !!userToken?.token,
+    });
+
+    // Force WebSocket connection if not connected but we have a token
+    if (!isConnected && userToken?.token && !socket) {
+      console.log("Forcing WebSocket connection from ChatScreen");
+      // Trigger a re-render of the WebSocket provider by updating a state
+      // This will cause the WebSocket provider to re-initialize
+    }
+  }, [isConnected, socket, userToken]);
+
   const { setCurrentCommunityId, markMessageAsRead, fetchAndCacheMessages } =
     useCommunity();
   const { getItem, setItem } = useCache();
   const navigation = useNavigation();
   const [messages, setMessages] = useState<CustomIMessage[]>([]);
   const [messageIds, setMessageIds] = useState(new Set<string>());
-  const [loadEarlier, setLoadEarlier] = useState(true);
+  const [loadEarlier, setLoadEarlier] = useState(false);
   const [isLoadingEarlier, setIsLoadingEarlier] = useState(false);
+  const [isScreenReady, setIsScreenReady] = useState(false);
   const [lastMessageId, setLastMessageId] = useState<string | null>(null);
   const [lastMessageTimestamp, setLastMessageTimestamp] = useState<
     number | null
@@ -148,11 +179,7 @@ const CommunityChatScreen: React.FC = () => {
     { uri: string; type: string; id: string }[]
   >([]);
   const [isImagePreviewVisible, setIsImagePreviewVisible] = useState(false);
-  const [community, setCommunity] = useState<{
-    id: string;
-    name: string;
-    image_url: string;
-  } | null>(null);
+  // Community data is now passed via route params
   // State to track downloaded PDFs
   const [downloadedPDFs, setDownloadedPDFs] = useState<Set<string>>(new Set());
   const [downloadingPDFs, setDownloadingPDFs] = useState<Set<string>>(
@@ -264,21 +291,7 @@ const CommunityChatScreen: React.FC = () => {
       ? "https://images.pexels.com/photos/9665185/pexels-photo-9665185.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
       : "https://images.pexels.com/photos/7599590/pexels-photo-7599590.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2";
 
-  // Fetch community data from cache
-  const fetchCommunityData = useCallback(async () => {
-    try {
-      const cachedCommunity = await getItem(`community_${communityId}`);
-      if (cachedCommunity) {
-        setCommunity(JSON.parse(cachedCommunity));
-      }
-    } catch (error) {
-      console.error("Error fetching community data:", error);
-    }
-  }, [communityId, getItem]);
-
-  useEffect(() => {
-    fetchCommunityData();
-  }, [fetchCommunityData]);
+  // Community data is passed via route params, no need to fetch
 
   const fetchInitialMessages = useCallback(async () => {
     try {
@@ -303,6 +316,12 @@ const CommunityChatScreen: React.FC = () => {
             return dateB.getTime() - dateA.getTime();
           });
         setMessages(transformedMessages);
+
+        // Only enable loadEarlier if there are enough messages (threshold: 20 messages)
+        if (transformedMessages.length >= 20) {
+          setLoadEarlier(true);
+        }
+
         if (transformedMessages.length > 0) {
           const lastMessage =
             transformedMessages[transformedMessages.length - 1];
@@ -334,6 +353,10 @@ const CommunityChatScreen: React.FC = () => {
       setLoading(false);
       setIsInitialLoad(false);
       fadeIn();
+      // Set screen ready for animations after a small delay
+      setTimeout(() => {
+        setIsScreenReady(true);
+      }, 100);
     }
   }, [
     communityId,
@@ -847,7 +870,7 @@ const CommunityChatScreen: React.FC = () => {
             await setItem("storage_keys", JSON.stringify(keys));
           }
         } else {
-          sendMessage({
+          const messagePayload = {
             type: "send_message",
             community_id: communityId,
             message: message.text || "",
@@ -857,7 +880,14 @@ const CommunityChatScreen: React.FC = () => {
             ...(replyToMessage && { reply_to: replyToMessage._id }),
             image: tempMessage.image ? tempMessage.image : undefined,
             document: tempMessage.document ? tempMessage.document : undefined,
+          };
+          console.log("Sending message via WebSocket:", messagePayload);
+          console.log("WebSocket status:", {
+            isConnected,
+            socket: !!socket,
+            socketState: socket?.readyState,
           });
+          sendMessage(messagePayload);
         }
 
         if (replyToMessage) {
@@ -986,11 +1016,18 @@ const CommunityChatScreen: React.FC = () => {
 
   const onEditMessage = useCallback(() => {
     if (editingMessage) {
-      sendMessage({
+      const editPayload = {
         type: "edit_message",
         message_id: editingMessage._id,
         new_content: messageInput,
+      };
+      console.log("Sending edit message:", editPayload);
+      console.log("WebSocket status:", {
+        isConnected,
+        socket: !!socket,
+        socketState: socket?.readyState,
       });
+      sendMessage(editPayload);
       setMessages((prevMessages) => {
         const updatedMessages = prevMessages.map((m) =>
           m._id === editingMessage._id
@@ -1013,10 +1050,17 @@ const CommunityChatScreen: React.FC = () => {
         "Are you sure you want to delete these messages?",
         () => {
           selectedMessages.forEach((message) => {
-            sendMessage({
+            const deletePayload = {
               type: "delete_message",
               message_id: message._id,
+            };
+            console.log("Sending delete message:", deletePayload);
+            console.log("WebSocket status:", {
+              isConnected,
+              socket: !!socket,
+              socketState: socket?.readyState,
             });
+            sendMessage(deletePayload);
           });
 
           setMessages((prevMessages) => {
@@ -1034,7 +1078,7 @@ const CommunityChatScreen: React.FC = () => {
   const updateHeader = useCallback(() => {
     console.log("updateHeader called", {
       selectedMessagesCount: selectedMessages.length,
-      community: community?.name || "Unknown",
+      community: name || "Unknown",
       headerState: selectedMessages.length > 0 ? "selected" : "default",
     });
 
@@ -1051,6 +1095,7 @@ const CommunityChatScreen: React.FC = () => {
         flexShrink: 1,
         alignItems: "center" as const, // Ensure title container is centered
       },
+      animation: "slide_from_right",
     };
 
     if (selectedMessages.length > 0) {
@@ -1149,7 +1194,7 @@ const CommunityChatScreen: React.FC = () => {
       });
     } else {
       console.log("Rendering default header", {
-        communityName: community?.name || "Unknown",
+        communityName: name || "Unknown",
         communityId,
       });
       navigation.setOptions({
@@ -1173,7 +1218,7 @@ const CommunityChatScreen: React.FC = () => {
             }}
           >
             <AppImage
-              uri={community?.image_url || "https://via.placeholder.com/28"}
+              uri={image || "https://via.placeholder.com/28"}
               style={{
                 width: rS(28),
                 height: rV(28),
@@ -1192,7 +1237,7 @@ const CommunityChatScreen: React.FC = () => {
               numberOfLines={1}
               ellipsizeMode="tail"
             >
-              {community?.name || "Chat"}
+              {name || "Chat"}
             </Text>
           </TouchableOpacity>
         ),
@@ -1221,7 +1266,6 @@ const CommunityChatScreen: React.FC = () => {
     handleEditMessage,
     canEditDeleteOrReply,
     handleDeselectAll,
-    community,
     width,
   ]);
 
@@ -1428,104 +1472,109 @@ const CommunityChatScreen: React.FC = () => {
       };
 
       return (
-        <TouchableOpacity
-          onPress={() => handlePress(props.currentMessage)}
-          onLongPress={() => handleLongPress(props.currentMessage)}
-          style={
-            isSelected
-              ? [props.containerStyle, styles.blurBackground]
-              : props.containerStyle
-          }
+        <Reanimated.View
+          entering={FadeInUp.duration(300).delay(50)}
+          style={{ flex: 1 }}
         >
-          <Bubble
-            {...props}
-            text={messageText}
+          <TouchableOpacity
             onPress={() => handlePress(props.currentMessage)}
             onLongPress={() => handleLongPress(props.currentMessage)}
-            wrapperStyle={{
-              left: {
-                backgroundColor: themeColors.secondaryBackground,
-                marginTop:
-                  isSameUserMessage && isSameDayMessage ? rV(0.5) : rV(5),
-                marginBottom: rV(0.5),
-              },
-              right: {
-                backgroundColor: themeColors.tint,
-                marginTop:
-                  isSameUserMessage && isSameDayMessage ? rV(0.5) : rV(5),
-                marginBottom: rV(0.5),
-              },
-              ...(isSelected && styles.blurBackground),
-            }}
-            // containerStyle={{
-            //   marginLeft:
-            //     isOtherUser && isSameUserMessage && isSameDayMessage
-            //       ? rS(24)
-            //       : rS(28),
-            //   marginRight: props.position === "right" ? rS(8) : rS(4),
-            // }}
-            renderTime={() => (
-              <View style={styles.timeContainer}>
-                <Text style={styles.timeText}>
-                  {props.currentMessage.createdAt?.toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </Text>
-                {!isOtherUser && (
-                  <View style={styles.statusIcon}>
-                    {props.currentMessage.status === "pending" && (
-                      <MaterialCommunityIcons
-                        name="clock-outline"
-                        size={SIZES.small}
-                        color={themeColors.textSecondary}
-                      />
-                    )}
-                    {props.currentMessage.status === "sending" && (
-                      <MaterialCommunityIcons
-                        name="sync"
-                        size={SIZES.small}
-                        color={themeColors.textSecondary}
-                      />
-                    )}
-                    {props.currentMessage.status === "sent" && (
-                      <MaterialCommunityIcons
-                        name="check"
-                        size={SIZES.small}
-                        color={themeColors.textSecondary}
-                      />
-                    )}
-                    {props.currentMessage.status === "read" && (
-                      <MaterialCommunityIcons
-                        name="check-all"
-                        size={SIZES.small}
-                        color={themeColors.textSecondary}
-                      />
-                    )}
-                  </View>
-                )}
-              </View>
-            )}
-            renderCustomView={renderCustomContent}
-            textStyle={{
-              right: { color: "white" },
-              left: { color: themeColors.text },
-            }}
-          />
-          {props.currentMessage.isEdited && (
-            <Text
-              style={[
-                styles.editedText,
-                {
-                  alignSelf:
-                    props.position === "left" ? "flex-start" : "flex-end",
+            style={
+              isSelected
+                ? [props.containerStyle, styles.blurBackground]
+                : props.containerStyle
+            }
+          >
+            <Bubble
+              {...props}
+              text={messageText}
+              onPress={() => handlePress(props.currentMessage)}
+              onLongPress={() => handleLongPress(props.currentMessage)}
+              wrapperStyle={{
+                left: {
+                  backgroundColor: themeColors.secondaryBackground,
+                  marginTop:
+                    isSameUserMessage && isSameDayMessage ? rV(0.5) : rV(5),
+                  marginBottom: rV(0.5),
                 },
-              ]}
-            >
-              Edited
-            </Text>
-          )}
-        </TouchableOpacity>
+                right: {
+                  backgroundColor: themeColors.tint,
+                  marginTop:
+                    isSameUserMessage && isSameDayMessage ? rV(0.5) : rV(5),
+                  marginBottom: rV(0.5),
+                },
+                ...(isSelected && styles.blurBackground),
+              }}
+              // containerStyle={{
+              //   marginLeft:
+              //     isOtherUser && isSameUserMessage && isSameDayMessage
+              //       ? rS(24)
+              //       : rS(28),
+              //   marginRight: props.position === "right" ? rS(8) : rS(4),
+              // }}
+              renderTime={() => (
+                <View style={styles.timeContainer}>
+                  <Text style={styles.timeText}>
+                    {props.currentMessage.createdAt?.toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </Text>
+                  {!isOtherUser && (
+                    <View style={styles.statusIcon}>
+                      {props.currentMessage.status === "pending" && (
+                        <MaterialCommunityIcons
+                          name="clock-outline"
+                          size={SIZES.small}
+                          color={themeColors.textSecondary}
+                        />
+                      )}
+                      {props.currentMessage.status === "sending" && (
+                        <MaterialCommunityIcons
+                          name="sync"
+                          size={SIZES.small}
+                          color={themeColors.textSecondary}
+                        />
+                      )}
+                      {props.currentMessage.status === "sent" && (
+                        <MaterialCommunityIcons
+                          name="check"
+                          size={SIZES.small}
+                          color={themeColors.textSecondary}
+                        />
+                      )}
+                      {props.currentMessage.status === "read" && (
+                        <MaterialCommunityIcons
+                          name="check-all"
+                          size={SIZES.small}
+                          color={themeColors.textSecondary}
+                        />
+                      )}
+                    </View>
+                  )}
+                </View>
+              )}
+              renderCustomView={renderCustomContent}
+              textStyle={{
+                right: { color: "white" },
+                left: { color: themeColors.text },
+              }}
+            />
+            {props.currentMessage.isEdited && (
+              <Text
+                style={[
+                  styles.editedText,
+                  {
+                    alignSelf:
+                      props.position === "left" ? "flex-start" : "flex-end",
+                  },
+                ]}
+              >
+                Edited
+              </Text>
+            )}
+          </TouchableOpacity>
+        </Reanimated.View>
       );
     },
     [
@@ -2482,17 +2531,14 @@ const CommunityChatScreen: React.FC = () => {
   });
 
   return (
-    <View style={{ flex: 1, paddingTop: rV(1) }}>
-      {loading && messages.length === 0 ? (
-        <View
-          style={[
-            styles.container,
-            { justifyContent: "center", alignItems: "center" },
-          ]}
-        >
-          <ActivityIndicator size="large" color={themeColors.tint} />
-        </View>
-      ) : (
+    <Reanimated.View
+      style={{ flex: 1, paddingTop: rV(1) }}
+      entering={FadeIn.duration(300)}
+    >
+      <Reanimated.View
+        entering={isScreenReady ? FadeInUp.duration(300).delay(100) : undefined}
+        style={{ flex: 1 }}
+      >
         <MemoizedGiftedChat
           messages={messages}
           onSend={onSend}
@@ -2539,20 +2585,28 @@ const CommunityChatScreen: React.FC = () => {
             scrollEnabled: true,
           }}
         />
-      )}
-      <FullScreenImageViewer
-        visible={isImageViewerVisible}
-        images={imageViewerImages}
-        currentIndex={currentImageIndex}
-        onRequestClose={onRequestClose}
-      />
-      <ImagePreviewModal
-        visible={isImagePreviewVisible}
-        images={selectedImagesForPreview}
-        onClose={onClose}
-        onSend={handleSendImage}
-      />
-    </View>
+      </Reanimated.View>
+      <Reanimated.View
+        entering={isScreenReady ? FadeIn.duration(300).delay(200) : undefined}
+      >
+        <FullScreenImageViewer
+          visible={isImageViewerVisible}
+          images={imageViewerImages}
+          currentIndex={currentImageIndex}
+          onRequestClose={onRequestClose}
+        />
+      </Reanimated.View>
+      <Reanimated.View
+        entering={isScreenReady ? FadeIn.duration(300).delay(300) : undefined}
+      >
+        <ImagePreviewModal
+          visible={isImagePreviewVisible}
+          images={selectedImagesForPreview}
+          onClose={onClose}
+          onSend={handleSendImage}
+        />
+      </Reanimated.View>
+    </Reanimated.View>
   );
 };
 export default CommunityChatScreen;

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   StyleSheet,
   Image,
@@ -103,6 +103,7 @@ const ReanimatedCarouselWithAds: React.FC<ReanimatedCarouselWithAdsProps> = ({
       width: "100%",
       height: "100%",
       backgroundColor: themeColors.background,
+      minHeight: 0,
     },
   });
 

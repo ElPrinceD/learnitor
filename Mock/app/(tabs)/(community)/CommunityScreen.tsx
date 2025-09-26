@@ -180,9 +180,7 @@ const CommunityScreen: React.FC = () => {
 
       try {
         if (!silent) setIsRefreshing(true);
-        console.log("Fetching communities from API...");
         const communities = await getUserCommunities(userToken.token);
-        console.log("API communities response:", communities);
 
         if (communities && communities.length > 0) {
           setMyCommunities(communities);
@@ -333,7 +331,7 @@ const CommunityScreen: React.FC = () => {
         console.error("WebSocket error:", e);
       }
     },
-    [userToken?.token, setItem]
+    [userToken?.token, setItem, debouncedSetCommunities, debouncedSetMessages]
   );
 
   useEffect(() => {
@@ -349,7 +347,6 @@ const CommunityScreen: React.FC = () => {
         setIsRefreshing(true);
         try {
           const result = await searchCommunities(query, userToken.token);
-          console.log("Search result:", result);
 
           setGlobalCommunities(
             result.filter((c) => !myCommunities.some((mc) => mc.id === c.id))

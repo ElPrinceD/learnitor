@@ -37,13 +37,13 @@ export default function ChatScreenLayout() {
           options={({ route, navigation }) => ({
             headerShown: true,
             headerBackTitle: "Back",
-          
             headerStyle: {
               backgroundColor: themeColors.reverseText,
             },
             headerTitleAlign: "center",
             headerTintColor: themeColors.text,
             headerShadowVisible: false,
+            animation: "slide_from_right",
           })}
         />
         <Stack.Screen

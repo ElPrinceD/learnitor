@@ -52,7 +52,10 @@ export const TimelineProvider: React.FC<TimelineProviderProps> = ({
             data: { taskId: task.id },
             sound: "default",
           },
-          trigger: triggerDate,
+          trigger: {
+            type: "date",
+            date: triggerDate,
+          },
         });
 
         await setItem(`notification_${task.id}`, notificationId);

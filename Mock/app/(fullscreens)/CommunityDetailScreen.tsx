@@ -981,7 +981,14 @@ const CommunityDetailScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.reportButton}
             onPress={() =>
-              Alert.alert("Report", "Report channel functionality.")
+              showDeleteAlert(
+                "Delete Channel",
+                "Are you sure you want to delete this channel? This action cannot be undone.",
+                () => {
+                  // Add delete channel functionality here
+                  console.log("Delete channel functionality");
+                }
+              )
             }
           >
             <Text style={styles.reportButtonText}>Delete channel</Text>

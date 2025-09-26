@@ -54,11 +54,6 @@ interface UpdateTaskData {
   learner?: number;
 }
 
-interface DeleteOptions {
-  deleteScope: "single" | "future" | "all";
-  showConfirmation: boolean;
-}
-
 const EditPlan = () => {
   const params = useLocalSearchParams();
   const id = params.taskId as string;
@@ -151,11 +146,6 @@ const EditPlan = () => {
   });
   const [affectAllRecurring, setAffectAllRecurring] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [showDeleteOptions, setShowDeleteOptions] = useState(false);
-  const [deleteOptions, setDeleteOptions] = useState<DeleteOptions>({
-    deleteScope: "single",
-    showConfirmation: true,
-  });
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -374,12 +364,8 @@ const EditPlan = () => {
   ]);
 
   const handleDeletePlan = useCallback(() => {
-    if (isRecurring) {
-      setShowDeleteOptions(true);
-    } else {
-      showDeleteConfirmation("single");
-    }
-  }, [isRecurring]);
+    showDeleteConfirmation("single");
+  }, []);
 
   const showDeleteConfirmation = useCallback(
     (scope: "single" | "future" | "all") => {
@@ -406,14 +392,6 @@ const EditPlan = () => {
       );
     },
     [id, userToken?.token, deleteTaskMutation, showDeleteAlert]
-  );
-
-  const handleDeleteOptionSelect = useCallback(
-    (scope: "single" | "future" | "all") => {
-      setShowDeleteOptions(false);
-      showDeleteConfirmation(scope);
-    },
-    [showDeleteConfirmation]
   );
 
   const recurrenceOptions = useMemo(
@@ -683,105 +661,6 @@ const EditPlan = () => {
           */}
         </View>
 
-        {/* Delete Options for Recurring Tasks */}
-        {showDeleteOptions && isRecurring && (
-          <View style={styles.deleteOptionsContainer}>
-            <Text style={styles.deleteOptionsTitle}>Delete Options</Text>
-            <Text style={[styles.infoLabel, { marginBottom: rV(10) }]}>
-              This is a recurring task. Choose what you want to delete:
-            </Text>
-
-            <TouchableOpacity
-              style={[
-                styles.deleteOptionButton,
-                deleteOptions.deleteScope === "single" &&
-                  styles.deleteOptionButtonActive,
-              ]}
-              onPress={() =>
-                setDeleteOptions({ ...deleteOptions, deleteScope: "single" })
-              }
-            >
-              <Text
-                style={[
-                  styles.deleteOptionText,
-                  deleteOptions.deleteScope === "single" &&
-                    styles.deleteOptionTextActive,
-                ]}
-              >
-                Delete this task only
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.deleteOptionButton,
-                deleteOptions.deleteScope === "future" &&
-                  styles.deleteOptionButtonActive,
-              ]}
-              onPress={() =>
-                setDeleteOptions({ ...deleteOptions, deleteScope: "future" })
-              }
-            >
-              <Text
-                style={[
-                  styles.deleteOptionText,
-                  deleteOptions.deleteScope === "future" &&
-                    styles.deleteOptionTextActive,
-                ]}
-              >
-                Delete this task and all future occurrences
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.deleteOptionButton,
-                deleteOptions.deleteScope === "all" &&
-                  styles.deleteOptionButtonActive,
-              ]}
-              onPress={() =>
-                setDeleteOptions({ ...deleteOptions, deleteScope: "all" })
-              }
-            >
-              <Text
-                style={[
-                  styles.deleteOptionText,
-                  deleteOptions.deleteScope === "all" &&
-                    styles.deleteOptionTextActive,
-                ]}
-              >
-                Delete all occurrences of this task
-              </Text>
-            </TouchableOpacity>
-
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                marginTop: rV(10),
-              }}
-            >
-              <GameButton
-                onPress={() => setShowDeleteOptions(false)}
-                title="Cancel"
-                style={[styles.button, { width: rS(100) }]}
-              />
-              <GameButton
-                onPress={() =>
-                  handleDeleteOptionSelect(deleteOptions.deleteScope)
-                }
-                title="Confirm Delete"
-                style={[styles.deleteButton, { width: rS(120) }]}
-                disabled={deleteTaskMutation.isPending}
-              >
-                {deleteTaskMutation.isPending && (
-                  <ActivityIndicator size="small" color={themeColors.text} />
-                )}
-              </GameButton>
-            </View>
-          </View>
-        )}
-
         <View style={styles.buttonContainer}>
           <GameButton
             onPress={handleSaveTime}
@@ -797,7 +676,7 @@ const EditPlan = () => {
             onPress={handleDeletePlan}
             title="Delete Task"
             style={styles.deleteButton}
-            disabled={deleteTaskMutation.isPending || showDeleteOptions}
+            disabled={deleteTaskMutation.isPending}
           >
             {deleteTaskMutation.isPending && (
               <ActivityIndicator size="small" color={themeColors.text} />
