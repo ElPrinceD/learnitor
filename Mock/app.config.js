@@ -41,6 +41,10 @@ export default {
       },
       "package": "com.cradle.learnitor",
       "hermesEnabled": false,
+      "config": {
+        "googleMobileAdsAppId": "ca-app-pub-1639151369389939~6963720638"
+      }
+
     },
     "web": {
       "bundler": "metro",
@@ -51,14 +55,20 @@ export default {
       "expo-router",
       "expo-font",
       "expo-secure-store",
-       "expo-sqlite",
+      "expo-sqlite",
       "@react-native-google-signin/google-signin",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-1639151369389939~6963720638",
+          "iosAppId": "ca-app-pub-1639151369389939~6963720638"
+        }
+      ],
       [
         "expo-notifications",
         {
           "icon": "./assets/images/Elevay.jpg",
-          "color": "#ffffff",
-          "sounds": ["default"]
+          "color": "#ffffff"
         }
       ],
       [
@@ -85,7 +95,9 @@ export default {
           "project": "elevay",
           "organization": "elevay"
         }
-      ]
+      ],
+      "expo-web-browser",
+      "expo-dev-client"
     ],
     "experiments": {
       "typedRoutes": true
@@ -105,10 +117,7 @@ export default {
     "updates": {
       "url": "https://u.expo.dev/7fd80734-c8a7-49db-accf-6b9f79c74f9f"
     },
-    plugins: [
-      "expo-web-browser", // Add this line
-      "expo-dev-client"
-    ],
-  }
+  
+  },
 
 };

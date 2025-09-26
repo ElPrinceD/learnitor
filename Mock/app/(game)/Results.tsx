@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from "react"; // Add useEffect
+import React, { useMemo, useEffect, useState } from "react"; // Add useEffect and useState
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import GameButton from "../../components/GameButton";
 import { SIZES, rMS, rS, rV } from "../../constants";
 import { useQuery } from "@tanstack/react-query";
 import { getGameDetails } from "../../services/GamesApiCalls";
+import { useAdManager } from "../../components/ads/AdManager";
 
 export default function ResultsScreen() {
   const { userInfo, userToken } = useAuth();
@@ -23,6 +24,17 @@ export default function ResultsScreen() {
     gameId: string;
     scores: string;
   }>();
+  const { showGameCompletionAd } = useAdManager();
+  const [adShown, setAdShown] = useState(false);
+
+  // Show ad when component mounts (game completion) - only once
+  useEffect(() => {
+    if (!adShown) {
+      console.log("Showing game completion ad");
+      showGameCompletionAd();
+      setAdShown(true);
+    }
+  }, [showGameCompletionAd, adShown]);
 
   // Allow back navigation to home tab
   useEffect(() => {

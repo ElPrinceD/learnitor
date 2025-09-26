@@ -19,6 +19,7 @@ import { SIZES, rMS, rS, rV, useShadows } from "../../../constants";
 import { useMutation } from "@tanstack/react-query";
 import { markTopicAsComplete } from "../../../services/CoursesApiCalls";
 import ErrorMessage from "../../../components/ErrorMessage";
+import { useAdManager } from "../../../components/ads/AdManager";
 
 const AnimatedText = Animated.createAnimatedComponent(Text);
 
@@ -30,6 +31,7 @@ const ScorePage: React.FC = () => {
     score: scoreParam,
     results: resultsParam,
   } = useLocalSearchParams();
+  const { showAnswerViewingAd } = useAdManager();
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -38,6 +40,7 @@ const ScorePage: React.FC = () => {
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const [showAnswers, setShowAnswers] = useState(false);
+  const [hasWatchedAd, setHasWatchedAd] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null); // State to manage error message
 
   const handleDismissError = useCallback(() => setErrorMessage(null), []);
@@ -50,6 +53,7 @@ const ScorePage: React.FC = () => {
     },
     topContainer: {
       flex: 1,
+      width: "110%",
       padding: rMS(48),
       marginTop: -rMS(48),
       justifyContent: "center",
@@ -75,17 +79,22 @@ const ScorePage: React.FC = () => {
     buttonContainer: {
       flexDirection: "row",
       marginTop: rV(18),
+      justifyContent: "space-between",
+      width: "100%",
+      paddingHorizontal: rS(2),
     },
     button: {
       backgroundColor: "transparent",
       borderWidth: 2,
       borderColor: themeColors.border,
-      paddingVertical: rV(13),
-      paddingHorizontal: rS(27),
+      paddingVertical: rV(8),
+      paddingHorizontal: rS(5),
       borderRadius: 10,
-      marginHorizontal: rS(10),
       alignItems: "center",
       justifyContent: "center",
+      flex: 1,
+      marginHorizontal: rS(5),
+      minHeight: rV(35),
     },
     buttonText: {
       fontSize: SIZES.large,
@@ -161,7 +170,16 @@ const ScorePage: React.FC = () => {
     typeof course === "string" ? JSON.parse(course) : course;
 
   const handleToggleAnswers = () => {
-    setShowAnswers((prevShowAnswers) => !prevShowAnswers);
+    console.log("Toggle answers pressed, current state:", showAnswers);
+    if (!showAnswers) {
+      // Show rewarded ad before revealing answers
+      console.log("Showing rewarded ad before revealing answers");
+      showAnswerViewingAd(() => {
+        console.log("Reward earned, showing answers");
+        setShowAnswers(true);
+        setHasWatchedAd(true);
+      });
+    }
   };
 
   const markTopicAsCompletedMutation = useMutation<any, any, any, any>({
@@ -305,18 +323,18 @@ const ScorePage: React.FC = () => {
           <Text style={styles.title}>Your Score</Text>
           <Text style={styles.score}>{score}%</Text>
           <View style={styles.buttonContainer}>
-            <GameButton style={styles.button} onPress={handleToggleAnswers}>
-              <Text style={styles.buttonText}>
-                {showAnswers ? "Hide Answers" : "Show Answers"}
-              </Text>
-            </GameButton>
+            {!showAnswers && (
+              <GameButton style={styles.button} onPress={handleToggleAnswers}>
+                <Text style={styles.buttonText}>View answers (watch ad)</Text>
+              </GameButton>
+            )}
 
             <GameButton
               onPress={handleDone}
-              title={"Done"}
               style={styles.button}
               disabled={markTopicAsCompletedMutation.isPending}
             >
+              <Text style={styles.buttonText}>Done</Text>
               {markTopicAsCompletedMutation.isPending && (
                 <ActivityIndicator size="small" color={themeColors.text} />
               )}

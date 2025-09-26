@@ -25,7 +25,7 @@ import { queryClient } from "../../QueryClient";
 
 import ErrorMessage from "../../components/ErrorMessage";
 import EnrolledCoursesList from "../../components/EnrolledCoursesList";
-import ReanimatedCarousel from "../../components/ReanimatedCarousel";
+import ReanimatedCarouselWithAds from "../../components/ReanimatedCarouselWithAds";
 
 const Home: React.FC = () => {
   const { userToken, userInfo } = useAuth();
@@ -182,7 +182,7 @@ const Home: React.FC = () => {
             <Text style={styles(themeColors).loadingText}></Text>
           </View>
         ) : carouselItems.length > 0 ? (
-          <ReanimatedCarousel data={carouselItems} />
+          <ReanimatedCarouselWithAds data={carouselItems} />
         ) : null}
         <View style={styles(themeColors).coursesContainer}>
           {enrolledCoursesData?.length ? (
