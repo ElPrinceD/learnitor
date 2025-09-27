@@ -24,12 +24,10 @@ interface WebSocketContextType {
 const WebSocketContext = createContext<WebSocketContextType | null>(null);
 
 interface WebSocketProviderProps {
-  token: string | null;
   children: React.ReactNode;
 }
 
 export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
-  token,
   children,
 }) => {
   const [socket, setSocket] = useState<WebSocket | null>(null);
@@ -37,17 +35,22 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimeout = useRef<NodeJS.Timeout | null>(null);
   const listenersRef = useRef<MessageListener[]>([]);
-  const hasConnectedRef = useRef(false);
   const isConnectingRef = useRef(false);
-  const { userInfo } = useAuth();
+  const { userInfo, userToken } = useAuth();
 
   const connectWebSocket = useCallback(() => {
+    const token = userToken?.token || userInfo?.user.token;
+
     if (
       !token ||
       isConnectingRef.current ||
       socket?.readyState === WebSocket.OPEN
-    )
+    ) {
+      console.log(
+        "connectWebSocket: Not connecting - no token or already connecting/connected"
+      );
       return;
+    }
 
     isConnectingRef.current = true;
 
@@ -61,12 +64,10 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
     };
 
     ws.onmessage = (event) => {
-      console.log(`Message from server (${userInfo?.user.first_name}):`, event);
       listenersRef.current.forEach((listener) => listener(event));
     };
 
     ws.onclose = (event) => {
-      console.log("WebSocket disconnected:", event.reason || event.code);
       setIsConnected(false);
       isConnectingRef.current = false;
       reconnectWebSocket();
@@ -76,9 +77,10 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
       console.error("WebSocket error:", error);
       ws.close(); // Ensure proper closure on error
     };
-  }, [token, socket, userInfo]);
+  }, [userToken?.token, userInfo?.user.token, socket, userInfo]);
 
   const reconnectWebSocket = useCallback(() => {
+    const token = userToken?.token || userInfo?.user.token;
     if (reconnectTimeout.current || !token) return;
 
     const attempt = reconnectAttemptsRef.current;
@@ -96,12 +98,20 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
       reconnectTimeout.current = null;
       connectWebSocket();
     }, backoff);
-  }, [connectWebSocket, token]);
+  }, [connectWebSocket, userToken?.token, userInfo?.user.token]);
 
   useEffect(() => {
-    if (!token || hasConnectedRef.current) return;
+    const token = userToken?.token || userInfo?.user.token;
 
-    hasConnectedRef.current = true;
+    if (!token) {
+      // If no token, close existing connection and reset state
+      if (socket) {
+        socket.close();
+        setSocket(null);
+        setIsConnected(false);
+      }
+      return;
+    }
 
     const manager = InteractionManager.runAfterInteractions(() => {
       connectWebSocket();
@@ -109,20 +119,13 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
 
     return () => {
       manager.cancel();
-      hasConnectedRef.current = false;
-      socket?.close();
-      if (reconnectTimeout.current) {
-        clearTimeout(reconnectTimeout.current);
-        reconnectTimeout.current = null;
-      }
     };
-  }, [token, connectWebSocket]);
+  }, [userToken?.token, userInfo?.user.token, connectWebSocket, socket]);
 
   const sendMessage = useCallback(
     (message: any) => {
       if (socket?.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify(message));
-        console.log("WebSocket sent:", message);
       } else {
         console.warn("WebSocket is not connected.");
       }

@@ -96,6 +96,9 @@ const RootLayoutNav = () => {
   const themeColors = Colors[colorScheme ?? "light"];
 
   const [navigationCompleted, setNavigationCompleted] = useState(false);
+  const token = userToken?.token || null;
+  console.log("2nd main layout token", token);
+  console.log("main layout token", userToken?.token);
 
   useEffect(() => {
     if (isLoading) return;
@@ -133,9 +136,9 @@ const RootLayoutNav = () => {
                 {/* Wrap all contexts with SQLiteProvider */}
                 <SQLiteProvider databaseName="slate.db">
                   <CacheProvider>
-                    <WebSocketProvider token={userToken?.token}>
-                      <CommunityProvider token={userToken?.token}>
-                        <TimelineProvider token={userToken?.token}>
+                    <WebSocketProvider>
+                      <CommunityProvider token={token}>
+                        <TimelineProvider token={token}>
                           <AlertProvider>
                             <AdManagerProvider>
                               <ThemeProvider

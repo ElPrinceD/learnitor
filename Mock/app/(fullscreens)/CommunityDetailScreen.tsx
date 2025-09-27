@@ -154,6 +154,25 @@ const CommunityDetailScreen: React.FC = () => {
     [removeItem]
   );
 
+  // Background refresh function for timetable data
+  const refreshTimetableInBackground = useCallback(async () => {
+    if (!userToken?.token) return;
+
+    try {
+      console.log("Background refresh: Fetching fresh timetable data...");
+      const freshData = await getCommunityTimetable(id, userToken.token);
+      console.log("Background refresh - Fresh data:", freshData);
+
+      const processedData = Array.isArray(freshData) ? freshData : [];
+      setTimetable(processedData);
+
+      // Update cache with fresh data
+      await setCachedData(`timetable_${id}`, processedData);
+    } catch (err) {
+      console.error("Background refresh error:", err);
+    }
+  }, [id, userToken?.token, setCachedData]);
+
   const fetchCommunityData = useCallback(async () => {
     try {
       setLoading(true);
@@ -251,8 +270,10 @@ const CommunityDetailScreen: React.FC = () => {
     useCallback(() => {
       if (id) {
         fetchCommunityData();
+        // Trigger background refresh of timetable data
+        refreshTimetableInBackground();
       }
-    }, [id, fetchCommunityData])
+    }, [id, fetchCommunityData, refreshTimetableInBackground])
   );
 
   // Set navigation options to show edit button only for leaders
@@ -687,10 +708,12 @@ const CommunityDetailScreen: React.FC = () => {
             </View>
             <TouchableOpacity
               onPress={() =>
-                showAlert(
-                  "Channel Privacy",
-                  "This channel is public and can be found by anyone searching for it. Users can join directly without an invitation."
-                )
+                showAlert({
+                  title: "Channel Privacy",
+                  message:
+                    "This channel is public and can be found by anyone searching for it. Users can join directly without an invitation.",
+                  type: "default",
+                })
               }
               style={styles.helpButton}
             >
@@ -743,67 +766,23 @@ const CommunityDetailScreen: React.FC = () => {
     () => (
       <>
         <View style={styles.sectionHeader}>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
+          <View style={styles.sectionHeaderRow}>
             <Text
               style={[styles.sectionHeaderText, { color: themeColors.text }]}
             >
               Calendar ({timetable.length} events)
             </Text>
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
+            {isUserLeader && (
               <TouchableOpacity
-                onPress={async () => {
-                  console.log("Manual refresh triggered");
-                  try {
-                    await removeCachedData(`timetable_${id}`);
-                    const freshData = await getCommunityTimetable(
-                      id,
-                      userToken?.token!
-                    );
-                    console.log("Manual refresh - Fresh data:", freshData);
-                    setTimetable(Array.isArray(freshData) ? freshData : []);
-                    await setCachedData(
-                      `timetable_${id}`,
-                      Array.isArray(freshData) ? freshData : []
-                    );
-                  } catch (err) {
-                    console.error("Manual refresh error:", err);
-                  }
-                }}
-                style={{
-                  marginRight: 10,
-                  padding: 8,
-                  backgroundColor: themeColors.secondaryBackground,
-                  borderRadius: 6,
-                }}
+                onPress={() =>
+                  router.push({ pathname: "TimeTable", params: { id } })
+                }
+                style={styles.addEventButton}
               >
-                <Ionicons name="refresh" size={18} color={themeColors.tint} />
+                <Ionicons name="add" size={18} color={themeColors.tint} />
+                <Text style={styles.addEventButtonText}>Add Event</Text>
               </TouchableOpacity>
-              {isUserLeader && (
-                <TouchableOpacity
-                  onPress={() =>
-                    router.push({ pathname: "TimeTable", params: { id } })
-                  }
-                  style={{
-                    backgroundColor: themeColors.tint,
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    borderRadius: 6,
-                  }}
-                >
-                  <Text
-                    style={{ color: themeColors.background, fontWeight: "600" }}
-                  >
-                    + Add Event
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
+            )}
           </View>
         </View>
         {timetable.length === 0 ? (
@@ -1061,12 +1040,14 @@ const CommunityDetailScreen: React.FC = () => {
           color: themeColors.textSecondary,
         },
         sectionHeader: {
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
           paddingHorizontal: rS(16),
           marginTop: rV(30),
           marginBottom: rV(10),
+        },
+        sectionHeaderRow: {
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
         },
         sectionHeaderText: {
           fontSize: SIZES.medium,
@@ -1317,6 +1298,23 @@ const CommunityDetailScreen: React.FC = () => {
           fontSize: SIZES.medium,
           fontWeight: "600",
           marginHorizontal: rS(8),
+        },
+        addEventButton: {
+          backgroundColor: "transparent",
+          borderRadius: rMS(6),
+          paddingHorizontal: rS(8),
+          paddingVertical: rV(4),
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
+          borderWidth: 1,
+          borderColor: themeColors.tint,
+        },
+        addEventButtonText: {
+          color: themeColors.tint,
+          fontSize: rMS(12),
+          fontWeight: "500",
+          marginLeft: rS(4),
         },
       }),
     [themeColors]

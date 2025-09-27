@@ -28,6 +28,7 @@ import CustomDateTimeSelector from "../../components/CustomDateTimeSelector";
 import { useRoute } from "@react-navigation/native";
 import { useAlert } from "../../contexts/AlertContext";
 import { useErrorHandler } from "../../hooks/useErrorHandler";
+import ErrorMessage from "../../components/ErrorMessage";
 
 interface Period {
   id?: string;
@@ -184,7 +185,7 @@ const CreateTimetablePage: React.FC = () => {
       createPeriodMutation.mutate(finalPeriods);
     },
     onError: (error: any) => {
-      setErrorMessage(error?.message || "Error creating timetable");
+      setErrorMessage("Failed to create timetable. Please try again.");
       setIsLoading(false);
     },
   });
@@ -210,7 +211,7 @@ const CreateTimetablePage: React.FC = () => {
       router.back();
     },
     onError: (error: any) => {
-      setErrorMessage(error?.message || "Error updating timetable");
+      setErrorMessage("Failed to update timetable. Please try again.");
       setIsLoading(false);
     },
   });
@@ -228,7 +229,7 @@ const CreateTimetablePage: React.FC = () => {
       router.back();
     },
     onError: (error: any) => {
-      setErrorMessage(error?.message || "Error creating periods");
+      setErrorMessage("Failed to save periods. Please try again.");
       setIsLoading(false);
     },
   });
@@ -240,17 +241,17 @@ const CreateTimetablePage: React.FC = () => {
 
       // Validate form data
       if (!formData.name.trim()) {
-        setErrorMessage("Please provide a name for the timetable.");
+        setErrorMessage("Please enter a timetable name.");
         return;
       }
 
       if (formData.name.trim().length < 3) {
-        setErrorMessage("Timetable name must be at least 3 characters long.");
+        setErrorMessage("Timetable name must be at least 3 characters.");
         return;
       }
 
       if (periods.length === 0) {
-        setErrorMessage("Please add at least one period to the timetable.");
+        setErrorMessage("Please add at least one class period.");
         return;
       }
 
@@ -290,15 +291,15 @@ const CreateTimetablePage: React.FC = () => {
 
     // Validate required fields
     if (!newPeriod.course_name.trim()) {
-      setErrorMessage("Course name is required.");
+      setErrorMessage("Please enter the course name.");
       return;
     }
     if (!newPeriod.lecturer.trim()) {
-      setErrorMessage("Lecturer name is required.");
+      setErrorMessage("Please enter the lecturer's name.");
       return;
     }
     if (!newPeriod.venue.trim()) {
-      setErrorMessage("Venue is required.");
+      setErrorMessage("Please enter the venue.");
       return;
     }
 
@@ -326,7 +327,7 @@ const CreateTimetablePage: React.FC = () => {
 
     if (hasOverlap) {
       setErrorMessage(
-        "This time period overlaps with an existing period on the same day."
+        "This time conflicts with another class on the same day."
       );
       return;
     }
@@ -381,42 +382,52 @@ const CreateTimetablePage: React.FC = () => {
   const deletePeriod = useCallback(
     (id?: string) => {
       if (!id) return;
-      Alert.alert(
+      showDeleteAlert(
         "Delete Period",
         "Are you sure you want to delete this period? This action cannot be undone.",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Delete",
-            onPress: () => {
-              setPeriods((prev) => prev.filter((p) => p.id !== id));
-              if (editingPeriodId === id) {
-                setEditingPeriodId(null);
-                setNewPeriod({
-                  course_name: "",
-                  lecturer: "",
-                  venue: "",
-                  days: currentDay,
-                  start_time: new Date(),
-                  end_time: new Date(),
-                });
-                setValue("start_time", new Date());
-                setValue("end_time", new Date());
-              }
-              setErrorMessage(null);
-            },
-            style: "destructive",
-          },
-        ]
+        () => {
+          setPeriods((prev) => prev.filter((p) => p.id !== id));
+          if (editingPeriodId === id) {
+            setEditingPeriodId(null);
+            setNewPeriod({
+              course_name: "",
+              lecturer: "",
+              venue: "",
+              days: currentDay,
+              start_time: new Date(),
+              end_time: new Date(),
+            });
+            setValue("start_time", new Date());
+            setValue("end_time", new Date());
+          }
+          setErrorMessage(null);
+        }
       );
     },
-    [editingPeriodId, currentDay, setValue]
+    [editingPeriodId, currentDay, setValue, showDeleteAlert]
   );
 
   const filteredPeriods = useMemo(
     () => periods.filter((p) => p.days === currentDay),
     [periods, currentDay]
   );
+
+  // Check if form is valid for saving
+  const isFormValid = useMemo(() => {
+    const formData = watch();
+
+    // Check if timetable name is provided and valid
+    if (!formData.name?.trim() || formData.name.trim().length < 3) {
+      return false;
+    }
+
+    // Check if at least one period is added
+    if (periods.length === 0) {
+      return false;
+    }
+
+    return true;
+  }, [watch, periods.length]);
 
   const cancelEdit = useCallback(() => {
     setEditingPeriodId(null);
@@ -450,39 +461,57 @@ const CreateTimetablePage: React.FC = () => {
       marginBottom: rV(10),
       color: themeColors.text,
     },
-    progressBarContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      paddingVertical: rV(10),
+    daySelectionContainer: {
+      backgroundColor: themeColors.secondaryBackground,
+      padding: rV(15),
+      borderRadius: rMS(8),
       marginBottom: rV(15),
     },
-    dayProgressChip: {
-      borderWidth: rS(0.5),
-      borderColor: themeColors.text,
-      borderRadius: rMS(4),
-      paddingHorizontal: rS(7),
-      paddingVertical: rV(5),
-      marginHorizontal: rS(2),
+    daySelectionTitle: {
+      fontSize: rMS(16),
+      fontWeight: "bold",
+      marginBottom: rV(10),
+      color: themeColors.text,
+      textAlign: "center",
+    },
+    dayRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "center",
+      gap: rS(6),
+    },
+    dayChip: {
+      backgroundColor: themeColors.background,
+      borderRadius: rMS(20),
+      borderWidth: rS(1),
+      borderColor: themeColors.textSecondary,
+      paddingHorizontal: rS(12),
+      paddingVertical: rV(6),
       flexDirection: "row",
       alignItems: "center",
+      justifyContent: "center",
+      minWidth: rS(50),
+      position: "relative",
     },
-    activeDayChip: {
+    selectedDayChip: {
       backgroundColor: Colors.light.tint,
+      borderColor: Colors.light.tint,
     },
     dayChipText: {
-      fontSize: rMS(14),
+      fontSize: rMS(12),
+      fontWeight: "500",
       color: themeColors.text,
     },
-    checkMark: {
-      marginLeft: rS(5),
-      color: "green",
-      fontSize: rMS(14),
+    selectedDayChipText: {
+      color: "white",
+      fontWeight: "600",
     },
-    progressBarLine: {
-      height: 2,
-      flex: 1,
-      backgroundColor: themeColors.text,
-      marginHorizontal: rS(1),
+    completedDot: {
+      width: rS(6),
+      height: rS(6),
+      borderRadius: rMS(3),
+      backgroundColor: "green",
+      marginLeft: rS(4),
     },
     dayHeaderContainer: {
       flexDirection: "row",
@@ -565,19 +594,6 @@ const CreateTimetablePage: React.FC = () => {
       fontSize: rMS(20),
       color: themeColors.text,
     },
-    errorContainer: {
-      backgroundColor: themeColors.errorBackground || "#ffebee",
-      padding: rV(12),
-      borderRadius: rMS(8),
-      marginTop: rV(10),
-      borderLeftWidth: 4,
-      borderLeftColor: themeColors.errorText || "#f44336",
-    },
-    errorText: {
-      color: themeColors.errorText || "#f44336",
-      fontSize: rMS(14),
-      fontWeight: "500",
-    },
     loadingOverlay: {
       ...StyleSheet.absoluteFillObject,
       backgroundColor: "rgba(0,0,0,0.2)",
@@ -627,46 +643,40 @@ const CreateTimetablePage: React.FC = () => {
             />
           </View>
 
-          <View style={{ alignItems: "center" }}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={[
-                styles.progressBarContainer,
-                { justifyContent: "center" },
-              ]}
-            >
-              {daysOfWeek.map((shortDay, index) => {
+          <View style={styles.daySelectionContainer}>
+            <Text style={styles.daySelectionTitle}>Select Day</Text>
+            <View style={styles.dayRow}>
+              {daysOfWeek.map((shortDay) => {
                 const longDay = dayMapping[shortDay];
                 const dayCompleted =
                   periods.filter((p) => p.days === longDay).length > 0;
+                const isSelected = currentDay === longDay;
+
                 return (
-                  <React.Fragment key={shortDay}>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setCurrentDay(longDay);
-                        setNewPeriod((prev) => ({ ...prev, days: longDay }));
-                      }}
+                  <TouchableOpacity
+                    key={shortDay}
+                    onPress={() => {
+                      setCurrentDay(longDay);
+                      setNewPeriod((prev) => ({ ...prev, days: longDay }));
+                    }}
+                    style={[
+                      styles.dayChip,
+                      isSelected && styles.selectedDayChip,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.dayChipText,
+                        isSelected && styles.selectedDayChipText,
+                      ]}
                     >
-                      <View
-                        style={[
-                          styles.dayProgressChip,
-                          currentDay === longDay && styles.activeDayChip,
-                        ]}
-                      >
-                        <Text style={styles.dayChipText}>{shortDay}</Text>
-                        {dayCompleted && (
-                          <Text style={styles.checkMark}>✓</Text>
-                        )}
-                      </View>
-                    </TouchableOpacity>
-                    {index < daysOfWeek.length - 1 && (
-                      <View style={styles.progressBarLine} />
-                    )}
-                  </React.Fragment>
+                      {shortDay}
+                    </Text>
+                    {dayCompleted && <View style={styles.completedDot} />}
+                  </TouchableOpacity>
                 );
               })}
-            </ScrollView>
+            </View>
           </View>
 
           <View style={styles.dayHeaderContainer}>
@@ -779,17 +789,29 @@ const CreateTimetablePage: React.FC = () => {
               <GameButton
                 title={isLoading ? "Saving..." : "Save Timetable"}
                 onPress={handleSubmit(handleCreateTimetable)}
-                disabled={isLoading}
-                style={{ width: "100%" }}
+                disabled={isLoading || !isFormValid}
+                style={{
+                  width: "100%",
+                  opacity: !isFormValid && !isLoading ? 0.5 : 1,
+                }}
               />
+              {!isFormValid && !isLoading && (
+                <Text
+                  style={{
+                    fontSize: rMS(12),
+                    fontStyle: "italic",
+                    color: themeColors.textSecondary,
+                    textAlign: "center",
+                    marginTop: rV(8),
+                  }}
+                >
+                  {!watch().name?.trim() || watch().name?.trim().length < 3
+                    ? "Enter a timetable name (at least 3 characters)"
+                    : "Add at least one class period to save"}
+                </Text>
+              )}
             </View>
           </View>
-
-          {errorMessage && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{errorMessage}</Text>
-            </View>
-          )}
 
           {/* Show existing periods if any */}
           {filteredPeriods.length > 0 && (
@@ -829,6 +851,13 @@ const CreateTimetablePage: React.FC = () => {
             </View>
           )}
         </ScrollView>
+
+        {/* Error display at bottom */}
+        <ErrorMessage
+          message={errorMessage}
+          visible={!!errorMessage}
+          onDismiss={() => setErrorMessage(null)}
+        />
 
         {isLoading && (
           <View style={styles.loadingOverlay}>
