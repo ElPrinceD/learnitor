@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from "react"; // Add useEffect and useState
+import React, { useMemo, useEffect, useState, useRef } from "react"; // Add useEffect and useState
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   Image,
   useColorScheme,
   BackHandler, // Add BackHandler
+  TouchableOpacity,
+  Animated,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Player, GameDetailsResponse } from "../../components/types";
@@ -17,6 +19,7 @@ import { SIZES, rMS, rS, rV } from "../../constants";
 import { useQuery } from "@tanstack/react-query";
 import { getGameDetails } from "../../services/GamesApiCalls";
 import { useAdManager } from "../../components/ads/AdManager";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function ResultsScreen() {
   const { userInfo, userToken } = useAuth();
@@ -26,6 +29,10 @@ export default function ResultsScreen() {
   }>();
   const { showGameCompletionAd } = useAdManager();
   const [adShown, setAdShown] = useState(false);
+
+  // Animation refs for buttons
+  const homeButtonScale = useRef(new Animated.Value(1)).current;
+  const newGameButtonScale = useRef(new Animated.Value(1)).current;
 
   // Show ad when component mounts (game completion) - only once
   useEffect(() => {
@@ -76,7 +83,7 @@ export default function ResultsScreen() {
 
   const players = useMemo(() => {
     if (!gameDetails?.players) return [];
-    return gameDetails.players.map((player) => ({
+    const playersList = gameDetails.players.map((player) => ({
       id: player.id,
       score: scores[player.id] || "0.0",
       profileName: `${player.first_name} ${player.last_name}`,
@@ -84,15 +91,54 @@ export default function ResultsScreen() {
         player.id === userInfo?.user.id
           ? userInfo.user.profile_picture
           : `${player.profile_picture}`,
+      isWinner: false,
     }));
+
+    // Sort by score to find winner
+    playersList.sort((a, b) => parseFloat(b.score) - parseFloat(a.score));
+
+    // Mark the winner (highest score)
+    if (playersList.length > 0) {
+      playersList[0].isWinner = true;
+    }
+
+    return playersList;
   }, [gameDetails, scores, userInfo]);
 
   const handleCreateNewGame = () => {
+    // Animate button press
+    Animated.sequence([
+      Animated.timing(newGameButtonScale, {
+        toValue: 0.95,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(newGameButtonScale, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
     // Navigate to GameIntro to create a new game
     router.dismissTo("GameIntro");
   };
 
   const handleBackToHome = () => {
+    // Animate button press
+    Animated.sequence([
+      Animated.timing(homeButtonScale, {
+        toValue: 0.95,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(homeButtonScale, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
     // Add a back to home option
     router.replace("/(tabs)/home");
   };
@@ -128,6 +174,18 @@ export default function ResultsScreen() {
       padding: rMS(10),
       backgroundColor: "transparent",
       marginVertical: rV(5),
+      position: "relative",
+    },
+    winnerContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: rMS(10),
+      backgroundColor: "#FFD700" + "20",
+      marginVertical: rV(5),
+      borderRadius: rMS(12),
+      borderWidth: 2,
+      borderColor: "#FFD700",
+      position: "relative",
     },
     profileImage: {
       width: 50,
@@ -142,19 +200,75 @@ export default function ResultsScreen() {
     buttonContainer: {
       flexDirection: "row",
       justifyContent: "space-between",
-      paddingTop: rV(28),
-      gap: rS(5),
+      paddingTop: rV(5),
+      paddingBottom: rV(20),
+      paddingHorizontal: rMS(20),
+      gap: rS(16),
     },
     button: {
       flex: 1,
-      borderTopLeftRadius: 20,
-      borderBottomRightRadius: 20,
+      backgroundColor: themeColors.background,
+      borderRadius: rMS(16),
+      paddingVertical: rV(16),
+      paddingHorizontal: rMS(20),
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 8,
+      borderWidth: 2,
+      borderColor: "transparent",
+      alignItems: "center",
+      justifyContent: "center",
+      flexDirection: "row",
+      minHeight: rV(60),
+    },
+    homeButton: {
+      backgroundColor: themeColors.tint + "20",
+      borderColor: themeColors.tint,
+    },
+    newGameButton: {
+      backgroundColor: themeColors.text + "20",
+      borderColor: themeColors.text,
+    },
+    buttonText: {
+      fontSize: rMS(16),
+      fontWeight: "bold",
+      color: themeColors.text,
+      marginLeft: rS(8),
+    },
+    homeButtonText: {
+      color: themeColors.tint,
+    },
+    newGameButtonText: {
+      color: themeColors.text,
+    },
+    buttonIcon: {
+      marginRight: rS(4),
+    },
+    crownIcon: {
+      position: "absolute",
+      top: -rV(5),
+      right: rS(10),
+      zIndex: 1,
+    },
+    winnerText: {
+      color: "#FFD700",
+      fontWeight: "bold",
     },
   });
 
-  const renderPlayer = ({ item }: { item: Player }) => {
+  const renderPlayer = ({ item }: { item: any }) => {
+    const isWinner = item.isWinner;
+    const containerStyle = isWinner
+      ? styles.winnerContainer
+      : styles.playerContainer;
+    const scoreStyle = isWinner
+      ? [styles.profileName, styles.winnerText]
+      : styles.profileName;
+
     return (
-      <View style={styles.playerContainer}>
+      <View style={containerStyle}>
         <Image
           source={{ uri: item.profile_picture }}
           style={styles.profileImage}
@@ -163,7 +277,15 @@ export default function ResultsScreen() {
           }
         />
         <Text style={styles.profileName}>{item.profileName}: </Text>
-        <Text style={styles.profileName}>{item.score}</Text>
+        <Text style={scoreStyle}>{item.score}</Text>
+        {isWinner && (
+          <Ionicons
+            name="trophy"
+            size={24}
+            color="#FFD700"
+            style={styles.crownIcon}
+          />
+        )}
       </View>
     );
   };
@@ -179,16 +301,45 @@ export default function ResultsScreen() {
         contentContainerStyle={styles.playersList}
       />
       <View style={styles.buttonContainer}>
-        <GameButton
-          title="Back to Home"
-          onPress={handleBackToHome}
-          style={styles.button}
-        />
-        <GameButton
-          title="Create New Game"
-          onPress={handleCreateNewGame}
-          style={styles.button}
-        />
+        <Animated.View
+          style={{ transform: [{ scale: homeButtonScale }], flex: 1 }}
+        >
+          <TouchableOpacity
+            onPress={handleBackToHome}
+            style={[styles.button, styles.homeButton]}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name="home"
+              size={24}
+              color={themeColors.tint}
+              style={styles.buttonIcon}
+            />
+            <Text style={[styles.buttonText, styles.homeButtonText]}>
+              Back to Home
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
+
+        <Animated.View
+          style={{ transform: [{ scale: newGameButtonScale }], flex: 1 }}
+        >
+          <TouchableOpacity
+            onPress={handleCreateNewGame}
+            style={[styles.button, styles.newGameButton]}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name="game-controller"
+              size={24}
+              color={themeColors.text}
+              style={styles.buttonIcon}
+            />
+            <Text style={[styles.buttonText, styles.newGameButtonText]}>
+              New Game
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
     </View>
   );
