@@ -12,6 +12,7 @@ import {
   Animated,
   useColorScheme,
   RefreshControl,
+  BackHandler,
 } from "react-native";
 import CourseRoadmap from "../../../components/CourseRoadmap";
 import RoadmapTitle from "../../../components/RoadmapTitle";
@@ -63,6 +64,18 @@ const EnrolledCourse: React.FC = () => {
       return null;
     }
   }, [course]);
+
+  // Handle back navigation - go back to course list
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        router.back(); // This will go back to the course list
+        return true; // Prevent default back action
+      }
+    );
+    return () => backHandler.remove();
+  }, []);
 
   // Early return if no course data
   if (!parsedCourse) {

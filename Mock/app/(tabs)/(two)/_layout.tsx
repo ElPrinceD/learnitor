@@ -39,7 +39,7 @@ export default function Tab2Layout() {
           name="CourseDetails"
           options={{
             headerShown: true,
-            headerBackVisible: false, 
+            headerBackVisible: true,
             title: "Course Details",
             headerTransparent: true,
             headerTitleStyle: {
@@ -49,24 +49,32 @@ export default function Tab2Layout() {
             headerShadowVisible: false,
           }}
         />
-        <Stack.Screen name="EnrolledCourse" options={{ headerShown: false, headerBackVisible: false,  }} />
+        <Stack.Screen
+          name="EnrolledCourse"
+          options={{
+            headerShown: true,
+            headerBackVisible: true,
+            title: "Course Details",
+            headerTitleAlign: "center",
+            headerShadowVisible: false,
+          }}
+        />
         <Stack.Screen
           name="(topic)"
           options={{
             headerShown: true,
-            headerBackVisible: false, 
+            headerBackVisible: true,
             title: "Materials",
             headerTitleStyle: {
               color: themeColors.text,
             },
             headerTitleAlign: "center",
             headerShadowVisible: false,
-            
           }}
         />
         <Stack.Screen
           name="Practice"
-          options={{ headerShown: true, headerBackVisible: false }}
+          options={{ headerShown: true, headerBackVisible: true }}
         />
         <Stack.Screen
           name="PracticeInstructions"
