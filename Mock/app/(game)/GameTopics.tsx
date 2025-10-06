@@ -7,14 +7,15 @@ import {
   Dimensions,
   TouchableOpacity,
   useColorScheme,
+  BackHandler,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { Course, Topic } from "../../components/types";
 import { useAuth } from "../../components/AuthContext";
-import TimelineCategoryItem from "../../components/TimelineCategoryItem";
 import GameButton from "../../components/GameButton";
+import TimelineCategoryItem from "../../components/TimelineCategoryItem";
 import Colors from "../../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../../constants";
 import { getCourseTopics } from "../../services/CoursesApiCalls"; // Import the new API function
@@ -46,6 +47,18 @@ const GameTopics: React.FC = () => {
     }
   }, [course]);
 
+  // Handle back navigation - go to GameCourses
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        router.back(); // This will go back to GameCourses
+        return true; // Prevent default back action
+      }
+    );
+    return () => backHandler.remove();
+  }, []);
+
   // Early return if no course data
   if (!parsedCourse) {
     return (
@@ -71,7 +84,10 @@ const GameTopics: React.FC = () => {
   }
 
   const fetchTopics = async (): Promise<Topic[]> => {
-    const topics = await getCourseTopics(parsedCourse.id, userToken?.token);
+    const topics = await getCourseTopics(
+      parseInt(parsedCourse.id),
+      userToken?.token
+    );
     return topics.map((topic: Topic) => ({
       ...topic,
       color: getRandomColor(),

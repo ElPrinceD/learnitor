@@ -60,7 +60,7 @@ const Home: React.FC = () => {
     enabled: !!token && !!userId,
   });
 
-  // Tasks and Categories
+  // Today's Tasks
   const {
     data: tasksData = { tasks: [], categories: {} },
     error: tasksError,
@@ -192,27 +192,27 @@ const Home: React.FC = () => {
                 progressMap={progressMap || {}}
                 loading={enrolledLoading}
               />
-              <View style={styles(themeColors).tasksContainer}>
-                <View style={styles(themeColors).taskCountContainer}>
-                  <Text style={styles(themeColors).taskCountText}>
-                    Tasks Today
-                  </Text>
-                  <Text style={styles(themeColors).taskCountNumber}>
-                    {tasksData.tasks.length}
-                  </Text>
-                </View>
-                {tasksData.tasks.length > 0 && (
-                  <View style={styles(themeColors).taskListContainer}>
-                    <TaskList
-                      tasks={tasksData.tasks}
-                      categoryNames={tasksData.categories}
-                    />
-                  </View>
-                )}
-              </View>
             </View>
           ) : null}
         </View>
+
+        {/* Tasks Section */}
+        {tasksData.tasks.length > 0 && (
+          <View style={styles(themeColors).tasksContainer}>
+            <View style={styles(themeColors).taskCountContainer}>
+              <Text style={styles(themeColors).taskCountText}>Tasks Today</Text>
+              <Text style={styles(themeColors).taskCountNumber}>
+                {tasksData.tasks.length}
+              </Text>
+            </View>
+            <View style={styles(themeColors).taskListContainer}>
+              <TaskList
+                tasks={tasksData.tasks}
+                categoryNames={tasksData.categories}
+              />
+            </View>
+          </View>
+        )}
       </ScrollView>
       <ErrorMessage
         message={errorMessage}
@@ -244,7 +244,6 @@ const styles = (themeColors: (typeof Colors)["light"]) => {
     },
     tasksContainer: {
       backgroundColor: themeColors.background,
-      // borderRadius: rMS(12),
       padding: rMS(16),
       marginTop: rMS(16),
       flexDirection: "row",

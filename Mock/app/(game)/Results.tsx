@@ -36,12 +36,12 @@ export default function ResultsScreen() {
     }
   }, [showGameCompletionAd, adShown]);
 
-  // Allow back navigation to home tab
+  // Allow back navigation to GameIntro
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
       "hardwareBackPress",
       () => {
-        router.replace("/(tabs)/home");
+        router.replace("/(game)/GameIntro");
         return true; // Returning true prevents the default back action
       }
     );

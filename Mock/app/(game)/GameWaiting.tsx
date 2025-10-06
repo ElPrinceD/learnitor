@@ -10,6 +10,7 @@ import {
   useColorScheme,
   Platform,
   ActivityIndicator,
+  BackHandler,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import Toast from "react-native-root-toast";
@@ -47,10 +48,10 @@ export default function GameWaitingScreen() {
   const themeColors = Colors[colorScheme ?? "light"];
   const ws = useRef<WebSocket | null>(null);
 
-  const {
-    data: gameDetails,
-    error: gameDetailsError,
-  } = useQuery<GameDetailsResponse, Error>({
+  const { data: gameDetails, error: gameDetailsError } = useQuery<
+    GameDetailsResponse,
+    Error
+  >({
     queryKey: ["gameDetails", id || gameId, userToken?.token],
     queryFn: () => getGameDetails(id || gameId, userToken?.token),
     enabled: !!userToken,
@@ -78,6 +79,18 @@ export default function GameWaitingScreen() {
     }
   }, [gameDetails, userInfo]);
 
+  // Handle back navigation - go to GameIntro
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        router.replace("/(game)/GameIntro"); // Go directly to GameIntro
+        return true; // Prevent default back action
+      }
+    );
+    return () => backHandler.remove();
+  }, []);
+
   const goToGame = useCallback(() => {
     router.navigate({
       pathname: "Game",
@@ -95,7 +108,9 @@ export default function GameWaitingScreen() {
     if (!gameCode || ws.current) return;
 
     // Optional: Add token if using token-based auth
-     ws.current = new WebSocket(`${WsUrl}/ws/games/${gameCode}/ws/?token=${userToken?.token}`);
+    ws.current = new WebSocket(
+      `${WsUrl}/ws/games/${gameCode}/ws/?token=${userToken?.token}`
+    );
     //ws.current = new WebSocket(`${WsUrl}/ws/games/${gameCode}/ws/`);
 
     ws.current.onopen = () => {
@@ -111,15 +126,17 @@ export default function GameWaitingScreen() {
     ws.current.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        
+
         if (data.type === "game.finished") {
           console.log("Game finished. Closing connection...");
           if (ws.current) {
             ws.current.close();
           }
           // Optionally navigate to a summary or results screen instead of the game screen.
-          
-        } else if (data.type === "game.update" || data.type === "game.players") {
+        } else if (
+          data.type === "game.update" ||
+          data.type === "game.players"
+        ) {
           const payload = data.data || data;
           if (payload.players) {
             const newPlayers = payload.players.map((player) => ({
@@ -132,22 +149,19 @@ export default function GameWaitingScreen() {
             }));
             setPlayers(newPlayers);
           }
-          
+
           if (payload.started && !payload.ended) {
             console.log("Game started via update");
             goToGame();
           }
-          
         } else if (data.type === "game.start") {
           console.log("Received game.start message");
           goToGame();
         }
-        
       } catch (error) {
         console.error("Error parsing WebSocket message:", error);
       }
     };
-    
 
     ws.current.onclose = () => {
       console.log("WebSocket connection closed");
@@ -159,7 +173,7 @@ export default function GameWaitingScreen() {
     connectWebSocket();
     return () => {
       if (ws.current) {
-       // ws.current.close();
+        // ws.current.close();
       }
     };
   }, [connectWebSocket]);
@@ -171,7 +185,9 @@ export default function GameWaitingScreen() {
 
   const shareGameCode = async () => {
     try {
-      await Share.share({ message: `Join my game with this code: ${gameCode}` });
+      await Share.share({
+        message: `Join my game with this code: ${gameCode}`,
+      });
     } catch (error) {
       console.error("Error sharing game code:", error);
     }
@@ -251,7 +267,10 @@ export default function GameWaitingScreen() {
 
   const renderPlayer = ({ item }: { item: Player }) => (
     <View style={styles.playerContainer}>
-      <Image source={{ uri: item.profile_picture }} style={styles.profileImage} />
+      <Image
+        source={{ uri: item.profile_picture }}
+        style={styles.profileImage}
+      />
       <Text style={styles.profileName}>{item.profileName}</Text>
     </View>
   );
@@ -268,7 +287,9 @@ export default function GameWaitingScreen() {
         </TouchableOpacity>
         <TouchableOpacity onPress={shareGameCode} style={styles.iconButton}>
           <Ionicons
-            name={Platform.OS === "ios" ? "share-outline" : "share-social-sharp"}
+            name={
+              Platform.OS === "ios" ? "share-outline" : "share-social-sharp"
+            }
             size={30}
             color={themeColors.icon}
           />
@@ -276,7 +297,9 @@ export default function GameWaitingScreen() {
       </View>
       <Text style={styles.waitingText}>Waiting for others...</Text>
       {gameDetailsError && (
-        <Text style={{ color: "red", textAlign: "center", marginBottom: rV(10) }}>
+        <Text
+          style={{ color: "red", textAlign: "center", marginBottom: rV(10) }}
+        >
           {gameDetailsError.message}
         </Text>
       )}

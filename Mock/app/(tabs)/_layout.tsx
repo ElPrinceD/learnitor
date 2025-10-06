@@ -9,7 +9,6 @@ import { useThemeColor } from "../../components/Themed";
 import { rMS } from "../../constants";
 import { useAuth } from "../../components/AuthContext";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { useCommunity } from "../../contexts/CommunityContext";
 
 // Animated TabBarIcon: the indicator uses a scale transform so that it starts at 0
 // in the middle and expands equally to left and right.
@@ -67,7 +66,6 @@ function TabBarIcon(props: { name: string; color: string; focused: boolean }) {
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const { unreadMessages } = useCommunity();
   const currentHour = new Date().getHours();
   let greeting = "";
   if (currentHour >= 4 && currentHour < 12) {
@@ -85,14 +83,6 @@ export default function TabLayout() {
     "text"
   );
   const { userInfo } = useAuth();
-
-  const [communitiesWithUnread, setCommunitiesWithUnread] = useState(0);
-
-useEffect(() => {
-  const count = Object.values(unreadMessages).filter(c => c > 0).length;
-  setCommunitiesWithUnread(count);
-}, [unreadMessages]);
-
 
   return (
     <SafeAreaProvider>
@@ -165,35 +155,6 @@ useEffect(() => {
           }}
         />
         <Tabs.Screen
-          name="(community)"
-          options={{
-            title: "Squad",
-            tabBarIcon: ({ color, focused }) => (
-              <View style={{ backgroundColor: "transparent" }}>
-                <TabBarIcon
-                  name="account-group"
-                  color={color}
-                  focused={focused}
-                />
-                {communitiesWithUnread > 0 && (
-  <View style={[
-    styles.badge,
-    { backgroundColor: Colors[colorScheme ?? "light"].tint }
-  ]}>
-    <Text style={styles.badgeText}>
-      {communitiesWithUnread}
-    </Text>
-  </View>
-)}
-
-              </View>
-            ),
-            headerShown: false,
-            headerTitle: "Community",
-            headerShadowVisible: false,
-          }}
-        />
-        <Tabs.Screen
           name="(reminder)"
           options={{
             title: "To Do",
@@ -240,20 +201,5 @@ const styles = StyleSheet.create({
     top: -9,
     height: 3,
     borderRadius: 1.5,
-  },
-  badge: {
-    position: "absolute",
-    left: 15,
-    top: -3,
-    borderRadius: 10,
-    width: 20,
-    height: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  badgeText: {
-    color: "white",
-    fontSize: 10,
-    fontWeight: "bold",
   },
 });

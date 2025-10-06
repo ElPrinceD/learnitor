@@ -1,5 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { View, StyleSheet, Text, useColorScheme } from "react-native";
+import {
+  View,
+  StyleSheet,
+  Text,
+  useColorScheme,
+  BackHandler,
+} from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import CoursesList from "../../components/CoursesList";
 import { router } from "expo-router";
@@ -42,6 +48,18 @@ const GameCourses: React.FC = () => {
       setErrorMessage(coursesError?.message || "An error occurred");
     }
   }, [coursesStatus]);
+
+  // Handle back navigation - go to GameIntro
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        router.back(); // This will go back to GameIntro
+        return true; // Prevent default back action
+      }
+    );
+    return () => backHandler.remove();
+  }, []);
 
   const onRefresh = useCallback(async () => {
     try {

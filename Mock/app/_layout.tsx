@@ -24,9 +24,8 @@ import { queryClient } from "../QueryClient";
 import { SQLiteProvider } from "expo-sqlite";
 import { CacheProvider } from "../contexts/CacheContext"; // Update the path
 import { WebSocketProvider } from "../contexts/webSocketProvider"; // Update the path
-import { CommunityProvider } from "../contexts/CommunityContext"; // Update the path
-import { TimelineProvider } from "../contexts/TimelineContext"; // Update the path
 import { AlertProvider } from "../contexts/AlertContext"; // Update the path
+import { TimelineProvider } from "../contexts/TimelineContext"; // Update the path
 import { AdManagerProvider } from "../components/ads/AdManager"; // Add AdManager
 import mobileAds from "react-native-google-mobile-ads";
 import {
@@ -137,47 +136,45 @@ const RootLayoutNav = () => {
                 <SQLiteProvider databaseName="slate.db">
                   <CacheProvider>
                     <WebSocketProvider>
-                      <CommunityProvider token={token}>
-                        <TimelineProvider token={token}>
-                          <AlertProvider>
-                            <AdManagerProvider>
-                              <ThemeProvider
-                                value={
-                                  colorScheme === "dark"
-                                    ? DarkTheme
-                                    : DefaultTheme
-                                }
-                              >
-                                <Stack>
-                                  <Stack.Screen
-                                    name="index"
-                                    options={{ headerShown: false }}
-                                  />
-                                  <Stack.Screen
-                                    name="(verification)"
-                                    options={{ headerShown: false }}
-                                  />
-                                  <Stack.Screen
-                                    name="(tabs)"
-                                    options={{
-                                      headerShown: false,
-                                      headerShadowVisible: false,
-                                    }}
-                                  />
-                                  <Stack.Screen
-                                    name="(game)"
-                                    options={{ headerShown: false }}
-                                  />
-                                  <Stack.Screen
-                                    name="(fullscreens)"
-                                    options={{ headerShown: false }}
-                                  />
-                                </Stack>
-                              </ThemeProvider>
-                            </AdManagerProvider>
-                          </AlertProvider>
-                        </TimelineProvider>
-                      </CommunityProvider>
+                      <TimelineProvider token={token}>
+                        <AlertProvider>
+                          <AdManagerProvider>
+                            <ThemeProvider
+                              value={
+                                colorScheme === "dark"
+                                  ? DarkTheme
+                                  : DefaultTheme
+                              }
+                            >
+                              <Stack>
+                                <Stack.Screen
+                                  name="index"
+                                  options={{ headerShown: false }}
+                                />
+                                <Stack.Screen
+                                  name="(verification)"
+                                  options={{ headerShown: false }}
+                                />
+                                <Stack.Screen
+                                  name="(tabs)"
+                                  options={{
+                                    headerShown: false,
+                                    headerShadowVisible: false,
+                                  }}
+                                />
+                                <Stack.Screen
+                                  name="(game)"
+                                  options={{ headerShown: false }}
+                                />
+                                <Stack.Screen
+                                  name="(fullscreens)"
+                                  options={{ headerShown: false }}
+                                />
+                              </Stack>
+                            </ThemeProvider>
+                          </AdManagerProvider>
+                        </AlertProvider>
+                      </TimelineProvider>
                     </WebSocketProvider>
                   </CacheProvider>
                 </SQLiteProvider>
