@@ -2,12 +2,13 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  TextInput,
   StyleSheet,
   ActivityIndicator,
   useColorScheme,
   Linking,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { router } from "expo-router";
 import axios from "axios";
@@ -15,12 +16,9 @@ import ApiUrl from "../../config";
 import Colors from "../../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../../constants";
 import VerificationButton from "../../components/VerificationButton";
-import Animated, {
-  ReduceMotion,
-  SlideInUp,
-  SlideOutUp,
-} from "react-native-reanimated";
+import AnimatedTextInput from "../../components/AnimatedTextInput";
 import { StatusBar } from "expo-status-bar";
+import { Ionicons } from "@expo/vector-icons";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -47,9 +45,14 @@ const ForgotPassword = () => {
         setError("");
         clearErrorsAfterTimeout();
       })
-      .catch(() => {
+      .catch((error) => {
         setLoading(false);
-        setError("Email not found");
+        const errorMessage =
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          error.message ||
+          "Email not found";
+        setError(errorMessage);
         clearErrorsAfterTimeout();
       });
   };
@@ -58,7 +61,7 @@ const ForgotPassword = () => {
     setTimeout(() => {
       setError("");
       setResetCodeError("");
-    }, 5000); // Clear errors after 5 seconds
+    }, 8000); // Clear errors after 8 seconds
   };
 
   const CheckVerificationCode = () => {
@@ -76,9 +79,14 @@ const ForgotPassword = () => {
         setError("");
         clearErrorsAfterTimeout();
       })
-      .catch(() => {
+      .catch((error) => {
         setLoading(false);
-        setResetCodeError("Invalid reset code");
+        const errorMessage =
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          error.message ||
+          "Invalid reset code";
+        setResetCodeError(errorMessage);
         clearErrorsAfterTimeout();
       });
   };
@@ -99,9 +107,14 @@ const ForgotPassword = () => {
         setError("");
         clearErrorsAfterTimeout();
       })
-      .catch(() => {
+      .catch((error) => {
         setLoading(false);
-        setResetCodeError("Invalid Password");
+        const errorMessage =
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          error.message ||
+          "Invalid Password";
+        setResetCodeError(errorMessage);
         clearErrorsAfterTimeout();
       });
   };
@@ -109,158 +122,242 @@ const ForgotPassword = () => {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      marginTop: rMS(20),
-      alignItems: "center",
-      padding: rMS(16),
       backgroundColor: themeColors.background,
+    },
+    scrollContainer: {
+      flexGrow: 1,
+      paddingHorizontal: rS(24),
+      paddingTop: rV(60),
+      paddingBottom: rV(40),
+    },
+    header: {
+      alignItems: "center",
+      marginBottom: rV(40),
+    },
+    iconContainer: {
+      width: rS(80),
+      height: rS(80),
+      borderRadius: rS(40),
+      backgroundColor: themeColors.tint + "20",
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: rV(24),
     },
     title: {
       fontSize: SIZES.xLarge,
       fontWeight: "bold",
-      marginBottom: rMS(16),
       color: themeColors.text,
       textAlign: "center",
+      marginBottom: rV(8),
+    },
+    subtitle: {
+      fontSize: SIZES.large,
+      color: themeColors.textSecondary,
+      textAlign: "center",
+      marginBottom: rV(16),
     },
     description: {
       fontSize: SIZES.medium,
-      marginBottom: rMS(16),
+      color: themeColors.textSecondary,
       textAlign: "center",
-      color: themeColors.text,
+      lineHeight: 22,
+      paddingHorizontal: rS(20),
     },
-    input: {
-      borderWidth: 1,
-      padding: rMS(16),
-      width: rS(320),
-      marginBottom: rMS(16),
-      borderTopWidth: 0,
-      borderRightWidth: 0,
-      borderLeftWidth: 0,
-      borderBottomWidth: 1,
-      borderColor: themeColors.border,
-      color: themeColors.text,
+    formContainer: {
+      marginBottom: rV(32),
     },
-    errorMessage: {
-      fontSize: SIZES.medium,
-      marginBottom: rMS(16),
+    inputContainer: {
+      marginBottom: rV(20),
+    },
+    errorContainer: {
+      backgroundColor: "#D22B2B" + "15",
+      padding: rS(12),
+      borderRadius: rMS(8),
+      marginBottom: rV(16),
+      borderLeftWidth: 4,
+      borderLeftColor: "#D22B2B",
+    },
+    errorText: {
       color: "#D22B2B",
+      fontSize: SIZES.small,
+      fontWeight: "500",
     },
-    sentMessage: {
-      fontSize: SIZES.medium,
-      fontWeight: "bold",
-      marginBottom: rMS(16),
-      marginTop: rMS(16),
-      color: themeColors.text,
+    successContainer: {
+      backgroundColor: themeColors.tint + "15",
+      padding: rS(12),
+      borderRadius: rMS(8),
+      marginBottom: rV(16),
+      borderLeftWidth: 4,
+      borderLeftColor: themeColors.tint,
     },
-    support: {
-      fontSize: SIZES.medium,
-      bottom: rV(10),
+    successText: {
+      color: themeColors.tint,
+      fontSize: SIZES.small,
+      fontWeight: "500",
+    },
+    buttonContainer: {
+      marginTop: rV(24),
+      alignItems: "center",
+    },
+    supportContainer: {
+      alignItems: "center",
+      marginTop: rV(40),
+      paddingHorizontal: rS(20),
+    },
+    supportText: {
+      fontSize: SIZES.small,
+      color: themeColors.textSecondary,
       textAlign: "center",
-      color: themeColors.text,
+      lineHeight: 20,
     },
     supportLink: {
-      fontSize: SIZES.medium,
-      textDecorationLine: "underline",
-      color: themeColors.buttonBackground,
+      color: themeColors.tint,
+      fontWeight: "600",
     },
   });
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
       <StatusBar hidden={true} />
-
-      <Animated.View
-        entering={SlideInUp.delay(300)
-          .randomDelay()
-          .reduceMotion(ReduceMotion.Never)
-          .withInitialValues({ transform: [{ scaleY: 0.5 }] })}
-        exiting={SlideOutUp.delay(300)
-          .randomDelay()
-          .reduceMotion(ReduceMotion.Never)
-          .withInitialValues({ transform: [{ scaleY: 0.5 }] })}
-        style={styles.container}
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        <Text style={[styles.title, { marginBottom: -rMS(12) }]}>
-          Forgot your password?
-        </Text>
-        <Text style={[styles.title, { fontSize: 20, marginTop: rMS(10) }]}>
-          Don't Worry!
-        </Text>
-        <Text style={styles.description}>
-          Enter your email and we'll send you a code to reset your password.
-        </Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          value={email}
-          onChangeText={(text) => setEmail(text)}
-          placeholderTextColor={themeColors.textSecondary}
-        />
-        {error ? <Text style={styles.errorMessage}>{error}</Text> : null}
-        {sent ? (
-          <Animated.Text style={styles.sentMessage}>
-            Check your email for a password reset code
-          </Animated.Text>
-        ) : (
-          <VerificationButton
-            onPress={handleSendCode}
-            title={loading ? <ActivityIndicator color="white" /> : "Send code"}
-            disabled={loading}
-          />
-        )}
-        {sent ? (
-          <TextInput
-            style={styles.input}
-            placeholder="Reset code"
-            value={resetCode}
-            onChangeText={(text) => setResetCode(text)}
-            placeholderTextColor={themeColors.textSecondary}
-          />
-        ) : null}
-        {resetCodeError ? (
-          <Text style={styles.errorMessage}>{resetCodeError}</Text>
-        ) : null}
-        {sent ? (
-          <VerificationButton
-            onPress={CheckVerificationCode}
-            title={
-              loading ? <ActivityIndicator color="white" /> : "Reset Password"
-            }
-            disabled={loading}
-          />
-        ) : null}
-        {resettingPassword ? (
-          <Text style={styles.sentMessage}>Enter new password</Text>
-        ) : null}
-        {resettingPassword && sent ? (
-          <TextInput
-            style={styles.input}
-            placeholder="New password"
-            value={newPassword}
-            onChangeText={(text) => setNewPassword(text)}
-            secureTextEntry
-            placeholderTextColor={themeColors.textSecondary}
-          />
-        ) : null}
-        {resettingPassword ? (
-          <VerificationButton
-            onPress={ConfirmNewPassword}
-            title={
-              loading ? <ActivityIndicator color="white" /> : "Set New Password"
-            }
-            disabled={loading}
-          />
-        ) : null}
-      </Animated.View>
-      <Text style={styles.support}>
-        If you have trouble resetting your password, contact us at{" "}
-        <Text
-          onPress={() => Linking.openURL("mailto:support@learnitor.org")}
-          style={styles.supportLink}
-        >
-          support@learnitor.org
-        </Text>
-      </Text>
-    </ScrollView>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.iconContainer}>
+            <Ionicons
+              name="lock-closed-outline"
+              size={rS(32)}
+              color={themeColors.tint}
+            />
+          </View>
+          <Text style={styles.title}>Forgot Password?</Text>
+          <Text style={styles.subtitle}>
+            No worries, we'll help you reset it
+          </Text>
+          <Text style={styles.description}>
+            Enter your email address and we'll send you a verification code to
+            reset your password.
+          </Text>
+        </View>
+
+        {/* Form */}
+        <View style={styles.formContainer}>
+          {/* Email Input */}
+          <View style={styles.inputContainer}>
+            <AnimatedTextInput
+              label="Email Address"
+              value={email}
+              onChangeText={setEmail}
+              placeholder="Enter your email"
+            />
+          </View>
+
+          {/* Error Messages */}
+          {error ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
+
+          {/* Success Messages */}
+          {sent && !resettingPassword ? (
+            <View style={styles.successContainer}>
+              <Text style={styles.successText}>
+                Check your email for a password reset code
+              </Text>
+            </View>
+          ) : null}
+
+          {/* Reset Code Input */}
+          {sent ? (
+            <View style={styles.inputContainer}>
+              <AnimatedTextInput
+                label="Reset Code"
+                value={resetCode}
+                onChangeText={setResetCode}
+                placeholder="Enter reset code"
+              />
+            </View>
+          ) : null}
+
+          {/* Reset Code Error */}
+          {resetCodeError ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{resetCodeError}</Text>
+            </View>
+          ) : null}
+
+          {/* New Password Input */}
+          {resettingPassword ? (
+            <View style={styles.inputContainer}>
+              <AnimatedTextInput
+                label="New Password"
+                value={newPassword}
+                onChangeText={setNewPassword}
+                placeholder="Enter new password"
+                secureTextEntry
+              />
+            </View>
+          ) : null}
+
+          {/* Buttons */}
+          <View style={styles.buttonContainer}>
+            {!sent ? (
+              <VerificationButton
+                onPress={handleSendCode}
+                title={
+                  loading ? (
+                    <ActivityIndicator color="white" />
+                  ) : (
+                    "Send Reset Code"
+                  )
+                }
+                disabled={loading || !email.trim()}
+              />
+            ) : !resettingPassword ? (
+              <VerificationButton
+                onPress={CheckVerificationCode}
+                title={
+                  loading ? <ActivityIndicator color="white" /> : "Verify Code"
+                }
+                disabled={loading || !resetCode.trim()}
+              />
+            ) : (
+              <VerificationButton
+                onPress={ConfirmNewPassword}
+                title={
+                  loading ? (
+                    <ActivityIndicator color="white" />
+                  ) : (
+                    "Set New Password"
+                  )
+                }
+                disabled={loading || !newPassword.trim()}
+              />
+            )}
+          </View>
+        </View>
+
+        {/* Support */}
+        <View style={styles.supportContainer}>
+          <Text style={styles.supportText}>
+            Having trouble? Contact us at{" "}
+            <Text
+              onPress={() => Linking.openURL("mailto:support@learnitor.org")}
+              style={styles.supportLink}
+            >
+              support@learnitor.org
+            </Text>
+          </Text>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 

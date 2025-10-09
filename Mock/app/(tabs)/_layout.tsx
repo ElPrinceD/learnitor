@@ -8,7 +8,6 @@ import { useClientOnlyValue } from "../../components/useClientOnlyValue";
 import { useThemeColor } from "../../components/Themed";
 import { rMS } from "../../constants";
 import { useAuth } from "../../components/AuthContext";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 
 // Animated TabBarIcon: the indicator uses a scale transform so that it starts at 0
 // in the middle and expands equally to left and right.
@@ -55,7 +54,7 @@ function TabBarIcon(props: { name: string; color: string; focused: boolean }) {
         />
       )}
       <MaterialCommunityIcons
-        name={props.focused ? props.name : `${props.name}-outline`}
+        name={props.focused ? props.name : (`${props.name}-outline` as any)}
         size={rMS(20)}
         color={props.color}
         style={{ marginBottom: -3 }}
@@ -85,105 +84,99 @@ export default function TabLayout() {
   const { userInfo } = useAuth();
 
   return (
-    <SafeAreaProvider>
-      <Tabs
-        screenOptions={{
-          tabBarHideOnKeyboard: true,
-          tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
-          tabBarLabelStyle: { fontSize: 13 },
-          tabBarStyle: {
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            borderTopWidth: 0,
-            shadowOpacity: 0.25,
-            shadowRadius: 3.84,
-            elevation: 5,
-          },
-          headerShown: useClientOnlyValue(false, true),
+    <Tabs
+      screenOptions={{
+        tabBarHideOnKeyboard: true,
+        tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
+        tabBarLabelStyle: { fontSize: 13 },
+        tabBarStyle: {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          borderTopWidth: 0,
+          shadowOpacity: 0.25,
+          shadowRadius: 3.84,
+          elevation: 5,
+        },
+        headerShown: useClientOnlyValue(false, true),
+      }}
+    >
+      <Tabs.Screen
+        name="home"
+        options={{
+          title: "Relax",
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name="home" color={color} focused={focused} />
+          ),
+          headerShadowVisible: false,
+          headerRight: () => (
+            <View style={styles.container}>
+              <Link href="/GameIntro" asChild>
+                <Pressable>
+                  {({ pressed }) => (
+                    <Ionicons
+                      name="game-controller-outline"
+                      size={27}
+                      color={Colors[colorScheme ?? "light"].text}
+                      style={{
+                        marginRight: 15,
+                        opacity: pressed ? 0.5 : 1,
+                      }}
+                    />
+                  )}
+                </Pressable>
+              </Link>
+            </View>
+          ),
+          headerTitle: () => (
+            <Text
+              style={{
+                color: themeTextColor,
+                fontSize: 20,
+                fontWeight: "bold",
+              }}
+            >
+              {greeting}, {userInfo?.user.first_name}!
+            </Text>
+          ),
         }}
-      >
-        <Tabs.Screen
-          name="home"
-          options={{
-            title: "Relax",
-            tabBarIcon: ({ color, focused }) => (
-              <TabBarIcon name="home" color={color} focused={focused} />
-            ),
-            headerShadowVisible: false,
-            headerRight: () => (
-              <View style={styles.container}>
-                <Link href="/GameIntro" asChild>
-                  <Pressable>
-                    {({ pressed }) => (
-                      <Ionicons
-                        name="game-controller-outline"
-                        size={27}
-                        color={Colors[colorScheme ?? "light"].text}
-                        style={{
-                          marginRight: 15,
-                          opacity: pressed ? 0.5 : 1,
-                        }}
-                      />
-                    )}
-                  </Pressable>
-                </Link>
-              </View>
-            ),
-            headerTitle: () => (
-              <Text
-                style={{
-                  color: themeTextColor,
-                  fontSize: 20,
-                  fontWeight: "bold",
-                }}
-              >
-                {greeting}, {userInfo?.user.first_name}!
-              </Text>
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="(two)"
-          options={{
-            title: "Learn",
-            tabBarIcon: ({ color, focused }) => (
-              <TabBarIcon name="book" color={color} focused={focused} />
-            ),
-            headerShown: false,
-            headerTitle: "Details",
-            headerShadowVisible: false,
-          }}
-        />
-        <Tabs.Screen
-          name="(reminder)"
-          options={{
-            title: "To Do",
-            tabBarIcon: ({ color, focused }) => (
-              <TabBarIcon
-                name="calendar-clock"
-                color={color}
-                focused={focused}
-              />
-            ),
-            headerShadowVisible: false,
-            headerShown: false,
-            headerTitle: "",
-          }}
-        />
-        <Tabs.Screen
-          name="(account)"
-          options={{
-            title: "Settings",
-            tabBarIcon: ({ color, focused }) => (
-              <TabBarIcon name="cog" color={color} focused={focused} />
-            ),
-            headerTitle: "Settings",
-            headerShown: false,
-            headerShadowVisible: false,
-          }}
-        />
-      </Tabs>
-    </SafeAreaProvider>
+      />
+      <Tabs.Screen
+        name="(two)"
+        options={{
+          title: "Learn",
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name="book" color={color} focused={focused} />
+          ),
+          headerShown: false,
+          headerTitle: "Details",
+          headerShadowVisible: false,
+        }}
+      />
+      <Tabs.Screen
+        name="(reminder)"
+        options={{
+          title: "To Do",
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name="calendar-clock" color={color} focused={focused} />
+          ),
+          headerShadowVisible: false,
+          headerShown: false,
+          headerTitle: "",
+        }}
+      />
+      <Tabs.Screen
+        name="(account)"
+        options={{
+          title: "Settings",
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name="cog" color={color} focused={focused} />
+          ),
+          headerTitle: "Settings",
+          headerShown: false,
+          headerShadowVisible: false,
+        }}
+      />
+    </Tabs>
   );
 }
 

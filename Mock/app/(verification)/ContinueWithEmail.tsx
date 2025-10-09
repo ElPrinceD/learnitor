@@ -18,7 +18,6 @@ import Colors from "../../constants/Colors";
 import VerificationButton from "../../components/VerificationButton";
 import { StatusBar } from "expo-status-bar";
 import { Typewriter } from "../../components/TypewriterText";
-
 import AnimatedTextInput from "../../components/AnimatedTextInput";
 
 const ContinueWithEmail = () => {
@@ -42,8 +41,43 @@ const ContinueWithEmail = () => {
     setDob(dateString);
   };
 
+  // Clear errors when user starts typing in the specific field
+  const handleEmailChange = (text: string) => {
+    setEmail(text);
+    if (emailError) {
+      setEmailError("");
+    }
+  };
+
+  const handlePasswordChange = (text: string) => {
+    setPassword(text);
+    if (passwordError) {
+      setPasswordError("");
+    }
+  };
+
+  const handleFirstNameChange = (text: string) => {
+    setFirstName(text);
+    if (allFieldsError) {
+      setAllFieldsError("");
+    }
+  };
+
+  const handleSurnameChange = (text: string) => {
+    setSurname(text);
+    if (allFieldsError) {
+      setAllFieldsError("");
+    }
+  };
+
   const handleKeyboardDismiss = () => {
     Keyboard.dismiss();
+  };
+
+  const clearErrors = () => {
+    setEmailError("");
+    setPasswordError("");
+    setAllFieldsError("");
   };
 
   // const handleInstitutionSelect = () => {
@@ -85,9 +119,8 @@ const ContinueWithEmail = () => {
   // };
 
   const handleSignUp = () => {
-    setPasswordError("");
-    setEmailError("");
-    setAllFieldsError("");
+    clearErrors();
+
     if (!firstName || !surname || !email || !password || !dob) {
       setAllFieldsError("Please fill in all fields");
     } else if (password.length < 8) {
@@ -107,12 +140,25 @@ const ContinueWithEmail = () => {
         .then((response) => {
           setUser(response.data.user);
           router.navigate({
-            pathname: "LogIn",
+            pathname: "ConsentScreen",
             params: { email: response.data.user.email },
           });
         })
         .catch((error) => {
           console.error("Registration failed:", error);
+          if (error.response?.status === 400) {
+            setAllFieldsError(
+              "Registration failed. Please check your information and try again."
+            );
+          } else if (error.response?.status === 409) {
+            setEmailError("An account with this email already exists.");
+          } else if (error.response?.status === 500) {
+            setAllFieldsError("Server error. Please try again later.");
+          } else {
+            setAllFieldsError(
+              "Registration failed. Please check your internet connection and try again."
+            );
+          }
         });
     }
   };
@@ -171,6 +217,10 @@ const ContinueWithEmail = () => {
       width: rS(300),
       backgroundColor: themeColors.background,
     },
+    errorContainer: {
+      marginTop: rV(20),
+      paddingHorizontal: rMS(20),
+    },
     errorMessage: {
       fontSize: SIZES.medium,
       color: "#D22B2B",
@@ -210,26 +260,29 @@ const ContinueWithEmail = () => {
           <AnimatedTextInput
             label="Email"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={handleEmailChange}
             placeholderTextColor={themeColors.textSecondary}
             style={styles.inputContainer}
+            labelColor={emailError ? "#D22B2B" : undefined}
           />
           <AnimatedTextInput
             label="Password"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={handlePasswordChange}
             placeholderTextColor={themeColors.textSecondary}
             secureTextEntry={!showPassword}
             showToggleIcon={true}
             style={styles.inputContainer}
+            labelColor={passwordError ? "#D22B2B" : undefined}
           />
           <View style={styles.rowContainer}>
             <View style={[styles.halfInput, { marginRight: rS(20) }]}>
               <AnimatedTextInput
                 label="First Name"
                 value={firstName}
-                onChangeText={setFirstName}
+                onChangeText={handleFirstNameChange}
                 placeholderTextColor={themeColors.textSecondary}
+                labelColor={allFieldsError ? "#D22B2B" : undefined}
               />
             </View>
 
@@ -237,8 +290,9 @@ const ContinueWithEmail = () => {
               <AnimatedTextInput
                 label="Last Name"
                 value={surname}
-                onChangeText={setSurname}
+                onChangeText={handleSurnameChange}
                 placeholderTextColor={themeColors.textSecondary}
+                labelColor={allFieldsError ? "#D22B2B" : undefined}
               />
             </View>
           </View>
@@ -246,14 +300,27 @@ const ContinueWithEmail = () => {
           <View style={styles.dateContainer}>
             <DateSelector
               label="Date of Birth"
-              initialDate={dob}
               onDateChange={handleDateChange}
               minDate={false}
+              startBlank={true}
             />
           </View>
 
           <View style={styles.spacing} />
           <VerificationButton onPress={handleSignUp} title="Register" />
+
+          {/* Error Messages Below Register Button */}
+          <View style={styles.errorContainer}>
+            {emailError ? (
+              <Text style={styles.errorMessage}>{emailError}</Text>
+            ) : null}
+            {passwordError ? (
+              <Text style={styles.errorMessage}>{passwordError}</Text>
+            ) : null}
+            {allFieldsError ? (
+              <Text style={styles.errorMessage}>{allFieldsError}</Text>
+            ) : null}
+          </View>
         </View>
         <View style={styles.bottomContainer}>
           <Text style={styles.existingText}>Already have an account?</Text>

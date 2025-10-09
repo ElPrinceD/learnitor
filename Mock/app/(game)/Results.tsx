@@ -29,6 +29,7 @@ export default function ResultsScreen() {
   }>();
   const { showGameCompletionAd } = useAdManager();
   const [adShown, setAdShown] = useState(false);
+  const [error, setError] = useState<string>("");
 
   // Animation refs for buttons
   const homeButtonScale = useRef(new Animated.Value(1)).current;
@@ -71,11 +72,31 @@ export default function ResultsScreen() {
     return null;
   }
 
-  const { data: gameDetails } = useQuery<GameDetailsResponse, Error>({
+  const { data: gameDetails, error: gameDetailsError } = useQuery<
+    GameDetailsResponse,
+    Error
+  >({
     queryKey: ["gameDetails", gameId, userToken?.token],
     queryFn: () => getGameDetails(gameId, userToken?.token),
     enabled: !!userToken,
   });
+
+  // Handle errors and set user-friendly messages
+  useEffect(() => {
+    if (gameDetailsError) {
+      if (gameDetailsError.message.includes("404")) {
+        setError("Game results not found. Please try again.");
+      } else if (gameDetailsError.message.includes("403")) {
+        setError("You don't have permission to view these results.");
+      } else if (gameDetailsError.message.includes("network")) {
+        setError("Connection failed. Please check your internet connection.");
+      } else {
+        setError("Unable to load results. Please try again later.");
+      }
+    } else {
+      setError(""); // Clear error when successful
+    }
+  }, [gameDetailsError]);
 
   const creator = gameDetails?.creator.first_name;
   const creatorId = gameDetails?.creator.id;
@@ -246,6 +267,14 @@ export default function ResultsScreen() {
     buttonIcon: {
       marginRight: rS(4),
     },
+    errorMessage: {
+      alignSelf: "center",
+      fontSize: SIZES.medium,
+      color: "#D22B2B",
+      marginVertical: rV(16),
+      textAlign: "center",
+      paddingHorizontal: rMS(20),
+    },
     crownIcon: {
       position: "absolute",
       top: -rV(5),
@@ -292,8 +321,14 @@ export default function ResultsScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.topContainerTitle}>{creator}'s Arena</Text>
-      <Text style={styles.title}>Scores</Text>
+      {error ? (
+        <Text style={styles.errorMessage}>{error}</Text>
+      ) : (
+        <>
+          <Text style={styles.topContainerTitle}>{creator}'s Arena</Text>
+          <Text style={styles.title}>Scores</Text>
+        </>
+      )}
       <FlatList
         data={players}
         renderItem={renderPlayer}

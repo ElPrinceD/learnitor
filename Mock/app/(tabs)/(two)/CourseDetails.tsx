@@ -41,9 +41,6 @@ const CourseDetails: React.FC = () => {
   const { course } = useLocalSearchParams();
   const { userToken, userInfo } = useAuth();
 
-  // Debug logging
-  console.log("CourseDetails - Raw course param:", course);
-  console.log("CourseDetails - Course type:", typeof course);
   const [selectedTopics, setSelectedTopics] = useState<Topic[]>([]);
   const [progress, setProgress] = useState<number>(0);
   const [refreshing, setRefreshing] = useState(false);
@@ -56,12 +53,9 @@ const CourseDetails: React.FC = () => {
   const parsedCourse: Course | null = useMemo(() => {
     try {
       if (!course) {
-        console.log("No course parameter provided");
         return null;
       }
-      console.log("Parsing course:", course);
       const parsed = typeof course === "string" ? JSON.parse(course) : course;
-      console.log("Parsed course:", parsed);
       return parsed;
     } catch (error) {
       console.error("Error parsing course:", error);
@@ -97,7 +91,7 @@ const CourseDetails: React.FC = () => {
     refetch: refetchTopics,
   } = useQuery({
     queryKey: ["courseTopics", parsedCourse.id],
-    queryFn: () => getCourseTopics(parsedCourse.id, userToken?.token),
+    queryFn: () => getCourseTopics(parseInt(parsedCourse.id), userToken?.token),
     enabled: !!parsedCourse.id && !!userInfo?.user?.id && !!userToken?.token,
   });
 
@@ -111,12 +105,15 @@ const CourseDetails: React.FC = () => {
 
     queryFn: () =>
       getEnrollmentStatus(
-        userInfo?.user?.id,
-        parsedCourse.id,
+        userInfo?.user?.id || 0,
+        parseInt(parsedCourse.id),
         userToken?.token
       ),
     enabled: !!parsedCourse.id && !!userInfo?.user?.id && !!userToken?.token,
   });
+
+  // Define userAlreadyEnrolled after enrollment query
+  const userAlreadyEnrolled = enrollmentData?.enrolled;
 
   const {
     status: progressStatus,
@@ -124,7 +121,12 @@ const CourseDetails: React.FC = () => {
     error: progressError,
     refetch: refetchProgress,
   } = useQuery({
-    queryKey: ["courseProgress", userInfo?.user?.id, parsedCourse.id],
+    queryKey: [
+      "courseProgress",
+      userInfo?.user?.id,
+      parsedCourse.id,
+      userAlreadyEnrolled,
+    ],
     queryFn: () => {
       // Check if user is enrolled before fetching progress
       if (
@@ -135,7 +137,7 @@ const CourseDetails: React.FC = () => {
       ) {
         return getCourseProgress(
           userInfo.user.id,
-          parsedCourse.id,
+          parseInt(parsedCourse.id),
           userToken.token
         );
       } else {
@@ -143,10 +145,20 @@ const CourseDetails: React.FC = () => {
         return Promise.resolve(null); // or any other suitable placeholder
       }
     },
-    enabled: !!parsedCourse.id && !!userInfo?.user?.id && !!userToken?.token,
+    enabled:
+      !!parsedCourse.id &&
+      !!userInfo?.user?.id &&
+      !!userToken?.token &&
+      enrollmentStatus === "success" &&
+      userAlreadyEnrolled === true,
+    retry: (failureCount, error) => {
+      // Don't retry on 404 errors (expected for newly enrolled courses)
+      if ((error as any)?.response?.status === 404) {
+        return false;
+      }
+      return failureCount < 3;
+    },
   });
-
-  const userAlreadyEnrolled = enrollmentData?.enrolled;
   const [enrollDisabled, setEnrollDisabled] = useState<boolean>(
     userAlreadyEnrolled || selectedTopics.length === 0
   );
@@ -163,14 +175,13 @@ const CourseDetails: React.FC = () => {
       queryClient.invalidateQueries({
         queryKey: ["courseProgress", userInfo?.user?.id, parsedCourse.id],
       });
+      setProgress(0); // Reset progress on enrollment
       setErrorMessage(null); // Clear error message on successful enrollment
     },
     onError: (error) => {
       setErrorMessage(error.message || "Error enrolling in course");
     },
   });
-
-  console.log("This: ", enrollmentData);
 
   const unenrollMutation = useMutation<any, any, any, any>({
     mutationFn: async ({ userId, courseId, token }) => {
@@ -183,6 +194,7 @@ const CourseDetails: React.FC = () => {
       queryClient.invalidateQueries({
         queryKey: ["courseProgress", userInfo?.user?.id, parsedCourse.id],
       });
+      setProgress(0); // Reset progress on unenrollment
       setErrorMessage(null); // Clear error message on successful unenrollment
     },
     onError: (error) => {
@@ -192,23 +204,34 @@ const CourseDetails: React.FC = () => {
   useEffect(() => {
     if (courseProgress) {
       setProgress(courseProgress);
+    } else if (userAlreadyEnrolled === false) {
+      // Reset progress when user is not enrolled
+      setProgress(0);
     }
-  }, [courseProgress]);
+  }, [courseProgress, userAlreadyEnrolled]);
 
   useEffect(() => {
     if (progressError) {
-      setErrorMessage(progressError.message || "An error occurred");
+      // Only show progress error if it's not a 404 (which is expected for newly enrolled courses)
+      const is404Error = (progressError as any)?.response?.status === 404;
+      if (!is404Error) {
+        setErrorMessage(progressError.message || "An error occurred");
+      }
     } else if (courseProgress) {
       setProgress(courseProgress);
     }
   }, [courseProgress, progressError]);
 
   useEffect(() => {
-    if (topicsError || enrollmentError || progressError) {
+    // Check if progress error is a 404 (expected for newly enrolled courses)
+    const isProgress404 =
+      progressError && (progressError as any)?.response?.status === 404;
+
+    if (topicsError || enrollmentError || (progressError && !isProgress404)) {
       setErrorMessage(
         topicsError?.message ||
           enrollmentError?.message ||
-          progressError?.message ||
+          (progressError && !isProgress404 ? progressError?.message : null) ||
           "An error occurred"
       );
     }
@@ -447,13 +470,6 @@ const CourseDetails: React.FC = () => {
           source={{ uri: parsedCourse.url }}
           style={styles.image}
           resizeMode="cover"
-          onError={(error) => console.log("Image error:", error)}
-          onLoad={() =>
-            console.log("Image loaded successfully:", parsedCourse.url)
-          }
-          onLoadStart={() =>
-            console.log("Image loading started:", parsedCourse.url)
-          }
         />
         <RNAnimated.View
           style={{

@@ -44,11 +44,6 @@ const NativeAdComponent: React.FC<NativeAdComponentProps> = ({
 
   const loadNativeAd = async () => {
     try {
-      console.log(
-        "Loading native ad with unit ID:",
-        AD_CONFIG.NATIVE_AD_UNIT_ID
-      );
-
       const ad = await NativeAd.createForAdRequest(
         AD_CONFIG.NATIVE_AD_UNIT_ID,
         {

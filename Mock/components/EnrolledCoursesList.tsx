@@ -19,12 +19,14 @@ interface Props {
   enrolledCoursesData: Course[];
   progressMap: { [key: string]: number };
   loading: boolean;
+  isRecommended?: boolean;
 }
 
 const EnrolledCoursesList: React.FC<Props> = ({
   enrolledCoursesData,
   progressMap,
   loading,
+  isRecommended = false,
 }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -102,10 +104,19 @@ const EnrolledCoursesList: React.FC<Props> = ({
     ({ item }: { item: Course }) => (
       <TouchableOpacity
         onPress={() => {
-          router.navigate({
-            pathname: "EnrolledCourse",
-            params: { course: JSON.stringify(item) },
-          });
+          if (isRecommended) {
+            // Navigate to Learn tab first, then to CourseDetails
+            router.push({
+              pathname: "/(tabs)/(two)/CourseDetails",
+              params: { course: JSON.stringify(item) },
+            });
+          } else {
+            // Navigate to Learn tab first, then to EnrolledCourse
+            router.push({
+              pathname: "/(tabs)/(two)/EnrolledCourse",
+              params: { course: JSON.stringify(item) },
+            });
+          }
         }}
         activeOpacity={0.5}
         style={styles.touchable}
@@ -118,16 +129,18 @@ const EnrolledCoursesList: React.FC<Props> = ({
             <Text style={styles.name} numberOfLines={2}>
               {item.title}
             </Text>
-            <ProgressBar
-              progress={progressMap[item.id] || 0}
-              containerStyle={containerStyle}
-              fillStyle={fillStyle}
-            />
+            {!isRecommended && (
+              <ProgressBar
+                progress={progressMap[item.id] || 0}
+                containerStyle={containerStyle}
+                fillStyle={fillStyle}
+              />
+            )}
           </View>
         </View>
       </TouchableOpacity>
     ),
-    [progressMap, themeColors]
+    [progressMap, themeColors, isRecommended]
   );
 
   const keyExtractor = useCallback((item: Course) => item.id.toString(), []);
@@ -144,7 +157,9 @@ const EnrolledCoursesList: React.FC<Props> = ({
   }
   return (
     <>
-      <Text style={styles.title}>Enrolled Courses</Text>
+      <Text style={styles.title}>
+        {isRecommended ? "Recommended Courses" : "Enrolled Courses"}
+      </Text>
       <FlatList
         horizontal
         data={enrolledCoursesData}

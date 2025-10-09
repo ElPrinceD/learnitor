@@ -78,7 +78,16 @@ const CoursesCategories: React.FC<Props> = ({
       <View style={styles.skeletonContainer}>
         {[...Array(4)].map((_, index) => (
           <View key={index} style={styles.skeleton}>
-            <Skeleton colorMode={colorMode} height={rV(24)} width={rS(70)} />
+            <Skeleton
+              colorMode={colorMode}
+              height={rV(24)}
+              width={rS(70)}
+              transition={{
+                type: "timing",
+                duration: 800,
+                delay: index * 150,
+              }}
+            />
           </View>
         ))}
       </View>

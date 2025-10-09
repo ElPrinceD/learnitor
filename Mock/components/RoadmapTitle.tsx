@@ -78,7 +78,7 @@ const RoadmapTitle = ({ course, progress }) => {
           }}
           fillStyle={{ backgroundColor: themeColors.icon }}
         />
-        <Text style={styles.progressText}>{`${progress.toFixed(
+        <Text style={styles.progressText}>{`${(progress || 0).toFixed(
           2
         )}% Completed`}</Text>
       </View>

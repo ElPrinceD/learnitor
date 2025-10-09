@@ -8,7 +8,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { useAuth } from "./components/AuthContext";
 import ApiUrl from "./config";
-import { useAlert } from "./contexts/AlertContext";
+import { useConsent } from "./contexts/ConsentContext";
 
 export interface PushNotificationState {
   expoPushToken?: Notifications.ExpoPushToken;
@@ -27,7 +27,7 @@ export const usePushNotifications = (): PushNotificationState => {
   >();
 
   const { userToken } = useAuth();
-  const { showAlert } = useAlert();
+  const { hasConsent } = useConsent();
 
   const notificationListener = useRef<Notifications.Subscription | null>(null);
   const responseListener = useRef<Notifications.Subscription | null>(null);
@@ -40,7 +40,15 @@ export const usePushNotifications = (): PushNotificationState => {
     try {
       const response = await axios.post(
         `${ApiUrl}/api/register-device/`,
-        { token: tokenData },
+        { 
+          token: tokenData,
+          platform: Platform.OS,
+          consent_types: {
+            notifications: hasConsent("notifications"),
+            marketing: hasConsent("marketing"),
+            analytics: hasConsent("analytics")
+          }
+        },
         { headers: { Authorization: `Token ${authToken}` } }
       );
       console.log("[PushNotifications] Token saved to backend:", response.data);
@@ -54,6 +62,12 @@ export const usePushNotifications = (): PushNotificationState => {
   ): Promise<Notifications.ExpoPushToken | undefined> {
     if (!Device.isDevice) {
       console.warn("[PushNotifications] Must use a physical device");
+      return;
+    }
+
+    // Check if user has consented to notifications
+    if (!hasConsent("notifications")) {
+      console.log("[PushNotifications] User has not consented to notifications");
       return;
     }
 
@@ -71,30 +85,17 @@ export const usePushNotifications = (): PushNotificationState => {
             allowBadge: true,
             provideAppNotificationSettings: true,
           },
+          android: {
+            allowAlert: true,
+            allowBadge: true,
+            allowSound: true,
+          },
         });
         finalStatus = status;
       }
 
       if (finalStatus !== "granted") {
-        if (showSettingsPrompt) {
-          showAlert(
-            "Enable Notifications",
-            "Please enable notifications in Settings to stay updated.",
-            [
-              { text: "Cancel", onPress: () => {} },
-              {
-                text: "Open Settings",
-                onPress: () => {
-                  if (Platform.OS === "ios") {
-                    Linking.openURL("app-settings:");
-                  } else {
-                    Linking.openSettings();
-                  }
-                },
-              },
-            ]
-          );
-        }
+        console.log("[PushNotifications] Notification permissions not granted");
         return;
       }
 
@@ -103,7 +104,7 @@ export const usePushNotifications = (): PushNotificationState => {
       });
 
       const savedToken = await AsyncStorage.getItem("savedPushToken");
-      if (savedToken !== token.data) {
+      if (savedToken !== token.data && userToken?.token) {
         await saveTokenToBackend(token.data, userToken.token);
         await AsyncStorage.setItem("savedPushToken", token.data);
       }
@@ -121,6 +122,18 @@ export const usePushNotifications = (): PushNotificationState => {
     try {
       const content = notification.request.content;
       const data = content.data || {};
+      
+      // Check consent for different notification types
+      if (data.type === "marketing" && !hasConsent("marketing")) {
+        console.log("[PushNotifications] Ignoring marketing notification - no consent");
+        return;
+      }
+      
+      if (data.type === "analytics" && !hasConsent("analytics")) {
+        console.log("[PushNotifications] Ignoring analytics notification - no consent");
+        return;
+      }
+
       const title = content.title || "New Notification";
       const body =
         content.body ||
@@ -148,22 +161,47 @@ export const usePushNotifications = (): PushNotificationState => {
 
   useEffect(() => {
     Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: true,
-        shouldShowBanner: true,
-        shouldShowList: true,
-      }),
+      handleNotification: async (notification) => {
+        const data = notification.request.content.data || {};
+        
+        // Check consent for different notification types
+        if (data.type === "marketing" && !hasConsent("marketing")) {
+          return {
+            shouldPlaySound: false,
+            shouldSetBadge: false,
+            shouldShowBanner: false,
+            shouldShowList: false,
+          };
+        }
+        
+        if (data.type === "analytics" && !hasConsent("analytics")) {
+          return {
+            shouldPlaySound: false,
+            shouldSetBadge: false,
+            shouldShowBanner: false,
+            shouldShowList: false,
+          };
+        }
+
+        return {
+          shouldPlaySound: true,
+          shouldSetBadge: true,
+          shouldShowBanner: true,
+          shouldShowList: true,
+        };
+      },
     });
-  }, []);
+  }, [hasConsent]);
 
   useEffect(() => {
     if (!userToken?.token) return;
 
-    registerForPushNotificationsAsync(false).then((token) => {
-      if (token?.data) setExpoPushToken(token);
-    });
+    // Only register for push notifications if user has consented
+    if (hasConsent("notifications")) {
+      registerForPushNotificationsAsync(false).then((token) => {
+        if (token?.data) setExpoPushToken(token);
+      });
+    }
 
     notificationListener.current = Notifications.addNotificationReceivedListener(
       (notification) => {
@@ -175,29 +213,40 @@ export const usePushNotifications = (): PushNotificationState => {
     responseListener.current =
       Notifications.addNotificationResponseReceivedListener((response) => {
         const data = response.notification.request.content.data;
-        if (data?.community_id) {
+        
+        // Handle different notification types
+        if (data?.type === "task_reminder" && data?.taskId) {
+          router.push("/(tabs)/(reminder)/three");
+        } else if (data?.type === "course_update" && data?.courseId) {
+          router.push({ 
+            pathname: "/(tabs)/(two)/CourseDetails", 
+            params: { courseId: String(data.courseId) } 
+          });
+        } else if (data?.community_id) {
           router.push({
             pathname: "ChatScreen",
             params: {
-              communityId: data.community_id,
-              name: data.community_name,
-              image: data.community_image,
+              communityId: String(data.community_id),
+              name: String(data.community_name || ""),
+              image: String(data.community_image || ""),
             },
           });
+        } else if (data?.type === "announcement") {
+          router.push("/(tabs)/home");
         }
       });
 
     return () => {
       if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
+        notificationListener.current.remove();
         notificationListener.current = null;
       }
       if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
+        responseListener.current.remove();
         responseListener.current = null;
       }
     };
-  }, [userToken]);
+  }, [userToken, hasConsent]);
 
   return {
     expoPushToken,

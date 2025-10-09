@@ -190,8 +190,26 @@ const CoursesList: React.FC<Props> = ({
       >
         {[...Array(6)].map((_, index) => (
           <View key={index} style={styles.skeletonItem}>
-            <Skeleton colorMode={colorMode} height={rV(120)} width={"100%"} />
-            <Skeleton colorMode={colorMode} height={rV(18)} width={"100%"} />
+            <Skeleton
+              colorMode={colorMode}
+              height={rV(120)}
+              width={"100%"}
+              transition={{
+                type: "timing",
+                duration: 800,
+                delay: index * 100,
+              }}
+            />
+            <Skeleton
+              colorMode={colorMode}
+              height={rV(18)}
+              width={"100%"}
+              transition={{
+                type: "timing",
+                duration: 800,
+                delay: index * 100 + 50,
+              }}
+            />
           </View>
         ))}
       </View>

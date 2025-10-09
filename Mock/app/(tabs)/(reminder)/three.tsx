@@ -150,10 +150,6 @@ const Timeline = () => {
     });
   };
 
-  const handleNavigateCreateTask = () => {
-    router.navigate("createNewTime");
-  };
-
   const memoizedPlans = useMemo(() => {
     if (plansStatus === "success" && typedCategoryNames) {
       return todayPlans || [];

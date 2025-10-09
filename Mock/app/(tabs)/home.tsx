@@ -18,6 +18,7 @@ import {
 import {
   getEnrolledCourses,
   getCourseProgress,
+  getCourses,
 } from "../../services/CoursesApiCalls";
 import { getAnnouncements } from "../../services/companyApiCalls";
 import { useQuery } from "@tanstack/react-query";
@@ -58,6 +59,18 @@ const Home: React.FC = () => {
     queryKey: ["enrolledCourses", userId, token],
     queryFn: () => getEnrolledCourses(userId!, token!),
     enabled: !!token && !!userId,
+  });
+
+  // Recommended Courses (for first-time users)
+  const {
+    data: allCoursesData,
+    error: coursesError,
+    status: coursesStatus,
+    isLoading: coursesLoading,
+  } = useQuery({
+    queryKey: ["allCourses", token],
+    queryFn: () => getCourses(token!),
+    enabled: !!token,
   });
 
   // Today's Tasks
@@ -108,13 +121,15 @@ const Home: React.FC = () => {
       enrolledStatus === "error" ||
       progressStatus === "error" ||
       tasksStatus === "error" ||
-      announcementsStatus === "error"
+      announcementsStatus === "error" ||
+      coursesStatus === "error"
     ) {
       setErrorMessage(
         enrolledError?.message?.toString() ||
           progressError?.message?.toString() ||
           tasksError?.message?.toString() ||
           announcementsError?.message?.toString() ||
+          coursesError?.message?.toString() ||
           "An unknown error occurred"
       );
     } else {
@@ -125,10 +140,12 @@ const Home: React.FC = () => {
     progressStatus,
     tasksStatus,
     announcementsStatus,
+    coursesStatus,
     enrolledError,
     progressError,
     tasksError,
     announcementsError,
+    coursesError,
   ]);
 
   const onRefresh = useCallback(async () => {
@@ -143,6 +160,7 @@ const Home: React.FC = () => {
           queryKey: ["progress", userId, token, enrolledCoursesData],
         }),
         queryClient.invalidateQueries({ queryKey: ["todayTasks", token] }),
+        queryClient.invalidateQueries({ queryKey: ["allCourses", token] }),
       ]);
     } finally {
       setRefreshing(false);
@@ -162,6 +180,42 @@ const Home: React.FC = () => {
 
     return items;
   }, [announcementsData]);
+
+  // Get 6 random recommended courses for first-time users
+  const recommendedCourses = useMemo(() => {
+    if (!allCoursesData || allCoursesData.length === 0) return [];
+
+    // Shuffle array and take first 6
+    const shuffled = [...allCoursesData].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, 6);
+  }, [allCoursesData]);
+
+  // Learning quotes
+  const learningQuotes = [
+    "The expert in anything was once a beginner.",
+    "Learning never exhausts the mind.",
+    "Education is the passport to the future.",
+    "The capacity to learn is a gift.",
+    "Live as if you were to die tomorrow. Learn as if you were to live forever.",
+    "Learning is a treasure that will follow its owner everywhere.",
+    "The more that you read, the more things you will know.",
+    "Invest in yourself. Your career is the engine of your wealth.",
+    "Knowledge is power, but enthusiasm pulls the switch.",
+    "Learning is the only thing the mind never exhausts, never fears, and never regrets.",
+  ];
+
+  const randomQuote = useMemo(() => {
+    return learningQuotes[Math.floor(Math.random() * learningQuotes.length)];
+  }, []);
+
+  // Get today's date in the same format as TaskList
+  const todayDate = useMemo(() => {
+    const today = new Date();
+    const dayOfWeek = today.toLocaleDateString("en-US", { weekday: "long" });
+    const dayOfMonth = today.getDate();
+    const month = today.toLocaleDateString("en-US", { month: "short" });
+    return { dayOfWeek, dayOfMonth, month };
+  }, []);
 
   return (
     <View style={styles(themeColors).container}>
@@ -193,26 +247,53 @@ const Home: React.FC = () => {
                 loading={enrolledLoading}
               />
             </View>
-          ) : null}
+          ) : (
+            <View style={styles(themeColors).taskAndCoursesRow}>
+              <EnrolledCoursesList
+                enrolledCoursesData={recommendedCourses}
+                progressMap={{}}
+                loading={coursesLoading}
+                isRecommended={true}
+              />
+            </View>
+          )}
         </View>
 
         {/* Tasks Section */}
-        {tasksData.tasks.length > 0 && (
-          <View style={styles(themeColors).tasksContainer}>
-            <View style={styles(themeColors).taskCountContainer}>
-              <Text style={styles(themeColors).taskCountText}>Tasks Today</Text>
-              <Text style={styles(themeColors).taskCountNumber}>
-                {tasksData.tasks.length}
-              </Text>
-            </View>
-            <View style={styles(themeColors).taskListContainer}>
+        <View style={styles(themeColors).tasksContainer}>
+          <View style={styles(themeColors).taskCountContainer}>
+            <Text style={styles(themeColors).taskCountText}>Tasks Today</Text>
+            <Text style={styles(themeColors).taskCountNumber}>
+              {tasksData.tasks.length}
+            </Text>
+          </View>
+          <View style={styles(themeColors).taskListContainer}>
+            {tasksData.tasks.length > 0 ? (
               <TaskList
                 tasks={tasksData.tasks}
                 categoryNames={tasksData.categories}
               />
-            </View>
+            ) : (
+              <View style={styles(themeColors).taskListContainer}>
+                <View style={styles(themeColors).header}>
+                  <View style={styles(themeColors).dateContainer}>
+                    <Text style={styles(themeColors).dateText}>
+                      {todayDate.dayOfWeek}
+                    </Text>
+                    <Text style={styles(themeColors).dayText}>
+                      {todayDate.dayOfMonth} {todayDate.month}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles(themeColors).emptyState}>
+                  <Text style={styles(themeColors).emptyText}>
+                    "{randomQuote}"
+                  </Text>
+                </View>
+              </View>
+            )}
           </View>
-        )}
+        </View>
       </ScrollView>
       <ErrorMessage
         message={errorMessage}
@@ -288,6 +369,43 @@ const styles = (themeColors: (typeof Colors)["light"]) => {
     loadingText: {
       fontSize: SIZES.medium,
       color: themeColors.text,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: rMS(8),
+    },
+    dateContainer: {
+      backgroundColor: themeColors.card,
+      paddingHorizontal: rMS(12),
+      paddingVertical: rMS(8),
+      borderRadius: rMS(8),
+      marginRight: rMS(12),
+    },
+    dateText: {
+      fontSize: SIZES.small,
+      fontWeight: "600",
+      color: themeColors.text,
+    },
+    dayText: {
+      fontSize: SIZES.medium,
+      fontWeight: "bold",
+      color: themeColors.text,
+      marginTop: rV(2),
+    },
+    emptyState: {
+      backgroundColor: themeColors.card,
+      borderRadius: rMS(12),
+      padding: rMS(10),
+      flexDirection: "row",
+      alignItems: "stretch",
+      marginRight: rS(-40),
+    },
+    emptyText: {
+      fontSize: SIZES.medium,
+      color: themeColors.textSecondary,
+      textAlign: "center",
+      fontStyle: "italic",
     },
   });
 };

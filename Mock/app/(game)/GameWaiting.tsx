@@ -43,6 +43,7 @@ export default function GameWaitingScreen() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [gameQuestions, setGameQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>("");
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -56,6 +57,23 @@ export default function GameWaitingScreen() {
     queryFn: () => getGameDetails(id || gameId, userToken?.token),
     enabled: !!userToken,
   });
+
+  // Handle errors and set user-friendly messages
+  useEffect(() => {
+    if (gameDetailsError) {
+      if (gameDetailsError.message.includes("404")) {
+        setError("Game not found. Please check the game code and try again.");
+      } else if (gameDetailsError.message.includes("403")) {
+        setError("You don't have permission to access this game.");
+      } else if (gameDetailsError.message.includes("network")) {
+        setError("Connection failed. Please check your internet connection.");
+      } else {
+        setError("Unable to load game. Please try again later.");
+      }
+    } else {
+      setError(""); // Clear error when successful
+    }
+  }, [gameDetailsError]);
 
   useEffect(() => {
     if (gameDetails) {
@@ -115,7 +133,7 @@ export default function GameWaitingScreen() {
 
     ws.current.onopen = () => {
       console.log("WebSocket connection opened");
-      ws.current.send(JSON.stringify({ type: "join_game" }));
+      ws.current?.send(JSON.stringify({ type: "join_game" }));
     };
 
     ws.current.onerror = (error) => {
@@ -296,11 +314,16 @@ export default function GameWaitingScreen() {
         </TouchableOpacity>
       </View>
       <Text style={styles.waitingText}>Waiting for others...</Text>
-      {gameDetailsError && (
+      {error && (
         <Text
-          style={{ color: "red", textAlign: "center", marginBottom: rV(10) }}
+          style={{
+            color: "#D22B2B",
+            textAlign: "center",
+            marginBottom: rV(10),
+            fontSize: SIZES.medium,
+          }}
         >
-          {gameDetailsError.message}
+          {error}
         </Text>
       )}
       {loading ? (

@@ -2,16 +2,16 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Link, router, Stack } from "expo-router";
 import React from "react";
 import { Pressable, useColorScheme } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 import Colors from "../../../constants/Colors";
 import CustomBackButton from "../../../components/CustomBackButton";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 
 export default function Tab3Layout() {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
   return (
-    <SafeAreaProvider>
+    <BottomSheetModalProvider>
       <Stack>
         <Stack.Screen
           name="three"
@@ -78,6 +78,6 @@ export default function Tab3Layout() {
           }}
         />
       </Stack>
-    </SafeAreaProvider>
+    </BottomSheetModalProvider>
   );
 }

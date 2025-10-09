@@ -18,15 +18,14 @@ import { AuthProvider, useAuth } from "../components/AuthContext"; // Update the
 import { useColorScheme } from "../components/useColorScheme";
 import { RootSiblingParent } from "react-native-root-siblings";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "../QueryClient";
 import { SQLiteProvider } from "expo-sqlite";
 import { CacheProvider } from "../contexts/CacheContext"; // Update the path
-import { WebSocketProvider } from "../contexts/webSocketProvider"; // Update the path
 import { AlertProvider } from "../contexts/AlertContext"; // Update the path
 import { TimelineProvider } from "../contexts/TimelineContext"; // Update the path
 import { AdManagerProvider } from "../components/ads/AdManager"; // Add AdManager
+import { ConsentProvider } from "../contexts/ConsentContext";
 import mobileAds from "react-native-google-mobile-ads";
 import {
   configureReanimatedLogger,
@@ -96,8 +95,6 @@ const RootLayoutNav = () => {
 
   const [navigationCompleted, setNavigationCompleted] = useState(false);
   const token = userToken?.token || null;
-  console.log("2nd main layout token", token);
-  console.log("main layout token", userToken?.token);
 
   useEffect(() => {
     if (isLoading) return;
@@ -128,60 +125,51 @@ const RootLayoutNav = () => {
   return (
     <TamaguiProvider config={config}>
       <PortalProvider>
-        <BottomSheetModalProvider>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <SafeAreaProvider>
-              <QueryClientProvider client={queryClient}>
-                {/* Wrap all contexts with SQLiteProvider */}
-                <SQLiteProvider databaseName="slate.db">
-                  <CacheProvider>
-                    <WebSocketProvider>
-                      <TimelineProvider token={token}>
-                        <AlertProvider>
-                          <AdManagerProvider>
-                            <ThemeProvider
-                              value={
-                                colorScheme === "dark"
-                                  ? DarkTheme
-                                  : DefaultTheme
-                              }
-                            >
-                              <Stack>
-                                <Stack.Screen
-                                  name="index"
-                                  options={{ headerShown: false }}
-                                />
-                                <Stack.Screen
-                                  name="(verification)"
-                                  options={{ headerShown: false }}
-                                />
-                                <Stack.Screen
-                                  name="(tabs)"
-                                  options={{
-                                    headerShown: false,
-                                    headerShadowVisible: false,
-                                  }}
-                                />
-                                <Stack.Screen
-                                  name="(game)"
-                                  options={{ headerShown: false }}
-                                />
-                                <Stack.Screen
-                                  name="(fullscreens)"
-                                  options={{ headerShown: false }}
-                                />
-                              </Stack>
-                            </ThemeProvider>
-                          </AdManagerProvider>
-                        </AlertProvider>
-                      </TimelineProvider>
-                    </WebSocketProvider>
-                  </CacheProvider>
-                </SQLiteProvider>
-              </QueryClientProvider>
-            </SafeAreaProvider>
-          </GestureHandlerRootView>
-        </BottomSheetModalProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <SafeAreaProvider>
+            <QueryClientProvider client={queryClient}>
+              <SQLiteProvider databaseName="slate.db">
+                <CacheProvider>
+                  <ConsentProvider>
+                    <TimelineProvider token={token}>
+                      <AlertProvider>
+                        <AdManagerProvider>
+                          <ThemeProvider
+                            value={
+                              colorScheme === "dark" ? DarkTheme : DefaultTheme
+                            }
+                          >
+                            <Stack>
+                              <Stack.Screen
+                                name="index"
+                                options={{ headerShown: false }}
+                              />
+                              <Stack.Screen
+                                name="(verification)"
+                                options={{ headerShown: false }}
+                              />
+                              <Stack.Screen
+                                name="(tabs)"
+                                options={{
+                                  headerShown: false,
+                                  headerShadowVisible: false,
+                                }}
+                              />
+                              <Stack.Screen
+                                name="(game)"
+                                options={{ headerShown: false }}
+                              />
+                            </Stack>
+                          </ThemeProvider>
+                        </AdManagerProvider>
+                      </AlertProvider>
+                    </TimelineProvider>
+                  </ConsentProvider>
+                </CacheProvider>
+              </SQLiteProvider>
+            </QueryClientProvider>
+          </SafeAreaProvider>
+        </GestureHandlerRootView>
       </PortalProvider>
     </TamaguiProvider>
   );

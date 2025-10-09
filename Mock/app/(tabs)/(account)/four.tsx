@@ -96,6 +96,10 @@ const Profile = () => {
     router.navigate("FAQScreen");
   };
 
+  const handlePrivacySettings = () => {
+    router.navigate("ConsentSettings");
+  };
+
   const handleProfilePictureUpdate = async () => {
     try {
       const { status } =
@@ -355,6 +359,17 @@ const Profile = () => {
             style={styles.icon}
           />
           <Text style={styles.optionText}>FAQs</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.sectionTitle}>Privacy</Text>
+        <TouchableOpacity style={styles.option} onPress={handlePrivacySettings}>
+          <Ionicons
+            name="shield-checkmark-outline"
+            size={24}
+            color={themeColors.icon}
+            style={styles.icon}
+          />
+          <Text style={styles.optionText}>Privacy Settings</Text>
         </TouchableOpacity>
 
         <Text style={styles.sectionTitle}>Terms</Text>

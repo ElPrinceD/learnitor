@@ -7,6 +7,7 @@ const VerificationLayout = () => {
       <Stack.Screen name="Intro" options={{ headerShown: false }} />
       <Stack.Screen name="SignUp" options={{ headerShown: false }} />
       <Stack.Screen name="ContinueWithEmail" options={{ headerShown: false }} />
+      <Stack.Screen name="ConsentScreen" options={{ headerShown: false }} />
 
       <Stack.Screen name="LogIn" options={{ headerShown: false }} />
 

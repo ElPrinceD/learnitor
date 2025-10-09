@@ -1,5 +1,11 @@
-import React, { useCallback, useEffect, useState, useMemo } from "react";
-import { View, StyleSheet } from "react-native";
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+  useMemo,
+  useRef,
+} from "react";
+import { View, StyleSheet, Animated } from "react-native";
 import SearchBar from "../../../components/SearchBar";
 import CoursesList from "../../../components/CoursesList";
 import CoursesCategories from "../../../components/CoursesCategories";
@@ -32,6 +38,7 @@ const CoursesScreen: React.FC<CoursesScreenProps> = ({ segment }) => {
   );
   const { userToken, userInfo } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const handleDismissError = useCallback(() => setErrorMessage(null), []);
 
@@ -110,6 +117,15 @@ const CoursesScreen: React.FC<CoursesScreenProps> = ({ segment }) => {
     setFilteredCourses(coursesData ?? []);
   }, [coursesData]);
 
+  // Fade in animation on mount
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 400,
+      useNativeDriver: true,
+    }).start();
+  }, [fadeAnim]);
+
   const onRefresh = useCallback(async () => {
     try {
       await queryClient.invalidateQueries({
@@ -144,7 +160,7 @@ const CoursesScreen: React.FC<CoursesScreenProps> = ({ segment }) => {
   );
 
   return (
-    <View style={styles.container}>
+    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
       <SearchBar onSearch={handleSearch} />
       <CoursesCategories {...coursesCategoriesProps} />
       <CoursesList {...coursesListProps} />
@@ -153,7 +169,7 @@ const CoursesScreen: React.FC<CoursesScreenProps> = ({ segment }) => {
         visible={!!errorMessage}
         onDismiss={handleDismissError}
       />
-    </View>
+    </Animated.View>
   );
 };
 

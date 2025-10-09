@@ -95,6 +95,35 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
     },
   });
 
+  // Early return if no topics
+  if (!enrolledTopics || enrolledTopics.length === 0) {
+    return (
+      <View
+        style={[
+          styles.container,
+          { justifyContent: "center", alignItems: "center", padding: 20 },
+        ]}
+      >
+        <Text
+          style={{ color: themeColors.text, fontSize: 16, textAlign: "center" }}
+        >
+          No topics available
+        </Text>
+      </View>
+    );
+  }
+
+  // Create stable callback functions outside of render
+  const createTopicPressHandler = useCallback(
+    (topic: Topic) => () => handleTopicPress(topic),
+    [handleTopicPress]
+  );
+
+  const createQuestionPressHandler = useCallback(
+    (topic: Topic) => () => handleQuestionPress(topic),
+    [handleQuestionPress]
+  );
+
   const renderTimelineItem = (
     topic: Topic,
     index: number,
@@ -126,10 +155,10 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
         ? "center"
         : "right";
 
-    const onPress = useCallback(
-      () => (isQuestion ? handleQuestionPress(topic) : handleTopicPress(topic)),
-      [isQuestion, topic.id, handleTopicPress, handleQuestionPress]
-    );
+    // Use the stable callback functions instead of useCallback inside render
+    const onPress = isQuestion
+      ? createQuestionPressHandler(topic)
+      : createTopicPressHandler(topic);
 
     return (
       <View key={`${topic.id}-${index}`} style={styles.timelineItem}>

@@ -53,11 +53,6 @@ const useRewardedAd = ({
 
   const loadAd = () => {
     try {
-      console.log(
-        "Creating rewarded ad with unit ID:",
-        AD_CONFIG.REWARDED_AD_UNIT_ID
-      );
-
       // Check if Google Mobile Ads is available
       if (!RewardedAd || typeof RewardedAd.createForAdRequest !== "function") {
         console.warn(

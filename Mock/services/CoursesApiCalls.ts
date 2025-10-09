@@ -145,7 +145,6 @@ export const getCourseTopics = async (courseId: number, token: string | null | u
 };
 
 export const getEnrollmentStatus = async (userId: number, courseId: number, token: string | null | undefined): Promise<any> => { // replace any
-    console.log(`${LEARNER_API_BASE_URL}/${userId}/course/${courseId}/enrollment/`);
     try {
         const data = await api.get<any>(`${LEARNER_API_BASE_URL}/${userId}/course/${courseId}/enrollment/`, { // replace any
             headers: {
@@ -246,7 +245,6 @@ export const enrollInCourse = async (userId: number, courseId: number, topicIds:
                 Authorization: `Token ${token}`,
             },
         });
-        console.log(data.results)
         return data;
     } catch (error) {
         console.error('Error enrolling in course:', error);

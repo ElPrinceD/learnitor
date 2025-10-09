@@ -24,6 +24,8 @@ interface DateSelectorProps extends SelectProps {
   minDate?: boolean;
   // Optional prop: If provided, this date will be used as the initial date
   initialDate?: string;
+  // Optional prop: If true, starts with no date selected (blank state)
+  startBlank?: boolean;
 }
 
 // Helper function to get today's date in ISO format.
@@ -66,17 +68,25 @@ const DateSelector: React.FC<DateSelectorProps> = ({
   buttonTitle = "Select a date",
   minDate = false,
   initialDate,
+  startBlank = false,
   ...selectProps
 }) => {
-  // If an initialDate is provided, use it. Otherwise, fall back to today's date.
-  const defaultDateStr =
-    initialDate && initialDate.trim() !== "" ? initialDate : getTodayDate();
-  const defaultDate = new Date(defaultDateStr);
+  // If startBlank is true, start with no date. Otherwise, use initialDate or today's date.
+  const defaultDateStr = startBlank
+    ? ""
+    : initialDate && initialDate.trim() !== ""
+    ? initialDate
+    : getTodayDate();
+  const defaultDate = startBlank ? null : new Date(defaultDateStr);
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(defaultDate);
   const [selected, setSelected] = useState(defaultDateStr);
-  const [currentMonth, setCurrentMonth] = useState(defaultDate.getMonth() + 1);
-  const [currentYear, setCurrentYear] = useState(defaultDate.getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(
+    startBlank ? new Date().getMonth() + 1 : defaultDate.getMonth() + 1
+  );
+  const [currentYear, setCurrentYear] = useState(
+    startBlank ? new Date().getFullYear() : defaultDate.getFullYear()
+  );
   const [showYearPicker, setShowYearPicker] = useState(false);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
 
@@ -253,7 +263,7 @@ const DateSelector: React.FC<DateSelectorProps> = ({
                 fontSize: SIZES.medium,
               }}
             >
-              {formatDate(selectedDate)}
+              {selectedDate ? formatDate(selectedDate) : buttonTitle}
             </Select.Value>
           </Select.Trigger>
 

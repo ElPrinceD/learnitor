@@ -229,7 +229,8 @@ const PracticeQuestions: React.FC = () => {
       };
     });
 
-    let scorePercentage = (correctAnswers / totalQuestions) * 100;
+    let scorePercentage =
+      totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
 
     setTimeout(() => {
       router.replace({

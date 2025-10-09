@@ -111,13 +111,7 @@ const ReanimatedCarouselWithAds: React.FC<ReanimatedCarouselWithAdsProps> = ({
     if (item.isAd) {
       return (
         <View style={styles.adContainer} pointerEvents="box-none">
-          <NativeAdComponent
-            placement="carousel"
-            onAdLoaded={() => console.log("Carousel native ad loaded")}
-            onAdFailedToLoad={(error) =>
-              console.log("Carousel native ad failed:", error)
-            }
-          />
+          <NativeAdComponent placement="carousel" />
         </View>
       );
     }

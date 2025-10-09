@@ -29,6 +29,7 @@ type AnimatedTextInputProps = {
   showToggleIcon?: boolean;
   editable?: boolean;
   keyboardType?: KeyboardTypeOptions;
+  labelColor?: string;
 };
 
 const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
@@ -44,6 +45,7 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
   style,
   editable = true,
   keyboardType,
+  labelColor,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
   const colorScheme = useColorScheme();
@@ -169,7 +171,10 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
         ]}
       >
         <Animated.Text
-          style={[styles.label, { color: themeColors.background, fontSize }]}
+          style={[
+            styles.label,
+            { color: labelColor || themeColors.background, fontSize },
+          ]}
         >
           {label}
         </Animated.Text>

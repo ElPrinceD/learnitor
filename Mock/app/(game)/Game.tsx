@@ -46,6 +46,7 @@ export default function Game() {
   const [gameEnded, setGameEnded] = useState(false);
   const [redirected, setRedirected] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number>(questionDuration); // Added timeLeft state
+  const [error, setError] = useState<string>(""); // Add error state
 
   // Animation refs for power-ups
   const doubleDipScale = useRef(new Animated.Value(1)).current;
@@ -60,11 +61,31 @@ export default function Game() {
   const themeColors = Colors[colorScheme ?? "light"];
 
   // Fetch game details from the backend
-  const { data: gameDetails } = useQuery<GameDetailsResponse, Error>({
+  const { data: gameDetails, error: gameDetailsError } = useQuery<
+    GameDetailsResponse,
+    Error
+  >({
     queryKey: ["gameDetails", gameId, userToken?.token],
     queryFn: () => getGameDetails(gameId, userToken?.token),
     enabled: !!userToken,
   });
+
+  // Handle errors and set user-friendly messages
+  useEffect(() => {
+    if (gameDetailsError) {
+      if (gameDetailsError.message.includes("404")) {
+        setError("Game not found. Please check the game code and try again.");
+      } else if (gameDetailsError.message.includes("403")) {
+        setError("You don't have permission to access this game.");
+      } else if (gameDetailsError.message.includes("network")) {
+        setError("Connection failed. Please check your internet connection.");
+      } else {
+        setError("Unable to load game. Please try again later.");
+      }
+    } else {
+      setError(""); // Clear error when successful
+    }
+  }, [gameDetailsError]);
 
   // Initialize game state when gameDetails is loaded
   useEffect(() => {
@@ -74,12 +95,16 @@ export default function Game() {
       if (gameDetails.ended) setGameEnded(true);
       if (gameDetails.questions) {
         const fetchAllAnswers = async () => {
-          const answersPromises = gameDetails.questions.map(
-            (question: Question) =>
-              getPracticeAnswers(question.id, userToken?.token)
-          );
-          const answers = await Promise.all(answersPromises);
-          setGameAnswers(answers.flat());
+          try {
+            const answersPromises = gameDetails.questions.map(
+              (question: Question) =>
+                getPracticeAnswers(question.id, userToken?.token)
+            );
+            const answers = await Promise.all(answersPromises);
+            setGameAnswers(answers.flat());
+          } catch (error) {
+            setError("Failed to load questions. Please try again.");
+          }
         };
         fetchAllAnswers();
       }
@@ -509,6 +534,14 @@ export default function Game() {
     },
     correctAnswer: { backgroundColor: "#097969" },
     wrongAnswer: { backgroundColor: "#D22B2B" },
+    errorMessage: {
+      alignSelf: "center",
+      fontSize: SIZES.medium,
+      color: "#D22B2B",
+      marginVertical: rV(16),
+      textAlign: "center",
+      paddingHorizontal: rMS(20),
+    },
   });
 
   // Render UI
@@ -516,8 +549,11 @@ export default function Game() {
     <View style={styles.container}>
       <StatusBar hidden={true} />
 
+      {/* Error Display */}
+      {error ? <Text style={styles.errorMessage}>{error}</Text> : null}
+
       {/* Timer Display */}
-      {!gameEnded && gameQuestions.length > 0 && (
+      {!gameEnded && gameQuestions.length > 0 && !error && (
         <View style={styles.timerContainer}>
           <Text style={styles.timerText}>
             {`${Math.floor(timeLeft / 60000)
@@ -541,21 +577,23 @@ export default function Game() {
       )}
 
       {/* Questions Section */}
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1 }}>
-        {gameQuestions.length > 0 && (
-          <Questions
-            practiceQuestions={gameQuestions}
-            practiceAnswers={gameAnswers}
-            currentQuestion={currentQuestion}
-            questionsWithMultipleCorrectAnswers={
-              questionsWithMultipleCorrectAnswers
-            }
-            isAnswerSelected={isAnswerSelected}
-            handleAnswerSelection={handleAnswerSelection}
-            styles={styles}
-          />
-        )}
-      </ScrollView>
+      {!error && (
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1 }}>
+          {gameQuestions.length > 0 && (
+            <Questions
+              practiceQuestions={gameQuestions}
+              practiceAnswers={gameAnswers}
+              currentQuestion={currentQuestion}
+              questionsWithMultipleCorrectAnswers={
+                questionsWithMultipleCorrectAnswers
+              }
+              isAnswerSelected={isAnswerSelected}
+              handleAnswerSelection={handleAnswerSelection}
+              styles={styles}
+            />
+          )}
+        </ScrollView>
+      )}
 
       {/* Power-ups Section - Fixed at Bottom */}
       <View style={styles.powerUpContainer}>
