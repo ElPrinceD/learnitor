@@ -39,6 +39,25 @@ import * as Sentry from "@sentry/react-native";
 import { isRunningInExpoGo } from "expo";
 import { StatusBar } from "react-native";
 import Colors from "../constants/Colors";
+import * as SystemUI from "expo-system-ui";
+import { usePushNotifications } from "../usePushNotifications";
+
+// Component to handle push notifications inside ConsentProvider
+const PushNotificationHandler = () => {
+  const { expoPushToken, notification } = usePushNotifications();
+
+  // Debug notification setup
+  useEffect(() => {
+    if (expoPushToken) {
+      console.log("[App] Push token received:", expoPushToken.data);
+    }
+    if (notification) {
+      console.log("[App] Notification received:", notification);
+    }
+  }, [expoPushToken, notification]);
+
+  return null; // This component doesn't render anything
+};
 
 const navigationIntegration = Sentry.reactNavigationIntegration({
   enableTimeToInitialDisplay: !isRunningInExpoGo(),
@@ -114,12 +133,16 @@ const RootLayoutNav = () => {
     }
   }, [navigationCompleted]);
 
-  // Add StatusBar configuration
+  // Add StatusBar and SystemUI configuration
   useEffect(() => {
+    // Set status bar style based on theme
     StatusBar.setBarStyle(
       colorScheme === "dark" ? "light-content" : "dark-content"
     );
-    StatusBar.setBackgroundColor(themeColors.background);
+
+    // Set root view background color using expo-system-ui
+    // This will be handled by the expo-system-ui plugin configuration
+    SystemUI.setBackgroundColorAsync(themeColors.background);
   }, [colorScheme, themeColors.background]);
 
   return (
@@ -131,6 +154,7 @@ const RootLayoutNav = () => {
               <SQLiteProvider databaseName="slate.db">
                 <CacheProvider>
                   <ConsentProvider>
+                    <PushNotificationHandler />
                     <TimelineProvider token={token}>
                       <AlertProvider>
                         <AdManagerProvider>

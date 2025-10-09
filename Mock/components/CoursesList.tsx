@@ -87,26 +87,28 @@ const CourseItem: React.FC<{
       onCoursePress(item);
     }, [onCoursePress, item]);
 
+    const cardStyle = useMemo(
+      () => [styles.courseListContainer, { backgroundColor: themeColors.card }],
+      [themeColors.card]
+    );
+
+    const textStyle = useMemo(
+      () => [styles.name, { color: themeColors.text }],
+      [themeColors.text]
+    );
+
     return (
       <TouchableOpacity
         onPress={handlePress}
-        activeOpacity={0.5}
+        activeOpacity={0.7}
         style={styles.courseItem}
       >
-        <View
-          style={[
-            styles.courseListContainer,
-            { backgroundColor: themeColors.card },
-          ]}
-        >
+        <View style={cardStyle}>
           <View style={styles.imageContainer}>
             <AppImage uri={item.url} style={styles.image} />
           </View>
           <View style={styles.textContainer}>
-            <Text
-              style={[styles.name, { color: themeColors.text }]}
-              numberOfLines={1}
-            >
+            <Text style={textStyle} numberOfLines={1}>
               {item.title}
             </Text>
           </View>

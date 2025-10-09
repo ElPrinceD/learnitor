@@ -72,6 +72,17 @@ export const usePushNotifications = (): PushNotificationState => {
     }
 
     try {
+      // Check if we're in Expo Go (which doesn't support FCM)
+      if (Constants.appOwnership === 'expo') {
+        console.warn("[PushNotifications] Push notifications not supported in Expo Go");
+        return;
+      }
+
+      // Check if we have the required configuration
+      if (!Constants.expoConfig?.extra?.eas?.projectId) {
+        console.warn("[PushNotifications] No EAS project ID found, push notifications may not work");
+        return;
+      }
       const { status: existingStatus } =
         await Notifications.getPermissionsAsync();
 
@@ -99,9 +110,24 @@ export const usePushNotifications = (): PushNotificationState => {
         return;
       }
 
-      const token = await Notifications.getExpoPushTokenAsync({
-        projectId: Constants.expoConfig?.extra?.eas.projectId,
-      });
+      let token;
+      try {
+        token = await Notifications.getExpoPushTokenAsync({
+          projectId: Constants.expoConfig?.extra?.eas.projectId,
+          applicationId: Constants.expoConfig?.android?.package || Constants.expoConfig?.ios?.bundleIdentifier,
+        });
+      } catch (tokenError) {
+        console.error("[PushNotifications] Failed to get Expo push token:", tokenError);
+        // Try without applicationId as fallback
+        try {
+          token = await Notifications.getExpoPushTokenAsync({
+            projectId: Constants.expoConfig?.extra?.eas.projectId,
+          });
+        } catch (fallbackError) {
+          console.error("[PushNotifications] Fallback token request also failed:", fallbackError);
+          throw fallbackError;
+        }
+      }
 
       const savedToken = await AsyncStorage.getItem("savedPushToken");
       if (savedToken !== token.data && userToken?.token) {

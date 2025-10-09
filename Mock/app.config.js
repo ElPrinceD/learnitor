@@ -11,8 +11,13 @@ export default {
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/Elevay.jpg",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "resizeMode": "cover",
+      "backgroundColor": "#ffffff",
+      "dark": {
+        "image": "./assets/images/Elevay.jpg",
+        "resizeMode": "cover",
+        "backgroundColor": "#18191a"
+      }
     },
     "newArchEnabled": true,
     "assetBundlePatterns": ["**/*"],
@@ -20,6 +25,12 @@ export default {
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.cradle.learnitor",
+      "statusBar": {
+        "style": "dark-content",
+        "dark": {
+          "style": "light-content"
+        }
+      },
       "infoPlist": {
         "UIBackgroundModes": ["remote-notification"],
         "CFBundleURLTypes": [
@@ -34,17 +45,43 @@ export default {
     },
     "android": {
       "usesCleartextTraffic": true,
-      "permissions": ["INTERNET", "NOTIFICATIONS"],
+      "permissions": [
+        "INTERNET", 
+        "NOTIFICATIONS",
+        "VIBRATE",
+        "RECEIVE_BOOT_COMPLETED",
+        "WAKE_LOCK"
+      ],
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/images/Elevay.jpg",
+        "backgroundColor": "#ffffff",
+        "dark": {
+          "backgroundColor": "#18191a"
+        }
       },
       "package": "com.cradle.learnitor",
       "hermesEnabled": false,
       "config": {
         "googleMobileAdsAppId": "ca-app-pub-1639151369389939~6963720638"
+      },
+      "googleServicesFile": "./google-services.json",
+      "useNextNotificationsApi": true,
+      "statusBar": {
+        "backgroundColor": "#ffffff",
+        "style": "dark-content",
+        "dark": {
+          "backgroundColor": "#18191a",
+          "style": "light-content"
+        }
+      },
+      "navigationBar": {
+        "backgroundColor": "#ffffff",
+        "style": "light-content",
+        "dark": {
+          "backgroundColor": "#18191a",
+          "style": "dark-content"
+        }
       }
-
     },
     "web": {
       "bundler": "metro",
@@ -55,6 +92,29 @@ export default {
       "expo-router",
       "expo-font",
       "expo-secure-store",
+      [
+        "expo-system-ui",
+        {
+          "android": {
+            "statusBarColor": "#ffffff",
+            "navigationBarColor": "#ffffff",
+            "statusBarStyle": "dark-content",
+            "navigationBarStyle": "light-content",
+            "dark": {
+              "statusBarColor": "#18191a",
+              "navigationBarColor": "#18191a",
+              "statusBarStyle": "light-content",
+              "navigationBarStyle": "dark-content"
+            }
+          },
+          "ios": {
+            "statusBarStyle": "dark-content",
+            "dark": {
+              "statusBarStyle": "light-content"
+            }
+          }
+        }
+      ],
       "expo-sqlite",
       "@react-native-google-signin/google-signin",
       [
@@ -68,7 +128,11 @@ export default {
         "expo-notifications",
         {
           "icon": "./assets/images/Elevay.jpg",
-          "color": "#ffffff"
+          "color": "#ffffff",
+          "defaultChannel": "default",
+          "dark": {
+            "color": "#18191a"
+          }
         }
       ],
       [

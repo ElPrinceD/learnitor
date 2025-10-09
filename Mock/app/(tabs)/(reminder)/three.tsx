@@ -12,6 +12,7 @@ import {
   useColorScheme,
   TouchableOpacity,
   ActivityIndicator,
+  ScrollView,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
@@ -33,6 +34,8 @@ const Timeline = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [bottomSheetReady, setBottomSheetReady] = useState(false);
+  const [useFallback, setUseFallback] = useState(false);
 
   const { userToken } = useAuth();
 
@@ -40,7 +43,7 @@ const Timeline = () => {
   const themeColors = Colors[colorScheme ?? "light"];
   const shadow = useShadows();
 
-  const BottomSheetRef = useRef(null);
+  const BottomSheetRef = useRef<BottomSheet>(null);
   const snapPoints = useMemo(() => ["50%", "80%"], []);
 
   const getCategoryColor = (type) => {
@@ -80,6 +83,41 @@ const Timeline = () => {
     queryFn: () => getCategoryNames(userToken?.token),
     enabled: !!userToken,
   });
+
+  // Initialize BottomSheet
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setBottomSheetReady(true);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Handle BottomSheet errors and force fallback if needed
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!bottomSheetReady) {
+        console.warn("BottomSheet failed to initialize, using fallback");
+        setUseFallback(true);
+      }
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [bottomSheetReady]);
+
+  // Reset fallback when component remounts
+  useFocusEffect(
+    useCallback(() => {
+      setUseFallback(false);
+      setBottomSheetReady(false);
+
+      const timer = setTimeout(() => {
+        setBottomSheetReady(true);
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }, [])
+  );
 
   useEffect(() => {
     if (categoriesStatus === "success" && categoryNames) {
@@ -159,6 +197,18 @@ const Timeline = () => {
 
   const handleDismissError = useCallback(() => setErrorMessage(null), []);
 
+  // BottomSheet callbacks
+  const handleBottomSheetChange = useCallback((index: number) => {
+    console.log("BottomSheet index changed:", index);
+  }, []);
+
+  const handleBottomSheetAnimate = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      console.log("BottomSheet animating from", fromIndex, "to", toIndex);
+    },
+    []
+  );
+
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: themeColors.background },
     scrollViewContent: { flexGrow: 1 },
@@ -208,6 +258,51 @@ const Timeline = () => {
     },
   });
 
+  // Fallback content component
+  const renderFallbackContent = useCallback(
+    () => (
+      <ScrollView
+        style={[styles.bottom, { flex: 1 }]}
+        contentContainerStyle={styles.scrollViewContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.plansContainer}>
+          {plansStatus === "pending" ? (
+            <View style={{ flex: 1, justifyContent: "center" }}>
+              <ActivityIndicator size="large" color="#0D47A1" />
+            </View>
+          ) : memoizedPlans.length === 0 ? (
+            <Text style={styles.noPlansText}>Hey, you have a free day!</Text>
+          ) : (
+            memoizedPlans.map(
+              (plan, index) =>
+                plan && (
+                  <View key={index} style={styles.planItemWrapper}>
+                    {typedCategoryNames && (
+                      <PlanItem
+                        plan={plan}
+                        categoryNames={typedCategoryNames}
+                        getCategoryColor={getCategoryColor}
+                        handleEditPlan={handleEditPlan}
+                      />
+                    )}
+                  </View>
+                )
+            )
+          )}
+        </View>
+      </ScrollView>
+    ),
+    [
+      plansStatus,
+      memoizedPlans,
+      typedCategoryNames,
+      getCategoryColor,
+      handleEditPlan,
+      styles,
+    ]
+  );
+
   return (
     <View style={styles.container}>
       <DaySelector
@@ -215,44 +310,70 @@ const Timeline = () => {
         setSelectedDate={setSelectedDate}
       />
 
-      <BottomSheet
-        ref={BottomSheetRef}
-        snapPoints={snapPoints}
-        index={1}
-        backgroundStyle={{ backgroundColor: themeColors.background }}
-        handleIndicatorStyle={{ backgroundColor: themeColors.tint }}
-      >
-        <BottomSheetScrollView
-          style={[styles.bottom]}
-          contentContainerStyle={styles.scrollViewContent}
+      {!bottomSheetReady ? (
+        // Loading state while BottomSheet initializes
+        <View
+          style={[
+            styles.bottom,
+            { flex: 1, justifyContent: "center", alignItems: "center" },
+          ]}
         >
-          <View style={styles.plansContainer}>
-            {plansStatus === "pending" ? (
-              <View style={{ flex: 1, justifyContent: "center" }}>
-                <ActivityIndicator size="large" color="#0D47A1" />
-              </View>
-            ) : memoizedPlans.length === 0 ? (
-              <Text style={styles.noPlansText}>Hey, you have a free day!</Text>
-            ) : (
-              memoizedPlans.map(
-                (plan, index) =>
-                  plan && (
-                    <View key={index} style={styles.planItemWrapper}>
-                      {typedCategoryNames && (
-                        <PlanItem
-                          plan={plan}
-                          categoryNames={typedCategoryNames}
-                          getCategoryColor={getCategoryColor}
-                          handleEditPlan={handleEditPlan}
-                        />
-                      )}
-                    </View>
-                  )
-              )
-            )}
-          </View>
-        </BottomSheetScrollView>
-      </BottomSheet>
+          <ActivityIndicator size="large" color={themeColors.tint} />
+        </View>
+      ) : useFallback ? (
+        // Fallback ScrollView when BottomSheet fails
+        renderFallbackContent()
+      ) : (
+        // BottomSheet with improved configuration
+        <BottomSheet
+          ref={BottomSheetRef}
+          snapPoints={snapPoints}
+          index={1}
+          backgroundStyle={{ backgroundColor: themeColors.background }}
+          handleIndicatorStyle={{ backgroundColor: themeColors.tint }}
+          onChange={handleBottomSheetChange}
+          onAnimate={handleBottomSheetAnimate}
+          enablePanDownToClose={false}
+          enableOverDrag={false}
+          animateOnMount={true}
+          style={{ zIndex: 1 }}
+        >
+          <BottomSheetScrollView
+            style={[styles.bottom]}
+            contentContainerStyle={styles.scrollViewContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.plansContainer}>
+              {plansStatus === "pending" ? (
+                <View style={{ flex: 1, justifyContent: "center" }}>
+                  <ActivityIndicator size="large" color="#0D47A1" />
+                </View>
+              ) : memoizedPlans.length === 0 ? (
+                <Text style={styles.noPlansText}>
+                  Hey, you have a free day!
+                </Text>
+              ) : (
+                memoizedPlans.map(
+                  (plan, index) =>
+                    plan && (
+                      <View key={index} style={styles.planItemWrapper}>
+                        {typedCategoryNames && (
+                          <PlanItem
+                            plan={plan}
+                            categoryNames={typedCategoryNames}
+                            getCategoryColor={getCategoryColor}
+                            handleEditPlan={handleEditPlan}
+                          />
+                        )}
+                      </View>
+                    )
+                )
+              )}
+            </View>
+          </BottomSheetScrollView>
+        </BottomSheet>
+      )}
+
       {errorMessage && (
         <ErrorMessage
           message={errorMessage}
