@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQuery } from "@tanstack/react-query";
 import {
   getTodayPlans,
@@ -36,6 +37,7 @@ const Timeline = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [bottomSheetReady, setBottomSheetReady] = useState(false);
   const [useFallback, setUseFallback] = useState(false);
+  const [hasAnimatedBefore, setHasAnimatedBefore] = useState(false);
 
   const { userToken } = useAuth();
 
@@ -84,6 +86,20 @@ const Timeline = () => {
     enabled: !!userToken,
   });
 
+  // Check if user has seen bottom sheet animation before
+  useEffect(() => {
+    const checkAnimationHistory = async () => {
+      try {
+        const hasAnimated = await AsyncStorage.getItem("bottomSheetAnimated");
+        setHasAnimatedBefore(hasAnimated === "true");
+      } catch (error) {
+        console.log("Error checking animation history:", error);
+      }
+    };
+
+    checkAnimationHistory();
+  }, []);
+
   // Initialize BottomSheet
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -105,18 +121,24 @@ const Timeline = () => {
     return () => clearTimeout(timer);
   }, [bottomSheetReady]);
 
-  // Reset fallback when component remounts
+  // Reset fallback when component remounts (only if not animated before)
   useFocusEffect(
     useCallback(() => {
-      setUseFallback(false);
-      setBottomSheetReady(false);
+      if (!hasAnimatedBefore) {
+        setUseFallback(false);
+        setBottomSheetReady(false);
 
-      const timer = setTimeout(() => {
+        const timer = setTimeout(() => {
+          setBottomSheetReady(true);
+        }, 100);
+
+        return () => clearTimeout(timer);
+      } else {
+        // If user has seen animation before, just ensure bottom sheet is ready
         setBottomSheetReady(true);
-      }, 100);
-
-      return () => clearTimeout(timer);
-    }, [])
+        setUseFallback(false);
+      }
+    }, [hasAnimatedBefore])
   );
 
   useEffect(() => {
@@ -203,11 +225,33 @@ const Timeline = () => {
   }, []);
 
   const handleBottomSheetAnimate = useCallback(
-    (fromIndex: number, toIndex: number) => {
+    async (fromIndex: number, toIndex: number) => {
       console.log("BottomSheet animating from", fromIndex, "to", toIndex);
+
+      // Mark that user has seen the animation (only on first animation)
+      if (!hasAnimatedBefore && toIndex >= 0) {
+        try {
+          await AsyncStorage.setItem("bottomSheetAnimated", "true");
+          setHasAnimatedBefore(true);
+          console.log("BottomSheet animation marked as seen");
+        } catch (error) {
+          console.log("Error saving animation state:", error);
+        }
+      }
     },
-    []
+    [hasAnimatedBefore]
   );
+
+  // Optional: Function to reset animation state (for testing or user preference)
+  const resetAnimationState = useCallback(async () => {
+    try {
+      await AsyncStorage.removeItem("bottomSheetAnimated");
+      setHasAnimatedBefore(false);
+      console.log("BottomSheet animation state reset");
+    } catch (error) {
+      console.log("Error resetting animation state:", error);
+    }
+  }, []);
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: themeColors.background },
@@ -335,7 +379,7 @@ const Timeline = () => {
           onAnimate={handleBottomSheetAnimate}
           enablePanDownToClose={false}
           enableOverDrag={false}
-          animateOnMount={true}
+          animateOnMount={!hasAnimatedBefore}
           style={{ zIndex: 1 }}
         >
           <BottomSheetScrollView
