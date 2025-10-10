@@ -170,7 +170,7 @@ export default function Game() {
     handleMessageRef.current = (event) => {
       if (gameEnded) return;
       const message = JSON.parse(event.data);
-      console.log(`Player ${userInfo?.user.id} received:`, message);
+      console.log(`Player ${userInfo?.user.id} received in Game:`, message);
 
       if (
         message.type === "question.attempted" &&
@@ -198,6 +198,18 @@ export default function Game() {
             pathname: "Results",
             params: { scores: JSON.stringify(scoresObject), gameId },
           });
+        }
+      } else if (message.type === "game.start") {
+        console.log("Game start message received in Game component");
+        // Game is already started, just ensure we're ready
+      } else if (
+        message.type === "game.update" ||
+        message.type === "game.state"
+      ) {
+        const payload = message.data || message;
+        if (payload.started && !payload.ended) {
+          console.log("Game started via update in Game component");
+          // Game is already started, just ensure we're ready
         }
       }
     };
@@ -228,8 +240,11 @@ export default function Game() {
     );
     webSocket.current = ws;
 
-    ws.onopen = () =>
-      console.log(`WebSocket opened for Player ${userInfo?.user.id}`);
+    ws.onopen = () => {
+      console.log(`WebSocket opened for Player ${userInfo?.user.id} in Game`);
+      // Send join_game message to ensure we're registered
+      ws.send(JSON.stringify({ type: "join_game" }));
+    };
     ws.onerror = (error) =>
       console.error(`WebSocket error for Player ${userInfo?.user.id}:`, error);
     ws.onmessage = (event) => handleMessageRef.current(event);

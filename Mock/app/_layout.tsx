@@ -45,16 +45,28 @@ import { usePushNotifications } from "../usePushNotifications";
 // Component to handle push notifications inside ConsentProvider
 const PushNotificationHandler = () => {
   const { expoPushToken, notification } = usePushNotifications();
+  const [loggedToken, setLoggedToken] = useState<string | null>(null);
 
-  // Debug notification setup
+  // Debug notification setup - only log once per token
   useEffect(() => {
-    if (expoPushToken) {
+    if (expoPushToken && expoPushToken.data !== loggedToken) {
       console.log("[App] Push token received:", expoPushToken.data);
+      setLoggedToken(expoPushToken.data);
     }
+  }, [expoPushToken, loggedToken]);
+
+  // Debug notification received - only log unique notifications
+  useEffect(() => {
     if (notification) {
-      console.log("[App] Notification received:", notification);
+      const notificationId = notification.request.identifier;
+      console.log("[App] Notification received:", {
+        id: notificationId,
+        title: notification.request.content.title,
+        body: notification.request.content.body,
+        data: notification.request.content.data,
+      });
     }
-  }, [expoPushToken, notification]);
+  }, [notification]);
 
   return null; // This component doesn't render anything
 };

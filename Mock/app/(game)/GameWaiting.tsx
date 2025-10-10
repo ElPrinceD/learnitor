@@ -22,8 +22,8 @@ import Colors from "../../constants/Colors";
 import ApiUrl from "../../config";
 import { Question, Player, GameDetailsResponse } from "../../components/types";
 import { SIZES, rMS, rS, rV } from "../../constants";
-import { useQuery } from "@tanstack/react-query";
-import { getGameDetails } from "../../services/GamesApiCalls";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { getGameDetails, startGame } from "../../services/GamesApiCalls";
 import WsUrl from "../../configWs";
 
 export default function GameWaitingScreen() {
@@ -49,10 +49,11 @@ export default function GameWaitingScreen() {
   const themeColors = Colors[colorScheme ?? "light"];
   const ws = useRef<WebSocket | null>(null);
 
-  const { data: gameDetails, error: gameDetailsError } = useQuery<
-    GameDetailsResponse,
-    Error
-  >({
+  const {
+    data: gameDetails,
+    error: gameDetailsError,
+    refetch: refetchGameDetails,
+  } = useQuery<GameDetailsResponse, Error>({
     queryKey: ["gameDetails", id || gameId, userToken?.token],
     queryFn: () => getGameDetails(id || gameId, userToken?.token),
     enabled: !!userToken,
@@ -144,27 +145,33 @@ export default function GameWaitingScreen() {
     ws.current.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        console.log("GameWaiting received message:", data);
 
         if (data.type === "game.finished") {
           console.log("Game finished. Closing connection...");
           if (ws.current) {
             ws.current.close();
           }
-          // Optionally navigate to a summary or results screen instead of the game screen.
         } else if (
           data.type === "game.update" ||
-          data.type === "game.players"
+          data.type === "game.players" ||
+          data.type === "player.joined" ||
+          data.type === "player.left"
         ) {
           const payload = data.data || data;
+          console.log("Processing player update:", payload);
+
           if (payload.players) {
             const newPlayers = payload.players.map((player) => ({
               id: player.id,
+              score: "0",
               profileName: `${player.first_name} ${player.last_name}`,
               profile_picture:
                 player.id === userInfo?.user.id
                   ? userInfo.user.profile_picture
                   : `${ApiUrl}${player.profile_picture}`,
             }));
+            console.log("Updated players list:", newPlayers);
             setPlayers(newPlayers);
           }
 
@@ -175,6 +182,26 @@ export default function GameWaitingScreen() {
         } else if (data.type === "game.start") {
           console.log("Received game.start message");
           goToGame();
+        } else if (data.type === "game.state") {
+          // Handle game state updates
+          const payload = data.data || data;
+          if (payload.players) {
+            const newPlayers = payload.players.map((player) => ({
+              id: player.id,
+              score: "0",
+              profileName: `${player.first_name} ${player.last_name}`,
+              profile_picture:
+                player.id === userInfo?.user.id
+                  ? userInfo.user.profile_picture
+                  : `${ApiUrl}${player.profile_picture}`,
+            }));
+            setPlayers(newPlayers);
+          }
+
+          if (payload.started && !payload.ended) {
+            console.log("Game started via state update");
+            goToGame();
+          }
         }
       } catch (error) {
         console.error("Error parsing WebSocket message:", error);
@@ -189,12 +216,21 @@ export default function GameWaitingScreen() {
 
   useEffect(() => {
     connectWebSocket();
+
+    // Periodic refresh of game details to ensure creator sees all players
+    const refreshInterval = setInterval(() => {
+      if (gameCode && userToken?.token) {
+        refetchGameDetails();
+      }
+    }, 5000); // Refresh every 5 seconds
+
     return () => {
+      clearInterval(refreshInterval);
       if (ws.current) {
-        // ws.current.close();
+        ws.current.close();
       }
     };
-  }, [connectWebSocket]);
+  }, [connectWebSocket, gameCode, userToken, refetchGameDetails]);
 
   const copyToClipboard = async () => {
     await Clipboard.setStringAsync(gameCode);
@@ -211,11 +247,34 @@ export default function GameWaitingScreen() {
     }
   };
 
+  const startGameMutation = useMutation<any, any, any>({
+    mutationFn: async ({ gameId, token }) => {
+      const response = await startGame(gameId, token);
+      return response;
+    },
+    onSuccess: () => {
+      console.log("Game started successfully via API");
+      goToGame();
+    },
+    onError: (error: Error) => {
+      console.error("Error starting game:", error);
+      setError(error.message || "Error starting game");
+    },
+  });
+
   const handleStartGame = () => {
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      console.log("Sending start_game message");
       ws.current.send(JSON.stringify({ type: "start_game" }));
     } else {
-      console.error("WebSocket is not open");
+      console.error("WebSocket is not open, cannot start game");
+      // Fallback: try to start game via API
+      if (userToken?.token) {
+        startGameMutation.mutate({
+          gameId: gameId || id,
+          token: userToken.token,
+        });
+      }
     }
   };
 

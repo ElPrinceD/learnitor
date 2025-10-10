@@ -222,17 +222,31 @@ export const usePushNotifications = (): PushNotificationState => {
   useEffect(() => {
     if (!userToken?.token) return;
 
+    let isMounted = true;
+
     // Only register for push notifications if user has consented
     if (hasConsent("notifications")) {
       registerForPushNotificationsAsync(false).then((token) => {
-        if (token?.data) setExpoPushToken(token);
+        if (isMounted && token?.data) {
+          setExpoPushToken(token);
+        }
       });
+    }
+
+    // Clean up existing listeners before adding new ones
+    if (notificationListener.current) {
+      notificationListener.current.remove();
+    }
+    if (responseListener.current) {
+      responseListener.current.remove();
     }
 
     notificationListener.current = Notifications.addNotificationReceivedListener(
       (notification) => {
-        setNotification(notification);
-        presentForegroundNotification(notification);
+        if (isMounted) {
+          setNotification(notification);
+          presentForegroundNotification(notification);
+        }
       }
     );
 
@@ -263,6 +277,7 @@ export const usePushNotifications = (): PushNotificationState => {
       });
 
     return () => {
+      isMounted = false;
       if (notificationListener.current) {
         notificationListener.current.remove();
         notificationListener.current = null;

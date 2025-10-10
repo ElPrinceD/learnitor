@@ -14,7 +14,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Player, GameDetailsResponse } from "../../components/types";
 import { useAuth } from "../../components/AuthContext";
 import Colors from "../../constants/Colors";
-import GameButton from "../../components/GameButton";
 import { SIZES, rMS, rS, rV } from "../../constants";
 import { useQuery } from "@tanstack/react-query";
 import { getGameDetails } from "../../services/GamesApiCalls";
@@ -115,16 +114,26 @@ export default function ResultsScreen() {
       isWinner: false,
     }));
 
-    // Sort by score to find winner
+    // Sort by score to find winners
     playersList.sort((a, b) => parseFloat(b.score) - parseFloat(a.score));
 
-    // Mark the winner (highest score)
+    // Mark all players with the highest score as winners
     if (playersList.length > 0) {
-      playersList[0].isWinner = true;
+      const highestScore = parseFloat(playersList[0].score);
+      playersList.forEach((player) => {
+        if (parseFloat(player.score) === highestScore) {
+          player.isWinner = true;
+        }
+      });
     }
 
     return playersList;
   }, [gameDetails, scores, userInfo]);
+
+  // Count winners to show tie message
+  const winnerCount = useMemo(() => {
+    return players.filter((player) => player.isWinner).length;
+  }, [players]);
 
   const handleCreateNewGame = () => {
     // Animate button press
@@ -179,6 +188,17 @@ export default function ResultsScreen() {
       color: themeColors.text,
       textDecorationLine: "underline",
     },
+    tieTitle: {
+      fontSize: 24,
+      fontWeight: "bold",
+      marginBottom: 20,
+      marginTop: 40,
+      color: "#FFD700",
+      textDecorationLine: "underline",
+      textShadowColor: "#FFD700",
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 2,
+    },
     topContainerTitle: {
       color: themeColors.text,
       fontSize: SIZES.xxxLarge,
@@ -200,13 +220,18 @@ export default function ResultsScreen() {
     winnerContainer: {
       flexDirection: "row",
       alignItems: "center",
-      padding: rMS(10),
-      backgroundColor: "#FFD700" + "20",
+      padding: rMS(12),
+      backgroundColor: "#FFD700" + "25",
       marginVertical: rV(5),
       borderRadius: rMS(12),
       borderWidth: 2,
       borderColor: "#FFD700",
       position: "relative",
+      shadowColor: "#FFD700",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      elevation: 4,
     },
     profileImage: {
       width: 50,
@@ -277,9 +302,14 @@ export default function ResultsScreen() {
     },
     crownIcon: {
       position: "absolute",
-      top: -rV(5),
-      right: rS(10),
+      top: -rV(8),
+      right: rS(8),
       zIndex: 1,
+      shadowColor: "#FFD700",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.5,
+      shadowRadius: 2,
+      elevation: 3,
     },
     winnerText: {
       color: "#FFD700",
@@ -310,7 +340,7 @@ export default function ResultsScreen() {
         {isWinner && (
           <Ionicons
             name="trophy"
-            size={24}
+            size={26}
             color="#FFD700"
             style={styles.crownIcon}
           />
@@ -326,7 +356,9 @@ export default function ResultsScreen() {
       ) : (
         <>
           <Text style={styles.topContainerTitle}>{creator}'s Arena</Text>
-          <Text style={styles.title}>Scores</Text>
+          <Text style={winnerCount > 1 ? styles.tieTitle : styles.title}>
+            {winnerCount > 1 ? `Tie! ${winnerCount} Winners` : "Scores"}
+          </Text>
         </>
       )}
       <FlatList
