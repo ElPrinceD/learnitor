@@ -7,10 +7,10 @@ import {
   Switch,
   ScrollView,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker";
 import { router, useLocalSearchParams } from "expo-router";
 import Colors from "../../../constants/Colors";
 import GameButton from "../../../components/GameButton";
+import CustomPicker from "../../../components/CustomPicker";
 import { SIZES, rMS, rS, rV } from "../../../constants";
 import Animated, { FadeInLeft, ReduceMotion } from "react-native-reanimated";
 
@@ -21,7 +21,10 @@ const PracticeInstructions = () => {
   const { topic, level, course } = useLocalSearchParams();
 
   const [isTimed, setIsTimed] = useState(false);
-  const [duration, setDuration] = useState(10); // Default to 10 minutes
+  const [duration, setDuration] = useState("10"); // Default to 10 minutes
+
+  // Duration options for the picker
+  const durationOptions = ["10", "15", "30", "45"];
 
   const handleStartQuiz = () => {
     router.navigate({
@@ -30,7 +33,7 @@ const PracticeInstructions = () => {
         level: level?.toString(), // Ensure level is treated as a string
         topic: topic?.toString(),
         isTimed: isTimed.toString(), // Convert boolean to string
-        duration: duration.toString(), // Convert number to string
+        duration: duration, // duration is already a string
         course: course?.toString(),
       },
     });
@@ -95,13 +98,8 @@ const PracticeInstructions = () => {
       color: themeColors.textSecondary,
       marginRight: rS(8),
     },
-    pickerContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-    },
-    picker: {
-      flex: 1,
-      color: themeColors.textSecondary,
+    durationContainer: {
+      marginTop: rV(10),
     },
   });
 
@@ -150,19 +148,15 @@ const PracticeInstructions = () => {
             entering={FadeInLeft.delay(200)
               .randomDelay()
               .reduceMotion(ReduceMotion.Never)}
-            style={{ flexDirection: "row", alignItems: "center" }}
+            style={styles.durationContainer}
           >
-            <Text style={styles.timerText}>Select Duration:</Text>
-            <Picker
+            <CustomPicker
+              label="Select Duration:"
+              options={durationOptions.map((option) => `${option} minutes`)}
               selectedValue={duration}
-              style={styles.picker}
-              onValueChange={(itemValue) => setDuration(itemValue)}
-            >
-              <Picker.Item label="10 minutes" value={10} />
-              <Picker.Item label="15 minutes" value={15} />
-              <Picker.Item label="30 minutes" value={30} />
-              <Picker.Item label="45 minutes" value={45} />
-            </Picker>
+              onValueChange={(value) => setDuration(value.split(" ")[0])}
+              placeholder="Choose duration"
+            />
           </Animated.View>
         )}
 

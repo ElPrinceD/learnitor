@@ -169,17 +169,9 @@ export const usePushNotifications = (): PushNotificationState => {
           ? "Document"
           : "No message content");
 
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title,
-          body,
-          data,
-          sound: "default",
-          badge: content.badge ?? 1,
-        },
-        trigger: null,
-        identifier: notification.request.identifier,
-      });
+      // For foreground notifications, we don't need to schedule a new one
+      // The notification is already being displayed by the system
+      console.log(`[PushNotifications] Presenting foreground notification: ${title} - ${body}`);
     } catch (error) {
       console.error("[PushNotifications] Error presenting notification:", error);
     }
@@ -242,7 +234,7 @@ export const usePushNotifications = (): PushNotificationState => {
     }
 
     notificationListener.current = Notifications.addNotificationReceivedListener(
-      (notification) => {
+      async (notification) => {
         if (isMounted) {
           setNotification(notification);
           presentForegroundNotification(notification);
@@ -255,7 +247,7 @@ export const usePushNotifications = (): PushNotificationState => {
         const data = response.notification.request.content.data;
         
         // Handle different notification types
-        if (data?.type === "task_reminder" && data?.taskId) {
+        if ((data?.type === "task_reminder" || data?.type === "task_reminder_advance") && data?.taskId) {
           router.push("/(tabs)/(reminder)/three");
         } else if (data?.type === "course_update" && data?.courseId) {
           router.push({ 

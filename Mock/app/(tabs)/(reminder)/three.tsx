@@ -28,6 +28,7 @@ import DaySelector from "../../../components/DaySelector";
 import Colors from "../../../constants/Colors";
 import { SIZES, rMS, rS, rV, useShadows } from "../../../constants";
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import { useTimeline } from "../../../contexts/TimelineContext";
 import { FontAwesome6 } from "@expo/vector-icons";
 import ErrorMessage from "../../../components/ErrorMessage";
 
@@ -40,6 +41,7 @@ const Timeline = () => {
   const [hasAnimatedBefore, setHasAnimatedBefore] = useState(false);
 
   const { userToken } = useAuth();
+  const { cancelAllNotifications, listScheduledNotifications } = useTimeline();
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -143,7 +145,6 @@ const Timeline = () => {
 
   useEffect(() => {
     if (categoriesStatus === "success" && categoryNames) {
-      console.log("Categories loaded successfully:", categoryNames);
     }
     if (categoriesStatus === "error" && categoriesError) {
       console.error("Categories loading error:", categoriesError);

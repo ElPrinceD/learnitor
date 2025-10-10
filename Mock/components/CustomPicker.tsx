@@ -21,6 +21,7 @@ interface CustomPickerProps extends SelectProps {
   selectedValue: string | undefined;
   onValueChange: (value: string) => void;
   options: string[];
+  placeholder?: string;
 }
 
 const CustomPicker: React.FC<CustomPickerProps> = ({
@@ -28,6 +29,7 @@ const CustomPicker: React.FC<CustomPickerProps> = ({
   selectedValue,
   onValueChange,
   options = [], // Default to an empty array
+  placeholder,
   ...selectProps
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -110,7 +112,7 @@ const CustomPicker: React.FC<CustomPickerProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
+      {label && <Text style={styles.label}>{label}</Text>}
       <View style={styles.selectContainer}>
         <Select
           value={selectedValue}
@@ -139,13 +141,16 @@ const CustomPicker: React.FC<CustomPickerProps> = ({
           >
             <Select.Value
               style={{
-                color: themeColors.text,
-                fontWeight: "bold",
+                color: selectedValue
+                  ? themeColors.text
+                  : themeColors.textSecondary,
+                fontWeight: selectedValue ? "bold" : "normal",
                 fontSize: SIZES.medium,
+                textAlign: "right",
               }}
-              placeholder={`Select ${label.toLowerCase()}`}
+              placeholder={placeholder || `Select ${label.toLowerCase()}`}
             >
-              {selectedValue || `Select ${label.toLowerCase()}`}
+              {selectedValue || placeholder || `Select ${label.toLowerCase()}`}
             </Select.Value>
           </Select.Trigger>
 
@@ -166,7 +171,10 @@ const CustomPicker: React.FC<CustomPickerProps> = ({
                     <Text style={styles.closeButtonText}>✕</Text>
                   </TouchableOpacity>
                 </View>
-                <ScrollView style={styles.optionsContainer}>
+                <ScrollView
+                  style={styles.optionsContainer}
+                  showsVerticalScrollIndicator={false}
+                >
                   {options?.map((option, index) => (
                     <TouchableOpacity
                       key={option}

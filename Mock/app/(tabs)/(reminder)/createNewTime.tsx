@@ -47,7 +47,11 @@ interface CreateTaskData {
 
 const CreateNewTime = () => {
   const { userToken, userInfo } = useAuth();
-  const { scheduleTaskNotification, storeNotificationId } = useTimeline(); // Use TimelineContext
+  const {
+    scheduleTaskNotification,
+    scheduleTaskReminderNotification,
+    storeNotificationId,
+  } = useTimeline(); // Use TimelineContext
   const { removeItem } = useCache(); // Use CacheContext for cache invalidation
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -78,14 +82,28 @@ const CreateNewTime = () => {
       const dateString = formatDate(dueDate);
       const categoryId = selectedCategory?.value?.toString();
 
-      // Schedule notification for the created task
+      // Schedule notifications for the created task
       try {
+        // Schedule main notification (at start time)
         const notificationId = await scheduleTaskNotification(createdTask);
         if (notificationId) {
           await storeNotificationId(createdTask.id, notificationId);
         }
+
+        // Schedule reminder notification (5 minutes before start time)
+        const reminderNotificationId = await scheduleTaskReminderNotification(
+          createdTask,
+          5
+        );
+        if (reminderNotificationId) {
+          await storeNotificationId(
+            `${createdTask.id}_reminder`,
+            reminderNotificationId
+          );
+        }
       } catch (error) {
         // Silently handle notification errors - don't block the user
+        console.error("Failed to schedule notifications:", error);
       }
 
       router.dismiss(1);

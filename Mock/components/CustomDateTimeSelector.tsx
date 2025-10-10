@@ -276,9 +276,15 @@ const CustomDateTimeSelector: React.FC<CustomDateTimeSelectorProps> = ({
                   />
                 ) : (
                   <View style={styles.timePickerContainer}>
-                    <ScrollView style={styles.timePickerScroll}>
+                    <ScrollView
+                      style={styles.timePickerScroll}
+                      showsVerticalScrollIndicator={false}
+                    >
                       <View style={styles.timePickerRow}>
-                        <ScrollView style={styles.hourPicker}>
+                        <ScrollView
+                          style={styles.hourPicker}
+                          showsVerticalScrollIndicator={false}
+                        >
                           {Array.from({ length: 24 }, (_, i) => (
                             <TouchableOpacity
                               key={i}
@@ -311,7 +317,10 @@ const CustomDateTimeSelector: React.FC<CustomDateTimeSelectorProps> = ({
                           ))}
                         </ScrollView>
                         <Text style={styles.timeSeparator}>:</Text>
-                        <ScrollView style={styles.minutePicker}>
+                        <ScrollView
+                          style={styles.minutePicker}
+                          showsVerticalScrollIndicator={false}
+                        >
                           {Array.from({ length: 60 }, (_, i) => (
                             <TouchableOpacity
                               key={i}

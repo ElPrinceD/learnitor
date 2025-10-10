@@ -35,6 +35,7 @@ import Animated, {
 import { useTimeline } from "../../../contexts/TimelineContext"; // Added for TimelineContext
 import { useCache } from "../../../contexts/CacheContext"; // Added for CacheContext
 import { useAlert } from "../../../contexts/AlertContext"; // Added for custom alerts
+import { useConsent } from "../../../contexts/ConsentContext"; // Added for consent management
 
 interface Category {
   value: number;
@@ -70,11 +71,14 @@ const EditPlan = () => {
   const { userToken, userInfo } = useAuth();
   const {
     scheduleTaskNotification,
+    scheduleTaskReminderNotification,
     cancelTaskNotification,
     storeNotificationId,
+    checkNotificationPermissions,
   } = useTimeline(); // Use TimelineContext
   const { removeItem } = useCache(); // Use CacheContext for cache invalidation
   const { showDeleteAlert } = useAlert(); // Use custom alert
+  const { hasConsent } = useConsent(); // Use consent management
 
   // Initialize dueDate with the plan's oldDate
   const [dueDate, setDueDate] = useState(() => {
@@ -201,11 +205,32 @@ const EditPlan = () => {
           await removeItem(`todayPlans_${newDateString}_${newCategoryId}`);
       }
       try {
-        await cancelTaskNotification(id);
-        const notificationId = await scheduleTaskNotification(updatedTask);
-        if (notificationId) await storeNotificationId(id, notificationId);
+        // Check notification permissions and consent
+        const hasPermission = await checkNotificationPermissions();
+        if (hasPermission && hasConsent("notifications")) {
+          // Cancel existing notifications (both main and reminder)
+          await cancelTaskNotification(id);
+          await cancelTaskNotification(`${id}_reminder`);
+
+          // Schedule new main notification
+          const notificationId = await scheduleTaskNotification(updatedTask);
+          if (notificationId) await storeNotificationId(id, notificationId);
+
+          // Schedule new reminder notification (5 minutes before)
+          const reminderNotificationId = await scheduleTaskReminderNotification(
+            updatedTask,
+            5
+          );
+          if (reminderNotificationId) {
+            await storeNotificationId(`${id}_reminder`, reminderNotificationId);
+          }
+        } else {
+          console.log(
+            "Notification permissions not granted or user has not consented to notifications"
+          );
+        }
       } catch (error) {
-        console.error("Error updating notification:", error);
+        console.error("Error updating notifications:", error);
       }
       router.dismiss(1);
       setErrorMessage(null);
@@ -224,9 +249,11 @@ const EditPlan = () => {
       if (categoryId)
         await removeItem(`todayPlans_${dateString}_${categoryId}`);
       try {
+        // Cancel both main and reminder notifications
         await cancelTaskNotification(id);
+        await cancelTaskNotification(`${id}_reminder`);
       } catch (error) {
-        console.error("Error canceling notification:", error);
+        console.error("Error canceling notifications:", error);
       }
       router.dismiss(1);
       setErrorMessage(null);
