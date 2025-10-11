@@ -128,7 +128,6 @@ const ContinueWithEmail = () => {
     } else if (!email.includes("@")) {
       setEmailError("Enter a valid email address");
     } else {
-      console.log(institution);
       axios
         .post(`${ApiUrl}/api/register/`, {
           first_name: firstName,

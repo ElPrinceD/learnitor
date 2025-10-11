@@ -37,7 +37,6 @@ export default function ResultsScreen() {
   // Show ad when component mounts (game completion) - only once
   useEffect(() => {
     if (!adShown) {
-      console.log("Showing game completion ad");
       showGameCompletionAd();
       setAdShown(true);
     }

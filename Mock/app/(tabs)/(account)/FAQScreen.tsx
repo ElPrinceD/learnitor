@@ -20,7 +20,7 @@ import { rMS, rS, rV, SIZES } from "../../../constants";
 const faqData = [
   // Courses and Learning
   {
-    id: "1",
+    id: "1", 
     question: "How do I browse and enroll in courses?",
     answer:
       'Go to the "Learn" tab to see all available courses. You can browse by category, search for specific topics, and tap on any course to view details and enroll.',
@@ -174,10 +174,10 @@ const FAQScreen: React.FC = () => {
     if (!searchQuery.trim()) return faqData;
 
     return faqData.filter(
-      (item) =>
-        item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.answer.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    (item) =>
+      item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.answer.toLowerCase().includes(searchQuery.toLowerCase())
+  );
   }, [searchQuery]);
 
   const toggleFAQ = (id: string) => {
@@ -206,11 +206,11 @@ const FAQScreen: React.FC = () => {
           {item.question}
         </Text>
         <View style={styles.chevronContainer}>
-          <Ionicons
-            name={expandedFAQ === item.id ? "chevron-up" : "chevron-down"}
-            size={24}
-            color={themeColors.text}
-          />
+        <Ionicons
+          name={expandedFAQ === item.id ? "chevron-up" : "chevron-down"}
+          size={24}
+          color={themeColors.text}
+        />
         </View>
       </TouchableOpacity>
       {expandedFAQ === item.id && (

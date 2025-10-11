@@ -26,7 +26,6 @@ export const getGameDetails = async (
         
         return response.data;
            } catch (error) {
-        console.error('Error fetching game details:', error);
         throw error;
     }
 };

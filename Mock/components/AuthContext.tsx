@@ -99,9 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const setUserInformation = async (userInfo: any) => {
     try {
       await setItem("user", JSON.stringify(userInfo));
-    } catch (error) {
-      console.error("Error setting userInfo:", error);
-    }
+    } catch (error) {}
   };
 
   const logout = async () => {

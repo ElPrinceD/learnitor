@@ -33,12 +33,9 @@ const GameTopics: React.FC = () => {
   const parsedCourse: Course | null = useMemo(() => {
     try {
       if (!course) {
-        console.log("GameTopics - No course parameter provided");
         return null;
       }
-      console.log("GameTopics - Parsing course:", course);
       const parsed = typeof course === "string" ? JSON.parse(course) : course;
-      console.log("GameTopics - Parsed course:", parsed);
       return parsed;
     } catch (error) {
       console.error("GameTopics - Error parsing course:", error);

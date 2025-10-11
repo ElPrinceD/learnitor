@@ -87,12 +87,10 @@ const ConsentScreen = () => {
 
   const handleContinue = async () => {
     try {
-      console.log("Saving consents:", consents);
       // Convert consents array to object for batch update
       const consentUpdates: Record<string, boolean> = {};
       consents.forEach((consent) => {
         consentUpdates[consent.id] = consent.enabled;
-        console.log(`Preparing ${consent.id}: ${consent.enabled}`);
       });
 
       // Save all consent preferences in one batch
@@ -100,10 +98,6 @@ const ConsentScreen = () => {
 
       // Check what was actually saved
       const savedConsents = await AsyncStorage.getItem("user_consents");
-      console.log(
-        "Consents saved to AsyncStorage:",
-        JSON.parse(savedConsents || "{}")
-      );
 
       // Navigate to login with pre-filled email
       router.replace({

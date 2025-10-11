@@ -36,7 +36,6 @@ export const cancelPeriodForToday = async (periodId, token) => {
     });
     return response.data;
   } catch (error) {
-    console.error("Error canceling period for today:", error);
     throw error;
   }
 };
@@ -51,7 +50,6 @@ export const uncancelPeriodForToday = async (periodId, token) => {
     });
     return response.data;
   } catch (error) {
-    console.error("Error uncanceling period for today:", error);
     throw error;
   }
 };
@@ -67,19 +65,16 @@ export const getCategoryNames = async (token) => {
         const categories = response.data.results || response.data || [];
         
         if (!Array.isArray(categories)) {
-            console.error('Categories is not an array:', categories);
             return {};
         }
         
         return categories.reduce((acc, category) => {
             acc[category.id] = category.name;
-            console.table(acc)
             return acc;
         }, {})
     
   } catch (error)
   {
-      console.error('Error task categories:', error);
     throw error;
   }
 };
@@ -97,7 +92,6 @@ export const getCategories = async (token: string | null | undefined) => {
     const categories = response.data.results || response.data || [];
     
     if (!Array.isArray(categories)) {
-        console.error('Categories is not an array:', categories);
         return [];
     }
     
@@ -106,7 +100,7 @@ export const getCategories = async (token: string | null | undefined) => {
       value: category.id,
     }));
           } catch (error)
-   {  console.error('Error fetching task categories:', error);
+   {
     throw error;
   }
 };
@@ -120,7 +114,6 @@ export const createTask = async (taskData, token: string | null | undefined) => 
     });
     return response.data;
   } catch (error) {
-    console.error('Error creating task:', error);
     throw error;
   }
 };
@@ -145,11 +138,6 @@ export const updateTask = async (taskId, taskData, token, updateScope = 'single'
     });
     return response.data;
   } catch (error) {
-    console.error('Error updating task:', error);
-    if (error.response) {
-      console.error('Response status:', error.response.status);
-      console.error('Response data:', error.response.data);
-    }
     throw error;
   }
 };
@@ -174,18 +162,12 @@ export const deleteTask = async (taskId, token, deleteScope = 'single') => {
     });
     return response.data;
   } catch (error) {
-    console.error('Error deleting task:', error);
-    if (error.response) {
-      console.error('Response status:', error.response.status);
-      console.error('Response data:', error.response.data);
-    }
     throw error;
   }
 };
 
   
 export const createTimetable = async (timetableData, token) => {
-  console.log("timetableData", timetableData);
   try {
     const response = await apiClient.post('/timetables/', 
       timetableData,
@@ -198,7 +180,6 @@ export const createTimetable = async (timetableData, token) => {
     return response.data;
 
   } catch (error) {
-    console.error('Error creating timetable:', error);
     throw error;
   }
 };
@@ -211,7 +192,6 @@ export const getTimetables = async (token: string | null | undefined) => {
     });
     return response.data;
   } catch (error) {
-    console.error("Error fetching timetables:", error);
     throw error;
   }
 };
@@ -224,7 +204,6 @@ export const getTimetable = async (timetableId: any, token: string) => {
     });
     return response.data;
   } catch (error) {
-    console.error('Error fetching period:', error);
     throw error;
   }
 };
@@ -240,7 +219,6 @@ export const updateTimetable = async ( id, name, description , token) => {
     );
     return response.data;
   } catch (error) {
-    console.error('Error updating timetable:', error);
     throw error;
   }
 };
@@ -254,7 +232,6 @@ export const deleteTimetable = async (id, token) => {
     });
     return response.data;
   } catch (error) {
-    console.error('Error deleting timetable:', error);
     throw error;
   }
 };
@@ -273,7 +250,6 @@ export const createPeriod = async (periodData, token: string | null | undefined)
     return response.data;
 
   } catch (error) {
-    console.error('Error creating period:', error);
     throw error;
   }
 };
@@ -287,7 +263,6 @@ export const getPeriod = async (periodId, token: string | null | undefined) => {
     });
     return response.data;
   } catch (error) {
-    console.error('Error fetching period:', error);
     throw error;
   }
 };
@@ -303,7 +278,6 @@ export const updatePeriod = async (periodId, periodData, token: string | null | 
     );
     return response.data;
   } catch (error) {
-    console.error('Error updating period:', error);
     throw error;
   }
 };
@@ -317,7 +291,6 @@ export const deletePeriod = async (periodId, token) => {
     });
     return response.data;
   } catch (error) {
-    console.error('Error deleting period:', error);
     throw error;
   }
 };
@@ -331,7 +304,6 @@ export const getUserDetails = async (userId: number, token: string | null | unde
     });
     return response.data;
   } catch (error) {
-    console.error('Error fetching user details:', error);
     throw error;
   }
 };

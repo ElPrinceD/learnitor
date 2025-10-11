@@ -133,7 +133,6 @@ export default function GameWaitingScreen() {
     //ws.current = new WebSocket(`${WsUrl}/ws/games/${gameCode}/ws/`);
 
     ws.current.onopen = () => {
-      console.log("WebSocket connection opened");
       ws.current?.send(JSON.stringify({ type: "join_game" }));
     };
 
@@ -145,10 +144,8 @@ export default function GameWaitingScreen() {
     ws.current.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log("GameWaiting received message:", data);
 
         if (data.type === "game.finished") {
-          console.log("Game finished. Closing connection...");
           if (ws.current) {
             ws.current.close();
           }
@@ -159,7 +156,6 @@ export default function GameWaitingScreen() {
           data.type === "player.left"
         ) {
           const payload = data.data || data;
-          console.log("Processing player update:", payload);
 
           if (payload.players) {
             const newPlayers = payload.players.map((player) => ({
@@ -171,16 +167,13 @@ export default function GameWaitingScreen() {
                   ? userInfo.user.profile_picture
                   : `${ApiUrl}${player.profile_picture}`,
             }));
-            console.log("Updated players list:", newPlayers);
             setPlayers(newPlayers);
           }
 
           if (payload.started && !payload.ended) {
-            console.log("Game started via update");
             goToGame();
           }
         } else if (data.type === "game.start") {
-          console.log("Received game.start message");
           goToGame();
         } else if (data.type === "game.state") {
           // Handle game state updates
@@ -199,7 +192,6 @@ export default function GameWaitingScreen() {
           }
 
           if (payload.started && !payload.ended) {
-            console.log("Game started via state update");
             goToGame();
           }
         }
@@ -209,7 +201,6 @@ export default function GameWaitingScreen() {
     };
 
     ws.current.onclose = () => {
-      console.log("WebSocket connection closed");
       ws.current = null;
     };
   }, [gameCode, userInfo, goToGame]);
@@ -253,7 +244,6 @@ export default function GameWaitingScreen() {
       return response;
     },
     onSuccess: () => {
-      console.log("Game started successfully via API");
       goToGame();
     },
     onError: (error: Error) => {
@@ -264,7 +254,6 @@ export default function GameWaitingScreen() {
 
   const handleStartGame = () => {
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-      console.log("Sending start_game message");
       ws.current.send(JSON.stringify({ type: "start_game" }));
     } else {
       console.error("WebSocket is not open, cannot start game");

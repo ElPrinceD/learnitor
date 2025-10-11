@@ -103,16 +103,13 @@ const useInterstitialAd = ({
   const showAd = () => {
     if (isAdReady && interstitialAdRef.current) {
       try {
-        console.log("Showing interstitial ad");
         interstitialAdRef.current.show();
         setAdState(AdLoadingState.SHOWN);
       } catch (error) {
-        console.error("Failed to show interstitial ad:", error);
         onAdFailedToLoad?.("Failed to show interstitial ad");
       }
     } else {
       // If ad is not ready, proceed without showing ad
-      console.log("Interstitial ad not ready, proceeding without ad");
       onAdClosed?.();
     }
   };

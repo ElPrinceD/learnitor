@@ -21,7 +21,6 @@ const Practice: React.FC = () => {
       topic: JSON.stringify(parsedTopic),
       course: course?.toString(),
     });
-    console.log("Level pressed:", level);
   };
 
   const levels: Level[] = [

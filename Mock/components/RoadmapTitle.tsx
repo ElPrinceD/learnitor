@@ -66,7 +66,7 @@ const RoadmapTitle = ({ course, progress }) => {
           }}
           style={styles.image}
           resizeMode="cover"
-          onError={(error) => console.log("Image error:", error)}
+          onError={() => {}}
         />
       </View>
       <View style={styles.progressContainer}>

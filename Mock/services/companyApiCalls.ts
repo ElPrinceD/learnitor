@@ -25,7 +25,6 @@ export const getAnnouncements = async (token: string | null | undefined) => {
 
         
     } catch (error) {
-        console.error('Error fetching announcements:', error);
         throw error;
     }
 };

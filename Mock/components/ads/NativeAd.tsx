@@ -55,7 +55,6 @@ const NativeAdComponent: React.FC<NativeAdComponentProps> = ({
       setAdState(AdLoadingState.LOADED);
       onAdLoaded?.();
     } catch (error) {
-      console.error("Failed to load native ad:", error);
       setAdState(AdLoadingState.ERROR);
       onAdFailedToLoad?.(error.message || "Native ad failed to load");
     }

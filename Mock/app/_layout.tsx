@@ -50,7 +50,6 @@ const PushNotificationHandler = () => {
   // Debug notification setup - only log once per token
   useEffect(() => {
     if (expoPushToken && expoPushToken.data !== loggedToken) {
-      console.log("[App] Push token received:", expoPushToken.data);
       setLoggedToken(expoPushToken.data);
     }
   }, [expoPushToken, loggedToken]);
@@ -59,12 +58,7 @@ const PushNotificationHandler = () => {
   useEffect(() => {
     if (notification) {
       const notificationId = notification.request.identifier;
-      console.log("[App] Notification received:", {
-        id: notificationId,
-        title: notification.request.content.title,
-        body: notification.request.content.body,
-        data: notification.request.content.data,
-      });
+      // Notification received - handled silently
     }
   }, [notification]);
 
@@ -111,12 +105,8 @@ SplashScreen.preventAutoHideAsync();
 // Initialize Google Mobile Ads
 mobileAds()
   .initialize()
-  .then((adapterStatuses) => {
-    console.log("Google Mobile Ads initialized successfully:", adapterStatuses);
-  })
-  .catch((error) => {
-    console.error("Failed to initialize Google Mobile Ads:", error);
-  });
+  .then((adapterStatuses) => {})
+  .catch((error) => {});
 
 const RootLayoutNav = () => {
   const colorScheme = useColorScheme();

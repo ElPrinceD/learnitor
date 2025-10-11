@@ -49,14 +49,12 @@ export const ConsentProvider: React.FC<{ children: ReactNode }> = ({
             );
             return;
           } else {
-            console.log("Backend has no consents, checking local storage");
             // Backend is empty, check if we have local consents to sync
             const storedConsents = await AsyncStorage.getItem(
               CONSENT_STORAGE_KEY
             );
             if (storedConsents) {
               const parsedConsents = JSON.parse(storedConsents);
-              console.log("Found local consents to sync:", parsedConsents);
               setConsents(parsedConsents);
 
               // Sync local consents to backend
@@ -69,15 +67,12 @@ export const ConsentProvider: React.FC<{ children: ReactNode }> = ({
                     granted as boolean,
                     userToken.token
                   );
-                } catch (error) {
-                  console.error(`Failed to sync ${consentType}:`, error);
-                }
+                } catch (error) {}
               }
               return;
             }
           }
         } catch (error) {
-          console.error("Backend load failed, falling back to local:", error);
           // Fall back to local storage
         }
       }
@@ -88,12 +83,9 @@ export const ConsentProvider: React.FC<{ children: ReactNode }> = ({
         const parsedConsents = JSON.parse(storedConsents);
         setConsents(parsedConsents);
       } else {
-        console.log("No consents found, using empty object");
         setConsents({});
       }
-    } catch (error) {
-      console.error("Error loading consents:", error);
-    }
+    } catch (error) {}
   };
 
   const updateConsent = async (consentType: string, granted: boolean) => {
@@ -122,14 +114,11 @@ export const ConsentProvider: React.FC<{ children: ReactNode }> = ({
             JSON.stringify(backendConsents.consents)
           );
         } catch (error) {
-          console.error("Error syncing with backend:", error);
           // Revert local state on backend error
           setConsents(consents);
         }
       }
-    } catch (error) {
-      console.error("Error updating consent:", error);
-    }
+    } catch (error) {}
   };
 
   const hasConsent = (consentType: string): boolean => {
@@ -146,7 +135,6 @@ export const ConsentProvider: React.FC<{ children: ReactNode }> = ({
         ...consentUpdates,
       };
 
-      console.log("Batch updating consents:", consentUpdates);
       setConsents(updatedConsents);
       await AsyncStorage.setItem(
         CONSENT_STORAGE_KEY,
@@ -158,14 +146,10 @@ export const ConsentProvider: React.FC<{ children: ReactNode }> = ({
         for (const [consentType, granted] of Object.entries(consentUpdates)) {
           try {
             await updateConsentAPI(consentType, granted, userToken.token);
-          } catch (error) {
-            console.error(`Error syncing ${consentType}:`, error);
-          }
+          } catch (error) {}
         }
       }
-    } catch (error) {
-      console.error("Error updating multiple consents:", error);
-    }
+    } catch (error) {}
   };
 
   useEffect(() => {

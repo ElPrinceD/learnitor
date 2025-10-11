@@ -40,7 +40,6 @@ export const AdManagerProvider: React.FC<AdManagerProviderProps> = ({
       setGameCompletionAdReady(false);
     },
     onAdFailedToLoad: (error) => {
-      console.log("Game completion ad failed to load:", error);
       setGameCompletionAdReady(false);
     },
     autoLoad: true,
@@ -57,7 +56,6 @@ export const AdManagerProvider: React.FC<AdManagerProviderProps> = ({
       setAnswerViewingAdReady(false);
     },
     onAdFailedToLoad: (error) => {
-      console.log("Answer viewing ad failed to load:", error);
       setAnswerViewingAdReady(false);
     },
     autoLoad: true,
@@ -80,7 +78,6 @@ export const AdManagerProvider: React.FC<AdManagerProviderProps> = ({
         onRewardEarned();
       } else {
         // If ad is not ready, proceed without showing ad (graceful fallback)
-        console.log("Answer viewing ad not ready, proceeding without ad");
         onRewardEarned();
       }
     },

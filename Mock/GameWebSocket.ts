@@ -28,11 +28,9 @@ export const useWebSocket = (
       ws.current.onerror = (error) => console.error("WebSocket connection error:", error);
 
       ws.current.onmessage = (event) => {
-        console.log("WebSocket message received:", event.data);
         if (event.data) {
           try {
             const data = JSON.parse(event.data);
-            console.log("Parsed WebSocket data:", data);
 
             if (data && data.data && data.data.players) {
               const newPlayers = data.data.players.map((player) => ({
@@ -46,7 +44,6 @@ export const useWebSocket = (
               setPlayers(newPlayers);
             }
             if (data.type === "game.start") {
-              console.log("User has received start game ", userInfo?.user.first_name);
               goToGame();
             }
             if (data.type === "question.attempted" && gameQuestions[currentQuestion]) {

@@ -4,9 +4,9 @@ import React, {
   useEffect,
   useCallback,
   useMemo,
-} from 'react';
-import { useSQLiteContext, SQLiteDatabase } from 'expo-sqlite';
-import { InteractionManager } from 'react-native';
+} from "react";
+import { useSQLiteContext, SQLiteDatabase } from "expo-sqlite";
+import { InteractionManager } from "react-native";
 
 interface CacheContextType {
   setItem: (key: string, value: string) => Promise<void>;
@@ -19,28 +19,30 @@ interface CacheContextType {
 
 const CacheContext = createContext<CacheContextType | null>(null);
 
-export const CacheProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const CacheProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const db: SQLiteDatabase = useSQLiteContext();
 
   useEffect(() => {
     const manager = InteractionManager.runAfterInteractions(() => {
-      db.execAsync(`
+      db.execAsync(
+        `
         CREATE TABLE IF NOT EXISTS storage (
           key TEXT PRIMARY KEY NOT NULL,
           value TEXT
         );
-      `).catch(console.error);
+      `
+      ).catch(() => {});
     });
 
     return () => manager.cancel();
   }, [db]);
 
   const setItem = useCallback(
-    
     async (key: string, value: string) => {
-      
       await db.runAsync(
-        'INSERT OR REPLACE INTO storage (key, value) VALUES (?, ?);',
+        "INSERT OR REPLACE INTO storage (key, value) VALUES (?, ?);",
         [key, value]
       );
     },
@@ -50,7 +52,7 @@ export const CacheProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const getItem = useCallback(
     async (key: string) => {
       const row = await db.getFirstAsync<{ value: string }>(
-        'SELECT value FROM storage WHERE key = ?;',
+        "SELECT value FROM storage WHERE key = ?;",
         [key]
       );
       return row?.value ?? null;
@@ -60,17 +62,19 @@ export const CacheProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const removeItem = useCallback(
     async (key: string) => {
-      await db.runAsync('DELETE FROM storage WHERE key = ?;', [key]);
+      await db.runAsync("DELETE FROM storage WHERE key = ?;", [key]);
     },
     [db]
   );
 
   const clear = useCallback(async () => {
-    await db.runAsync('DELETE FROM storage');
+    await db.runAsync("DELETE FROM storage");
   }, [db]);
 
   const getAllKeys = useCallback(async () => {
-    const rows = await db.getAllAsync<{ key: string }>('SELECT key FROM storage;');
+    const rows = await db.getAllAsync<{ key: string }>(
+      "SELECT key FROM storage;"
+    );
     return rows.map((row) => row.key);
   }, [db]);
 
@@ -78,13 +82,15 @@ export const CacheProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     async (keys: string[]): Promise<[string, string | null][]> => {
       if (keys.length === 0) return [];
 
-      const placeholders = keys.map(() => '?').join(',');
+      const placeholders = keys.map(() => "?").join(",");
       const rows = await db.getAllAsync<{ key: string; value: string }>(
         `SELECT key, value FROM storage WHERE key IN (${placeholders});`,
         keys
       );
 
-      const valueMap = Object.fromEntries(rows.map(({ key, value }) => [key, value]));
+      const valueMap = Object.fromEntries(
+        rows.map(({ key, value }) => [key, value])
+      );
       return keys.map((key) => [key, valueMap[key] ?? null]);
     },
     [db]
@@ -112,7 +118,7 @@ export const CacheProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 export const useCache = () => {
   const context = useContext(CacheContext);
   if (!context) {
-    throw new Error('useCache must be used within a CacheProvider');
+    throw new Error("useCache must be used within a CacheProvider");
   }
   return context;
 };

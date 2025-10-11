@@ -14,7 +14,6 @@ import { SIZES, rMS, rV } from "../../constants";
 const Verification = () => {
   const params = useLocalSearchParams();
   const email = params.email;
-  console.log("Received email:", email);
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === "dark";
 

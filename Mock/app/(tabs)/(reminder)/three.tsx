@@ -94,9 +94,7 @@ const Timeline = () => {
       try {
         const hasAnimated = await AsyncStorage.getItem("bottomSheetAnimated");
         setHasAnimatedBefore(hasAnimated === "true");
-      } catch (error) {
-        console.log("Error checking animation history:", error);
-      }
+      } catch (error) {}
     };
 
     checkAnimationHistory();
@@ -115,7 +113,6 @@ const Timeline = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!bottomSheetReady) {
-        console.warn("BottomSheet failed to initialize, using fallback");
         setUseFallback(true);
       }
     }, 2000);
@@ -147,7 +144,6 @@ const Timeline = () => {
     if (categoriesStatus === "success" && categoryNames) {
     }
     if (categoriesStatus === "error" && categoriesError) {
-      console.error("Categories loading error:", categoriesError);
     }
   }, [categoriesStatus, categoryNames, categoriesError]);
 
@@ -182,10 +178,6 @@ const Timeline = () => {
   }, [plansStatus, categoriesStatus]);
 
   const handleEditPlan = (plan) => {
-    console.log("Edit plan - Full plan object:", plan);
-    console.log("CategoryNames:", categoryNames);
-    console.log("Plan category:", plan.category);
-
     // Handle different possible time field names
     const startTime = plan.due_time_start || plan.due_time || "12:00";
     const endTime = plan.due_time_end || plan.due_time || "13:00";
@@ -221,23 +213,16 @@ const Timeline = () => {
   const handleDismissError = useCallback(() => setErrorMessage(null), []);
 
   // BottomSheet callbacks
-  const handleBottomSheetChange = useCallback((index: number) => {
-    console.log("BottomSheet index changed:", index);
-  }, []);
+  const handleBottomSheetChange = useCallback((index: number) => {}, []);
 
   const handleBottomSheetAnimate = useCallback(
     async (fromIndex: number, toIndex: number) => {
-      console.log("BottomSheet animating from", fromIndex, "to", toIndex);
-
       // Mark that user has seen the animation (only on first animation)
       if (!hasAnimatedBefore && toIndex >= 0) {
         try {
           await AsyncStorage.setItem("bottomSheetAnimated", "true");
           setHasAnimatedBefore(true);
-          console.log("BottomSheet animation marked as seen");
-        } catch (error) {
-          console.log("Error saving animation state:", error);
-        }
+        } catch (error) {}
       }
     },
     [hasAnimatedBefore]
@@ -248,7 +233,6 @@ const Timeline = () => {
     try {
       await AsyncStorage.removeItem("bottomSheetAnimated");
       setHasAnimatedBefore(false);
-      console.log("BottomSheet animation state reset");
     } catch (error) {
       console.log("Error resetting animation state:", error);
     }

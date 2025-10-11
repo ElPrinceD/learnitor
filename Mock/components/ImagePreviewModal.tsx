@@ -41,7 +41,6 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
 
   // Sync previewImage with images prop
   useEffect(() => {
-    console.log("Images prop changed:", images);
     if (images.length > 0) {
       setPreviewImage(images[0]);
     } else {
@@ -50,14 +49,12 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
   }, [images]);
 
   const handleSend = useCallback(async () => {
-    console.log("handleSend called, previewImage:", previewImage);
     if (!previewImage) {
       console.warn("No preview image available");
       ToastAndroid.show("No image selected", ToastAndroid.SHORT);
       return;
     }
     setIsSendingImages(true);
-    console.log("isSendingImages set to true");
     try {
       await onSend(previewImage.uri);
       ToastAndroid.show("Image sent successfully", ToastAndroid.SHORT);
@@ -66,14 +63,11 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
       ToastAndroid.show("Failed to send image", ToastAndroid.SHORT);
     } finally {
       setIsSendingImages(false);
-      console.log("isSendingImages set to false");
       onClose();
-      console.log("onClose called from handleSend");
     }
   }, [previewImage, onSend, onClose]);
 
   const handleClose = useCallback(() => {
-    console.log("handleClose called");
     setPreviewImage(null); // Clear preview image on close
     onClose();
   }, [onClose]);
@@ -83,7 +77,6 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
       modal
       open={visible}
       onOpenChange={(isOpen) => {
-        console.log("Sheet onOpenChange, isOpen:", isOpen);
         if (!isOpen) {
           handleClose();
         }

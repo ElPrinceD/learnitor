@@ -225,13 +225,9 @@ const EditPlan = () => {
             await storeNotificationId(`${id}_reminder`, reminderNotificationId);
           }
         } else {
-          console.log(
-            "Notification permissions not granted or user has not consented to notifications"
-          );
+          // Notification permissions not granted or user has not consented to notifications
         }
-      } catch (error) {
-        console.error("Error updating notifications:", error);
-      }
+      } catch (error) {}
       router.dismiss(1);
       setErrorMessage(null);
     },
@@ -252,9 +248,7 @@ const EditPlan = () => {
         // Cancel both main and reminder notifications
         await cancelTaskNotification(id);
         await cancelTaskNotification(`${id}_reminder`);
-      } catch (error) {
-        console.error("Error canceling notifications:", error);
-      }
+      } catch (error) {}
       router.dismiss(1);
       setErrorMessage(null);
     },
@@ -594,7 +588,6 @@ const EditPlan = () => {
             onDateChange={(selectedDate: string) => {
               const newDate = new Date(selectedDate);
               if (!isNaN(newDate.getTime())) setDueDate(newDate);
-              else console.error(`Invalid due date: ${selectedDate}`);
             }}
             label="Due Date"
             initialDate={oldDate} // Use plan's date
@@ -608,7 +601,6 @@ const EditPlan = () => {
             onTimeChange={(time) => {
               const newTime = parseTime(time);
               if (!isNaN(newTime.getTime())) setStartTime(newTime);
-              else console.error(`Invalid start time: ${time}`);
             }}
             buttonTitle="Pick Start Time"
           />
@@ -620,7 +612,6 @@ const EditPlan = () => {
             onTimeChange={(time) => {
               const newTime = parseTime(time);
               if (!isNaN(newTime.getTime())) setEndTime(newTime);
-              else console.error(`Invalid end time: ${time}`);
             }}
             buttonTitle="Pick End Time"
           />
@@ -660,7 +651,6 @@ const EditPlan = () => {
                   const newDate = new Date(selectedDate);
                   if (!isNaN(newDate.getTime())) setRecurrenceEndDate(newDate);
                   else
-                    console.error(
                       `Invalid recurrence end date: ${selectedDate}`
                     );
                 }}

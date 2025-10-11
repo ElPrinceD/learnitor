@@ -35,7 +35,6 @@ const ReanimatedCarouselWithAds: React.FC<ReanimatedCarouselWithAdsProps> = ({
 
   // Don't render if no data
   if (!data || data.length === 0) {
-    console.log("No carousel data available");
     return null;
   }
 

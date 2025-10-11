@@ -43,7 +43,6 @@ export const getConsents = async (token: string | null | undefined): Promise<Con
         
         return { consents };
     } catch (error) {
-        console.error('Error fetching consents:', error);
         throw error;
     }
 };
@@ -66,7 +65,6 @@ export const updateConsent = async (
         });
         return response.data;
     } catch (error) {
-        console.error('Error updating consent:', error);
         throw error;
     }
 };
@@ -81,7 +79,6 @@ export const deleteConsents = async (token: string | null | undefined): Promise<
             },
         });
     } catch (error) {
-        console.error('Error deleting consents:', error);
         throw error;
     }
 };

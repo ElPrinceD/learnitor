@@ -170,12 +170,9 @@ const ScorePage: React.FC = () => {
     typeof course === "string" ? JSON.parse(course) : course;
 
   const handleToggleAnswers = () => {
-    console.log("Toggle answers pressed, current state:", showAnswers);
     if (!showAnswers) {
       // Show rewarded ad before revealing answers
-      console.log("Showing rewarded ad before revealing answers");
       showAnswerViewingAd(() => {
-        console.log("Reward earned, showing answers");
         setShowAnswers(true);
         setHasWatchedAd(true);
       });

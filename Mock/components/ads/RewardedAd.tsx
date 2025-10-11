@@ -55,9 +55,6 @@ const useRewardedAd = ({
     try {
       // Check if Google Mobile Ads is available
       if (!RewardedAd || typeof RewardedAd.createForAdRequest !== "function") {
-        console.warn(
-          "Google Mobile Ads SDK not available, skipping ad creation"
-        );
         setAdState(AdLoadingState.ERROR);
         return;
       }
@@ -125,7 +122,6 @@ const useRewardedAd = ({
         unsubscribeRewarded();
       };
     } catch (error) {
-      console.error("Error creating rewarded ad:", error);
       setAdState(AdLoadingState.ERROR);
       onAdFailedToLoad?.("Failed to create rewarded ad: " + error);
     }

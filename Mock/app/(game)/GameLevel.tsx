@@ -31,7 +31,6 @@ const GameLevel: React.FC = () => {
       if (typeof topic === "string") {
         const parsedTopic = JSON.parse(topic);
         parsedTopics.push(parsedTopic.id);
-        console.log(parsedTopic.id);
       }
 
       // Create a new game by making a POST request to the backend
@@ -64,8 +63,6 @@ const GameLevel: React.FC = () => {
           gameId: gameId,
         },
       });
-
-      console.log("Game code:", gameCode);
     } catch (error) {
       console.error("Error creating game:", error);
     }

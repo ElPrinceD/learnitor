@@ -29,7 +29,7 @@ const AnimatedImage: React.FC<AnimatedImageProps> = ({
         source={{ uri }}
         style={[styles.image, { height: MAX_HEADER_HEIGHT }]}
         resizeMode="cover"
-        onError={(error) => console.log("Image error:", error)}
+        onError={() => {}}
       />
       <Animated.View
         style={{

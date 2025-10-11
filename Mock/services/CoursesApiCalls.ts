@@ -31,7 +31,6 @@ export const api = {
             const response = await apiClient.get(url, config);
             return handleApiResponse<T>(response);
         } catch (error) {
-            console.error(`API GET request to ${url} failed:`, error);
             throw error;
         }
     },
@@ -41,7 +40,6 @@ export const api = {
             const response = await apiClient.post(url, data, config);
             return handleApiResponse<T>(response);
         } catch (error) {
-            console.error(`API POST request to ${url} failed:`, error);
             throw error;
         }
     },
@@ -51,7 +49,6 @@ export const api = {
             const response = await apiClient.put(url, data, config);
             return handleApiResponse<T>(response);
         } catch (error) {
-            console.error(`API PUT request to ${url} failed:`, error);
             throw error;
         }
     },
@@ -61,7 +58,6 @@ export const api = {
             const response = await apiClient.delete(url, config);
             return handleApiResponse<T>(response);
         } catch (error) {
-            console.error(`API DELETE request to ${url} failed:`, error);
             throw error;
         }
     },
@@ -83,7 +79,6 @@ export const getCourses = async (token: string | null | undefined): Promise<Cour
         });
         return data;
     } catch (error) {
-        console.error('Error fetching courses:', error);
         throw error;
     }
 };
@@ -97,7 +92,6 @@ export const getCourseCategories = async (token: string | null | undefined): Pro
         });
         return data;
     } catch (error) {
-        console.error('Error fetching categories:', error);
         throw error;
     }
 };
@@ -111,7 +105,6 @@ export const getRecommendedCourses = async (token: string | null | undefined, ca
         });
         return data;
     } catch (error) {
-        console.error('Error fetching recommended courses:', error);
         throw error;
     }
 };
@@ -125,7 +118,6 @@ export const getEnrolledCourses = async (userId: number, token: string | null | 
         });
         return data;
     } catch (error) {
-        console.error('Error fetching enrolled courses:', error);
         throw error;
     }
 };
@@ -139,7 +131,6 @@ export const getCourseTopics = async (courseId: number, token: string | null | u
         });
         return data;
     } catch (error) {
-        console.error('Error fetching course topics:', error);
         throw error;
     }
 };
@@ -153,7 +144,6 @@ export const getEnrollmentStatus = async (userId: number, courseId: number, toke
         });
         return data;
     } catch (error) {
-        console.error('Error fetching enrollment status:', error);
         throw error;
     }
 };
@@ -167,7 +157,6 @@ export const getCourseProgress = async (userId: number, courseId: number, token:
         });
         return response.data.course_progress;
     } catch (error) {
-        console.error('Error fetching course progress:', error);
         throw error;
     }
 };
@@ -183,7 +172,6 @@ export const getEnrolledCourseTopics = async (userId: number, courseId: number, 
         );
         return data;
     } catch (error) {
-        console.error('Error fetching enrolled topics:', error);
         throw error;
     }
 };
@@ -197,7 +185,6 @@ export const getPracticeQuestions = async (topicId: number, token: string | null
         });
         return data.filter((question) => level === "all" || question.level === level);
     } catch (error) {
-        console.error('Error fetching practice questions:', error);
         throw error;
     }
 };
@@ -213,7 +200,6 @@ export const getPracticeAnswers = async (questionId: number, token: string | nul
         );
         return data;
     } catch (error) {
-        console.error('Error fetching practice answers:', error);
         throw error;
     }
 };
@@ -229,7 +215,6 @@ export const fetchTopicMaterials = async (topicId: number, token: string | null 
         return data;
     }
     catch (error) {
-        console.error('Error fetching materials:', error);
         throw error;
     }
 };
@@ -247,7 +232,6 @@ export const enrollInCourse = async (userId: number, courseId: number, topicIds:
         });
         return data;
     } catch (error) {
-        console.error('Error enrolling in course:', error);
         throw error;
     }
 };
@@ -261,7 +245,6 @@ export const unenrollFromCourse = async (userId: number, courseId: number, token
         });
         return data;
     } catch (error) {
-        console.error('Error unenrolling from course:', error);
         throw error;
     }
 };
@@ -280,7 +263,6 @@ export const markTopicAsComplete = async (userId: number, courseId: number, topi
         );
         return data;
     } catch (error) {
-        console.error('Error marking topic completed:', error);
         throw error;
     }
 };

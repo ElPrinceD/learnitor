@@ -41,7 +41,6 @@ export const createIssueReport = async (
     });
     return handleApiResponse(response);
   } catch (error) {
-    console.error("Error creating issue report:", error);
     throw error;
   }
 };

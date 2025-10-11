@@ -103,7 +103,6 @@ const CreateNewTime = () => {
         }
       } catch (error) {
         // Silently handle notification errors - don't block the user
-        console.error("Failed to schedule notifications:", error);
       }
 
       router.dismiss(1);
@@ -367,7 +366,6 @@ const CreateNewTime = () => {
               if (!isNaN(newTime.getTime())) {
                 setStartTime(newTime);
               } else {
-                console.error(`Invalid start time: ${time}`);
               }
             }}
             buttonTitle="Pick Start Time"
@@ -381,7 +379,6 @@ const CreateNewTime = () => {
               if (!isNaN(newTime.getTime())) {
                 setEndTime(newTime);
               } else {
-                console.error(`Invalid end time: ${time}`);
               }
             }}
             buttonTitle="Pick End Time"

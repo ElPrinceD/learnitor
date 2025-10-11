@@ -29,12 +29,11 @@ export const usePushNotifications = (): PushNotificationState => {
   const { userToken } = useAuth();
   const { hasConsent } = useConsent();
 
-  const notificationListener = useRef<Notifications.Subscription | null>(null);
-  const responseListener = useRef<Notifications.Subscription | null>(null);
+  const notificationListener = useRef<Notifications.EventSubscription | null>(null);
+  const responseListener = useRef<Notifications.EventSubscription | null>(null);
 
   async function saveTokenToBackend(tokenData: string, authToken: string) {
     if (!authToken) {
-      console.error("[PushNotifications] No auth token provided");
       return;
     }
     try {
@@ -51,9 +50,8 @@ export const usePushNotifications = (): PushNotificationState => {
         },
         { headers: { Authorization: `Token ${authToken}` } }
       );
-      console.log("[PushNotifications] Token saved to backend:", response.data);
     } catch (error) {
-      console.error("[PushNotifications] Failed to save token:", error);
+      // Silent token save failure
     }
   }
 
@@ -61,26 +59,22 @@ export const usePushNotifications = (): PushNotificationState => {
     showSettingsPrompt = false
   ): Promise<Notifications.ExpoPushToken | undefined> {
     if (!Device.isDevice) {
-      console.warn("[PushNotifications] Must use a physical device");
       return;
     }
 
     // Check if user has consented to notifications
     if (!hasConsent("notifications")) {
-      console.log("[PushNotifications] User has not consented to notifications");
       return;
     }
 
     try {
       // Check if we're in Expo Go (which doesn't support FCM)
-      if (Constants.appOwnership === 'expo') {
-        console.warn("[PushNotifications] Push notifications not supported in Expo Go");
+      if (Constants.executionEnvironment === 'storeClient') {
         return;
       }
 
       // Check if we have the required configuration
       if (!Constants.expoConfig?.extra?.eas?.projectId) {
-        console.warn("[PushNotifications] No EAS project ID found, push notifications may not work");
         return;
       }
       const { status: existingStatus } =
@@ -106,7 +100,6 @@ export const usePushNotifications = (): PushNotificationState => {
       }
 
       if (finalStatus !== "granted") {
-        console.log("[PushNotifications] Notification permissions not granted");
         return;
       }
 
@@ -117,14 +110,12 @@ export const usePushNotifications = (): PushNotificationState => {
           applicationId: Constants.expoConfig?.android?.package || Constants.expoConfig?.ios?.bundleIdentifier,
         });
       } catch (tokenError) {
-        console.error("[PushNotifications] Failed to get Expo push token:", tokenError);
         // Try without applicationId as fallback
         try {
           token = await Notifications.getExpoPushTokenAsync({
             projectId: Constants.expoConfig?.extra?.eas.projectId,
           });
         } catch (fallbackError) {
-          console.error("[PushNotifications] Fallback token request also failed:", fallbackError);
           throw fallbackError;
         }
       }
@@ -137,7 +128,6 @@ export const usePushNotifications = (): PushNotificationState => {
 
       return token;
     } catch (error) {
-      console.error("[PushNotifications] Error registering for notifications:", error);
       return undefined;
     }
   }
@@ -151,12 +141,10 @@ export const usePushNotifications = (): PushNotificationState => {
       
       // Check consent for different notification types
       if (data.type === "marketing" && !hasConsent("marketing")) {
-        console.log("[PushNotifications] Ignoring marketing notification - no consent");
         return;
       }
       
       if (data.type === "analytics" && !hasConsent("analytics")) {
-        console.log("[PushNotifications] Ignoring analytics notification - no consent");
         return;
       }
 
@@ -171,9 +159,8 @@ export const usePushNotifications = (): PushNotificationState => {
 
       // For foreground notifications, we don't need to schedule a new one
       // The notification is already being displayed by the system
-      console.log(`[PushNotifications] Presenting foreground notification: ${title} - ${body}`);
     } catch (error) {
-      console.error("[PushNotifications] Error presenting notification:", error);
+      // Silent notification presentation error
     }
   }
 

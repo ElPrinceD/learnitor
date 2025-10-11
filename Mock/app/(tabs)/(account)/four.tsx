@@ -81,7 +81,6 @@ const Profile = () => {
       const result = await Share.share(shareOptions);
       if (result.action === Share.sharedAction) {
       } else if (result.action === Share.dismissedAction) {
-        console.log("Share operation dismissed");
       }
     } catch (error) {
       console.error("Error sharing:", error);

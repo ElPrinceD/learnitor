@@ -72,8 +72,6 @@ const PracticeQuestions: React.FC = () => {
     staleTime: 0,
   });
 
-  // console.log("Yes:", practiceAnswers);
-  // console.log("NO:", practiceQuestions);
   // Shuffle and slice to 20 questions
   const practiceQuestions = useMemo(() => {
     if (!allPracticeQuestions) return undefined;

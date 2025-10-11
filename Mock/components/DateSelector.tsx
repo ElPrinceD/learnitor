@@ -107,7 +107,6 @@ const DateSelector: React.FC<DateSelectorProps> = ({
   const [isOpen, setIsOpen] = useState(false);
 
   const handleDateChange = (day: any) => {
-    console.log("Date selected:", day); // Debug log
     if (!day?.dateString) return;
     const date = new Date(day.dateString);
     setSelectedDate(date);
@@ -377,7 +376,6 @@ const DateSelector: React.FC<DateSelectorProps> = ({
                 {!showYearPicker && !showMonthPicker && (
                   <Calendar
                     onDayPress={(day) => {
-                      console.log("Calendar day pressed:", day);
                       handleDateChange(day);
                     }}
                     enableSwipeMonths={true}
