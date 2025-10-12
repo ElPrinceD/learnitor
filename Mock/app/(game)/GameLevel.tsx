@@ -1,9 +1,10 @@
 import { View, Text, StyleSheet, useColorScheme } from "react-native";
-import React from "react";
+import React, { useState, useCallback } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import PracticeLevel from "../../components/PracticeLevel";
 import { Level } from "../../components/types";
 import { useAuth } from "../../components/AuthContext";
+import ErrorMessage from "../../components/ErrorMessage";
 
 import axios from "axios";
 import ApiUrl from "../../config";
@@ -15,9 +16,15 @@ const GameLevel: React.FC = () => {
   const { userToken } = useAuth();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const handleDismissError = useCallback(() => setErrorMessage(null), []);
 
   const handleLevelPress = async (level: Level) => {
     try {
+      // Clear any previous error messages
+      setErrorMessage(null);
+
       let parsedTopics: number[] = [];
 
       // Parse topics if it is a string
@@ -31,6 +38,12 @@ const GameLevel: React.FC = () => {
       if (typeof topic === "string") {
         const parsedTopic = JSON.parse(topic);
         parsedTopics.push(parsedTopic.id);
+      }
+
+      // Validate that we have topics to create a game with
+      if (parsedTopics.length === 0) {
+        setErrorMessage("Please select at least one topic to create a game.");
+        return;
       }
 
       // Create a new game by making a POST request to the backend
@@ -64,7 +77,16 @@ const GameLevel: React.FC = () => {
         },
       });
     } catch (error) {
-      console.error("Error creating game:", error);
+      // Let ErrorMessage component handle the user-friendly conversion
+      if (axios.isAxiosError(error)) {
+        setErrorMessage(error.message);
+      } else if (error instanceof Error) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage(
+          "An unexpected error occurred while creating the game."
+        );
+      }
     }
   };
 
@@ -104,6 +126,11 @@ const GameLevel: React.FC = () => {
     <View style={styles.container}>
       <Text style={styles.header}>Select a Level</Text>
       <PracticeLevel onPress={handleLevelPress} levels={levels} />
+      <ErrorMessage
+        message={errorMessage}
+        visible={!!errorMessage}
+        onDismiss={handleDismissError}
+      />
     </View>
   );
 };

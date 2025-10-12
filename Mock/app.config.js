@@ -61,7 +61,7 @@ export default {
         }
       },
       "package": "com.cradle.learnitor",
-      "hermesEnabled": false,
+      "hermesEnabled": true,
       "config": {
         "googleMobileAdsAppId": "ca-app-pub-1639151369389939~6963720638"
       },
