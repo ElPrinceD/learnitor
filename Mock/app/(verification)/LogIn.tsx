@@ -8,6 +8,7 @@ import {
   Keyboard,
   ScrollView,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../components/Themed";
 import { router, useGlobalSearchParams } from "expo-router";
 import axios from "axios";
@@ -33,6 +34,7 @@ const LogIn = () => {
   const [showPassword, setShowPassword] = useState(false);
   const themeColors = Colors[colorScheme ?? "light"];
   const [showSecondText, setShowSecondText] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const handleLogin = () => {
     if (!email || !password) {
@@ -100,7 +102,7 @@ const LogIn = () => {
       fontWeight: "bold",
     },
     bottomContainer: {
-      bottom: rV(15),
+      bottom: Math.max(rV(15), insets.bottom + rV(5)), // Use safe area bottom + small padding
       justifyContent: "flex-end",
       flexDirection: "row",
       alignItems: "center",

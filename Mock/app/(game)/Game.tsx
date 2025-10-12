@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Animated,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, router } from "expo-router";
@@ -25,6 +26,7 @@ import WsUrl from "../../configWs";
 export default function Game() {
   const { userToken, userInfo } = useAuth();
   const { gameId, gameCode } = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
 
   const [gameAnswers, setGameAnswers] = useState<Answer[]>([]);
   const [selectedAnswers, setSelectedAnswers] = useState<{
@@ -47,6 +49,9 @@ export default function Game() {
   const [redirected, setRedirected] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number>(questionDuration); // Added timeLeft state
   const [error, setError] = useState<string>(""); // Add error state
+  const [wsError, setWsError] = useState<string>("");
+  const [wsConnected, setWsConnected] = useState<boolean>(false);
+  const [wsConnectionAttempts, setWsConnectionAttempts] = useState<number>(0);
 
   // Animation refs for power-ups
   const doubleDipScale = useRef(new Animated.Value(1)).current;
@@ -169,43 +174,55 @@ export default function Game() {
   useEffect(() => {
     handleMessageRef.current = (event) => {
       if (gameEnded) return;
-      const message = JSON.parse(event.data);
 
-      if (
-        message.type === "question.attempted" &&
-        message.question_id === gameQuestions[currentQuestion]?.id
-      ) {
-        if (currentQuestion < gameQuestions.length - 1) {
-          setCurrentQuestion((prev) => prev + 1);
-        } else {
-          handleSubmit();
-        }
-      } else if (message.type === "all_scores_submitted") {
-        const scoresObject = message.scores.reduce((acc: any, score: any) => {
-          acc[score.user_id] = score.score;
-          return acc;
-        }, {});
-        setAllScores(scoresObject);
-        setGameEnded(true);
-        if (webSocket.current) {
-          webSocket.current.close();
-        }
-        if (!redirected) {
-          setRedirected(true);
-          router.replace({
-            pathname: "Results",
-            params: { scores: JSON.stringify(scoresObject), gameId },
-          });
-        }
-      } else if (message.type === "game.start") {
-        // Game is already started, just ensure we're ready
-      } else if (
-        message.type === "game.update" ||
-        message.type === "game.state"
-      ) {
-        const payload = message.data || message;
-        if (payload.started && !payload.ended) {
+      try {
+        const message = JSON.parse(event.data);
+
+        if (
+          message.type === "question.attempted" &&
+          message.question_id === gameQuestions[currentQuestion]?.id
+        ) {
+          if (currentQuestion < gameQuestions.length - 1) {
+            setCurrentQuestion((prev) => prev + 1);
+          } else {
+            handleSubmit();
+          }
+        } else if (message.type === "all_scores_submitted") {
+          const scoresObject = message.scores.reduce((acc: any, score: any) => {
+            acc[score.user_id] = score.score;
+            return acc;
+          }, {});
+          setAllScores(scoresObject);
+          setGameEnded(true);
+          if (webSocket.current) {
+            webSocket.current.close();
+          }
+          if (!redirected) {
+            setRedirected(true);
+            router.replace({
+              pathname: "Results",
+              params: { scores: JSON.stringify(scoresObject), gameId },
+            });
+          }
+        } else if (message.type === "game.start") {
           // Game is already started, just ensure we're ready
+        } else if (
+          message.type === "game.update" ||
+          message.type === "game.state"
+        ) {
+          const payload = message.data || message;
+          if (payload.started && !payload.ended) {
+            // Game is already started, just ensure we're ready
+          }
+        }
+      } catch (error) {
+        const errorMsg = `Failed to parse WebSocket message: ${
+          error instanceof Error ? error.message : "Unknown parsing error"
+        }`;
+        setWsError(errorMsg);
+
+        if (__DEV__) {
+          console.error("Error parsing WebSocket message:", error);
         }
       }
     };
@@ -230,20 +247,50 @@ export default function Game() {
   useEffect(() => {
     if (!gameCode || !userToken?.token || gameEnded) return;
 
+    setWsConnectionAttempts((prev) => prev + 1);
+    setWsError("");
+
     const ws = new WebSocket(
       `${WsUrl}/ws/games/${gameCode}/ws/?token=${userToken.token}`
     );
     webSocket.current = ws;
 
     ws.onopen = () => {
+      setWsConnected(true);
+      setWsError("");
+      setWsConnectionAttempts(0);
       // Send join_game message to ensure we're registered
       ws.send(JSON.stringify({ type: "join_game" }));
     };
-    ws.onerror = (error) =>
-      console.error(`WebSocket error for Player ${userInfo?.user.id}:`, error);
+
+    ws.onerror = (error) => {
+      setWsConnected(false);
+      const errorMsg = `WebSocket connection failed (attempt ${
+        wsConnectionAttempts + 1
+      }). Error: ${error?.type || "Unknown error"}`;
+      setWsError(errorMsg);
+
+      if (__DEV__) {
+        console.error(
+          `WebSocket error for Player ${userInfo?.user.id}:`,
+          error
+        );
+      }
+    };
+
     ws.onmessage = (event) => handleMessageRef.current(event);
-    ws.onclose = () => {
+
+    ws.onclose = (event) => {
+      setWsConnected(false);
       webSocket.current = null;
+
+      if (event.code !== 1000) {
+        // Not a normal closure
+        const errorMsg = `WebSocket connection closed unexpectedly. Code: ${
+          event.code
+        }, Reason: ${event.reason || "No reason provided"}`;
+        setWsError(errorMsg);
+      }
     };
 
     return () => {
@@ -255,12 +302,34 @@ export default function Game() {
   const sendWebSocketMessage = (message: object) => {
     if (gameEnded) return;
     if (webSocket.current?.readyState === WebSocket.OPEN) {
-      webSocket.current.send(JSON.stringify(message));
+      try {
+        webSocket.current.send(JSON.stringify(message));
+        setWsError(""); // Clear any previous errors
+      } catch (error) {
+        const errorMsg = `Failed to send WebSocket message: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`;
+        setWsError(errorMsg);
+
+        if (__DEV__) {
+          console.warn(
+            `WebSocket send error for Player ${userInfo?.user.id}:`,
+            error
+          );
+        }
+      }
     } else {
-      console.warn(
-        `WebSocket not open for Player ${userInfo?.user.id}:`,
-        message
-      );
+      const errorMsg = `WebSocket is not connected (state: ${
+        webSocket.current?.readyState || "null"
+      }). Cannot send message.`;
+      setWsError(errorMsg);
+
+      if (__DEV__) {
+        console.warn(
+          `WebSocket not open for Player ${userInfo?.user.id}:`,
+          message
+        );
+      }
     }
   };
 
@@ -439,6 +508,7 @@ export default function Game() {
       justifyContent: "space-around",
       paddingHorizontal: rMS(16),
       paddingVertical: rV(12),
+      paddingBottom: Math.max(rV(12), insets.bottom + rV(8)), // Use safe area bottom + padding
       backgroundColor: themeColors.background,
       borderTopWidth: 1,
       borderTopColor: themeColors.textSecondary + "20",
@@ -550,6 +620,41 @@ export default function Game() {
       textAlign: "center",
       paddingHorizontal: rMS(20),
     },
+    connectionStatus: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      marginVertical: rV(8),
+      paddingHorizontal: rMS(20),
+    },
+    statusIndicator: {
+      width: rS(12),
+      height: rS(12),
+      borderRadius: rS(6),
+      marginRight: rS(8),
+    },
+    statusText: {
+      color: themeColors.text,
+      fontSize: SIZES.medium,
+      fontWeight: "600",
+    },
+    attemptsText: {
+      color: themeColors.textSecondary,
+      fontSize: SIZES.small,
+      marginLeft: rS(8),
+    },
+    wsErrorMessage: {
+      alignSelf: "center",
+      fontSize: SIZES.small,
+      color: "#FF9800",
+      marginVertical: rV(8),
+      textAlign: "center",
+      paddingHorizontal: rMS(20),
+      backgroundColor: "#FFF3E0",
+      padding: rMS(10),
+      borderRadius: rMS(5),
+      marginHorizontal: rMS(20),
+    },
   });
 
   // Render UI
@@ -559,6 +664,27 @@ export default function Game() {
 
       {/* Error Display */}
       {error ? <Text style={styles.errorMessage}>{error}</Text> : null}
+
+      {/* WebSocket Connection Status */}
+      <View style={styles.connectionStatus}>
+        <View
+          style={[
+            styles.statusIndicator,
+            { backgroundColor: wsConnected ? "#4CAF50" : "#F44336" },
+          ]}
+        />
+        <Text style={styles.statusText}>
+          {wsConnected ? "Connected" : "Disconnected"}
+        </Text>
+        {wsConnectionAttempts > 0 && (
+          <Text style={styles.attemptsText}>
+            (Attempt {wsConnectionAttempts}/5)
+          </Text>
+        )}
+      </View>
+
+      {/* WebSocket Error Display */}
+      {wsError && <Text style={styles.wsErrorMessage}>{wsError}</Text>}
 
       {/* Timer Display */}
       {!gameEnded && gameQuestions.length > 0 && !error && (

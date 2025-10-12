@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   Animated,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { Player, GameDetailsResponse } from "../../components/types";
 import { useAuth } from "../../components/AuthContext";
@@ -28,6 +29,7 @@ export default function ResultsScreen() {
   }>();
   const { showGameCompletionAd } = useAdManager();
   const [adShown, setAdShown] = useState(false);
+  const insets = useSafeAreaInsets();
   const [error, setError] = useState<string>("");
 
   // Animation refs for buttons
@@ -246,7 +248,7 @@ export default function ResultsScreen() {
       flexDirection: "row",
       justifyContent: "space-between",
       paddingTop: rV(5),
-      paddingBottom: rV(20),
+      paddingBottom: Math.max(rV(20), insets.bottom + rV(10)), // Use safe area bottom + padding
       paddingHorizontal: rMS(20),
       gap: rS(16),
     },

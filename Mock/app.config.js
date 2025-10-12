@@ -4,17 +4,17 @@ export default {
     "slug": "mock",
     "scheme": "myapp",
     "description": "Learn it all",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "deepLinking": true,
     "orientation": "portrait",
-    "icon": "./assets/images/Elevay.jpg",
+    "icon": "./assets/images/ElevayWithoutTextLogo.png",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/images/Elevay.jpg",
+      "image": "./assets/images/ElevayLogoSplash.png",
       "resizeMode": "cover",
       "backgroundColor": "#ffffff",
       "dark": {
-        "image": "./assets/images/Elevay.jpg",
+        "image": "./assets/images/ElevayLogoSplash.png",
         "resizeMode": "cover",
         "backgroundColor": "#18191a"
       }
@@ -52,8 +52,9 @@ export default {
         "RECEIVE_BOOT_COMPLETED",
         "WAKE_LOCK"
       ],
+      "versionCode": 2,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/Elevay.jpg",
+        "foregroundImage": "./assets/images/ElevayWithoutTextLogo.png",
         "backgroundColor": "#ffffff",
         "dark": {
           "backgroundColor": "#18191a"
@@ -127,7 +128,7 @@ export default {
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/Elevay.jpg",
+          "icon": "./assets/images/ElevayWithoutTextLogo.png",
           "color": "#ffffff",
           "defaultChannel": "default",
           "dark": {

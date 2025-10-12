@@ -9,6 +9,7 @@ import {
   ViewStyle,
   TouchableOpacity,
   KeyboardTypeOptions,
+  Platform,
 } from "react-native";
 import { SIZES, rMS, rS, rV } from "../constants";
 import Colors from "../constants/Colors";
@@ -55,7 +56,13 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
   const borderWidth = useRef(new Animated.Value(1));
 
   const handleFocus = () => {
-    animateTransform(-27);
+    // Calculate the proper translation to move label to top-left corner
+    const labelHeight = Platform.OS === "ios" ? 20 : 18; // Approximate label height
+    const borderWidth = 2;
+    const padding = 10;
+    const translateY = -(labelHeight / 2 + padding + borderWidth);
+
+    animateTransform(translateY);
     animateBorderWidth(2);
     onFocusChange?.(true);
     onFocus?.();
@@ -95,7 +102,7 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
 
   const transX = transY.current.interpolate({
     inputRange: [rMS(-30), rMS(0)],
-    outputRange: [rMS(-15), rMS(0)],
+    outputRange: [rMS(-8), rMS(0)], // Reduced horizontal translation for better positioning
     extrapolate: "clamp",
   });
 
@@ -125,11 +132,15 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
       padding: rMS(10),
       backgroundColor: themeColors.text,
       color: themeColors.background,
+      // Different heights for iOS and Android
+      minHeight: Platform.OS === "ios" ? rV(50) : rV(45), // iOS maintains current height, Android is reduced
     },
     labelContainer: {
       position: "absolute",
       marginHorizontal: rS(13),
       marginVertical: rV(10),
+      // Ensure label starts at the center of the input field
+      top: Platform.OS === "ios" ? rV(7) : rV(5), // Adjust based on platform height
     },
     label: {
       borderRadius: 5,
@@ -139,11 +150,15 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
     },
     input: {
       color: themeColors.background,
+      // Ensure proper text positioning for both platforms
+      paddingTop: Platform.OS === "ios" ? rV(8) : rV(6),
+      paddingBottom: Platform.OS === "ios" ? rV(8) : rV(6),
+      fontSize: SIZES.medium,
     },
     toggleIcon: {
       position: "absolute",
       right: rMS(1),
-      top: rMS(5),
+      top: Platform.OS === "ios" ? rMS(8) : rMS(6), // Adjust based on platform height
     },
   });
 

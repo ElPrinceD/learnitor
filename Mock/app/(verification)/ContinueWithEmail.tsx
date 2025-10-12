@@ -9,6 +9,7 @@ import {
   Keyboard,
   ScrollView,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import DateSelector from "../../components/DateSelector";
 import axios from "axios";
@@ -21,6 +22,7 @@ import { Typewriter } from "../../components/TypewriterText";
 import AnimatedTextInput from "../../components/AnimatedTextInput";
 
 const ContinueWithEmail = () => {
+  const insets = useSafeAreaInsets();
   const [firstName, setFirstName] = useState("");
   const [surname, setSurname] = useState("");
   const [email, setEmail] = useState("");
@@ -227,7 +229,7 @@ const ContinueWithEmail = () => {
       textAlign: "center",
     },
     bottomContainer: {
-      bottom: rV(10),
+      bottom: Math.max(rV(15), insets.bottom + rV(5)), // Use safe area bottom + small padding (matching LogIn)
       justifyContent: "flex-end",
       flexDirection: "row",
       alignItems: "center",

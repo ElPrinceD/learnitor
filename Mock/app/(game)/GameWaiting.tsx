@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   BackHandler,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
 import Toast from "react-native-root-toast";
 import { useAuth } from "../../components/AuthContext";
@@ -34,6 +35,7 @@ export default function GameWaitingScreen() {
     id?: string;
     gameId?: string;
   };
+  const insets = useSafeAreaInsets();
 
   if (!userInfo) return null;
 
@@ -44,6 +46,9 @@ export default function GameWaitingScreen() {
   const [gameQuestions, setGameQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
+  const [wsError, setWsError] = useState<string>("");
+  const [wsConnected, setWsConnected] = useState<boolean>(false);
+  const [wsConnectionAttempts, setWsConnectionAttempts] = useState<number>(0);
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -126,6 +131,9 @@ export default function GameWaitingScreen() {
   const connectWebSocket = useCallback(() => {
     if (!gameCode || ws.current) return;
 
+    setWsConnectionAttempts((prev) => prev + 1);
+    setWsError("");
+
     // Optional: Add token if using token-based auth
     ws.current = new WebSocket(
       `${WsUrl}/ws/games/${gameCode}/ws/?token=${userToken?.token}`
@@ -133,12 +141,35 @@ export default function GameWaitingScreen() {
     //ws.current = new WebSocket(`${WsUrl}/ws/games/${gameCode}/ws/`);
 
     ws.current.onopen = () => {
+      setWsConnected(true);
+      setWsError("");
+      setWsConnectionAttempts(0);
       ws.current?.send(JSON.stringify({ type: "join_game" }));
     };
 
     ws.current.onerror = (error) => {
-      console.error("WebSocket error:", error);
-      setTimeout(connectWebSocket, 5000);
+      setWsConnected(false);
+      const errorMsg = `WebSocket connection failed (attempt ${
+        wsConnectionAttempts + 1
+      }). Error: ${error?.type || "Unknown error"}`;
+      setWsError(errorMsg);
+
+      // Log for debugging (will be visible in production if using a logging service)
+      if (__DEV__) {
+        console.error("WebSocket error:", error);
+      }
+
+      // Retry connection after delay
+      setTimeout(() => {
+        if (wsConnectionAttempts < 5) {
+          // Limit retry attempts
+          connectWebSocket();
+        } else {
+          setWsError(
+            "WebSocket connection failed after 5 attempts. Please check your internet connection."
+          );
+        }
+      }, 5000);
     };
 
     ws.current.onmessage = (event) => {
@@ -196,12 +227,28 @@ export default function GameWaitingScreen() {
           }
         }
       } catch (error) {
-        console.error("Error parsing WebSocket message:", error);
+        const errorMsg = `Failed to parse WebSocket message: ${
+          error instanceof Error ? error.message : "Unknown parsing error"
+        }`;
+        setWsError(errorMsg);
+
+        if (__DEV__) {
+          console.error("Error parsing WebSocket message:", error);
+        }
       }
     };
 
-    ws.current.onclose = () => {
+    ws.current.onclose = (event) => {
+      setWsConnected(false);
       ws.current = null;
+
+      if (event.code !== 1000) {
+        // Not a normal closure
+        const errorMsg = `WebSocket connection closed unexpectedly. Code: ${
+          event.code
+        }, Reason: ${event.reason || "No reason provided"}`;
+        setWsError(errorMsg);
+      }
     };
   }, [gameCode, userInfo, goToGame]);
 
@@ -254,9 +301,29 @@ export default function GameWaitingScreen() {
 
   const handleStartGame = () => {
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-      ws.current.send(JSON.stringify({ type: "start_game" }));
+      try {
+        ws.current.send(JSON.stringify({ type: "start_game" }));
+        setWsError(""); // Clear any previous errors
+      } catch (error) {
+        const errorMsg = `Failed to send start_game message: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`;
+        setWsError(errorMsg);
+
+        if (__DEV__) {
+          console.error("Error sending start_game message:", error);
+        }
+      }
     } else {
-      console.error("WebSocket is not open, cannot start game");
+      const errorMsg = `WebSocket is not connected (state: ${
+        ws.current?.readyState || "null"
+      }). Cannot start game via WebSocket.`;
+      setWsError(errorMsg);
+
+      if (__DEV__) {
+        console.error("WebSocket is not open, cannot start game");
+      }
+
       // Fallback: try to start game via API
       if (userToken?.token) {
         startGameMutation.mutate({
@@ -322,12 +389,35 @@ export default function GameWaitingScreen() {
     },
     startButtonContainer: {
       position: "absolute",
-      bottom: rS(18),
+      bottom: Math.max(rS(18), insets.bottom + rS(10)), // Use safe area bottom + padding
       width: rS(200),
       alignSelf: "center",
       padding: rMS(10),
       borderTopLeftRadius: 20,
       borderBottomRightRadius: 20,
+    },
+    connectionStatus: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: rV(10),
+      paddingHorizontal: rMS(20),
+    },
+    statusIndicator: {
+      width: rS(12),
+      height: rS(12),
+      borderRadius: rS(6),
+      marginRight: rS(8),
+    },
+    statusText: {
+      color: themeColors.text,
+      fontSize: SIZES.medium,
+      fontWeight: "600",
+    },
+    attemptsText: {
+      color: themeColors.textSecondary,
+      fontSize: SIZES.small,
+      marginLeft: rS(8),
     },
   });
 
@@ -362,6 +452,26 @@ export default function GameWaitingScreen() {
         </TouchableOpacity>
       </View>
       <Text style={styles.waitingText}>Waiting for others...</Text>
+
+      {/* WebSocket Connection Status */}
+      <View style={styles.connectionStatus}>
+        <View
+          style={[
+            styles.statusIndicator,
+            { backgroundColor: wsConnected ? "#4CAF50" : "#F44336" },
+          ]}
+        />
+        <Text style={styles.statusText}>
+          {wsConnected ? "Connected" : "Disconnected"}
+        </Text>
+        {wsConnectionAttempts > 0 && (
+          <Text style={styles.attemptsText}>
+            (Attempt {wsConnectionAttempts}/5)
+          </Text>
+        )}
+      </View>
+
+      {/* Error Messages */}
       {error && (
         <Text
           style={{
@@ -372,6 +482,24 @@ export default function GameWaitingScreen() {
           }}
         >
           {error}
+        </Text>
+      )}
+
+      {wsError && (
+        <Text
+          style={{
+            color: "#FF9800",
+            textAlign: "center",
+            marginBottom: rV(10),
+            fontSize: SIZES.small,
+            paddingHorizontal: rMS(20),
+            backgroundColor: "#FFF3E0",
+            padding: rMS(10),
+            borderRadius: rMS(5),
+            marginHorizontal: rMS(20),
+          }}
+        >
+          {wsError}
         </Text>
       )}
       {loading ? (

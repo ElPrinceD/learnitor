@@ -1,5 +1,6 @@
 import React, { SetStateAction, useState } from "react";
 import { StyleSheet, Text, View, useColorScheme, Image } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, FontAwesome6 } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Colors from "../../constants/Colors";
@@ -29,7 +30,7 @@ import { Alert } from "react-native";
 // });
 
 const SignUp = () => {
-  
+  const insets = useSafeAreaInsets();
 
   // const handleGoogleSignIn = async () => {
   //   try {
@@ -104,7 +105,7 @@ const SignUp = () => {
       opacity: 0.6,
     },
     bottomContainer: {
-      bottom: rV(10),
+      bottom: Math.max(rV(10), insets.bottom + rV(5)), // Use safe area bottom + small padding
       justifyContent: "flex-end",
       flexDirection: "row",
       alignItems: "center",
@@ -140,7 +141,7 @@ const SignUp = () => {
         <Text style={styles.title}>
           Create a free account to discover your personalized learning path
         </Text>
-        
+
         {status ? <Text>{status}</Text> : null}
         <View style={styles.dividerRow}>
           <Text style={styles.dividerText}>

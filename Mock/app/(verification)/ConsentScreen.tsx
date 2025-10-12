@@ -8,6 +8,7 @@ import {
   useColorScheme,
   Switch,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "../../constants/Colors";
@@ -31,6 +32,7 @@ const ConsentScreen = () => {
   const themeColors = Colors[colorScheme ?? "light"];
   const { updateMultipleConsents } = useConsent();
   const { email } = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
 
   const [consents, setConsents] = useState<ConsentItem[]>([
     {
@@ -195,7 +197,7 @@ const ConsentScreen = () => {
     },
     footer: {
       paddingHorizontal: rMS(20),
-      paddingBottom: rV(20), // Reduced from 50
+      paddingBottom: Math.max(rV(20), insets.bottom + rV(10)), // Use safe area bottom + padding
       paddingTop: rV(10),
       alignItems: "center", // Center the button
     },
