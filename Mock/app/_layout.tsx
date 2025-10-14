@@ -116,7 +116,7 @@ const RootLayoutNav = () => {
 
   const [navigationCompleted, setNavigationCompleted] = useState(false);
   const token = userToken?.token || null;
-
+  console.log("userToken", userToken);
   useEffect(() => {
     if (isLoading) return;
     const inTabsGroup = segments[0] === "(tabs)";

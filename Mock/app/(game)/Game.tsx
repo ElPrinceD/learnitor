@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -22,6 +22,7 @@ import Colors from "../../constants/Colors";
 import { rMS, rV, rS, SIZES } from "../../constants/index.js";
 import GameButton from "../../components/GameButton";
 import WsUrl from "../../configWs";
+import ErrorMessage from "../../components/ErrorMessage";
 
 export default function Game() {
   const { userToken, userInfo } = useAuth();
@@ -52,6 +53,9 @@ export default function Game() {
   const [wsError, setWsError] = useState<string>("");
   const [wsConnected, setWsConnected] = useState<boolean>(false);
   const [wsConnectionAttempts, setWsConnectionAttempts] = useState<number>(0);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const handleDismissError = useCallback(() => setErrorMessage(null), []);
 
   // Animation refs for power-ups
   const doubleDipScale = useRef(new Animated.Value(1)).current;
@@ -221,9 +225,7 @@ export default function Game() {
         }`;
         setWsError(errorMsg);
 
-        if (__DEV__) {
-          console.error("Error parsing WebSocket message:", error);
-        }
+        // Don't show WebSocket parsing errors to users - they're not actionable
       }
     };
   }, [currentQuestion, gameQuestions, gameId, gameEnded, userInfo, redirected]);
@@ -270,12 +272,7 @@ export default function Game() {
       }). Error: ${error?.type || "Unknown error"}`;
       setWsError(errorMsg);
 
-      if (__DEV__) {
-        console.error(
-          `WebSocket error for Player ${userInfo?.user.id}:`,
-          error
-        );
-      }
+      // Don't show WebSocket connection errors to users - they're not actionable
     };
 
     ws.onmessage = (event) => handleMessageRef.current(event);
@@ -311,12 +308,8 @@ export default function Game() {
         }`;
         setWsError(errorMsg);
 
-        if (__DEV__) {
-          console.warn(
-            `WebSocket send error for Player ${userInfo?.user.id}:`,
-            error
-          );
-        }
+        // Show user-friendly error for game interaction failure
+        setErrorMessage("Unable to submit your answer. Please try again.");
       }
     } else {
       const errorMsg = `WebSocket is not connected (state: ${
@@ -324,12 +317,8 @@ export default function Game() {
       }). Cannot send message.`;
       setWsError(errorMsg);
 
-      if (__DEV__) {
-        console.warn(
-          `WebSocket not open for Player ${userInfo?.user.id}:`,
-          message
-        );
-      }
+      // Show user-friendly error for connection issues
+      setErrorMessage("Connection issue. Your progress may not be saved.");
     }
   };
 
@@ -620,71 +609,12 @@ export default function Game() {
       textAlign: "center",
       paddingHorizontal: rMS(20),
     },
-    connectionStatus: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      marginVertical: rV(8),
-      paddingHorizontal: rMS(20),
-    },
-    statusIndicator: {
-      width: rS(12),
-      height: rS(12),
-      borderRadius: rS(6),
-      marginRight: rS(8),
-    },
-    statusText: {
-      color: themeColors.text,
-      fontSize: SIZES.medium,
-      fontWeight: "600",
-    },
-    attemptsText: {
-      color: themeColors.textSecondary,
-      fontSize: SIZES.small,
-      marginLeft: rS(8),
-    },
-    wsErrorMessage: {
-      alignSelf: "center",
-      fontSize: SIZES.small,
-      color: "#FF9800",
-      marginVertical: rV(8),
-      textAlign: "center",
-      paddingHorizontal: rMS(20),
-      backgroundColor: "#FFF3E0",
-      padding: rMS(10),
-      borderRadius: rMS(5),
-      marginHorizontal: rMS(20),
-    },
   });
 
   // Render UI
   return (
     <View style={styles.container}>
       <StatusBar hidden={true} />
-
-      {/* Error Display */}
-      {error ? <Text style={styles.errorMessage}>{error}</Text> : null}
-
-      {/* WebSocket Connection Status */}
-      <View style={styles.connectionStatus}>
-        <View
-          style={[
-            styles.statusIndicator,
-            { backgroundColor: wsConnected ? "#4CAF50" : "#F44336" },
-          ]}
-        />
-        <Text style={styles.statusText}>
-          {wsConnected ? "Connected" : "Disconnected"}
-        </Text>
-        {wsConnectionAttempts > 0 && (
-          <Text style={styles.attemptsText}>
-            (Attempt {wsConnectionAttempts}/5)
-          </Text>
-        )}
-      </View>
-
-      {/* WebSocket Error Display */}
-      {wsError && <Text style={styles.wsErrorMessage}>{wsError}</Text>}
 
       {/* Timer Display */}
       {!gameEnded && gameQuestions.length > 0 && !error && (
@@ -845,6 +775,11 @@ export default function Game() {
           </TouchableOpacity>
         </Animated.View>
       </View>
+      <ErrorMessage
+        message={errorMessage}
+        visible={!!errorMessage}
+        onDismiss={handleDismissError}
+      />
     </View>
   );
 }

@@ -52,7 +52,7 @@ export default {
         "RECEIVE_BOOT_COMPLETED",
         "WAKE_LOCK"
       ],
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/ElevayWithoutTextLogo.png",
         "backgroundColor": "#ffffff",

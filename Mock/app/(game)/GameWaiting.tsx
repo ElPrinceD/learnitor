@@ -26,6 +26,7 @@ import { SIZES, rMS, rS, rV } from "../../constants";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getGameDetails, startGame } from "../../services/GamesApiCalls";
 import WsUrl from "../../configWs";
+import ErrorMessage from "../../components/ErrorMessage";
 
 export default function GameWaitingScreen() {
   const { userInfo, userToken } = useAuth();
@@ -49,6 +50,9 @@ export default function GameWaitingScreen() {
   const [wsError, setWsError] = useState<string>("");
   const [wsConnected, setWsConnected] = useState<boolean>(false);
   const [wsConnectionAttempts, setWsConnectionAttempts] = useState<number>(0);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const handleDismissError = useCallback(() => setErrorMessage(null), []);
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -154,10 +158,7 @@ export default function GameWaitingScreen() {
       }). Error: ${error?.type || "Unknown error"}`;
       setWsError(errorMsg);
 
-      // Log for debugging (will be visible in production if using a logging service)
-      if (__DEV__) {
-        console.error("WebSocket error:", error);
-      }
+      // Don't show WebSocket connection errors to users - they're not actionable
 
       // Retry connection after delay
       setTimeout(() => {
@@ -232,9 +233,7 @@ export default function GameWaitingScreen() {
         }`;
         setWsError(errorMsg);
 
-        if (__DEV__) {
-          console.error("Error parsing WebSocket message:", error);
-        }
+        // Don't show WebSocket parsing errors to users - they're not actionable
       }
     };
 
@@ -281,7 +280,7 @@ export default function GameWaitingScreen() {
         message: `Join my game with this code: ${gameCode}`,
       });
     } catch (error) {
-      console.error("Error sharing game code:", error);
+      setErrorMessage("Failed to share game code. Please try again.");
     }
   };
 
@@ -294,8 +293,7 @@ export default function GameWaitingScreen() {
       goToGame();
     },
     onError: (error: Error) => {
-      console.error("Error starting game:", error);
-      setError(error.message || "Error starting game");
+      setErrorMessage(error.message || "Error starting game");
     },
   });
 
@@ -310,9 +308,8 @@ export default function GameWaitingScreen() {
         }`;
         setWsError(errorMsg);
 
-        if (__DEV__) {
-          console.error("Error sending start_game message:", error);
-        }
+        // Show user-friendly error for game start failure
+        setErrorMessage("Unable to start the game. Please try again.");
       }
     } else {
       const errorMsg = `WebSocket is not connected (state: ${
@@ -320,9 +317,8 @@ export default function GameWaitingScreen() {
       }). Cannot start game via WebSocket.`;
       setWsError(errorMsg);
 
-      if (__DEV__) {
-        console.error("WebSocket is not open, cannot start game");
-      }
+      // Show user-friendly error for connection issues
+      setErrorMessage("Connection issue. Trying alternative method...");
 
       // Fallback: try to start game via API
       if (userToken?.token) {
@@ -396,28 +392,15 @@ export default function GameWaitingScreen() {
       borderTopLeftRadius: 20,
       borderBottomRightRadius: 20,
     },
-    connectionStatus: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      marginBottom: rV(10),
-      paddingHorizontal: rMS(20),
-    },
-    statusIndicator: {
-      width: rS(12),
-      height: rS(12),
-      borderRadius: rS(6),
-      marginRight: rS(8),
-    },
-    statusText: {
-      color: themeColors.text,
-      fontSize: SIZES.medium,
-      fontWeight: "600",
-    },
-    attemptsText: {
+    multiplayerMessage: {
       color: themeColors.textSecondary,
-      fontSize: SIZES.small,
-      marginLeft: rS(8),
+      fontSize: SIZES.medium,
+      textAlign: "center",
+      padding: rMS(15),
+      backgroundColor: themeColors.card,
+      borderRadius: rMS(10),
+      borderWidth: 1,
+      borderColor: themeColors.border,
     },
   });
 
@@ -453,55 +436,6 @@ export default function GameWaitingScreen() {
       </View>
       <Text style={styles.waitingText}>Waiting for others...</Text>
 
-      {/* WebSocket Connection Status */}
-      <View style={styles.connectionStatus}>
-        <View
-          style={[
-            styles.statusIndicator,
-            { backgroundColor: wsConnected ? "#4CAF50" : "#F44336" },
-          ]}
-        />
-        <Text style={styles.statusText}>
-          {wsConnected ? "Connected" : "Disconnected"}
-        </Text>
-        {wsConnectionAttempts > 0 && (
-          <Text style={styles.attemptsText}>
-            (Attempt {wsConnectionAttempts}/5)
-          </Text>
-        )}
-      </View>
-
-      {/* Error Messages */}
-      {error && (
-        <Text
-          style={{
-            color: "#D22B2B",
-            textAlign: "center",
-            marginBottom: rV(10),
-            fontSize: SIZES.medium,
-          }}
-        >
-          {error}
-        </Text>
-      )}
-
-      {wsError && (
-        <Text
-          style={{
-            color: "#FF9800",
-            textAlign: "center",
-            marginBottom: rV(10),
-            fontSize: SIZES.small,
-            paddingHorizontal: rMS(20),
-            backgroundColor: "#FFF3E0",
-            padding: rMS(10),
-            borderRadius: rMS(5),
-            marginHorizontal: rMS(20),
-          }}
-        >
-          {wsError}
-        </Text>
-      )}
       {loading ? (
         <ActivityIndicator size="large" color={themeColors.tint} />
       ) : (
@@ -513,12 +447,27 @@ export default function GameWaitingScreen() {
         />
       )}
       {(isCreator || creatorId === userInfo?.user.id) && (
-        <GameButton
-          title="Start Game"
-          onPress={handleStartGame}
-          style={styles.startButtonContainer}
-        />
+        <>
+          {players.length < 2 ? (
+            <View style={styles.startButtonContainer}>
+              <Text style={styles.multiplayerMessage}>
+                Invite at least one more player to start the game
+              </Text>
+            </View>
+          ) : (
+            <GameButton
+              title="Start Game"
+              onPress={handleStartGame}
+              style={styles.startButtonContainer}
+            />
+          )}
+        </>
       )}
+      <ErrorMessage
+        message={errorMessage}
+        visible={!!errorMessage}
+        onDismiss={handleDismissError}
+      />
     </View>
   );
 }
