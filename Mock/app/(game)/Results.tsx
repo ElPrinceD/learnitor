@@ -258,9 +258,9 @@ export default function ResultsScreen() {
       borderRadius: rMS(16),
       paddingVertical: rV(16),
       paddingHorizontal: rMS(20),
-      shadowColor: "#000",
+      shadowColor: colorScheme === "light" ? "rgba(0,0,0,0.1)" : "#000",
       shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
+      shadowOpacity: colorScheme === "light" ? 0.15 : 0.3,
       shadowRadius: 8,
       elevation: 8,
       borderWidth: 2,
@@ -330,7 +330,11 @@ export default function ResultsScreen() {
     return (
       <View style={containerStyle}>
         <Image
-          source={{ uri: item.profile_picture }}
+          source={
+            item.profile_picture
+              ? { uri: item.profile_picture }
+              : require("../../assets/images/profile-placeholder.png")
+          }
           style={styles.profileImage}
           onError={() =>
             console.log(item.profile_picture, "Error loading picture")

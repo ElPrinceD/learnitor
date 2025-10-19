@@ -1,3 +1,3 @@
-const ApiUrl = "https://elevay.online";
+const ApiUrl = "https://api.elevay.online";
 export default ApiUrl;
 

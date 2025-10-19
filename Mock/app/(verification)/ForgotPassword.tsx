@@ -349,10 +349,10 @@ const ForgotPassword = () => {
           <Text style={styles.supportText}>
             Having trouble? Contact us at{" "}
             <Text
-              onPress={() => Linking.openURL("mailto:support@learnitor.org")}
+              onPress={() => Linking.openURL("mailto:support@elevay.online")}
               style={styles.supportLink}
             >
-              support@learnitor.org
+              support@elevay.online
             </Text>
           </Text>
         </View>

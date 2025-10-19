@@ -407,7 +407,11 @@ export default function GameWaitingScreen() {
   const renderPlayer = ({ item }: { item: Player }) => (
     <View style={styles.playerContainer}>
       <Image
-        source={{ uri: item.profile_picture }}
+        source={
+          item.profile_picture
+            ? { uri: item.profile_picture }
+            : require("../../../Mock/assets/images/profile-placeholder.png")
+        }
         style={styles.profileImage}
       />
       <Text style={styles.profileName}>{item.profileName}</Text>

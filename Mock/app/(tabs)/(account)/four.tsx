@@ -290,11 +290,12 @@ const Profile = () => {
         >
           <View key={`profile-image-${imageUpdateKey}`}>
             <Image
-              source={{
-                uri: currentImageUri,
-              }}
+              source={
+                currentImageUri
+                  ? { uri: currentImageUri }
+                  : require("../../../assets/images/profile-placeholder.png")
+              }
               style={styles.profileImage}
-              defaultSource={require("../../../assets/images/placeholder.png")}
               resizeMode="cover"
               onLoadStart={() => setImageLoading(true)}
               onLoad={() => {
