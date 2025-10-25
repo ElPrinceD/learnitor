@@ -177,6 +177,48 @@ const Profile = () => {
     }
   };
 
+  const handleProfilePictureDelete = async () => {
+    try {
+      const formData = new FormData();
+      formData.append("profile_picture", "");
+
+      const config = {
+        headers: {
+          Authorization: `Token ${userToken?.token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      };
+
+      const response = await axios.patch(
+        `${ApiUrl}/api/update/user/${userInfo?.user.id}/`,
+        formData,
+        config
+      );
+
+      if (userInfo) {
+        // Clear current image
+        setCurrentImageUri(undefined);
+        setImageLoading(false);
+        setImageError(false);
+
+        // Update user info
+        setUserInformation({
+          ...userInfo,
+          user: {
+            ...userInfo?.user,
+            profile_picture: null,
+          },
+        });
+
+        // Force image cache invalidation
+        setImageUpdateKey((prev) => prev + 1);
+      }
+    } catch (error) {
+      console.log(error.message);
+      handleError(error, "Delete Failed");
+    }
+  };
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -196,12 +238,20 @@ const Profile = () => {
       width: 115,
       height: 115,
       borderRadius: rMS(50),
-      backgroundColor: "#ccc",
+      backgroundColor: themeColors.card,
     },
     cameraIcon: {
       position: "absolute",
       bottom: 0,
       right: 0,
+      backgroundColor: themeColors.background,
+      borderRadius: 15,
+      padding: 6,
+    },
+    deleteIcon: {
+      position: "absolute",
+      top: 0,
+      left: 0,
       backgroundColor: themeColors.background,
       borderRadius: 15,
       padding: 6,
@@ -319,6 +369,14 @@ const Profile = () => {
             color={themeColors.icon}
             style={styles.cameraIcon}
           />
+          {currentImageUri && (
+            <TouchableOpacity
+              onPress={handleProfilePictureDelete}
+              style={styles.deleteIcon}
+            >
+              <Ionicons name="close" size={SIZES.medium} color="#DC2626" />
+            </TouchableOpacity>
+          )}
         </TouchableOpacity>
         <View style={styles.title}>
           <Text style={styles.fullName}>

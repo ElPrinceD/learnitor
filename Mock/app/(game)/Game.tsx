@@ -63,6 +63,13 @@ export default function Game() {
   const doubleDipGlow = useRef(new Animated.Value(0)).current;
   const askTheAIGlow = useRef(new Animated.Value(0)).current;
 
+  // Animation refs for question counter
+  const questionCounterPulse = useRef(new Animated.Value(1)).current;
+
+  // Animation refs for progress bar
+  const progressBarWidth = useRef(new Animated.Value(100)).current;
+  const progressBarPulse = useRef(new Animated.Value(1)).current;
+
   const webSocket = useRef<WebSocket | null>(null);
   const handleMessageRef = useRef<(event: MessageEvent) => void>(() => {});
   const startTimeRef = useRef<number>(0); // Added startTimeRef
@@ -138,15 +145,27 @@ export default function Game() {
 
     startTimeRef.current = Date.now();
     setTimeLeft(questionDuration);
+    progressBarWidth.setValue(100);
 
     const interval = setInterval(() => {
       const elapsed = Date.now() - startTimeRef.current;
       const remaining = questionDuration - elapsed;
       if (remaining <= 0) {
         setTimeLeft(0);
+        Animated.timing(progressBarWidth, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: false,
+        }).start();
         clearInterval(interval);
       } else {
         setTimeLeft(remaining);
+        const newWidth = (remaining / questionDuration) * 100;
+        Animated.timing(progressBarWidth, {
+          toValue: newWidth,
+          duration: 1000,
+          useNativeDriver: false,
+        }).start();
       }
     }, 1000);
 
@@ -173,6 +192,61 @@ export default function Game() {
     setAskTheAIActive(false);
     setDoubleDipActive(false);
   }, [currentQuestion, gameEnded]);
+
+  // Animate question counter when 5 or fewer questions remain
+  useEffect(() => {
+    if (gameEnded || gameQuestions.length === 0) return;
+
+    const questionsRemaining = gameQuestions.length - currentQuestion;
+    if (questionsRemaining <= 5) {
+      // Start subtle pulsing animation
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(questionCounterPulse, {
+            toValue: 1.05,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(questionCounterPulse, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      // Stop animation and reset to normal
+      questionCounterPulse.stopAnimation();
+      questionCounterPulse.setValue(1);
+    }
+  }, [currentQuestion, gameQuestions.length, gameEnded]);
+
+  // Animate progress bar when time is low
+  useEffect(() => {
+    if (gameEnded) return;
+
+    if (timeLeft <= 5000 && timeLeft > 0) {
+      // Start subtle pulsing animation for progress bar
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(progressBarPulse, {
+            toValue: 1.05,
+            duration: 800,
+            useNativeDriver: false,
+          }),
+          Animated.timing(progressBarPulse, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: false,
+          }),
+        ])
+      ).start();
+    } else {
+      // Stop animation and reset to normal
+      progressBarPulse.stopAnimation();
+      progressBarPulse.setValue(1);
+    }
+  }, [timeLeft, gameEnded]);
 
   // Handle WebSocket messages
   useEffect(() => {
@@ -582,15 +656,33 @@ export default function Game() {
       color: themeColors.text,
       fontStyle: "italic",
     },
-    timerContainer: {
+    timerRowContainer: {
+      flexDirection: "row",
+      justifyContent: "space-between",
       alignItems: "center",
       marginVertical: rV(16),
+      paddingHorizontal: rS(20),
     },
-    timerText: {
-      fontSize: rMS(24),
+    questionCounterText: {
+      fontSize: rMS(18),
       fontWeight: "bold",
-      color: themeColors.tint,
-      textAlign: "center",
+      textAlign: "left",
+    },
+    progressBarContainer: {
+      alignItems: "center",
+      width: rS(120),
+    },
+    progressBarBackground: {
+      width: "100%",
+      height: rV(8),
+      backgroundColor: "rgba(13, 71, 161, 0.2)",
+      borderRadius: rMS(4),
+      overflow: "hidden",
+    },
+    progressBarFill: {
+      height: "100%",
+      borderRadius: rMS(4),
+      alignSelf: "flex-end",
     },
     answerButton: {
       padding: rMS(10),
@@ -616,16 +708,42 @@ export default function Game() {
     <View style={styles.container}>
       <StatusBar hidden={true} />
 
-      {/* Timer Display */}
+      {/* Timer and Question Counter Row */}
       {!gameEnded && gameQuestions.length > 0 && !error && (
-        <View style={styles.timerContainer}>
-          <Text style={styles.timerText}>
-            {`${Math.floor(timeLeft / 60000)
-              .toString()
-              .padStart(2, "0")}:${Math.floor((timeLeft % 60000) / 1000)
-              .toString()
-              .padStart(2, "0")}`}
-          </Text>
+        <View style={styles.timerRowContainer}>
+          <Animated.Text
+            style={[
+              styles.questionCounterText,
+              {
+                color:
+                  gameQuestions.length - currentQuestion <= 5
+                    ? "#FF0000"
+                    : themeColors.text,
+                transform: [{ scale: questionCounterPulse }],
+              },
+            ]}
+          >
+            {currentQuestion + 1}/{gameQuestions.length}
+          </Animated.Text>
+          <View style={styles.progressBarContainer}>
+            <View style={styles.progressBarBackground}>
+              <Animated.View
+                style={[
+                  styles.progressBarFill,
+                  {
+                    width: progressBarWidth.interpolate({
+                      inputRange: [0, 100],
+                      outputRange: ["0%", "100%"],
+                      extrapolate: "clamp",
+                    }),
+                    backgroundColor:
+                      timeLeft <= 5000 ? "#DC2626" : themeColors.tint,
+                    transform: [{ scale: progressBarPulse }],
+                  },
+                ]}
+              />
+            </View>
+          </View>
         </View>
       )}
 

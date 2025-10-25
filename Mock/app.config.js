@@ -2,9 +2,9 @@ export default {
   "expo": {
     "name": "Elevay",
     "slug": "mock",
-    "scheme": "myapp",
+    "scheme": "elevay",
     "description": "Learn it all",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "deepLinking": true,
     "orientation": "portrait",
     "icon": "./assets/images/ElevayWithoutTextLogo.png",
@@ -25,6 +25,7 @@ export default {
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.cradle.learnitor",
+      "associatedDomains": ["applinks:elevay.online"],
       "statusBar": {
         "style": "dark-content",
         "dark": {
@@ -52,7 +53,7 @@ export default {
         "RECEIVE_BOOT_COMPLETED",
         "WAKE_LOCK"
       ],
-      "versionCode": 4,
+      "versionCode": 5,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/ElevayWithoutTextLogo.png",
         "backgroundColor": "#ffffff",
@@ -67,6 +68,20 @@ export default {
       },
       "googleServicesFile": "./google-services.json",
       "useNextNotificationsApi": true,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "elevay.online",
+              "pathPrefix": "/game"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ],
       "statusBar": {
         "backgroundColor": "#ffffff",
         "style": "dark-content",
@@ -175,7 +190,7 @@ export default {
         "projectId": "7fd80734-c8a7-49db-accf-6b9f79c74f9f"
       },
       "TWITTER_CLIENT_ID": "RGJSaVBYcFVsaEc2R3NrX1BvZTg6MTpjaQ",
-      "API_URL": "http://16.171.33.30/"
+      "API_URL": "https://16.171.33.30/"
     },
     "owner": "mandey",
     "runtimeVersion": "1.0.0",

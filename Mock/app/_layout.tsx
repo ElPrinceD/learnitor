@@ -41,6 +41,9 @@ import { StatusBar } from "react-native";
 import Colors from "../constants/Colors";
 import * as SystemUI from "expo-system-ui";
 import { usePushNotifications } from "../usePushNotifications";
+import * as Linking from "expo-linking";
+import axios from "axios";
+import ApiUrl from "../config";
 
 // Component to handle push notifications inside ConsentProvider
 const PushNotificationHandler = () => {
@@ -61,6 +64,122 @@ const PushNotificationHandler = () => {
       // Notification received - handled silently
     }
   }, [notification]);
+
+  return null; // This component doesn't render anything
+};
+
+// Component to handle deep links
+const DeepLinkHandler = () => {
+  const { userToken } = useAuth();
+
+  useEffect(() => {
+    const handleDeepLink = async (url: string) => {
+      try {
+        // Parse the URL to extract game code
+        const parsedUrl = Linking.parse(url);
+
+        // Handle custom scheme: elevay://game/join/ABC123
+        if (
+          parsedUrl.scheme === "elevay" &&
+          parsedUrl.hostname === "game" &&
+          parsedUrl.path === "/join"
+        ) {
+          const gameCode = parsedUrl.queryParams?.code as string;
+
+          if (gameCode && userToken?.token) {
+            try {
+              // Join the game automatically
+              const response = await axios.post(
+                `${ApiUrl}/games/join/`,
+                { game_code: gameCode },
+                {
+                  headers: {
+                    Authorization: `Token ${userToken.token}`,
+                  },
+                }
+              );
+
+              if (response.status === 200) {
+                const id = response.data.id;
+                // Navigate to GameWaiting screen
+                router.navigate({
+                  pathname: "/(game)/GameWaiting",
+                  params: { code: gameCode, id: id },
+                });
+              }
+            } catch (error) {
+              console.error("Error joining game via deep link:", error);
+              // Navigate to GameIntro with the code pre-filled
+              router.navigate({
+                pathname: "/(game)/GameIntro",
+                params: { code: gameCode },
+              });
+            }
+          }
+        }
+        // Handle universal links: https://elevay.online/game/ABC123
+        else if (
+          parsedUrl.scheme === "https" &&
+          parsedUrl.hostname === "elevay.online" &&
+          parsedUrl.path?.startsWith("/game/")
+        ) {
+          const gameCode = parsedUrl.path.split("/game/")[1];
+
+          if (gameCode && userToken?.token) {
+            try {
+              // Join the game automatically
+              const response = await axios.post(
+                `${ApiUrl}/games/join/`,
+                { game_code: gameCode },
+                {
+                  headers: {
+                    Authorization: `Token ${userToken.token}`,
+                  },
+                }
+              );
+
+              if (response.status === 200) {
+                const id = response.data.id;
+                // Navigate to GameWaiting screen
+                router.navigate({
+                  pathname: "/(game)/GameWaiting",
+                  params: { code: gameCode, id: id },
+                });
+              }
+            } catch (error) {
+              console.error("Error joining game via deep link:", error);
+              // Navigate to GameIntro with the code pre-filled
+              router.navigate({
+                pathname: "/(game)/GameIntro",
+                params: { code: gameCode },
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error handling deep link:", error);
+      }
+    };
+
+    // Handle initial URL when app is opened from a deep link
+    const getInitialURL = async () => {
+      const initialUrl = await Linking.getInitialURL();
+      if (initialUrl) {
+        handleDeepLink(initialUrl);
+      }
+    };
+
+    // Handle URLs when app is already running
+    const subscription = Linking.addEventListener("url", (event) => {
+      handleDeepLink(event.url);
+    });
+
+    getInitialURL();
+
+    return () => {
+      subscription?.remove();
+    };
+  }, [userToken]);
 
   return null; // This component doesn't render anything
 };
@@ -157,6 +276,7 @@ const RootLayoutNav = () => {
                 <CacheProvider>
                   <ConsentProvider>
                     <PushNotificationHandler />
+                    <DeepLinkHandler />
                     <TimelineProvider token={token}>
                       <AlertProvider>
                         <AdManagerProvider>

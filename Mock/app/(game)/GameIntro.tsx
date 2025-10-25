@@ -8,7 +8,7 @@ import {
   useColorScheme,
   BackHandler,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import axios from "axios";
 import ApiUrl from "../../config";
 import { useAuth } from "../../components/AuthContext";
@@ -18,7 +18,8 @@ import Colors from "../../constants/Colors";
 import { SIZES, rMS, rS, rV, useShadows } from "../../constants";
 
 export default function GameIntro() {
-  const [gameCode, setGameCode] = useState("");
+  const { code } = useLocalSearchParams() as { code?: string };
+  const [gameCode, setGameCode] = useState(code || "");
   const { userToken } = useAuth();
   const [joinGameDisabled, setJoinGameDisabled] = useState<boolean>(true);
 
@@ -50,12 +51,47 @@ export default function GameIntro() {
       } else {
         // Handle unsuccessful response
         console.error("Failed to join the game:", response.data);
-        // Optionally, display an error message to the user
+        Toast.show("Invalid game code. Please check and try again.", {
+          duration: Toast.durations.LONG,
+          position: Toast.positions.TOP,
+          shadow: true,
+          animation: true,
+          hideOnPress: true,
+          delay: 0,
+          opacity: 0.8,
+          backgroundColor: themeColors.tint,
+          textColor: "white",
+          containerStyle: {
+            marginTop: 20,
+          },
+        });
       }
-    } catch (error) {
+    } catch (error: any) {
       // Handle any errors that occur during the API call
-      console.error("Error joining the game:", error);
-      // Optionally, display an error message to the user
+
+      let errorMessage = "Unable to join game. Please try again.";
+      if (error.response?.status === 404) {
+        errorMessage = "Game not found. Please check the code.";
+      } else if (error.response?.status === 400) {
+        errorMessage = "Invalid game code. Please check and try again.";
+      } else if (error.response?.status === 403) {
+        errorMessage = "You don't have permission to join this game.";
+      }
+
+      Toast.show(errorMessage, {
+        duration: Toast.durations.LONG,
+        position: Toast.positions.TOP,
+        shadow: true,
+        animation: true,
+        hideOnPress: true,
+        delay: 0,
+        opacity: 0.8,
+        backgroundColor: themeColors.tint,
+        textColor: "white",
+        containerStyle: {
+          marginTop: 20,
+        },
+      });
     }
   };
 
@@ -79,12 +115,17 @@ export default function GameIntro() {
     if (joinGameDisabled) {
       Toast.show("Enter 6-character code", {
         duration: Toast.durations.LONG,
-        position: Toast.positions.BOTTOM,
+        position: Toast.positions.TOP,
         shadow: true,
         animation: true,
         hideOnPress: true,
         delay: 0,
         opacity: 0.8,
+        backgroundColor: themeColors.tint,
+        textColor: "white",
+        containerStyle: {
+          marginTop: 20,
+        },
       });
     }
   };

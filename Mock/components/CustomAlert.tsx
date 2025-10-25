@@ -17,6 +17,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   withTiming,
+  Easing,
 } from "react-native-reanimated";
 import Colors from "../constants/Colors";
 import { SIZES } from "../constants/theme";
@@ -54,16 +55,19 @@ const CustomAlert: React.FC<CustomAlertProps> = memo(
     const colorScheme = useColorScheme();
     const themeColors = Colors[colorScheme ?? "light"];
 
-    const scale = useSharedValue(0);
+    const scale = useSharedValue(0.95);
     const opacity = useSharedValue(0);
 
     React.useEffect(() => {
       if (visible) {
-        scale.value = withSpring(1, { damping: 15, stiffness: 150 });
-        opacity.value = withTiming(1, { duration: 200 });
+        scale.value = withTiming(1, {
+          duration: 150,
+          easing: Easing.out(Easing.ease),
+        });
+        opacity.value = withTiming(1, { duration: 150 });
       } else {
-        scale.value = withTiming(0, { duration: 150 });
-        opacity.value = withTiming(0, { duration: 150 });
+        scale.value = withTiming(0.95, { duration: 100 });
+        opacity.value = withTiming(0, { duration: 100 });
       }
     }, [visible, scale, opacity]);
 

@@ -107,7 +107,7 @@ export default function ResultsScreen() {
     const playersList = gameDetails.players.map((player) => ({
       id: player.id,
       score: scores[player.id] || "0.0",
-      profileName: `${player.first_name} ${player.last_name}`,
+      profileName: player.first_name,
       profile_picture:
         player.id === userInfo?.user.id
           ? userInfo.user.profile_picture

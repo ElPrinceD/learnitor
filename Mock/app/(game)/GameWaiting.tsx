@@ -95,7 +95,7 @@ export default function GameWaitingScreen() {
         const newPlayers = gameDetails.players.map((player) => ({
           id: player.id,
           score: "0",
-          profileName: `${player.first_name} ${player.last_name}`,
+          profileName: player.first_name,
           profile_picture:
             player.id === userInfo?.user.id
               ? userInfo.user.profile_picture
@@ -193,7 +193,7 @@ export default function GameWaitingScreen() {
             const newPlayers = payload.players.map((player) => ({
               id: player.id,
               score: "0",
-              profileName: `${player.first_name} ${player.last_name}`,
+              profileName: player.first_name,
               profile_picture:
                 player.id === userInfo?.user.id
                   ? userInfo.user.profile_picture
@@ -214,7 +214,7 @@ export default function GameWaitingScreen() {
             const newPlayers = payload.players.map((player) => ({
               id: player.id,
               score: "0",
-              profileName: `${player.first_name} ${player.last_name}`,
+              profileName: player.first_name,
               profile_picture:
                 player.id === userInfo?.user.id
                   ? userInfo.user.profile_picture
@@ -277,7 +277,8 @@ export default function GameWaitingScreen() {
   const shareGameCode = async () => {
     try {
       await Share.share({
-        message: `Join my game with this code: ${gameCode}`,
+        message: `Join my game on Elevay! https://elevay.online/game/join/${gameCode}`,
+        url: `https://elevay.online/game/join/${gameCode}`,
       });
     } catch (error) {
       setErrorMessage("Failed to share game code. Please try again.");
