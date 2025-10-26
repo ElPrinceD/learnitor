@@ -277,8 +277,8 @@ export default function GameWaitingScreen() {
   const shareGameCode = async () => {
     try {
       await Share.share({
-        message: `Join my game on Elevay! https://elevay.online/game/join/${gameCode}`,
-        url: `https://elevay.online/game/join/${gameCode}`,
+        message: `POV: You're about to lose😏 https://elevay.online/GameIntro?code=${gameCode}`,
+        url: `https://elevay.online/GameIntro?code=${gameCode}`,
       });
     } catch (error) {
       setErrorMessage("Failed to share game code. Please try again.");

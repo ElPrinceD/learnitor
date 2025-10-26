@@ -76,7 +76,7 @@ export default {
             {
               "scheme": "https",
               "host": "elevay.online",
-              "pathPrefix": "/game"
+              "pathPrefix": "/GameIntro"
             }
           ],
           "category": ["BROWSABLE", "DEFAULT"]
@@ -191,18 +191,6 @@ export default {
       },
       "TWITTER_CLIENT_ID": "RGJSaVBYcFVsaEc2R3NrX1BvZTg6MTpjaQ",
       "API_URL": "https://16.171.33.30/"
-    },
-    "linking": {
-      "prefixes": ["elevay://", "https://elevay.online"],
-      "config": {
-        "screens": {
-          "(game)": {
-            "screens": {
-              "GameIntro": "game/join/:code"
-            }
-          }
-        }
-      }
     },
     "owner": "mandey",
     "runtimeVersion": "1.0.0",
