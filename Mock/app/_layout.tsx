@@ -102,7 +102,7 @@ const DeepLinkHandler = () => {
               if (response.status === 200) {
                 const id = response.data.id;
                 // Navigate to GameWaiting screen
-                router.navigate({
+                router.push({
                   pathname: "/(game)/GameWaiting",
                   params: { code: gameCode, id: id },
                 });
@@ -110,20 +110,22 @@ const DeepLinkHandler = () => {
             } catch (error) {
               console.error("Error joining game via deep link:", error);
               // Navigate to GameIntro with the code pre-filled
-              router.navigate({
+              router.push({
                 pathname: "/(game)/GameIntro",
                 params: { code: gameCode },
               });
             }
           }
         }
-        // Handle universal links: https://elevay.online/game/ABC123
+        // Handle universal links: https://elevay.online/game/join/ABC123 or https://elevay.online/game/ABC123
         else if (
           parsedUrl.scheme === "https" &&
           parsedUrl.hostname === "elevay.online" &&
           parsedUrl.path?.startsWith("/game/")
         ) {
-          const gameCode = parsedUrl.path.split("/game/")[1];
+          // Extract game code from path - handle both /game/ABC123 and /game/join/ABC123
+          const pathAfterGame = parsedUrl.path.split("/game/")[1];
+          const gameCode = pathAfterGame.split("/").pop(); // Get the last segment
 
           if (gameCode && userToken?.token) {
             try {
@@ -141,7 +143,7 @@ const DeepLinkHandler = () => {
               if (response.status === 200) {
                 const id = response.data.id;
                 // Navigate to GameWaiting screen
-                router.navigate({
+                router.push({
                   pathname: "/(game)/GameWaiting",
                   params: { code: gameCode, id: id },
                 });
@@ -149,11 +151,18 @@ const DeepLinkHandler = () => {
             } catch (error) {
               console.error("Error joining game via deep link:", error);
               // Navigate to GameIntro with the code pre-filled
-              router.navigate({
+              router.push({
                 pathname: "/(game)/GameIntro",
                 params: { code: gameCode },
               });
             }
+          } else if (gameCode && !userToken?.token) {
+            // User not authenticated - navigate to GameIntro with code pre-filled
+            // The linking config will handle the navigation
+            router.push({
+              pathname: "/(game)/GameIntro",
+              params: { code: gameCode },
+            });
           }
         }
       } catch (error) {

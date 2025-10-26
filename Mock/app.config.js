@@ -56,7 +56,7 @@ export default {
       "versionCode": 5,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/ElevayWithoutTextLogo.png",
-        "backgroundColor": "#ffffff",
+        "backgroundColor": "#18191a",
         "dark": {
           "backgroundColor": "#18191a"
         }
@@ -144,7 +144,7 @@ export default {
         "expo-notifications",
         {
           "icon": "./assets/images/ElevayWithoutTextLogo.png",
-          "color": "#ffffff",
+          "color": "#18191a",
           "defaultChannel": "default",
           "dark": {
             "color": "#18191a"
@@ -191,6 +191,18 @@ export default {
       },
       "TWITTER_CLIENT_ID": "RGJSaVBYcFVsaEc2R3NrX1BvZTg6MTpjaQ",
       "API_URL": "https://16.171.33.30/"
+    },
+    "linking": {
+      "prefixes": ["elevay://", "https://elevay.online"],
+      "config": {
+        "screens": {
+          "(game)": {
+            "screens": {
+              "GameIntro": "game/join/:code"
+            }
+          }
+        }
+      }
     },
     "owner": "mandey",
     "runtimeVersion": "1.0.0",
