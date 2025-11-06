@@ -27,7 +27,7 @@ import { useAlert } from "../../../contexts/AlertContext";
 import { useErrorHandler } from "../../../hooks/useErrorHandler";
 
 const Profile = () => {
-  const { logout, userToken, userInfo, setUserInformation } = useAuth();
+  const { logout, userToken, userInfo, setUserInformation, setUserInfo } = useAuth();
   const { clear } = useCache(); // Access clear from CacheContext
   const { showErrorAlert } = useAlert();
   const { handleError } = useErrorHandler();
@@ -39,6 +39,16 @@ const Profile = () => {
   const [currentImageUri, setCurrentImageUri] = useState<string | undefined>(
     userInfo?.user.profile_picture
   );
+
+  // Sync currentImageUri with userInfo when it changes
+  useEffect(() => {
+    if (userInfo?.user.profile_picture && userInfo.user.profile_picture.trim() !== "") {
+      // Use plain URL to allow proper caching - only add cache-busting when explicitly needed
+      setCurrentImageUri(userInfo.user.profile_picture);
+    } else {
+      setCurrentImageUri(undefined);
+    }
+  }, [userInfo?.user.profile_picture]);
 
   const handleAccountSettings = () => {
     router.navigate("AccountSettings");
@@ -150,26 +160,31 @@ const Profile = () => {
           setImageLoading(true);
           setImageError(false);
 
-          // Update user info
-          setUserInformation({
+          const updatedUserInfo = {
             ...userInfo,
             user: {
               ...userInfo?.user,
               profile_picture: response.data.profile_picture,
             },
-          });
+          };
+
+          // Update user info in storage
+          setUserInformation(updatedUserInfo);
+          // Update user info in context state
+          setUserInfo(updatedUserInfo);
 
           // Force image cache invalidation and set new URI
-          setImageUpdateKey((prev) => prev + 1);
-
-          // Set new image URI after a small delay to ensure the old one is cleared
-          setTimeout(() => {
-            setCurrentImageUri(
-              `${
-                response.data.profile_picture
-              }?t=${Date.now()}&v=${Math.random()}`
-            );
-          }, 100);
+          setImageUpdateKey((prev) => {
+            const newKey = prev + 1;
+            // Set new image URI after a small delay to ensure the old one is cleared
+            // Use imageUpdateKey for controlled cache invalidation
+            setTimeout(() => {
+              setCurrentImageUri(
+                `${response.data.profile_picture}?cacheKey=${newKey}`
+              );
+            }, 100);
+            return newKey;
+          });
         }
       }
     } catch (error) {
@@ -179,41 +194,39 @@ const Profile = () => {
 
   const handleProfilePictureDelete = async () => {
     try {
-      const formData = new FormData();
-      formData.append("profile_picture", "");
-
-      const config = {
-        headers: {
-          Authorization: `Token ${userToken?.token}`,
-          "Content-Type": "multipart/form-data",
-        },
-      };
-
-      const response = await axios.patch(
-        `${ApiUrl}/api/update/user/${userInfo?.user.id}/`,
-        formData,
-        config
+      await axios.delete(
+        `${ApiUrl}/api/delete-profile-picture/`,
+        {
+          headers: {
+            Authorization: `Token ${userToken?.token}`,
+          },
+        }
       );
 
+      // If request succeeds, update the UI
       if (userInfo) {
         // Clear current image
         setCurrentImageUri(undefined);
         setImageLoading(false);
         setImageError(false);
 
-        // Update user info
-        setUserInformation({
+        const updatedUserInfo = {
           ...userInfo,
           user: {
             ...userInfo?.user,
-            profile_picture: null,
+            profile_picture: "",
           },
-        });
+        };
+
+        // Update user info in storage
+        setUserInformation(updatedUserInfo);
+        // Update user info in context state
+        setUserInfo(updatedUserInfo);
 
         // Force image cache invalidation
         setImageUpdateKey((prev) => prev + 1);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.log(error.message);
       handleError(error, "Delete Failed");
     }
