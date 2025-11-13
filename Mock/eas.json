@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 10.0.2"
+    "version": ">= 10.0.2",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -8,27 +9,55 @@
       "distribution": "internal",
       "channel": "development",
       "ios": {
-        "simulator": true
+        "simulator": false
+      },
+      "env": {
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
     "preview": {
-      "developmentClient": true,
-      "distribution": "internal",
+      "distribution": "store",
       "channel": "preview",
+      "ios": {
+        "simulator": false,
+        "buildConfiguration": "Release"
+      },
       "android": {
         "buildType": "apk",
         "ndk": "27.0.12077973"
+      },
+      "env": {
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
     "production": {
+      "distribution": "store",
       "channel": "production",
       "android": {
         "buildType": "app-bundle",
         "ndk": "27.0.12077973"
+      },
+      "ios": {
+        "simulator": false,
+        "buildConfiguration": "Release"
+      },
+      "env": {
+        "SENTRY_ALLOW_FAILURE": "true"
       }
     }
   },
   "submit": {
-    "production": {}
+    "preview": {
+      "ios": {
+        "appleId": "elprince.elp@gmail.com",
+        "ascAppId": "6755183677"
+      }
+    },
+    "production": {
+      "ios": {
+        "appleId": "elprince.elp@gmail.com",
+        "ascAppId": "6755183677"
+      }
+    }
   }
 }

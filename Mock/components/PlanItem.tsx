@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import React, { memo, useRef, useImperativeHandle, forwardRef } from "react";
 import {
   View,
   Text,
@@ -21,19 +21,33 @@ interface Props {
   categoryNames: Record<number, string>;
   getCategoryColor: (type: string) => string;
   handleEditPlan: (plan: Plan) => void;
+  onSwipeableWillOpen?: () => void;
 }
 
-const PlanItem: React.FC<Props> = ({
+export interface PlanItemRef {
+  close: () => void;
+}
+
+const PlanItem = forwardRef<PlanItemRef, Props>(({
   plan,
   categoryNames,
   getCategoryColor,
   handleEditPlan,
-}) => {
+  onSwipeableWillOpen,
+}, ref) => {
+  const swipeableRef = useRef<Swipeable>(null);
   const category = categoryNames[plan.category] || "Unknown Category";
   const categoryColor = getCategoryColor(category);
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const shadow = useShadows();
+
+  // Expose close method to parent
+  useImperativeHandle(ref, () => ({
+    close: () => {
+      swipeableRef.current?.close();
+    },
+  }));
 
   // Format time to HH:MM
   const formattedTimeStart = plan.due_time_start
@@ -125,23 +139,38 @@ const PlanItem: React.FC<Props> = ({
     },
   });
 
+  const handleEdit = () => {
+    handleEditPlan(plan);
+    // Close swipeable after action
+    setTimeout(() => {
+      swipeableRef.current?.close();
+    }, 100);
+  };
+
   return (
     <TouchableOpacity
-      onPress={() => {}}
+      onPress={() => {
+        // Close swipeable when tapping on the item
+        swipeableRef.current?.close();
+      }}
       activeOpacity={1}
       style={styles.wrapper}
     >
       <Swipeable
+        ref={swipeableRef}
         renderRightActions={() => (
           <TouchableOpacity
             style={styles.editButton}
-            onPress={() => handleEditPlan(plan)}
+            onPress={handleEdit}
           >
             <Feather name="edit" size={rMS(24)} color="white" />
           </TouchableOpacity>
         )}
         friction={2}
         rightThreshold={60}
+        onSwipeableWillOpen={() => {
+          onSwipeableWillOpen?.();
+        }}
       >
         <View style={styles.planItemWrapper}>
           <View
@@ -182,6 +211,8 @@ const PlanItem: React.FC<Props> = ({
       </Swipeable>
     </TouchableOpacity>
   );
-};
+});
+
+PlanItem.displayName = "PlanItem";
 
 export default memo(PlanItem);

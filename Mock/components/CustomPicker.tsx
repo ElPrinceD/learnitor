@@ -6,6 +6,7 @@ import {
   Modal,
   TouchableOpacity,
   ScrollView,
+  Platform,
 } from "react-native";
 import { Select } from "@tamagui/select";
 import { Adapt } from "@tamagui/adapt";
@@ -209,51 +210,54 @@ const CustomPicker: React.FC<CustomPickerProps> = ({
             </View>
           </Modal>
 
-          <Select.Content>
-            <Select.Viewport
-              animation="quick"
-              animateOnly={["transform", "opacity"]}
-              enterStyle={{ opacity: 0, y: -10 }}
-              exitStyle={{ opacity: 0, y: 10 }}
-            >
-              <Select.Group>
-                <Select.Label
-                  style={{
-                    color: themeColors.text,
-                    backgroundColor: themeColors.background,
-                    fontWeight: "bold",
-                    fontSize: SIZES.large,
-                  }}
-                >
-                  Options
-                </Select.Label>
-                {options?.map((option, index) => (
-                  <Select.Item
-                    key={option}
-                    index={index}
-                    value={option}
-                    backgroundColor={themeColors.background}
+          {/* Only render Select.Content on Android or when explicitly open on iOS */}
+          {(Platform.OS === "android" || isOpen) && (
+            <Select.Content>
+              <Select.Viewport
+                animation="quick"
+                animateOnly={["transform", "opacity"]}
+                enterStyle={{ opacity: 0, y: -10 }}
+                exitStyle={{ opacity: 0, y: 10 }}
+              >
+                <Select.Group>
+                  <Select.Label
+                    style={{
+                      color: themeColors.text,
+                      backgroundColor: themeColors.background,
+                      fontWeight: "bold",
+                      fontSize: SIZES.large,
+                    }}
                   >
-                    <Select.ItemText
-                      style={{
-                        color: themeColors.textSecondary,
-                        fontSize: SIZES.medium,
-                      }}
+                    Options
+                  </Select.Label>
+                  {options?.map((option, index) => (
+                    <Select.Item
+                      key={option}
+                      index={index}
+                      value={option}
+                      backgroundColor={themeColors.background}
                     >
-                      {option}
-                    </Select.ItemText>
-                    <Select.ItemIndicator>
-                      <AntDesign
-                        name="check-circle"
-                        size={16}
-                        color={themeColors.tint}
-                      />
-                    </Select.ItemIndicator>
-                  </Select.Item>
-                ))}
-              </Select.Group>
-            </Select.Viewport>
-          </Select.Content>
+                      <Select.ItemText
+                        style={{
+                          color: themeColors.textSecondary,
+                          fontSize: SIZES.medium,
+                        }}
+                      >
+                        {option}
+                      </Select.ItemText>
+                      <Select.ItemIndicator>
+                        <AntDesign
+                          name="check-circle"
+                          size={16}
+                          color={themeColors.tint}
+                        />
+                      </Select.ItemIndicator>
+                    </Select.Item>
+                  ))}
+                </Select.Group>
+              </Select.Viewport>
+            </Select.Content>
+          )}
         </Select>
       </View>
     </View>

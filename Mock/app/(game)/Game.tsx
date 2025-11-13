@@ -7,6 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Animated,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -323,55 +324,64 @@ export default function Game() {
   useEffect(() => {
     if (!gameCode || !userToken?.token || gameEnded) return;
 
-    setWsConnectionAttempts((prev) => prev + 1);
-    setWsError("");
-
-    const ws = new WebSocket(
-      `${WsUrl}/ws/games/${gameCode}/ws/?token=${userToken.token}`
-    );
-    webSocket.current = ws;
-
-    ws.onopen = () => {
-      setWsConnected(true);
+    // On iOS, add a small delay to ensure component is fully mounted
+    const connectDelay = Platform.OS === "ios" ? 300 : 0;
+    
+    const timer = setTimeout(() => {
+      setWsConnectionAttempts((prev) => prev + 1);
       setWsError("");
-      setWsConnectionAttempts(0);
-      // Send join_game message to ensure we're registered
-      ws.send(JSON.stringify({ type: "join_game" }));
-    };
 
-    ws.onerror = (error) => {
-      setWsConnected(false);
-      const errorMsg = `WebSocket connection failed (attempt ${
-        wsConnectionAttempts + 1
-      }). Error: ${error?.type || "Unknown error"}`;
-      setWsError(errorMsg);
+      const ws = new WebSocket(
+        `${WsUrl}/ws/games/${gameCode}/ws/?token=${userToken.token}`
+      );
+      webSocket.current = ws;
 
-      // Don't show WebSocket connection errors to users - they're not actionable
-    };
+      ws.onopen = () => {
+        setWsConnected(true);
+        setWsError("");
+        setWsConnectionAttempts(0);
+        // Send join_game message to ensure we're registered
+        ws.send(JSON.stringify({ type: "join_game" }));
+      };
 
-    ws.onmessage = (event) => handleMessageRef.current(event);
-
-    ws.onclose = (event) => {
-      setWsConnected(false);
-      webSocket.current = null;
-
-      if (event.code !== 1000) {
-        // Not a normal closure
-        const errorMsg = `WebSocket connection closed unexpectedly. Code: ${
-          event.code
-        }, Reason: ${event.reason || "No reason provided"}`;
+      ws.onerror = (error) => {
+        setWsConnected(false);
+        const errorMsg = `WebSocket connection failed (attempt ${
+          wsConnectionAttempts + 1
+        }). Error: ${error?.type || "Unknown error"}`;
         setWsError(errorMsg);
-      }
-    };
+
+        // Don't show WebSocket connection errors to users - they're not actionable
+      };
+
+      ws.onmessage = (event) => handleMessageRef.current(event);
+
+      ws.onclose = (event) => {
+        setWsConnected(false);
+        webSocket.current = null;
+
+        if (event.code !== 1000) {
+          // Not a normal closure
+          const errorMsg = `WebSocket connection closed unexpectedly. Code: ${
+            event.code
+          }, Reason: ${event.reason || "No reason provided"}`;
+          setWsError(errorMsg);
+        }
+      };
+    }, connectDelay);
 
     return () => {
-      if (ws && ws.readyState !== WebSocket.CLOSED) ws.close();
+      clearTimeout(timer);
+      if (webSocket.current && webSocket.current.readyState !== WebSocket.CLOSED) {
+        webSocket.current.close();
+      }
     };
   }, [gameCode, userToken?.token, gameEnded, userInfo]);
 
-  // Send WebSocket message helper
-  const sendWebSocketMessage = (message: object) => {
+  // Send WebSocket message helper with iOS-specific retry logic
+  const sendWebSocketMessage = (message: object, retryAttempts = 0) => {
     if (gameEnded) return;
+    
     if (webSocket.current?.readyState === WebSocket.OPEN) {
       try {
         webSocket.current.send(JSON.stringify(message));
@@ -385,6 +395,20 @@ export default function Game() {
         // Show user-friendly error for game interaction failure
         setErrorMessage("Unable to submit your answer. Please try again.");
       }
+    } else if (webSocket.current?.readyState === WebSocket.CONNECTING) {
+      // On iOS, WebSocket might still be connecting - wait a bit and retry
+      if (retryAttempts < 10 && Platform.OS === "ios") {
+        setTimeout(() => {
+          sendWebSocketMessage(message, retryAttempts + 1);
+        }, 200);
+        return;
+      }
+      // If still not connected after waiting, show error
+      const errorMsg = `WebSocket is still connecting (state: ${
+        webSocket.current?.readyState || "null"
+      }). Cannot send message.`;
+      setWsError(errorMsg);
+      setErrorMessage("Connection issue. Your progress may not be saved.");
     } else {
       const errorMsg = `WebSocket is not connected (state: ${
         webSocket.current?.readyState || "null"

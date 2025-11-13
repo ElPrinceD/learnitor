@@ -16,6 +16,10 @@ web-build/
 *.key
 *.mobileprovision
 
+# Native folders (using Prebuild/CNG)
+ios/
+android/
+
 # Metro
 .metro-health-check*
 

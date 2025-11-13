@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
+  Pressable,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
@@ -23,7 +24,7 @@ import {
   getCategoryNames,
 } from "../../../services/TimelineApiCalls";
 import { useAuth } from "../../../components/AuthContext";
-import PlanItem from "../../../components/PlanItem";
+import PlanItem, { PlanItemRef } from "../../../components/PlanItem";
 import DaySelector from "../../../components/DaySelector";
 import Colors from "../../../constants/Colors";
 import { SIZES, rMS, rS, rV, useShadows } from "../../../constants";
@@ -49,6 +50,7 @@ const Timeline = () => {
 
   const BottomSheetRef = useRef<BottomSheet>(null);
   const snapPoints = useMemo(() => ["50%", "80%"], []);
+  const swipeableRefs = useRef<Map<number, PlanItemRef>>(new Map());
 
   const getCategoryColor = (type) => {
     switch (type) {
@@ -178,6 +180,9 @@ const Timeline = () => {
   }, [plansStatus, categoriesStatus]);
 
   const handleEditPlan = (plan) => {
+    // Close all swipeables before navigating
+    swipeableRefs.current.forEach((ref) => ref?.close());
+    
     // Handle different possible time field names
     const startTime = plan.due_time_start || plan.due_time || "12:00";
     const endTime = plan.due_time_end || plan.due_time || "13:00";
@@ -202,6 +207,20 @@ const Timeline = () => {
       },
     });
   };
+
+  // Close all swipeables except the one that's opening
+  const handleSwipeableWillOpen = useCallback((index: number) => {
+    swipeableRefs.current.forEach((ref, idx) => {
+      if (idx !== index) {
+        ref?.close();
+      }
+    });
+  }, []);
+
+  // Close all swipeables when tapping outside
+  const handleCloseAllSwipeables = useCallback(() => {
+    swipeableRefs.current.forEach((ref) => ref?.close());
+  }, []);
 
   const memoizedPlans = useMemo(() => {
     if (plansStatus === "success" && typedCategoryNames) {
@@ -290,37 +309,47 @@ const Timeline = () => {
   // Fallback content component
   const renderFallbackContent = useCallback(
     () => (
-      <ScrollView
-        style={[styles.bottom, { flex: 1 }]}
-        contentContainerStyle={styles.scrollViewContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.plansContainer}>
-          {plansStatus === "pending" ? (
-            <View style={{ flex: 1, justifyContent: "center" }}>
-              <ActivityIndicator size="large" color="#0D47A1" />
-            </View>
-          ) : memoizedPlans.length === 0 ? (
-            <Text style={styles.noPlansText}>Hey, you have a free day!</Text>
-          ) : (
-            memoizedPlans.map(
-              (plan, index) =>
-                plan && (
-                  <View key={index} style={styles.planItemWrapper}>
-                    {typedCategoryNames && (
-                      <PlanItem
-                        plan={plan}
-                        categoryNames={typedCategoryNames}
-                        getCategoryColor={getCategoryColor}
-                        handleEditPlan={handleEditPlan}
-                      />
-                    )}
-                  </View>
-                )
-            )
-          )}
-        </View>
-      </ScrollView>
+      <Pressable onPress={handleCloseAllSwipeables} style={{ flex: 1 }}>
+        <ScrollView
+          style={[styles.bottom, { flex: 1 }]}
+          contentContainerStyle={styles.scrollViewContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.plansContainer}>
+            {plansStatus === "pending" ? (
+              <View style={{ flex: 1, justifyContent: "center" }}>
+                <ActivityIndicator size="large" color="#0D47A1" />
+              </View>
+            ) : memoizedPlans.length === 0 ? (
+              <Text style={styles.noPlansText}>Hey, you have a free day!</Text>
+            ) : (
+              memoizedPlans.map(
+                (plan, index) =>
+                  plan && (
+                    <View key={index} style={styles.planItemWrapper}>
+                      {typedCategoryNames && (
+                        <PlanItem
+                          ref={(ref) => {
+                            if (ref) {
+                              swipeableRefs.current.set(index, ref);
+                            } else {
+                              swipeableRefs.current.delete(index);
+                            }
+                          }}
+                          plan={plan}
+                          categoryNames={typedCategoryNames}
+                          getCategoryColor={getCategoryColor}
+                          handleEditPlan={handleEditPlan}
+                          onSwipeableWillOpen={() => handleSwipeableWillOpen(index)}
+                        />
+                      )}
+                    </View>
+                  )
+              )
+            )}
+          </View>
+        </ScrollView>
+      </Pressable>
     ),
     [
       plansStatus,
@@ -328,12 +357,17 @@ const Timeline = () => {
       typedCategoryNames,
       getCategoryColor,
       handleEditPlan,
+      handleSwipeableWillOpen,
+      handleCloseAllSwipeables,
       styles,
     ]
   );
 
   return (
-    <View style={styles.container}>
+    <Pressable 
+      style={styles.container}
+      onPress={handleCloseAllSwipeables}
+    >
       <DaySelector
         selectedDate={selectedDate}
         setSelectedDate={setSelectedDate}
@@ -372,33 +406,43 @@ const Timeline = () => {
             contentContainerStyle={styles.scrollViewContent}
             showsVerticalScrollIndicator={false}
           >
-            <View style={styles.plansContainer}>
-              {plansStatus === "pending" ? (
-                <View style={{ flex: 1, justifyContent: "center" }}>
-                  <ActivityIndicator size="large" color="#0D47A1" />
-                </View>
-              ) : memoizedPlans.length === 0 ? (
-                <Text style={styles.noPlansText}>
-                  Hey, you have a free day!
-                </Text>
-              ) : (
-                memoizedPlans.map(
-                  (plan, index) =>
-                    plan && (
-                      <View key={index} style={styles.planItemWrapper}>
-                        {typedCategoryNames && (
-                          <PlanItem
-                            plan={plan}
-                            categoryNames={typedCategoryNames}
-                            getCategoryColor={getCategoryColor}
-                            handleEditPlan={handleEditPlan}
-                          />
-                        )}
-                      </View>
-                    )
-                )
-              )}
-            </View>
+            <Pressable onPress={handleCloseAllSwipeables}>
+              <View style={styles.plansContainer}>
+                {plansStatus === "pending" ? (
+                  <View style={{ flex: 1, justifyContent: "center" }}>
+                    <ActivityIndicator size="large" color="#0D47A1" />
+                  </View>
+                ) : memoizedPlans.length === 0 ? (
+                  <Text style={styles.noPlansText}>
+                    Hey, you have a free day!
+                  </Text>
+                ) : (
+                  memoizedPlans.map(
+                    (plan, index) =>
+                      plan && (
+                        <View key={index} style={styles.planItemWrapper}>
+                          {typedCategoryNames && (
+                            <PlanItem
+                              ref={(ref) => {
+                                if (ref) {
+                                  swipeableRefs.current.set(index, ref);
+                                } else {
+                                  swipeableRefs.current.delete(index);
+                                }
+                              }}
+                              plan={plan}
+                              categoryNames={typedCategoryNames}
+                              getCategoryColor={getCategoryColor}
+                              handleEditPlan={handleEditPlan}
+                              onSwipeableWillOpen={() => handleSwipeableWillOpen(index)}
+                            />
+                          )}
+                        </View>
+                      )
+                  )
+                )}
+              </View>
+            </Pressable>
           </BottomSheetScrollView>
         </BottomSheet>
       )}
@@ -410,7 +454,7 @@ const Timeline = () => {
           onDismiss={handleDismissError}
         />
       )}
-    </View>
+    </Pressable>
   );
 };
 

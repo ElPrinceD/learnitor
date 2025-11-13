@@ -25,6 +25,7 @@ export default {
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.cradle.learnitor",
+      "buildNumber": "2",
       "associatedDomains": ["applinks:elevay.online"],
       "statusBar": {
         "style": "dark-content",
@@ -33,6 +34,7 @@ export default {
         }
       },
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "UIBackgroundModes": ["remote-notification"],
         "CFBundleURLTypes": [
           {

@@ -133,21 +133,41 @@ export default function GameWaitingScreen() {
   }, [gameQuestions, isCreator, gameId, id, gameCode]);
 
   const connectWebSocket = useCallback(() => {
-    if (!gameCode || ws.current) return;
+    if (!gameCode) return;
+    
+    // On iOS, if WebSocket is connecting, wait for it to complete
+    if (ws.current) {
+      if (ws.current.readyState === WebSocket.CONNECTING) {
+        // Wait for connection to complete on iOS
+        if (Platform.OS === "ios") {
+          return;
+        }
+      }
+      if (ws.current.readyState === WebSocket.OPEN) {
+        // Already connected
+        return;
+      }
+      // Close and reconnect if in a bad state
+      if (ws.current.readyState === WebSocket.CLOSING || ws.current.readyState === WebSocket.CLOSED) {
+        ws.current.close();
+        ws.current = null;
+      } else {
+        return;
+      }
+    }
 
     setWsConnectionAttempts((prev) => prev + 1);
     setWsError("");
 
-    // Optional: Add token if using token-based auth
     ws.current = new WebSocket(
       `${WsUrl}/ws/games/${gameCode}/ws/?token=${userToken?.token}`
     );
-    //ws.current = new WebSocket(`${WsUrl}/ws/games/${gameCode}/ws/`);
 
     ws.current.onopen = () => {
       setWsConnected(true);
       setWsError("");
       setWsConnectionAttempts(0);
+      console.log("WebSocket connection opened");
       ws.current?.send(JSON.stringify({ type: "join_game" }));
     };
 
@@ -203,10 +223,41 @@ export default function GameWaitingScreen() {
           }
 
           if (payload.started && !payload.ended) {
-            goToGame();
+            // On iOS, ensure WebSocket is fully connected before navigating
+            if (Platform.OS === "ios" && ws.current?.readyState !== WebSocket.OPEN) {
+              // Wait a bit for connection to establish, then navigate
+              const checkConnection = (attempts = 0) => {
+                if (ws.current?.readyState === WebSocket.OPEN) {
+                  goToGame();
+                } else if (ws.current?.readyState === WebSocket.CONNECTING && attempts < 10) {
+                  setTimeout(() => checkConnection(attempts + 1), 200);
+                } else {
+                  // Connection not ready, but proceed anyway (Game screen will handle it)
+                  goToGame();
+                }
+              };
+              checkConnection();
+            } else {
+              goToGame();
+            }
           }
         } else if (data.type === "game.start") {
-          goToGame();
+          // On iOS, ensure WebSocket is fully connected before navigating
+          if (Platform.OS === "ios" && ws.current?.readyState !== WebSocket.OPEN) {
+            const checkConnection = (attempts = 0) => {
+              if (ws.current?.readyState === WebSocket.OPEN) {
+                goToGame();
+              } else if (ws.current?.readyState === WebSocket.CONNECTING && attempts < 10) {
+                setTimeout(() => checkConnection(attempts + 1), 200);
+              } else {
+                // Connection not ready, but proceed anyway
+                goToGame();
+              }
+            };
+            checkConnection();
+          } else {
+            goToGame();
+          }
         } else if (data.type === "game.state") {
           // Handle game state updates
           const payload = data.data || data;
@@ -224,7 +275,21 @@ export default function GameWaitingScreen() {
           }
 
           if (payload.started && !payload.ended) {
-            goToGame();
+            // On iOS, ensure WebSocket is fully connected before navigating
+            if (Platform.OS === "ios" && ws.current?.readyState !== WebSocket.OPEN) {
+              const checkConnection = (attempts = 0) => {
+                if (ws.current?.readyState === WebSocket.OPEN) {
+                  goToGame();
+                } else if (ws.current?.readyState === WebSocket.CONNECTING && attempts < 10) {
+                  setTimeout(() => checkConnection(attempts + 1), 200);
+                } else {
+                  goToGame();
+                }
+              };
+              checkConnection();
+            } else {
+              goToGame();
+            }
           }
         }
       } catch (error) {
@@ -249,10 +314,15 @@ export default function GameWaitingScreen() {
         setWsError(errorMsg);
       }
     };
-  }, [gameCode, userInfo, goToGame]);
+  }, [gameCode, userInfo, goToGame, userToken?.token]);
 
   useEffect(() => {
-    connectWebSocket();
+    // On iOS, add a small delay to ensure component is fully mounted
+    const connectDelay = Platform.OS === "ios" ? 300 : 0;
+    
+    const timer = setTimeout(() => {
+      connectWebSocket();
+    }, connectDelay);
 
     // Periodic refresh of game details to ensure creator sees all players
     const refreshInterval = setInterval(() => {
@@ -262,9 +332,11 @@ export default function GameWaitingScreen() {
     }, 5000); // Refresh every 5 seconds
 
     return () => {
+      clearTimeout(timer);
       clearInterval(refreshInterval);
       if (ws.current) {
         ws.current.close();
+        ws.current = null;
       }
     };
   }, [connectWebSocket, gameCode, userToken, refetchGameDetails]);
@@ -299,36 +371,57 @@ export default function GameWaitingScreen() {
   });
 
   const handleStartGame = () => {
-    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-      try {
-        ws.current.send(JSON.stringify({ type: "start_game" }));
-        setWsError(""); // Clear any previous errors
-      } catch (error) {
-        const errorMsg = `Failed to send start_game message: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`;
+    // iOS-specific: Wait for WebSocket to fully connect before starting
+    const checkAndStart = (attempts = 0) => {
+      if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+        try {
+          ws.current.send(JSON.stringify({ type: "start_game" }));
+          setWsError(""); // Clear any previous errors
+          setErrorMessage(null); // Clear any error messages
+        } catch (error) {
+          const errorMsg = `Failed to send start_game message: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`;
+          setWsError(errorMsg);
+
+          // Show user-friendly error for game start failure
+          setErrorMessage("Unable to start the game. Please try again.");
+        }
+      } else if (ws.current && ws.current.readyState === WebSocket.CONNECTING) {
+        // On iOS, WebSocket might still be connecting - wait a bit
+        if (attempts < 15 && Platform.OS === "ios") {
+          setTimeout(() => checkAndStart(attempts + 1), 200);
+          return;
+        }
+        // If still not connected after waiting, fall back to API
+        setErrorMessage("Connection issue. Trying alternative method...");
+        if (userToken?.token) {
+          startGameMutation.mutate({
+            gameId: gameId || id,
+            token: userToken.token,
+          });
+        }
+      } else {
+        // WebSocket is not connected or doesn't exist
+        const errorMsg = `WebSocket is not connected (state: ${
+          ws.current?.readyState || "null"
+        }). Cannot start game via WebSocket.`;
         setWsError(errorMsg);
 
-        // Show user-friendly error for game start failure
-        setErrorMessage("Unable to start the game. Please try again.");
-      }
-    } else {
-      const errorMsg = `WebSocket is not connected (state: ${
-        ws.current?.readyState || "null"
-      }). Cannot start game via WebSocket.`;
-      setWsError(errorMsg);
+        // Show user-friendly error for connection issues
+        setErrorMessage("Connection issue. Trying alternative method...");
 
-      // Show user-friendly error for connection issues
-      setErrorMessage("Connection issue. Trying alternative method...");
-
-      // Fallback: try to start game via API
-      if (userToken?.token) {
-        startGameMutation.mutate({
-          gameId: gameId || id,
-          token: userToken.token,
-        });
+        // Fallback: try to start game via API
+        if (userToken?.token) {
+          startGameMutation.mutate({
+            gameId: gameId || id,
+            token: userToken.token,
+          });
+        }
       }
-    }
+    };
+
+    checkAndStart();
   };
 
   const styles = StyleSheet.create({
