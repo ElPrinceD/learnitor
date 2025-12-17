@@ -131,13 +131,19 @@ const ContinueWithEmail = () => {
       setEmailError("Enter a valid email address");
     } else {
       axios
-        .post(`${ApiUrl}/api/register/`, {
-          first_name: firstName,
-          last_name: surname,
-          email: email,
-          password: password,
-          dob: dob,
-        })
+        .post(
+          `${ApiUrl}/api/register/`,
+          {
+            first_name: firstName,
+            last_name: surname,
+            email: email,
+            password: password,
+            dob: dob,
+          },
+          {
+            timeout: 15000, // 15 second timeout
+          }
+        )
         .then((response) => {
           setUser(response.data.user);
           router.navigate({
@@ -147,6 +153,26 @@ const ContinueWithEmail = () => {
         })
         .catch((error) => {
           console.error("Registration failed:", error);
+          
+          // Handle network errors (no response from server)
+          if (!error.response) {
+            if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+              setAllFieldsError(
+                "Request timed out. Please check your internet connection and try again."
+              );
+            } else if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+              setAllFieldsError(
+                "Network error. Please check your internet connection and try again."
+              );
+            } else {
+              setAllFieldsError(
+                "Unable to connect to server. Please check your internet connection and try again."
+              );
+            }
+            return;
+          }
+          
+          // Handle HTTP response errors
           if (error.response?.status === 400) {
             setAllFieldsError(
               "Registration failed. Please check your information and try again."
@@ -157,7 +183,7 @@ const ContinueWithEmail = () => {
             setAllFieldsError("Server error. Please try again later.");
           } else {
             setAllFieldsError(
-              "Registration failed. Please check your internet connection and try again."
+              "Registration failed. Please try again later."
             );
           }
         });

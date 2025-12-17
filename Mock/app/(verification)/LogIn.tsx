@@ -44,18 +44,37 @@ const LogIn = () => {
 
     setLoading(true);
     axios
-      .post(`${ApiUrl}/api/login/`, {
-        email: email,
-        password: password,
-      })
+      .post(
+        `${ApiUrl}/api/login/`,
+        {
+          email: email,
+          password: password,
+        },
+        {
+          timeout: 15000, // 15 second timeout
+        }
+      )
       .then((response) => {
         setLoading(false);
         login(response.data, response.data.token);
-        router.replace({ pathname: "/home" });
+        router.replace("/(tabs)/home");
       })
-      .catch(() => {
+      .catch((error) => {
         setLoading(false);
-        setError("Email and/or password is incorrect");
+        // Handle network errors
+        if (!error.response) {
+          if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+            setError("Request timed out. Please check your internet connection and try again.");
+          } else if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+            setError("Network error. Please check your internet connection and try again.");
+          } else {
+            setError("Unable to connect to server. Please check your internet connection and try again.");
+          }
+        } else if (error.response?.status === 401 || error.response?.status === 400) {
+          setError("Email and/or password is incorrect");
+        } else {
+          setError("Login failed. Please try again later.");
+        }
       });
   };
 

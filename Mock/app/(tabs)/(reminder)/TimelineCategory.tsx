@@ -31,6 +31,7 @@ const TimelineCategory: React.FC = () => {
           headers: {
             Authorization: `Token ${userToken?.token}`,
           },
+          timeout: 15000, // 15 second timeout
         }
       );
       setCategories(

@@ -32,26 +32,62 @@ export const usePushNotifications = (): PushNotificationState => {
   const notificationListener = useRef<Notifications.EventSubscription | null>(null);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
 
-  async function saveTokenToBackend(tokenData: string, authToken: string) {
+  async function saveTokenToBackend(tokenData: string, authToken: string, retries = 3) {
     if (!authToken) {
       return;
     }
-    try {
-      const response = await axios.post(
-        `${ApiUrl}/api/register-device/`,
-        { 
-          token: tokenData,
-          platform: Platform.OS,
-          consent_types: {
-            notifications: hasConsent("notifications"),
-            marketing: hasConsent("marketing"),
-            analytics: hasConsent("analytics")
+    
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const response = await axios.post(
+          `${ApiUrl}/api/register-device/`,
+          { 
+            token: tokenData,
+            platform: Platform.OS,
+            consent_types: {
+              notifications: hasConsent("notifications"),
+              marketing: hasConsent("marketing"),
+              analytics: hasConsent("analytics")
+            }
+          },
+          { 
+            headers: { Authorization: `Token ${authToken}` },
+            timeout: 10000, // 10 second timeout
           }
-        },
-        { headers: { Authorization: `Token ${authToken}` } }
-      );
-    } catch (error) {
-      // Silent token save failure
+        );
+        // Success - exit retry loop
+        return;
+      } catch (error: any) {
+        const isLastAttempt = attempt === retries;
+        const errorMessage = error?.message || 'Unknown error';
+        const errorCode = error?.code || error?.response?.status;
+        
+        // Log error details for debugging
+        if (isLastAttempt) {
+          console.warn(`[PushNotifications] Failed to register device after ${retries} attempts:`, {
+            error: errorMessage,
+            code: errorCode,
+            url: `${ApiUrl}/api/register-device/`,
+          });
+        }
+        
+        // Don't retry on 4xx errors (client errors)
+        if (errorCode >= 400 && errorCode < 500) {
+          console.warn(`[PushNotifications] Client error (${errorCode}), not retrying`);
+          return;
+        }
+        
+        // Retry on network/TLS errors or 5xx errors
+        if (!isLastAttempt) {
+          // Wait before retrying (exponential backoff)
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        
+        // Last attempt failed - give up
+        return;
+      }
     }
   }
 

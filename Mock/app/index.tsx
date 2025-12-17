@@ -1,12 +1,22 @@
 import React from "react";
-import { ActivityIndicator, View } from "react-native";
+import { View, ActivityIndicator } from "react-native";
+import { useAuth } from "../components/AuthContext";
 
 const index = () => {
-  return (
-    <View style={{ flex: 1, justifyContent: "center" }}>
-      <ActivityIndicator size="large" color="#0000ff" />
-    </View>
-  );
+  const { isLoading } = useAuth();
+
+  // Show loading indicator while auth is loading
+  // The _layout.tsx will handle navigation once auth is ready
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  // Return null - _layout.tsx will handle navigation
+  return null;
 };
 
 export default index;

@@ -3,6 +3,7 @@ import ApiUrl from '../config';
 
 const apiClient = axios.create({
     baseURL: ApiUrl,
+    timeout: 15000, // 15 second timeout
     headers: {
         'Content-Type': 'application/json',
     },
@@ -15,6 +16,7 @@ export const getTodayPlans = async (token: string | null | undefined, date, sele
   }
   const response = await axios.get(apiUrl, {
     headers: { Authorization: `Token ${token}` },
+    timeout: 15000, // 15 second timeout
   });
 
   const results = response.data.results || response.data || [];

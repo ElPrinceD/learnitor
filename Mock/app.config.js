@@ -4,7 +4,7 @@ export default {
     "slug": "mock",
     "scheme": "elevay",
     "description": "Learn it all",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "deepLinking": true,
     "orientation": "portrait",
     "icon": "./assets/images/ElevayWithoutTextLogo.png",
@@ -25,7 +25,7 @@ export default {
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.cradle.learnitor",
-      "buildNumber": "2",
+      "buildNumber": "6",
       "associatedDomains": ["applinks:elevay.online"],
       "statusBar": {
         "style": "dark-content",
@@ -36,6 +36,7 @@ export default {
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "UIBackgroundModes": ["remote-notification"],
+        "CFBundleLocalizations": ["en-GB"],
         "CFBundleURLTypes": [
           {
             "CFBundleURLSchemes": [
@@ -43,7 +44,8 @@ export default {
             ]
           }
         ],
-        "NSUserNotificationsUsageDescription": "This app uses notifications to alert you about new messages and updates."
+        "NSUserNotificationsUsageDescription": "This app uses notifications to alert you about new messages and updates.",
+        "EXErrorRecoveryEnabled": false
       }
     },
     "android": {
@@ -179,7 +181,8 @@ export default {
         }
       ],
       "expo-web-browser",
-      "expo-dev-client"
+      "expo-dev-client",
+      "./plugins/disable-error-recovery"
     ],
     "experiments": {
       "typedRoutes": true
@@ -197,7 +200,10 @@ export default {
     "owner": "mandey",
     "runtimeVersion": "1.0.0",
     "updates": {
-      "url": "https://u.expo.dev/7fd80734-c8a7-49db-accf-6b9f79c74f9f"
+      "url": "https://u.expo.dev/7fd80734-c8a7-49db-accf-6b9f79c74f9f",
+      "fallbackToCacheTimeout": 3000,
+      "checkAutomatically": "NEVER",
+      "enabled": true
     },
   
   },

@@ -151,7 +151,10 @@ const Profile = () => {
         const response = await axios.patch(
           `${ApiUrl}/api/update/user/${userInfo?.user.id}/`,
           formData,
-          config
+          {
+            ...config,
+            timeout: 20000, // 20 second timeout for file uploads
+          }
         );
 
         if (userInfo) {
@@ -200,6 +203,7 @@ const Profile = () => {
           headers: {
             Authorization: `Token ${userToken?.token}`,
           },
+          timeout: 15000, // 15 second timeout
         }
       );
 

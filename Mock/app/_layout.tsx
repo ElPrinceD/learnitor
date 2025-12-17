@@ -1,6 +1,9 @@
-//import "../wdyr";
+// CRITICAL: Import error handler FIRST before any other code
+// This prevents Expo's error recovery from crashing the app
+import "./errorHandler";
+
 import "react-native-reanimated";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import {
   ThemeProvider,
@@ -14,7 +17,7 @@ import {
   useNavigationContainerRef,
 } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { AuthProvider, useAuth } from "../components/AuthContext"; // Update the path as needed
+import { AuthProvider, useAuth } from "../components/AuthContext";
 import { useColorScheme } from "../components/useColorScheme";
 import { ErrorFallbackScreen } from "../components/ErrorFallbackScreen";
 import { RootSiblingParent } from "react-native-root-siblings";
@@ -22,10 +25,10 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "../QueryClient";
 import { SQLiteProvider } from "expo-sqlite";
-import { CacheProvider } from "../contexts/CacheContext"; // Update the path
-import { AlertProvider } from "../contexts/AlertContext"; // Update the path
-import { TimelineProvider } from "../contexts/TimelineContext"; // Update the path
-import { AdManagerProvider } from "../components/ads/AdManager"; // Add AdManager
+import { CacheProvider } from "../contexts/CacheContext";
+import { AlertProvider } from "../contexts/AlertContext";
+import { TimelineProvider } from "../contexts/TimelineContext";
+import { AdManagerProvider } from "../components/ads/AdManager";
 import { ConsentProvider } from "../contexts/ConsentContext";
 import mobileAds from "react-native-google-mobile-ads";
 import {
@@ -37,7 +40,7 @@ import { PortalProvider } from "@tamagui/portal";
 import config from "../tamagui.config";
 import * as Sentry from "@sentry/react-native";
 import { isRunningInExpoGo } from "expo";
-import { StatusBar } from "react-native";
+import { StatusBar, View, ActivityIndicator } from "react-native";
 import Colors from "../constants/Colors";
 import * as SystemUI from "expo-system-ui";
 import { usePushNotifications } from "../usePushNotifications";
@@ -45,21 +48,38 @@ import * as Linking from "expo-linking";
 import axios from "axios";
 import ApiUrl from "../config";
 
-console.log("[_layout.tsx] Module loaded");
+// FIX #8: Static requires ensure all routes are bundled in production
+// Expo Router needs these for static analysis - prevents missing routes
+if (typeof require !== "undefined") {
+  require("./index");
+  require("./(verification)/Intro");
+  require("./(verification)/LogIn");
+  require("./(verification)/SignUp");
+  require("./(verification)/ContinueWithEmail");
+  require("./(verification)/ConsentScreen");
+  require("./(verification)/ForgotPassword");
+  require("./(verification)/Verification");
+  require("./(tabs)/home");
+  require("./(game)/GameIntro");
+  require("./(game)/GameWaiting");
+  require("./(game)/GameLevel");
+  require("./(game)/Game");
+  require("./(game)/GameCourses");
+  require("./(game)/GameTopics");
+  require("./(game)/Results");
+}
 
 // Component to handle push notifications inside ConsentProvider
 const PushNotificationHandler = () => {
   const { expoPushToken, notification } = usePushNotifications();
   const [loggedToken, setLoggedToken] = useState<string | null>(null);
 
-  // Debug notification setup - only log once per token
   useEffect(() => {
     if (expoPushToken && expoPushToken.data !== loggedToken) {
       setLoggedToken(expoPushToken.data);
     }
   }, [expoPushToken, loggedToken]);
 
-  // Debug notification received - only log unique notifications
   useEffect(() => {
     if (notification) {
       const notificationId = notification.request.identifier;
@@ -67,133 +87,87 @@ const PushNotificationHandler = () => {
     }
   }, [notification]);
 
-  return null; // This component doesn't render anything
+  return null;
 };
 
-// Component to handle deep links
-const DeepLinkHandler = () => {
+// Component to handle deep links - only processes when navigation is ready
+const DeepLinkHandler = ({ ready }: { ready: boolean }) => {
   const { userToken } = useAuth();
 
   useEffect(() => {
+    // FIX #4: Don't handle deep links until navigation is initialized
+    if (!ready) return;
+
     const handleDeepLink = async (url: string) => {
       try {
-        // Parse the URL to extract game code
         const parsedUrl = Linking.parse(url);
+        const gameCode = parsedUrl.queryParams?.code as string;
 
-        // Handle custom scheme: elevay://game/join/ABC123
+        if (!gameCode) return;
+
         if (
-          parsedUrl.scheme === "elevay" &&
-          parsedUrl.hostname === "game" &&
-          parsedUrl.path === "/join"
+          (parsedUrl.scheme === "elevay" && parsedUrl.hostname === "game" && parsedUrl.path === "/join") ||
+          (parsedUrl.scheme === "https" && parsedUrl.hostname === "elevay.online" && parsedUrl.path === "/GameIntro")
         ) {
-          const gameCode = parsedUrl.queryParams?.code as string;
-
           if (gameCode && userToken?.token) {
             try {
-              // Join the game automatically
               const response = await axios.post(
                 `${ApiUrl}/games/join/`,
                 { game_code: gameCode },
                 {
-                  headers: {
-                    Authorization: `Token ${userToken.token}`,
-                  },
+                  headers: { Authorization: `Token ${userToken.token}` },
+                  timeout: 15000, // FIX #6: 15 second timeout for network calls
                 }
               );
-
               if (response.status === 200) {
-                const id = response.data.id;
-                // Navigate to GameWaiting screen
                 router.push({
                   pathname: "/(game)/GameWaiting",
-                  params: { code: gameCode, id: id },
+                  params: { code: gameCode, id: response.data.id },
                 });
+                return;
               }
             } catch (error) {
+              // FIX #7: Log error but continue - navigate to GameIntro as fallback
               console.error("Error joining game via deep link:", error);
-              // Navigate to GameIntro with the code pre-filled
-              router.push({
-                pathname: "/(game)/GameIntro",
-                params: { code: gameCode },
-              });
             }
           }
-        }
-        // Handle universal links: https://elevay.online/GameIntro?code=ABC123
-        else if (
-          parsedUrl.scheme === "https" &&
-          parsedUrl.hostname === "elevay.online" &&
-          parsedUrl.path === "/GameIntro"
-        ) {
-          const gameCode = parsedUrl.queryParams?.code as string;
-
-          if (gameCode && userToken?.token) {
-            try {
-              // Join the game automatically
-              const response = await axios.post(
-                `${ApiUrl}/games/join/`,
-                { game_code: gameCode },
-                {
-                  headers: {
-                    Authorization: `Token ${userToken.token}`,
-                  },
-                }
-              );
-
-              if (response.status === 200) {
-                const id = response.data.id;
-                // Navigate to GameWaiting screen
-                router.push({
-                  pathname: "/(game)/GameWaiting",
-                  params: { code: gameCode, id: id },
-                });
-              }
-            } catch (error) {
-              console.error("Error joining game via deep link:", error);
-              // Navigate to GameIntro with the code pre-filled
-              router.push({
-                pathname: "/(game)/GameIntro",
-                params: { code: gameCode },
-              });
-            }
-          } else if (gameCode && !userToken?.token) {
-            // User not authenticated - navigate to GameIntro with code pre-filled
-            router.push({
-              pathname: "/(game)/GameIntro",
-              params: { code: gameCode },
-            });
-          }
+          router.push({
+            pathname: "/(game)/GameIntro",
+            params: { code: gameCode },
+          });
         }
       } catch (error) {
+        // FIX #7: Catch all deep link errors, log them, but don't crash
         console.error("Error handling deep link:", error);
       }
     };
 
-    // Handle initial URL when app is opened from a deep link
     const getInitialURL = async () => {
-      const initialUrl = await Linking.getInitialURL();
-      if (initialUrl) {
-        handleDeepLink(initialUrl);
+      try {
+        const initialUrl = await Linking.getInitialURL();
+        if (initialUrl) {
+          // FIX #4: Short delay to let router settle before handling deep link
+          setTimeout(() => handleDeepLink(initialUrl), 500);
+        }
+      } catch (error) {
+        // FIX #7: Log error but continue - deep links are non-critical
+        console.error("Failed to get initial URL:", error);
       }
     };
 
-    // Handle URLs when app is already running
     const subscription = Linking.addEventListener("url", (event) => {
       handleDeepLink(event.url);
     });
 
     getInitialURL();
+    return () => subscription?.remove();
+  }, [ready, userToken]);
 
-    return () => {
-      subscription?.remove();
-    };
-  }, [userToken]);
-
-  return null; // This component doesn't render anything
+  return null;
 };
 
 // Initialize Sentry safely
-let navigationIntegration;
+let navigationIntegration: any;
 try {
   navigationIntegration = Sentry.reactNavigationIntegration({
     enableTimeToInitialDisplay: !isRunningInExpoGo(),
@@ -201,12 +175,7 @@ try {
 
   Sentry.init({
     dsn: "https://461367c99dea3ea65e615a0ad9e1ba7e@o4509328707878912.ingest.us.sentry.io/4509328782000128",
-
-    // Adds more context data to events (IP address, cookies, user, etc.)
-    // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
     sendDefaultPii: true,
-
-    // Configure Session Replay
     replaysSessionSampleRate: 0.1,
     replaysOnErrorSampleRate: 1,
     integrations: [
@@ -214,13 +183,10 @@ try {
       Sentry.feedbackIntegration(),
     ],
     tracesSampleRate: 1.0,
-
-    // uncomment the line below to enable Spotlight (https://spotlightjs.com)
-    // spotlight: __DEV__,
   });
 } catch (error) {
+  // FIX #7: Sentry init failure shouldn't crash app
   console.warn("Failed to initialize Sentry:", error);
-  // Create a dummy integration to prevent crashes
   navigationIntegration = {
     registerNavigationContainer: () => {},
   };
@@ -230,13 +196,15 @@ export { ErrorBoundary } from "expo-router";
 
 // Initialize vexo-analytics safely (only in production)
 if (!__DEV__) {
-  // Lazy import to avoid module resolution errors during development
   import("vexo-analytics")
     .then((module) => {
-      // Handle both named and default exports
-      const vexo = module.vexo || (module.default && module.default.vexo) || module.default;
-      if (vexo && typeof vexo === "function") {
-        vexo("0893ecd2-10a6-4e31-a30f-37848b825577");
+      try {
+        const vexo = module.vexo || (module.default && module.default.vexo) || module.default;
+        if (vexo && typeof vexo === "function") {
+          vexo("0893ecd2-10a6-4e31-a30f-37848b825577");
+        }
+      } catch (error) {
+        console.warn("Failed to call vexo-analytics:", error);
       }
     })
     .catch((error) => {
@@ -244,20 +212,30 @@ if (!__DEV__) {
     });
 }
 
-configureReanimatedLogger({
-  level: ReanimatedLogLevel.warn,
-  strict: false,
-});
+// Configure Reanimated logger safely
+try {
+  configureReanimatedLogger({
+    level: ReanimatedLogLevel.warn,
+    strict: false,
+  });
+} catch (error) {
+  console.warn("Failed to configure Reanimated logger:", error);
+}
 
-SplashScreen.preventAutoHideAsync();
+// FIX #1: Prevent splash screen auto-hide - we'll hide it manually when ready
+try {
+  SplashScreen.preventAutoHideAsync().catch((error) => {
+    console.warn("Failed to prevent splash screen auto-hide:", error);
+  });
+} catch (error) {
+  console.warn("Failed to call preventAutoHideAsync:", error);
+}
 
 // Initialize Google Mobile Ads safely
 try {
   mobileAds()
     .initialize()
-    .then((adapterStatuses) => {
-      // Ad SDK initialized successfully
-    })
+    .then(() => {})
     .catch((error) => {
       console.warn("Failed to initialize Google Mobile Ads:", error);
     });
@@ -266,148 +244,174 @@ try {
 }
 
 const RootLayoutNav = () => {
-  console.log("[RootLayoutNav] Component rendering");
   const colorScheme = useColorScheme();
   const segments = useSegments();
-  console.log("[RootLayoutNav] Hooks initialized");
   const { userToken, isLoading } = useAuth();
-  console.log("[RootLayoutNav] Auth state:", { hasToken: !!userToken, isLoading });
   const themeColors = Colors[colorScheme ?? "light"];
-  console.log("[RootLayoutNav] Theme colors loaded");
 
+  const [isAppReady, setIsAppReady] = useState(false);
   const [navigationCompleted, setNavigationCompleted] = useState(false);
-  const [initError, setInitError] = useState<Error | null>(null);
-  const [isRetrying, setIsRetrying] = useState(false);
   const token = userToken?.token || null;
 
-  const MAX_INIT_TIMEOUT = 10000; // 10 second maximum timeout
+  // FIX #10: Use refs to prevent multiple navigation attempts
+  const navigationAttemptedRef = useRef(false);
+  const safetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Timeout safeguard - force hide splash screen after max timeout
+  // FIX #8: Ensure segments is always an array - prevents undefined errors
+  const safeSegments = Array.isArray(segments) ? segments : [];
+  const hasSegments = safeSegments.length > 0;
+  const currentSegment = hasSegments ? safeSegments[0] : null;
+  const isOnIndex = !hasSegments;
+  const inTabsGroup = currentSegment === "(tabs)";
+  const inAuthGroup = currentSegment === "(verification)";
+
+  // FIX #8: Track when segments populate and mark navigation as completed
   useEffect(() => {
-    const startTime = Date.now();
-    console.log("[RootLayoutNav] Starting initialization timeout safeguard");
-    
-    const timeoutId = setTimeout(() => {
-      const elapsed = Date.now() - startTime;
-      console.warn(`[RootLayoutNav] Initialization timeout after ${elapsed}ms - forcing completion`);
-      
-      setNavigationCompleted((prev) => {
-        if (!prev) {
-          console.warn("[RootLayoutNav] Forcing navigation completion due to timeout");
-          setInitError(new Error("Initialization timeout - app took too long to load"));
-          
-          // Force hide splash screen
-          SplashScreen.hideAsync().catch((error) => {
-            console.error("[RootLayoutNav] Failed to hide splash screen:", error);
-          });
-          
-          return true;
-        }
-        return prev;
+    if (!hasSegments) return;
+
+    const currentSegment = safeSegments[0];
+    const inTabsGroup = currentSegment === "(tabs)";
+    const inAuthGroup = currentSegment === "(verification)";
+
+    // FIX #8: Only mark navigation completed if we're in the expected route group
+    if ((userToken && inTabsGroup) || (!userToken && inAuthGroup)) {
+      console.log("[RootLayoutNav] Navigation completed - segments populated", {
+        currentSegment,
+        inTabsGroup,
+        inAuthGroup,
       });
-    }, MAX_INIT_TIMEOUT);
+      setNavigationCompleted(true);
+    }
+  }, [safeSegments, userToken, hasSegments]);
 
-    return () => {
-      clearTimeout(timeoutId);
-      console.log("[RootLayoutNav] Timeout safeguard cleaned up");
-    };
-  }, []);
-
-  // Handle navigation based on auth state
+  // FIX #1, #4: Main navigation logic - routes user based on auth state
   useEffect(() => {
+    // FIX #3: Wait for auth to finish loading before attempting navigation
     if (isLoading) {
-      console.log("[RootLayoutNav] Still loading auth state...");
       return;
     }
 
-    console.log("[RootLayoutNav] Auth loading complete, starting navigation");
-
-    try {
-      const inTabsGroup = segments[0] === "(tabs)";
-      console.log("[RootLayoutNav] Current segments:", segments, "inTabsGroup:", inTabsGroup);
-
-      if (userToken && !inTabsGroup) {
-        console.log("[RootLayoutNav] User authenticated, navigating to /home");
-        router.replace({ pathname: "/home" });
-      } else if (!userToken) {
-        console.log("[RootLayoutNav] User not authenticated, navigating to /Intro");
-        router.replace("/Intro");
-      } else {
-        console.log("[RootLayoutNav] User already in correct route");
-      }
-
-      setNavigationCompleted(true);
-      console.log("[RootLayoutNav] Navigation completed successfully");
-    } catch (error) {
-      console.error("[RootLayoutNav] Error during navigation:", error);
-      setInitError(error instanceof Error ? error : new Error("Navigation error"));
-      setNavigationCompleted(true);
+    // FIX #10: Prevent multiple navigation attempts
+    if (navigationAttemptedRef.current) {
+      return;
     }
-  }, [isLoading, userToken, segments]);
 
-  // Hide splash screen when navigation is completed
+    // FIX #8: If we're on index route, always navigate to appropriate screen
+    if (isOnIndex) {
+      navigationAttemptedRef.current = true;
+      if (userToken) {
+        console.log("[RootLayoutNav] Navigating authenticated user to /(tabs)/home");
+        router.replace("/(tabs)/home");
+      } else {
+        console.log("[RootLayoutNav] Navigating unauthenticated user to /(verification)/Intro");
+        router.replace("/(verification)/Intro");
+      }
+    } else if (userToken && !inTabsGroup) {
+      // FIX #1: User authenticated but not in tabs - redirect to home
+      navigationAttemptedRef.current = true;
+      console.log("[RootLayoutNav] Redirecting authenticated user to /(tabs)/home");
+      router.replace("/(tabs)/home");
+    } else if (!userToken && !inAuthGroup) {
+      // FIX #1: User not authenticated but not in auth flow - redirect to Intro
+      navigationAttemptedRef.current = true;
+      console.log("[RootLayoutNav] Redirecting unauthenticated user to /(verification)/Intro");
+      router.replace("/(verification)/Intro");
+    } else {
+      // FIX #1: Already in correct route - mark navigation as completed
+      console.log("[RootLayoutNav] Already in correct route");
+      setNavigationCompleted(true);
+      navigationAttemptedRef.current = true;
+    }
+  }, [isLoading, userToken, isOnIndex, inTabsGroup, inAuthGroup]);
+
+  // FIX #1, #8: Set app ready only when ALL conditions are met
   useEffect(() => {
-    if (navigationCompleted) {
+    if (navigationCompleted && !isLoading && hasSegments) {
+      console.log("[RootLayoutNav] All conditions met - marking app ready", {
+        navigationCompleted,
+        isLoading,
+        hasSegments,
+        segmentsLength: safeSegments.length,
+      });
+      setIsAppReady(true);
+    }
+  }, [navigationCompleted, isLoading, hasSegments, safeSegments.length]);
+
+  // FIX #9: Safety timer - forces app ready if async tasks take too long
+  useEffect(() => {
+    // Clear any existing timer
+    if (safetyTimerRef.current) {
+      clearTimeout(safetyTimerRef.current);
+    }
+
+    // FIX #9: Set 8-second safety timer (longer than auth timeout)
+    safetyTimerRef.current = setTimeout(() => {
+      if (!isAppReady) {
+        console.warn("[RootLayoutNav] Safety timer triggered - forcing app ready", {
+          isAppReady,
+          navigationCompleted,
+          isLoading,
+          hasSegments,
+          segmentsLength: safeSegments.length,
+        });
+        // FIX #1: Force ready state - better than infinite loading
+        setNavigationCompleted(true);
+        setIsAppReady(true);
+      }
+    }, 8000); // 8 seconds - gives auth check (5s) + navigation (3s) time
+
+    return () => {
+      if (safetyTimerRef.current) {
+        clearTimeout(safetyTimerRef.current);
+      }
+    };
+  }, [isAppReady, navigationCompleted, isLoading, hasSegments]);
+
+  // FIX #1: Hide splash screen only when truly ready
+  useEffect(() => {
+    if (isAppReady && navigationCompleted && hasSegments) {
       console.log("[RootLayoutNav] Hiding splash screen");
       SplashScreen.hideAsync()
         .then(() => {
           console.log("[RootLayoutNav] Splash screen hidden successfully");
         })
         .catch((error) => {
-          console.error("[RootLayoutNav] Failed to hide splash screen:", error);
-          // Continue anyway - don't block the app
+          // FIX #7: Log error but continue - splash hiding failure is non-critical
+          console.warn("[RootLayoutNav] Error hiding splash screen:", error);
         });
     }
-  }, [navigationCompleted]);
+  }, [isAppReady, navigationCompleted, hasSegments]);
 
-  // Retry handler
-  const handleRetry = () => {
-    console.log("[RootLayoutNav] Retry requested");
-    setIsRetrying(true);
-    setInitError(null);
-    setNavigationCompleted(false);
-    
-    // Force a re-render by resetting state
-    setTimeout(() => {
-      setIsRetrying(false);
-      // The useEffect will handle navigation again
-    }, 100);
-  };
+  // Configure System UI
+  useEffect(() => {
+    try {
+      StatusBar.setBarStyle(
+        colorScheme === "dark" ? "light-content" : "dark-content"
+      );
+      SystemUI.setBackgroundColorAsync(themeColors.background).catch(() => {
+        // FIX #7: SystemUI errors are non-critical
+      });
+    } catch (error) {
+      // FIX #7: Catch SystemUI errors, log them, but continue
+      console.warn("[RootLayoutNav] Error configuring System UI:", error);
+    }
+  }, [colorScheme, themeColors.background]);
 
-  // Show error screen if initialization failed
-  if (initError && navigationCompleted) {
-    console.log("[RootLayoutNav] Rendering error fallback screen");
+  // FIX #1: Show loading indicator until ALL conditions are met
+  if (!navigationCompleted || isLoading || !isAppReady || !hasSegments) {
     return (
-      <ErrorFallbackScreen
-        error={initError}
-        onRetry={handleRetry}
-        isLoading={isRetrying}
-      />
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: themeColors.background,
+        }}
+      >
+        <ActivityIndicator size="large" color={themeColors.tint} />
+      </View>
     );
   }
-
-  // Add StatusBar and SystemUI configuration (non-blocking)
-  useEffect(() => {
-    const configureUI = async () => {
-      try {
-        console.log("[RootLayoutNav] Configuring status bar and system UI");
-        // Set status bar style based on theme
-        StatusBar.setBarStyle(
-          colorScheme === "dark" ? "light-content" : "dark-content"
-        );
-        
-        // Set root view background color using expo-system-ui
-        await SystemUI.setBackgroundColorAsync(themeColors.background);
-        console.log("[RootLayoutNav] UI configuration completed");
-      } catch (error) {
-        console.warn("[RootLayoutNav] Failed to configure UI (non-critical):", error);
-        // Don't block app initialization on UI config errors
-      }
-    };
-
-    // Run UI configuration asynchronously without blocking
-    configureUI();
-  }, [colorScheme, themeColors.background]);
 
   return (
     <TamaguiProvider config={config}>
@@ -419,7 +423,7 @@ const RootLayoutNav = () => {
                 <CacheProvider>
                   <ConsentProvider>
                     <PushNotificationHandler />
-                    <DeepLinkHandler />
+                    <DeepLinkHandler ready={navigationCompleted && hasSegments} />
                     <TimelineProvider token={token}>
                       <AlertProvider>
                         <AdManagerProvider>
@@ -428,26 +432,11 @@ const RootLayoutNav = () => {
                               colorScheme === "dark" ? DarkTheme : DefaultTheme
                             }
                           >
-                            <Stack>
-                              <Stack.Screen
-                                name="index"
-                                options={{ headerShown: false }}
-                              />
-                              <Stack.Screen
-                                name="(verification)"
-                                options={{ headerShown: false }}
-                              />
-                              <Stack.Screen
-                                name="(tabs)"
-                                options={{
-                                  headerShown: false,
-                                  headerShadowVisible: false,
-                                }}
-                              />
-                              <Stack.Screen
-                                name="(game)"
-                                options={{ headerShown: false }}
-                              />
+                            <Stack screenOptions={{ headerShown: false }}>
+                              <Stack.Screen name="index" />
+                              <Stack.Screen name="(verification)" />
+                              <Stack.Screen name="(tabs)" />
+                              <Stack.Screen name="(game)" />
                             </Stack>
                           </ThemeProvider>
                         </AdManagerProvider>
@@ -465,32 +454,41 @@ const RootLayoutNav = () => {
 };
 
 const RootLayout = () => {
-  console.log("[RootLayout] Component rendering");
   const ref = useNavigationContainerRef();
-  console.log("[RootLayout] Navigation ref created");
 
   useEffect(() => {
-    console.log("[RootLayout] useEffect running");
     if (ref?.current && navigationIntegration) {
       try {
         navigationIntegration.registerNavigationContainer(ref);
-        console.log("[RootLayout] Sentry navigation registered");
       } catch (error) {
+        // FIX #7: Sentry registration failure shouldn't crash app
         console.warn("Failed to register navigation container with Sentry:", error);
       }
     }
   }, [ref]);
-  
-  console.log("[RootLayout] Returning JSX");
-  return (
-   
+
+  try {
+    return (
       <AuthProvider>
         <RootSiblingParent>
           <RootLayoutNav />
         </RootSiblingParent>
       </AuthProvider>
-  
-  );
+    );
+  } catch (error) {
+    // FIX #7: Catch rendering errors and show fallback UI
+    console.error("[RootLayout] Error rendering RootLayout:", error);
+    return (
+      <ErrorFallbackScreen
+        error={error instanceof Error ? error : new Error("Failed to initialize app")}
+        onRetry={() => {
+          // Retry will cause a re-render
+          console.log("[RootLayout] Retry requested");
+        }}
+        isLoading={false}
+      />
+    );
+  }
 };
 
 // Wrap with Sentry only if it's available

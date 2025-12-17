@@ -105,6 +105,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@jest/test-sequencer": "^29.7.0",
     "@types/event-source-polyfill": "^1.0.5",
     "@types/node": "^22.7.3",
     "@types/react": "~19.1.10",

@@ -4,6 +4,7 @@ import { Answer, Question, Topic, Course } from '../components/types'; // Import
 
 const apiClient = axios.create({
     baseURL: ApiUrl,
+    timeout: 15000, // 15 second timeout
     headers: {
         'Content-Type': 'application/json',
     },

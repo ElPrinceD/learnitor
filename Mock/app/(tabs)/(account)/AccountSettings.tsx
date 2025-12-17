@@ -72,7 +72,10 @@ const AccountSettings = () => {
       await axios.put(
         `${ApiUrl}/api/update/user/${userInfo?.user.id}/`,
         updatedFields,
-        config
+        {
+          ...config,
+          timeout: 15000, // 15 second timeout
+        }
       );
 
       if (userInfo) {

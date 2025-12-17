@@ -15,8 +15,13 @@ import { StatusBar } from "expo-status-bar";
 import * as Sentry from "@sentry/react-native";
 
 const Intro = () => {
-  const colorScheme = useColorScheme();
-  const themeColors = Colors[colorScheme ?? "light"];
+  console.log("[Intro] Component starting to render");
+  
+  try {
+    const colorScheme = useColorScheme();
+    const themeColors = Colors[colorScheme ?? "light"];
+    
+    console.log("[Intro] Component rendering", { colorScheme, hasThemeColors: !!themeColors });
 
   const handleSignUp = () => {
     router.navigate("ContinueWithEmail");
@@ -32,6 +37,7 @@ const Intro = () => {
       alignItems: "center",
       justifyContent: "center",
       padding: 16,
+      backgroundColor: themeColors.background,
     },
     image: {
       width: rS(280),
@@ -104,6 +110,15 @@ const Intro = () => {
       </View>
     </View>
   );
+  } catch (error) {
+    console.error("[Intro] Error rendering Intro component:", error);
+    // Return a fallback UI
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#ffffff" }}>
+        <Text style={{ fontSize: 16, color: "#000000" }}>Error loading screen</Text>
+      </View>
+    );
+  }
 };
 
 export default Intro;

@@ -217,30 +217,43 @@ const Home: React.FC = () => {
     return { dayOfWeek, dayOfMonth, month };
   }, []);
 
+  // Debug log
+  console.log("[Home] Rendering home screen", {
+    hasToken: !!token,
+    hasUserId: !!userId,
+    announcementsLoading,
+    enrolledLoading,
+    coursesLoading
+  });
+
+  // Ensure we always have theme colors
+  const safeThemeColors = themeColors || Colors[colorScheme ?? "light"];
+
   return (
-    <View style={styles(themeColors).container}>
+    <View style={[styles(safeThemeColors).container, { backgroundColor: safeThemeColors.background, flex: 1 }]}>
       <ScrollView
+        style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={themeColors.tint}
-            colors={[themeColors.tint, themeColors.text]}
-            progressBackgroundColor={themeColors.background}
+            tintColor={safeThemeColors.tint}
+            colors={[safeThemeColors.tint, safeThemeColors.text]}
+            progressBackgroundColor={safeThemeColors.background}
           />
         }
       >
         {announcementsLoading ? (
-          <View style={styles(themeColors).loadingContainer}>
-            <Text style={styles(themeColors).loadingText}></Text>
+          <View style={styles(safeThemeColors).loadingContainer}>
+            <Text style={styles(safeThemeColors).loadingText}></Text>
           </View>
         ) : carouselItems.length > 0 ? (
           <ReanimatedCarouselWithAds data={carouselItems} />
         ) : null}
-        <View style={styles(themeColors).coursesContainer}>
+        <View style={styles(safeThemeColors).coursesContainer}>
           {enrolledCoursesData?.length ? (
-            <View style={styles(themeColors).taskAndCoursesRow}>
+            <View style={styles(safeThemeColors).taskAndCoursesRow}>
               <EnrolledCoursesList
                 enrolledCoursesData={enrolledCoursesData}
                 progressMap={progressMap || {}}
@@ -248,7 +261,7 @@ const Home: React.FC = () => {
               />
             </View>
           ) : (
-            <View style={styles(themeColors).taskAndCoursesRow}>
+            <View style={styles(safeThemeColors).taskAndCoursesRow}>
               <EnrolledCoursesList
                 enrolledCoursesData={recommendedCourses}
                 progressMap={{}}
@@ -260,33 +273,33 @@ const Home: React.FC = () => {
         </View>
 
         {/* Tasks Section */}
-        <View style={styles(themeColors).tasksContainer}>
-          <View style={styles(themeColors).taskCountContainer}>
-            <Text style={styles(themeColors).taskCountText}>Tasks Today</Text>
-            <Text style={styles(themeColors).taskCountNumber}>
+        <View style={styles(safeThemeColors).tasksContainer}>
+          <View style={styles(safeThemeColors).taskCountContainer}>
+            <Text style={styles(safeThemeColors).taskCountText}>Tasks Today</Text>
+            <Text style={styles(safeThemeColors).taskCountNumber}>
               {tasksData.tasks.length}
             </Text>
           </View>
-          <View style={styles(themeColors).taskListContainer}>
+          <View style={styles(safeThemeColors).taskListContainer}>
             {tasksData.tasks.length > 0 ? (
               <TaskList
                 tasks={tasksData.tasks}
                 categoryNames={tasksData.categories}
               />
             ) : (
-              <View style={styles(themeColors).taskListContainer}>
-                <View style={styles(themeColors).header}>
-                  <View style={styles(themeColors).dateContainer}>
-                    <Text style={styles(themeColors).dateText}>
+              <View style={styles(safeThemeColors).taskListContainer}>
+                <View style={styles(safeThemeColors).header}>
+                  <View style={styles(safeThemeColors).dateContainer}>
+                    <Text style={styles(safeThemeColors).dateText}>
                       {todayDate.dayOfWeek}
                     </Text>
-                    <Text style={styles(themeColors).dayText}>
+                    <Text style={styles(safeThemeColors).dayText}>
                       {todayDate.dayOfMonth} {todayDate.month}
                     </Text>
                   </View>
                 </View>
-                <View style={styles(themeColors).emptyState}>
-                  <Text style={styles(themeColors).emptyText}>
+                <View style={styles(safeThemeColors).emptyState}>
+                  <Text style={styles(safeThemeColors).emptyText}>
                     "{randomQuote}"
                   </Text>
                 </View>

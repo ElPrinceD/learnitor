@@ -3,6 +3,7 @@ import ApiUrl from '../config'; // Assuming you have a config file for API URL
 
 const apiClient = axios.create({
     baseURL: ApiUrl,
+    timeout: 15000, // 15 second timeout
     headers: {
         'Content-Type': 'application/json',
     },

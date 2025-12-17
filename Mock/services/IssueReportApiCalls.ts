@@ -4,7 +4,7 @@ import apiUrl from "../config";
 // Create axios instance with base configuration
 const apiClient = axios.create({
   baseURL: apiUrl,
-  timeout: 10000,
+  timeout: 15000, // 15 second timeout
 });
 
 // Generic response handler
