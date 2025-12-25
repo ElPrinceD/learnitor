@@ -17,7 +17,6 @@ export default function Tab2Layout() {
             <Text
               style={{
                 color: themeColors.text,
-
                 fontSize: 20,
                 fontWeight: "bold",
               }}
@@ -37,12 +36,13 @@ export default function Tab2Layout() {
         name="CourseDetails"
         options={{
           headerShown: true,
-          headerBackVisible: true,
+          
           title: "Course Details",
           headerTransparent: true,
           headerTitleStyle: {
             color: themeColors.text,
           },
+          headerBackButtonDisplayMode: "minimal",
           headerTitleAlign: "center",
           headerShadowVisible: false,
         }}
@@ -51,9 +51,10 @@ export default function Tab2Layout() {
         name="EnrolledCourse"
         options={{
           headerShown: true,
-          headerBackVisible: true,
+          
           title: "Course Details",
           headerTitleAlign: "center",
+          headerBackButtonDisplayMode: "minimal",
           headerShadowVisible: false,
         }}
       />
@@ -61,12 +62,13 @@ export default function Tab2Layout() {
         name="(topic)"
         options={{
           headerShown: true,
-          headerBackVisible: true,
+          
           title: "Materials",
           headerTitleStyle: {
             color: themeColors.text,
           },
           headerTitleAlign: "center",
+          headerBackButtonDisplayMode: "minimal",
           headerShadowVisible: false,
         }}
       />

@@ -68,7 +68,10 @@ export default function Tab3Layout() {
             headerStyle: {
               backgroundColor: themeColors.background,
             },
+           
+            headerBackButtonDisplayMode: "minimal",
             headerTitle: "New",
+            
             headerTitleAlign: "center",
             headerTitleStyle: {
               fontWeight: "bold",
