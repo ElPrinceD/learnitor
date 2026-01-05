@@ -36,6 +36,7 @@ export default {
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "UIBackgroundModes": ["remote-notification"],
+        "UIDesignRequiresCompatibility": true,
         "CFBundleLocalizations": ["en-GB"],
         "CFBundleURLTypes": [
           {

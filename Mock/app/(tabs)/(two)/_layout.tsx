@@ -28,7 +28,6 @@ export default function Tab2Layout() {
             backgroundColor: themeColors.background,
           },
           headerTitleAlign: "center",
-
           headerShadowVisible: false,
         }}
       />

@@ -52,7 +52,7 @@ export default function Tab2Layout() {
             backgroundColor: themeColors.background,
           },
           headerTitleAlign: "center",
-          headerBackTitle: "Back",
+          headerBackButtonDisplayMode: "minimal",
           headerShadowVisible: false,
           presentation: "card",
         }}
@@ -125,7 +125,7 @@ export default function Tab2Layout() {
             backgroundColor: themeColors.background,
           },
           headerTitleAlign: "center",
-          headerBackTitle: "Back",
+          headerBackButtonDisplayMode: "minimal",
           headerShadowVisible: false,
           presentation: "card",
         }}

@@ -282,7 +282,7 @@ export default function ResultsScreen() {
       fontSize: rMS(16),
       fontWeight: "bold",
       color: themeColors.text,
-      marginLeft: rS(8),
+      marginLeft: rS(5),
     },
     homeButtonText: {
       color: themeColors.tint,

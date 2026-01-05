@@ -23,6 +23,7 @@ export default function Tab3Layout() {
             },
             headerTitle: "Schedule",
             headerTitleAlign: "center",
+            
             headerTitleStyle: {
               fontWeight: "bold",
             },
@@ -33,7 +34,7 @@ export default function Tab3Layout() {
                     name="plus-circle"
                     size={25}
                     color={Colors[colorScheme ?? "light"].text}
-                    style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
+                    style={{  opacity: pressed ? 0.5 : 1 }}
                   />
                 )}
               </Pressable>
@@ -51,6 +52,7 @@ export default function Tab3Layout() {
             },
             headerTitle: "Edit Schedule",
             headerTitleAlign: "center",
+            headerBackButtonDisplayMode: "minimal",
             headerTitleStyle: {
               fontWeight: "bold",
               color: themeColors.text,
