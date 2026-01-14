@@ -23,10 +23,10 @@ import { useAlert } from "../../../contexts/AlertContext";
 import { useErrorHandler } from "../../../hooks/useErrorHandler";
 
 const AccountSettings = () => {
-  const { userInfo, userToken, setUserInformation, setUserInfo } = useAuth();
+  const { userInfo, userToken, setUserInformation, setUserInfo, logout } = useAuth();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
-  const { showSuccessAlert } = useAlert();
+  const { showSuccessAlert, showDeleteAlert } = useAlert();
   const { handleError } = useErrorHandler();
 
   const [formData, setFormData] = useState({
@@ -43,6 +43,7 @@ const AccountSettings = () => {
   });
 
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const handleChange = (name: string, value: string) => {
     setFormData({
@@ -113,6 +114,52 @@ const AccountSettings = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+
+    const config = {
+      headers: {
+        Authorization: `Token ${userToken?.token}`,
+      },
+    };
+
+    try {
+      await axios.delete(
+        `${ApiUrl}/api/delete-account/`,
+        {
+          ...config,
+          timeout: 15000, // 15 second timeout
+        }
+      );
+
+      // Clear user data and logout
+      await logout();
+      
+      showSuccessAlert(
+        "Account Deleted",
+        "Your account has been successfully deleted.",
+        () => {
+          router.replace("/Intro");
+        }
+      );
+    } catch (error) {
+      handleError(error, "Delete Account Failed");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const confirmDeleteAccount = () => {
+    showDeleteAlert(
+      "Delete Account",
+      "Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently removed.",
+      handleDeleteAccount,
+      undefined,
+      "Delete",
+      "Cancel"
+    );
   };
 
   const styles = StyleSheet.create({
@@ -190,6 +237,19 @@ const AccountSettings = () => {
       width: "100%",
     },
     buttonText: {
+      color: "#fff",
+      fontSize: SIZES.medium,
+      fontWeight: "bold",
+    },
+    deleteButton: {
+      borderRadius: rMS(10),
+      paddingVertical: rV(12),
+      alignItems: "center",
+      backgroundColor: "#DC2626",
+      width: "100%",
+      marginTop: rV(10),
+    },
+    deleteButtonText: {
       color: "#fff",
       fontSize: SIZES.medium,
       fontWeight: "bold",
@@ -289,12 +349,23 @@ const AccountSettings = () => {
         <TouchableOpacity
           style={styles.button}
           onPress={handleUpdateInfo}
-          disabled={loading}
+          disabled={loading || deleting}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={styles.buttonText}>Update</Text>
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={confirmDeleteAccount}
+          disabled={loading || deleting}
+        >
+          {deleting ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.deleteButtonText}>Delete Account</Text>
           )}
         </TouchableOpacity>
       </View>

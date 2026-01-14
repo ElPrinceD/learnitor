@@ -46,6 +46,9 @@ export default {
           }
         ],
         "NSUserNotificationsUsageDescription": "This app uses notifications to alert you about new messages and updates.",
+        "NSPhotoLibraryUsageDescription": "Elevay accesses your photo library so you can upload images, such as selecting a profile picture or attaching images to your learning content.",
+  "NSPhotoLibraryAddUsageDescription": "Elevay allows you to save images to your photo library when you choose to download or export content from the app.",
+  "EXErrorRecoveryEnabled": false,
         "EXErrorRecoveryEnabled": false
       }
     },
