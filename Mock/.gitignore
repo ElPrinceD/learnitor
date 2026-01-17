@@ -46,3 +46,4 @@ expo-env.d.ts
 
 wdyr.js
 Mock/build-*.apk
+/books
