@@ -21,12 +21,13 @@ import DateSelector from "../../../components/DateSelector"; // DateSelector com
 import { router } from "expo-router"; // Import the router from Expo Router
 import { useAlert } from "../../../contexts/AlertContext";
 import { useErrorHandler } from "../../../hooks/useErrorHandler";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const AccountSettings = () => {
-  const { userInfo, userToken, setUserInformation, setUserInfo } = useAuth();
+  const { userInfo, userToken, setUserInformation, setUserInfo, logout } = useAuth();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
-  const { showSuccessAlert } = useAlert();
+  const { showSuccessAlert, showDeleteAlert } = useAlert();
   const { handleError } = useErrorHandler();
 
   const [formData, setFormData] = useState({
@@ -112,6 +113,41 @@ const AccountSettings = () => {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    showDeleteAlert(
+      "Delete Account",
+      "Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.",
+      async () => {
+        setLoading(true);
+        
+        const config = {
+          headers: {
+            Authorization: `Token ${userToken?.token}`,
+          },
+        };
+
+        try {
+          await axios.delete(`${ApiUrl}/api/delete-account/`, config);
+          
+          // Clear user data
+          await AsyncStorage.multiRemove(["token", "user"]);
+          
+          // Logout and redirect
+          logout();
+          router.replace("/(verification)/Intro");
+        } catch (error) {
+          handleError(error, "Delete Account Failed");
+          setLoading(false);
+        }
+      },
+      () => {
+        // onCancel - do nothing, alert will close automatically
+      },
+      "Delete", // deleteText
+      "Cancel"  // cancelText
+    );
+  };
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -190,6 +226,10 @@ const AccountSettings = () => {
       color: "#fff",
       fontSize: SIZES.medium,
       fontWeight: "bold",
+    },
+    deleteButton: {
+      marginTop: rV(10),
+      backgroundColor: themeColors.errorBackground || "#DC2626",
     },
   });
 
@@ -293,6 +333,14 @@ const AccountSettings = () => {
           ) : (
             <Text style={styles.buttonText}>Update</Text>
           )}
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.button, styles.deleteButton]}
+          onPress={handleDeleteAccount}
+          disabled={loading}
+        >
+          <Text style={styles.buttonText}>Delete Account</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>

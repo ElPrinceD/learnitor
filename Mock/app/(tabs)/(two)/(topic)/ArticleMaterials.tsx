@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { View, ScrollView, RefreshControl } from "react-native";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { View, ScrollView, RefreshControl, Text, StyleSheet, useColorScheme } from "react-native";
 import { useGlobalSearchParams } from "expo-router";
 
 import { useAuth } from "../../../../components/AuthContext";
@@ -9,6 +9,8 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchTopicMaterials } from "../../../../services/CoursesApiCalls";
 import { queryClient } from "../../../../QueryClient";
 import ErrorMessage from "../../../../components/ErrorMessage";
+import Colors from "../../../../constants/Colors";
+import { SIZES, rMS, rV } from "../../../../constants";
 
 interface ArticleMaterialsProps {
   topic: Topic[];
@@ -63,6 +65,41 @@ const ArticleMaterials: React.FC<ArticleMaterialsProps> = () => {
 
   const handleDismissError = useCallback(() => setErrorMessage(null), []);
 
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
+
+  // Filter articles from materials
+  const articles = useMemo(() => {
+    const materials = selectedArticleMaterials || [];
+    return materials.filter((material: any) => material.type === "journal");
+  }, [selectedArticleMaterials]);
+
+  const hasArticles = articles && articles.length > 0;
+
+  const styles = StyleSheet.create({
+    emptyContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: rMS(30),
+      minHeight: 300,
+    },
+    emptyText: {
+      fontSize: SIZES.large,
+      fontWeight: "600",
+      color: themeColors.text,
+      textAlign: "center",
+      lineHeight: rV(28),
+    },
+    emptySubtext: {
+      fontSize: SIZES.medium,
+      color: themeColors.textSecondary,
+      textAlign: "center",
+      marginTop: rV(10),
+      lineHeight: rV(22),
+    },
+  });
+
   return (
     <View style={{ flex: 1 }}>
       <ScrollView
@@ -70,7 +107,18 @@ const ArticleMaterials: React.FC<ArticleMaterialsProps> = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <Articles articleMaterials={selectedArticleMaterials || []} />
+        {!hasArticles && selectedArticleMaterialsStatus === "success" ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>
+              📖 Stay tuned! Articles will be available soon.
+            </Text>
+            <Text style={styles.emptySubtext}>
+              We're working on providing the best articles for this topic!
+            </Text>
+          </View>
+        ) : (
+          <Articles articleMaterials={selectedArticleMaterials || []} />
+        )}
       </ScrollView>
       <ErrorMessage
         message={errorMessage}
