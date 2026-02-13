@@ -9,16 +9,6 @@ export default {
     "orientation": "portrait",
     "icon": "./assets/images/ElevayWithoutTextLogo.png",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/images/ElevayLogoSplash.png",
-      "resizeMode": "cover",
-      "backgroundColor": "#ffffff",
-      "dark": {
-        "image": "./assets/images/ElevayLogoSplash.png",
-        "resizeMode": "cover",
-        "backgroundColor": "#18191a"
-      }
-    },
     "newArchEnabled": true,
     "assetBundlePatterns": ["**/*"],
     "sourceExts": ["js", "json", "ts", "tsx", "jsx", "svg"],
@@ -56,8 +46,11 @@ export default {
       "versionCode": 8,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/ElevayWithoutTextLogo.png",
+        "monochromeImage": "./assets/images/ElevayWithoutTextLogo.png",
         "backgroundColor": "#18191a",
         "dark": {
+          "foregroundImage": "./assets/images/ElevayWithoutTextLogo.png",
+          "monochromeImage": "./assets/images/ElevayWithoutTextLogo.png",
           "backgroundColor": "#18191a"
         }
       },
@@ -105,7 +98,21 @@ export default {
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router",
+      "expo-router", [
+        "expo-splash-screen",
+          {
+            "image": "./assets/images/ElevayLogoSplash.png",
+            "resizeMode": "contain",
+            "imageWidth": 200,
+            "backgroundColor": "#ffffff",
+            "dark": {
+              "image": "./assets/images/ElevayLogoSplash.png",
+              "resizeMode": "contain",
+              "imageWidth": 200,
+              "backgroundColor": "#18191a"
+            }
+          }
+      ],
       "expo-font",
       "expo-secure-store",
       [
@@ -144,6 +151,7 @@ export default {
         "expo-notifications",
         {
           "icon": "./assets/images/ElevayWithoutTextLogo.png",
+          "monochromeIcon": "./assets/images/ElevayWithoutTextLogo.png",
           "color": "#18191a",
           "defaultChannel": "default",
           "dark": {
