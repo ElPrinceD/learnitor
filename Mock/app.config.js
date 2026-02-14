@@ -4,7 +4,7 @@ export default {
     "slug": "mock",
     "scheme": "elevay",
     "description": "Learn it all",
-    "version": "1.0.7",
+    "version": "1.0.9",
     "deepLinking": true,
     "orientation": "portrait",
     "icon": "./assets/images/ElevayWithoutTextLogo.png",
@@ -37,13 +37,13 @@ export default {
     "android": {
       "usesCleartextTraffic": true,
       "permissions": [
-        "INTERNET", 
+        "INTERNET",
         "NOTIFICATIONS",
         "VIBRATE",
         "RECEIVE_BOOT_COMPLETED",
         "WAKE_LOCK"
       ],
-      "versionCode": 8,
+      "versionCode": 10,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/ElevayWithoutTextLogo.png",
         "monochromeImage": "./assets/images/ElevayWithoutTextLogo.png",
@@ -100,18 +100,18 @@ export default {
     "plugins": [
       "expo-router", [
         "expo-splash-screen",
-          {
+        {
+          "image": "./assets/images/ElevayLogoSplash.png",
+          "resizeMode": "contain",
+          "imageWidth": 200,
+          "backgroundColor": "#ffffff",
+          "dark": {
             "image": "./assets/images/ElevayLogoSplash.png",
             "resizeMode": "contain",
             "imageWidth": 200,
-            "backgroundColor": "#ffffff",
-            "dark": {
-              "image": "./assets/images/ElevayLogoSplash.png",
-              "resizeMode": "contain",
-              "imageWidth": 200,
-              "backgroundColor": "#18191a"
-            }
+            "backgroundColor": "#18191a"
           }
+        }
       ],
       "expo-font",
       "expo-secure-store",
@@ -205,7 +205,7 @@ export default {
     "updates": {
       "url": "https://u.expo.dev/7fd80734-c8a7-49db-accf-6b9f79c74f9f"
     },
-  
+
   },
 
 };

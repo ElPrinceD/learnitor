@@ -111,15 +111,7 @@ const Profile = () => {
 
   const handleProfilePictureUpdate = async () => {
     try {
-      const { status } =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== "granted") {
-        showErrorAlert(
-          "Permission Required",
-          "Permission to access media library is required!"
-        );
-        return;
-      }
+
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: "images",
