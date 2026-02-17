@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -16,9 +16,12 @@ import { Course, Topic } from "../../components/types";
 import { useAuth } from "../../components/AuthContext";
 import GameButton from "../../components/GameButton";
 import TimelineCategoryItem from "../../components/TimelineCategoryItem";
+import ErrorMessage from "../../components/ErrorMessage";
 import Colors from "../../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../../constants";
-import { getCourseTopics } from "../../services/CoursesApiCalls"; // Import the new API function
+import { getCourseTopics } from "../../services/CoursesApiCalls";
+import axios from "axios";
+import ApiUrl from "../../config";
 
 const GameTopics: React.FC = () => {
   const { userToken } = useAuth();
@@ -26,6 +29,7 @@ const GameTopics: React.FC = () => {
   const [selectedTopics, setSelectedTopics] = useState<Topic[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const screenWidth = Dimensions.get("window").width;
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -109,15 +113,72 @@ const GameTopics: React.FC = () => {
     }
   }, [fetchedTopics]);
 
-  const handleTopicPress = (topic: Topic) => {
-    if (selectedTopics.length === 0) {
+  const handleDismissError = useCallback(() => setErrorMessage(null), []);
+
+  const handleCreateGame = useCallback(async (topicsToUse: Topic[]) => {
+    try {
+      // Clear any previous error messages
+      setErrorMessage(null);
+
+      // Parse topics to get their IDs
+      const parsedTopics: number[] = topicsToUse.map((t) => t.id);
+
+      // Validate that we have topics to create a game with
+      if (parsedTopics.length === 0) {
+        setErrorMessage("Please select at least one topic to create a game.");
+        return;
+      }
+
+      // Create a new game by making a POST request to the backend
+      // Backend automatically selects questions from all levels (Beginner, Intermediate, Advanced, Master)
+      // Do NOT send level parameter - backend handles it automatically
+      const response = await axios.post(
+        `${ApiUrl}/games/`,
+        {
+          topics: parsedTopics,
+        },
+        {
+          headers: {
+            Authorization: `Token ${userToken?.token}`,
+          },
+        }
+      );
+
+      // Extract the game code from the response
+      const gameCode = response.data.code;
+      const gameId = response.data.id;
+
+      // Navigate to the GameWaiting screen with the necessary parameters
       router.navigate({
-        pathname: "GameLevel",
+        pathname: "GameWaiting",
         params: {
-          topic: JSON.stringify(topic),
+          level: "all",
+          topics: JSON.stringify(parsedTopics),
           course: course?.toString(),
+          isCreator: "true",
+          code: gameCode,
+          gameId: gameId,
         },
       });
+    } catch (error) {
+      // Let ErrorMessage component handle the user-friendly conversion
+      console.log(error.response.data);
+      if (axios.isAxiosError(error)) {
+        setErrorMessage(error.message);
+      } else if (error instanceof Error) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage(
+          "An unexpected error occurred while creating the game."
+        );
+      }
+    }
+  }, [userToken?.token, course]);
+
+  const handleTopicPress = (topic: Topic) => {
+    if (selectedTopics.length === 0) {
+      // Single topic selection - create game immediately
+      handleCreateGame([topic]);
     } else {
       handleTopicLongPress(topic);
     }
@@ -162,13 +223,8 @@ const GameTopics: React.FC = () => {
   };
 
   const handleContinue = () => {
-    router.navigate({
-      pathname: "GameLevel",
-      params: {
-        topics: JSON.stringify(selectedTopics),
-        course: course?.toString(),
-      },
-    });
+    // Create game immediately with selected topics
+    handleCreateGame(selectedTopics);
   };
 
   const styles = useMemo(
@@ -186,6 +242,13 @@ const GameTopics: React.FC = () => {
           marginTop: rV(8),
           marginBottom: rV(10),
           textAlign: "center",
+        },
+        instructionText: {
+          color: themeColors.textSecondary,
+          fontSize: SIZES.small,
+          textAlign: "center",
+          marginBottom: rV(10),
+          fontStyle: "italic",
         },
         row: {
           justifyContent: "space-between",
@@ -274,6 +337,9 @@ const GameTopics: React.FC = () => {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Select Topic(s)</Text>
+      <Text style={styles.instructionText}>
+        Press and hold to select multiple topics
+      </Text>
       <TouchableOpacity
         onPress={handleSelectAll}
         style={styles.selectAllContainer}
@@ -314,6 +380,11 @@ const GameTopics: React.FC = () => {
           style={styles.continueButton}
         />
       )}
+      <ErrorMessage
+        message={errorMessage}
+        visible={!!errorMessage}
+        onDismiss={handleDismissError}
+      />
     </View>
   );
 };

@@ -14,6 +14,7 @@ import {
   RefreshControl,
   BackHandler,
   Text,
+  ActivityIndicator,
 } from "react-native";
 import CourseRoadmap from "../../../components/CourseRoadmap";
 import RoadmapTitle from "../../../components/RoadmapTitle";
@@ -165,9 +166,7 @@ const EnrolledCourse: React.FC = () => {
           },
         ]}
       >
-        <Text style={{ color: themeColors.text, fontSize: 16 }}>
-          Loading course...
-        </Text>
+        <ActivityIndicator size="large" color={themeColors.tint} />
       </View>
     );
   }
@@ -477,9 +476,7 @@ const EnrolledCourse: React.FC = () => {
                 padding: 20,
               }}
             >
-              <Text style={{ color: themeColors.text, fontSize: 16 }}>
-                Loading topics...
-              </Text>
+              <ActivityIndicator size="large" color={themeColors.tint} />
             </View>
           ) : enrolledTopicsError ? (
             <View

@@ -38,6 +38,7 @@ const PracticeQuestions: React.FC = () => {
 
   const parsedTopic: Topic =
     typeof topic === "string" ? JSON.parse(topic) : topic;
+  
 
   const {
     status: questionsStatus,
@@ -89,8 +90,8 @@ const PracticeQuestions: React.FC = () => {
     // Return just the first 20 items
     return shuffledQuestions.slice(0, 20);
   }, [allPracticeQuestions]);
-
   // ... rest of the useQuery for answers (no change needed here since it depends on questions)
+
 
   useEffect(() => {
     if (userToken) {

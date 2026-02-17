@@ -4,7 +4,7 @@ export default {
     "slug": "mock",
     "scheme": "elevay",
     "description": "Learn it all",
-    "version": "1.0.9",
+    "version": "1.1.0",
     "deepLinking": true,
     "orientation": "portrait",
     "icon": "./assets/images/ElevayWithoutTextLogo.png",
@@ -43,7 +43,7 @@ export default {
         "RECEIVE_BOOT_COMPLETED",
         "WAKE_LOCK"
       ],
-      "versionCode": 10,
+      "versionCode": 11,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/ElevayWithoutTextLogo.png",
         "monochromeImage": "./assets/images/ElevayWithoutTextLogo.png",
@@ -103,12 +103,10 @@ export default {
         {
           "image": "./assets/images/ElevayLogoSplash.png",
           "resizeMode": "contain",
-          "imageWidth": 200,
           "backgroundColor": "#ffffff",
           "dark": {
             "image": "./assets/images/ElevayLogoSplash.png",
             "resizeMode": "contain",
-            "imageWidth": 200,
             "backgroundColor": "#18191a"
           }
         }

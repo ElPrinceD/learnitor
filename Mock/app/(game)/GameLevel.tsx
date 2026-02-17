@@ -57,7 +57,7 @@ const GameLevel: React.FC = () => {
           headers: {
             Authorization: `Token ${userToken?.token}`,
           },
-        }
+        } 
       );
 
       // Extract the game code from the response

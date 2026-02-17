@@ -38,7 +38,6 @@ const PracticeInstructions = () => {
       },
     });
   };
-
   // Determine styles based on color scheme
   const styles = StyleSheet.create({
     container: {
