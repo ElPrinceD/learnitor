@@ -1,9 +1,11 @@
 import { Stack } from "expo-router";
 import React from "react";
+import { GameAudioProvider } from "../../contexts/GameAudioContext";
 
 export default function GameLayout() {
   return (
-    <Stack>
+    <GameAudioProvider>
+    <Stack initialRouteName="GameIntro">
       <Stack.Screen
         name="GameIntro"
         options={{ headerShown: false, gestureEnabled: true }}
@@ -21,5 +23,6 @@ export default function GameLayout() {
       />
       <Stack.Screen name="Game" options={{ headerShown: false }} />
     </Stack>
+    </GameAudioProvider>
   );
 }

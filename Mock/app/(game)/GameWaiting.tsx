@@ -86,6 +86,12 @@ export default function GameWaitingScreen() {
   }, [gameDetailsError]);
 
   useEffect(() => {
+    if (code != null && code !== "") {
+      setGameCode(code);
+    }
+  }, [code]);
+
+  useEffect(() => {
     if (gameDetails) {
       setGameQuestions(gameDetails.questions);
       setCreator(gameDetails.creator.first_name);
@@ -117,11 +123,11 @@ export default function GameWaitingScreen() {
       }
     );
     return () => backHandler.remove();
-  }, []);
+  }, []); 
 
   const goToGame = useCallback(() => {
     router.navigate({
-      pathname: "Game",
+      pathname: "/(game)/Game",
       params: {
         questions: JSON.stringify(gameQuestions),
         isCreator,

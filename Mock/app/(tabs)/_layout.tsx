@@ -110,7 +110,7 @@ export default function TabLayout() {
           headerShadowVisible: false,
           headerRight: () => (
             <View style={styles.container}>
-              <Link href="/GameIntro" asChild>
+              <Link href="/(game)/GameIntro" asChild>
                 <Pressable>
                   {({ pressed }) => (
                     <Ionicons
@@ -155,7 +155,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="(reminder)"
         options={{
-          title: "To Do",
+          title: "Plan",
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon name="calendar-clock" color={color} focused={focused} />
           ),

@@ -365,6 +365,7 @@ const PracticeQuestions: React.FC = () => {
               }
               isAnswerSelected={isAnswerSelected}
               handleAnswerSelection={handleAnswerSelection}
+              showImmediateFeedback={false}
               styles={styles}
             />
           )}

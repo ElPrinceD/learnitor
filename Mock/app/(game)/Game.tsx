@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import {
   View,
   StyleSheet,
@@ -10,9 +16,12 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, router } from "expo-router";
+import * as Haptics from "expo-haptics";
 import { useAuth } from "../../components/AuthContext";
+import { useGameAudio } from "../../hooks/useGameAudio";
 import { getGameDetails } from "../../services/GamesApiCalls";
 import { getPracticeAnswers } from "../../services/CoursesApiCalls";
 import Questions from "../../components/Questions";
@@ -24,8 +33,30 @@ import GameButton from "../../components/GameButton";
 import WsUrl from "../../configWs";
 import ErrorMessage from "../../components/ErrorMessage";
 
+
+const PRINCE_WISDOM_PREFIXES = [
+  "I believe the answer is: ",
+  "My royal gut says: ",
+  "The scrolls suggest: ",
+  "I'd wager: ",
+  "Dare I say: ",
+  "The stars align on: ",
+  "My kingdom for: ",
+  "Verily, it must be: ",
+];
+
 export default function Game() {
   const { userToken, userInfo } = useAuth();
+  const {
+    musicMuted,
+    setMusicMuted,
+    soundMuted,
+    setSoundMuted,
+    playCorrect,
+    playWrong,
+    startMusic,
+    stopMusic,
+  } = useGameAudio();
   const { gameId, gameCode } = useLocalSearchParams();
   const insets = useSafeAreaInsets();
 
@@ -44,6 +75,9 @@ export default function Game() {
   const [doubleDipActive, setDoubleDipActive] = useState(false);
   const [askTheAIActive, setAskTheAIActive] = useState(false);
   const [aiPrediction, setAiPrediction] = useState<number | null>(null);
+  const [aiWisdomPrefix, setAiWisdomPrefix] = useState<string>(
+    PRINCE_WISDOM_PREFIXES[0]
+  );
   const [doubleDipUsed, setDoubleDipUsed] = useState(false);
   const [askTheAIUsed, setAskTheAIUsed] = useState(false);
   const [gameEnded, setGameEnded] = useState(false);
@@ -54,8 +88,26 @@ export default function Game() {
   const [wsConnected, setWsConnected] = useState<boolean>(false);
   const [wsConnectionAttempts, setWsConnectionAttempts] = useState<number>(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showFastAnswerCue, setShowFastAnswerCue] = useState(false);
 
   const handleDismissError = useCallback(() => setErrorMessage(null), []);
+
+  // Main game music: start when game screen is active, stop when game ends or unmount
+  useEffect(() => {
+    startMusic();
+    return () => {
+      stopMusic();
+    };
+  }, [startMusic, stopMusic]);
+
+  useEffect(() => {
+    if (gameEnded) stopMusic();
+  }, [gameEnded, stopMusic]);
+
+  // When user unmutes music while on game screen, start music
+  useEffect(() => {
+    if (!musicMuted && !gameEnded) startMusic();
+  }, [musicMuted, gameEnded, startMusic]);
 
   // Animation refs for power-ups
   const doubleDipScale = useRef(new Animated.Value(1)).current;
@@ -72,7 +124,7 @@ export default function Game() {
 
   const webSocket = useRef<WebSocket | null>(null);
   const handleMessageRef = useRef<(event: MessageEvent) => void>(() => {});
-  const startTimeRef = useRef<number>(0); // Added startTimeRef
+  const startTimeRef = useRef<number>(0);
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
@@ -185,12 +237,13 @@ export default function Game() {
     };
   }, [currentQuestion, questionDuration, gameQuestions, gameEnded]);
 
-  // Reset power-ups when question changes
+  // Reset power-ups and fast cue when question changes
   useEffect(() => {
     if (gameEnded) return;
     setAiPrediction(null);
     setAskTheAIActive(false);
     setDoubleDipActive(false);
+    setShowFastAnswerCue(false);
   }, [currentQuestion, gameEnded]);
 
   // Animate question counter when 5 or fewer questions remain
@@ -425,14 +478,25 @@ export default function Game() {
       const correctCount = gameAnswers.filter(
         (a) => a.question === questionId && a.isRight
       ).length;
+      const correctIds = gameAnswers
+        .filter((a) => a.question === questionId && a.isRight)
+        .map((a) => a.id);
+      let didSubmit = false;
+      let isCorrect = false;
 
       if (questionsWithMultipleCorrectAnswers.includes(questionId)) {
         if (updated[questionId]?.length === correctCount) return updated;
         if (!updated[questionId]) updated[questionId] = [answerId];
         else if (!updated[questionId].includes(answerId))
           updated[questionId].push(answerId);
-        if (updated[questionId].length === correctCount)
+        if (updated[questionId].length === correctCount) {
+          didSubmit = true;
+          const sel = updated[questionId];
+          isCorrect =
+            sel.length === correctIds.length &&
+            sel.every((id) => correctIds.includes(id));
           attemptQuestion(questionId);
+        }
       } else {
         if (updated[questionId]?.length > 0 && !doubleDipActive) return updated;
         if (doubleDipActive) {
@@ -441,12 +505,42 @@ export default function Game() {
           else updated[questionId].push(answerId);
           if (updated[questionId].length === 2) {
             setDoubleDipActive(false);
+            didSubmit = true;
+            const sel = updated[questionId];
+            isCorrect =
+              sel.length === correctIds.length &&
+              sel.every((id) => correctIds.includes(id));
             attemptQuestion(questionId);
           }
         } else {
           updated[questionId] = [answerId];
+          didSubmit = true;
+          isCorrect = correctIds.includes(answerId);
           attemptQuestion(questionId);
         }
+      }
+
+      if (didSubmit) {
+        const elapsed = Date.now() - startTimeRef.current;
+        const fastThreshold = questionDuration * 0.3;
+        if (isCorrect && elapsed < fastThreshold) {
+          setTimeout(() => setShowFastAnswerCue(true), 0);
+          setTimeout(() => setShowFastAnswerCue(false), 1500);
+        }
+        setTimeout(() => {
+          try {
+            Haptics.notificationAsync(
+              isCorrect
+                ? Haptics.NotificationFeedbackType.Success
+                : Haptics.NotificationFeedbackType.Error
+            );
+          } catch (_) {}
+          if (isCorrect) {
+            playCorrect();
+          } else {
+            playWrong();
+          }
+        }, 0);
       }
       return updated;
     });
@@ -476,6 +570,25 @@ export default function Game() {
   // Check if answer is selected
   const isAnswerSelected = (questionId: number, answerId: number) =>
     selectedAnswers[questionId]?.includes(answerId);
+
+  // Streak: consecutive correct from last answered backward
+  const currentStreak = useMemo(() => {
+    let streak = 0;
+    for (let i = currentQuestion - 1; i >= 0; i--) {
+      const q = gameQuestions[i];
+      if (!q) break;
+      const selectedIds = selectedAnswers[q.id] || [];
+      const correctIds = gameAnswers
+        .filter((a) => a.question === q.id && a.isRight)
+        .map((a) => a.id);
+      const isCorrect =
+        selectedIds.length === correctIds.length &&
+        selectedIds.every((id) => correctIds.includes(id));
+      if (isCorrect) streak++;
+      else break;
+    }
+    return streak;
+  }, [currentQuestion, gameQuestions, selectedAnswers, gameAnswers]);
 
   // Power-up: Double Dip
   const activateDoubleDip = () => {
@@ -512,6 +625,9 @@ export default function Game() {
 
       setDoubleDipActive(true);
       setDoubleDipUsed(true);
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      } catch (_) {}
     }
   };
 
@@ -555,11 +671,19 @@ export default function Game() {
         .map((answer) => answer.id);
       const aiGuess = correctIds[Math.floor(Math.random() * correctIds.length)];
       setAiPrediction(aiGuess);
+      setAiWisdomPrefix(
+        PRINCE_WISDOM_PREFIXES[
+          Math.floor(Math.random() * PRINCE_WISDOM_PREFIXES.length)
+        ]
+      );
       setTimeout(() => {
         setAskTheAIActive(false);
         setAiPrediction(null);
       }, 20000);
       setAskTheAIUsed(true);
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      } catch (_) {}
     }
   };
 
@@ -645,11 +769,15 @@ export default function Game() {
       borderLeftWidth: 4,
       borderLeftColor: themeColors.tint,
     },
+    aiPredictionTitleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: rV(8),
+    },
     aiPredictionTitle: {
       fontSize: rMS(16),
       fontWeight: "bold",
       color: themeColors.tint,
-      marginBottom: rV(8),
     },
     aiPredictionText: {
       fontSize: rMS(14),
@@ -671,6 +799,7 @@ export default function Game() {
     progressBarContainer: {
       alignItems: "center",
       width: rS(120),
+      marginLeft: rS(16),
     },
     progressBarBackground: {
       width: "100%",
@@ -701,6 +830,37 @@ export default function Game() {
       textAlign: "center",
       paddingHorizontal: rMS(20),
     },
+    muteButton: {
+      padding: rMS(4),
+    },
+    streakBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: "#FF6B3520",
+      paddingHorizontal: rMS(8),
+      paddingVertical: rV(4),
+      borderRadius: rMS(12),
+      marginLeft: rS(8),
+    },
+    streakText: {
+      fontSize: rMS(12),
+      fontWeight: "600",
+      color: "#FF6B35",
+      marginLeft: rS(4),
+    },
+    fastAnswerCue: {
+      alignSelf: "center",
+      marginVertical: rV(8),
+      paddingHorizontal: rMS(12),
+      paddingVertical: rV(6),
+      backgroundColor: themeColors.tint + "25",
+      borderRadius: rMS(8),
+    },
+    fastAnswerCueText: {
+      fontSize: rMS(14),
+      fontWeight: "600",
+      color: themeColors.tint,
+    },
   });
 
   // Render UI
@@ -711,6 +871,7 @@ export default function Game() {
       {/* Timer and Question Counter Row */}
       {!gameEnded && gameQuestions.length > 0 && !error && (
         <View style={styles.timerRowContainer}>
+          <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
           <Animated.Text
             style={[
               styles.questionCounterText,
@@ -725,6 +886,12 @@ export default function Game() {
           >
             {currentQuestion + 1}/{gameQuestions.length}
           </Animated.Text>
+          {currentStreak >= 2 && (
+            <View style={styles.streakBadge}>
+              <Ionicons name="flame" size={16} color="#FF6B35" />
+              <Text style={styles.streakText}>{currentStreak}</Text>
+            </View>
+          )}
           <View style={styles.progressBarContainer}>
             <View style={styles.progressBarBackground}>
               <Animated.View
@@ -744,15 +911,52 @@ export default function Game() {
               />
             </View>
           </View>
+          <TouchableOpacity
+            onPress={() => setMusicMuted(!musicMuted)}
+            style={[styles.muteButton, { marginLeft: rS(8) }]}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <MaterialIcons
+              name={musicMuted ? "music-off" : "music-note"}
+              size={24}
+              color={themeColors.textSecondary}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setSoundMuted(!soundMuted)}
+            style={[styles.muteButton, { marginLeft: rS(4) }]}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons
+              name={soundMuted ? "volume-mute" : "volume-high"}
+              size={24}
+              color={themeColors.textSecondary}
+            />
+          </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {showFastAnswerCue && (
+        <View style={styles.fastAnswerCue}>
+          <Text style={styles.fastAnswerCueText}>Quick thinking!</Text>
         </View>
       )}
 
       {/* AI Prediction Display */}
       {askTheAIActive && aiPrediction !== null && (
         <View style={styles.aiPrediction}>
-          <Text style={styles.aiPredictionTitle}>🤖 The Prince's Wisdom</Text>
+          <View style={styles.aiPredictionTitleRow}>
+            <Ionicons
+              name="bulb-outline"
+              size={22}
+              color={themeColors.tint}
+              style={{ marginRight: rS(6) }}
+            />
+            <Text style={styles.aiPredictionTitle}>The Prince's Wisdom</Text>
+          </View>
           <Text style={styles.aiPredictionText}>
-            "I believe the answer is:{" "}
+            "{aiWisdomPrefix}
             {gameAnswers.find((ans) => ans.id === aiPrediction)?.text}"
           </Text>
         </View>

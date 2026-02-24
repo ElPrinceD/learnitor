@@ -3,10 +3,10 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  ScrollView,
   Image,
   useColorScheme,
-  BackHandler, // Add BackHandler
+  BackHandler,
   TouchableOpacity,
   Animated,
 } from "react-native";
@@ -20,6 +20,96 @@ import { useQuery } from "@tanstack/react-query";
 import { getGameDetails } from "../../services/GamesApiCalls";
 import { useAdManager } from "../../components/ads/AdManager";
 import { Ionicons } from "@expo/vector-icons";
+const STAGGER_DELAY = 300;
+
+const StaggeredPodiumSlot: React.FC<{
+  children: React.ReactNode;
+  index: number;
+}> = ({ children, index }) => {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(30)).current;
+  useEffect(() => {
+    const t = setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateY, {
+          toValue: 0,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, index * STAGGER_DELAY);
+    return () => clearTimeout(t);
+  }, [index]);
+  return (
+    <Animated.View style={{ opacity, transform: [{ translateY }], flex: 1 }}>
+      {children}
+    </Animated.View>
+  );
+};
+
+const StaggeredPlayerRow: React.FC<{
+  item: any;
+  index: number;
+  isWinner: boolean;
+  styles: any;
+}> = ({ item, index, isWinner, styles: s }) => {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(20)).current;
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateY, {
+          toValue: 0,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, index * STAGGER_DELAY);
+    return () => clearTimeout(timer);
+  }, [index]);
+
+  const containerStyle = isWinner ? s.winnerContainer : s.playerContainer;
+  const scoreStyle = isWinner ? [s.profileName, s.winnerText] : s.profileName;
+
+  return (
+    <Animated.View
+      style={[
+        containerStyle,
+        { opacity, transform: [{ translateY }] },
+      ]}
+    >
+      <Image
+        source={
+          item.profile_picture
+            ? { uri: item.profile_picture }
+            : require("../../assets/images/profile-placeholder.png")
+        }
+        style={s.profileImage}
+      />
+      <Text style={s.profileName}>{item.profileName}: </Text>
+      <Text style={scoreStyle}>{item.score}</Text>
+      {isWinner && (
+        <Ionicons
+          name="trophy"
+          size={26}
+          color="#FFD700"
+          style={s.crownIcon}
+        />
+      )}
+    </Animated.View>
+  );
+};
 
 export default function ResultsScreen() {
   const { userInfo, userToken } = useAuth();
@@ -136,6 +226,38 @@ export default function ResultsScreen() {
     return players.filter((player) => player.isWinner).length;
   }, [players]);
 
+  // Current user's score and winner status
+  const userPlayer = useMemo(
+    () => players.find((p) => p.id === userInfo?.user.id),
+    [players, userInfo]
+  );
+  const userScore = userPlayer ? parseFloat(userPlayer.score) : 0;
+  const userIsWinner = !!userPlayer?.isWinner;
+
+  const scoreBasedMessage = useMemo(() => {
+    if (userIsWinner) {
+      if (userScore >= 90) return "Crushed it!";
+      if (userScore >= 70) return "Nice work!";
+      return "You won!";
+    }
+    if (userScore >= 90) return "Crushed it!";
+    if (userScore >= 70) return "Nice work!";
+    if (userScore >= 50) return "Close one!";
+    return "Room to improve!";
+  }, [userIsWinner, userScore]);
+
+  // Podium: top 3 as [2nd, 1st, 3rd] for display, rest as list. Always return { top3, rest } for consistent typing.
+  const podiumPlayers = useMemo(() => {
+    if (players.length < 2) return { top3: players, rest: [] as typeof players };
+    const [first, second, third, ...rest] = players;
+    const top3 = second
+      ? third
+        ? [second, first, third]
+        : [second, first]
+      : [first];
+    return { top3, rest };
+  }, [players]);
+
   const handleCreateNewGame = () => {
     // Animate button press
     Animated.sequence([
@@ -190,15 +312,16 @@ export default function ResultsScreen() {
       textDecorationLine: "underline",
     },
     tieTitle: {
-      fontSize: 24,
-      fontWeight: "bold",
+      fontSize: 26,
+      fontWeight: "800",
       marginBottom: 20,
       marginTop: 40,
       color: "#FFD700",
       textDecorationLine: "underline",
-      textShadowColor: "#FFD700",
+      textShadowColor: "rgba(0,0,0,0.3)",
       textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 2,
+      textShadowRadius: 0,
+      includeFontPadding: false,
     },
     topContainerTitle: {
       color: themeColors.text,
@@ -316,62 +439,142 @@ export default function ResultsScreen() {
       color: "#FFD700",
       fontWeight: "bold",
     },
+    podiumContainer: {
+      flexDirection: "row",
+      alignItems: "flex-end",
+      justifyContent: "center",
+      marginVertical: rV(24),
+      minHeight: rV(140),
+    },
+    podiumSlot: {
+      alignItems: "center",
+      flex: 1,
+      paddingHorizontal: rMS(8),
+    },
+    podiumAvatar: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      marginBottom: rV(8),
+    },
+    podiumName: {
+      fontSize: rMS(14),
+      fontWeight: "600",
+      color: themeColors.text,
+      textAlign: "center",
+    },
+    podiumScore: {
+      fontSize: rMS(12),
+      color: themeColors.textSecondary,
+      marginTop: rV(2),
+    },
+    podiumPlace: {
+      fontSize: rMS(10),
+      color: themeColors.textSecondary,
+      marginBottom: rV(8),
+    },
+    othersList: {
+      paddingHorizontal: rMS(20),
+      paddingBottom: rV(24),
+    },
+    scoreBasedBanner: {
+      paddingVertical: rV(12),
+      paddingHorizontal: rMS(20),
+      marginBottom: rV(16),
+      alignSelf: "center",
+      backgroundColor: themeColors.tint + "20",
+      borderRadius: rMS(12),
+    },
+    scoreBasedText: {
+      fontSize: rMS(16),
+      fontWeight: "bold",
+      color: themeColors.tint,
+    },
   });
 
-  const renderPlayer = ({ item }: { item: any }) => {
-    const isWinner = item.isWinner;
-    const containerStyle = isWinner
-      ? styles.winnerContainer
-      : styles.playerContainer;
-    const scoreStyle = isWinner
-      ? [styles.profileName, styles.winnerText]
-      : styles.profileName;
-
-    return (
-      <View style={containerStyle}>
-        <Image
-          source={
-            item.profile_picture
-              ? { uri: item.profile_picture }
-              : require("../../assets/images/profile-placeholder.png")
-          }
-          style={styles.profileImage}
-          onError={() =>
-            console.log(item.profile_picture, "Error loading picture")
-          }
-        />
-        <Text style={styles.profileName}>{item.profileName}: </Text>
-        <Text style={scoreStyle}>{item.score}</Text>
-        {isWinner && (
-          <Ionicons
-            name="trophy"
-            size={26}
-            color="#FFD700"
-            style={styles.crownIcon}
-          />
-        )}
-      </View>
-    );
-  };
+  const renderPodiumSlot = (
+    item: any,
+    _place: 1 | 2 | 3,
+    placeLabel: string
+  ) => (
+    <View key={item.id} style={styles.podiumSlot}>
+      <Text style={styles.podiumPlace}>{placeLabel}</Text>
+      <Image
+        source={
+          item.profile_picture
+            ? { uri: item.profile_picture }
+            : require("../../assets/images/profile-placeholder.png")
+        }
+        style={styles.podiumAvatar}
+      />
+      <Text style={styles.podiumName} numberOfLines={1}>
+        {item.profileName}
+      </Text>
+      <Text style={[styles.podiumScore, item.isWinner && styles.winnerText]}>
+        {item.score}
+      </Text>
+      {item.isWinner && (
+        <Ionicons name="trophy" size={24} color="#FFD700" />
+      )}
+    </View>
+  );
 
   return (
     <View style={styles.container}>
       {error ? (
         <Text style={styles.errorMessage}>{error}</Text>
       ) : (
-        <>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.playersList}
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
+        >
           <Text style={styles.topContainerTitle}>{creator}'s Arena</Text>
           <Text style={winnerCount > 1 ? styles.tieTitle : styles.title}>
             {winnerCount > 1 ? `Tie! ${winnerCount} Winners` : "Scores"}
           </Text>
-        </>
+          <View style={styles.scoreBasedBanner}>
+            <Text style={styles.scoreBasedText}>{scoreBasedMessage}</Text>
+          </View>
+          {podiumPlayers.top3 && podiumPlayers.top3.length > 0 && (
+            <View style={styles.podiumContainer}>
+              {podiumPlayers.top3.length >= 2 && (
+                <StaggeredPodiumSlot index={0}>
+                  {renderPodiumSlot(podiumPlayers.top3[0], 2, "2nd")}
+                </StaggeredPodiumSlot>
+              )}
+              {podiumPlayers.top3.length >= 1 && (
+                <StaggeredPodiumSlot index={1}>
+                  {renderPodiumSlot(
+                    podiumPlayers.top3[podiumPlayers.top3.length === 1 ? 0 : 1],
+                    1,
+                    "1st"
+                  )}
+                </StaggeredPodiumSlot>
+              )}
+              {podiumPlayers.top3.length >= 3 && (
+                <StaggeredPodiumSlot index={2}>
+                  {renderPodiumSlot(podiumPlayers.top3[2], 3, "3rd")}
+                </StaggeredPodiumSlot>
+              )}
+            </View>
+          )}
+          {podiumPlayers.rest && podiumPlayers.rest.length > 0 && (
+            <View style={styles.othersList}>
+              {podiumPlayers.rest.map((item, idx) => (
+                <StaggeredPlayerRow
+                  key={item.id}
+                  item={item}
+                  index={idx + 3}
+                  isWinner={item.isWinner}
+                  styles={styles}
+                />
+              ))}
+            </View>
+          )}
+        </ScrollView>
       )}
-      <FlatList
-        data={players}
-        renderItem={renderPlayer}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.playersList}
-      />
       <View style={styles.buttonContainer}>
         <Animated.View
           style={{ transform: [{ scale: homeButtonScale }], flex: 1 }}

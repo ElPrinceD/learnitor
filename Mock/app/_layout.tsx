@@ -102,7 +102,7 @@ const DeepLinkHandler = () => {
               if (response.status === 200) {
                 const id = response.data.id;
                 // Navigate to GameWaiting screen
-                router.push({
+                router.replace({
                   pathname: "/(game)/GameWaiting",
                   params: { code: gameCode, id: id },
                 });
@@ -110,7 +110,7 @@ const DeepLinkHandler = () => {
             } catch (error) {
               console.error("Error joining game via deep link:", error);
               // Navigate to GameIntro with the code pre-filled
-              router.push({
+              router.replace({
                 pathname: "/(game)/GameIntro",
                 params: { code: gameCode },
               });
@@ -141,7 +141,7 @@ const DeepLinkHandler = () => {
               if (response.status === 200) {
                 const id = response.data.id;
                 // Navigate to GameWaiting screen
-                router.push({
+                router.replace({
                   pathname: "/(game)/GameWaiting",
                   params: { code: gameCode, id: id },
                 });
@@ -149,14 +149,14 @@ const DeepLinkHandler = () => {
             } catch (error) {
               console.error("Error joining game via deep link:", error);
               // Navigate to GameIntro with the code pre-filled
-              router.push({
+              router.replace({
                 pathname: "/(game)/GameIntro",
                 params: { code: gameCode },
               });
             }
           } else if (gameCode && !userToken?.token) {
             // User not authenticated - navigate to GameIntro with code pre-filled
-            router.push({
+            router.replace({
               pathname: "/(game)/GameIntro",
               params: { code: gameCode },
             });

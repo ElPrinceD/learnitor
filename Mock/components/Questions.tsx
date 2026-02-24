@@ -1,13 +1,122 @@
-import React, { memo } from "react";
+import React, { memo, useEffect, useRef, useMemo } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   useColorScheme,
+  Animated,
 } from "react-native";
 import Colors from "../constants/Colors";
 import { SIZES, rMS, rS, rV, useShadows } from "../constants";
+
+const CORRECT_MESSAGES = ["Nice!", "Got it!", "Correct!", "Yes!", "Boom!"];
+const WRONG_MESSAGES = ["Wrong", "Not quite", "Almost!", "Nope", "Not this time"];
+
+const AnimatedAnswerRow: React.FC<{
+  answer: { id: number; text: string };
+  isSelected: boolean;
+  isCorrect: boolean;
+  questionsWithMultipleCorrectAnswers: number[];
+  questionId: number;
+  handleAnswerSelection: (answerId: number, questionId: number) => void;
+  styles: any;
+  showImmediateFeedback: boolean;
+}> = ({
+  answer,
+  isSelected,
+  isCorrect,
+  questionsWithMultipleCorrectAnswers,
+  questionId,
+  handleAnswerSelection,
+  styles: s,
+  showImmediateFeedback,
+}) => {
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (showImmediateFeedback && isSelected && !isCorrect) {
+      shakeAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(shakeAnim, { toValue: 1, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 2, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 3, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 4, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [showImmediateFeedback, isSelected, isCorrect]);
+
+  const translateX = shakeAnim.interpolate({
+    inputRange: [0, 1, 2, 3, 4],
+    outputRange: [0, 8, -8, 8, 0],
+  });
+
+  const answerStyle =
+    showImmediateFeedback && isSelected
+      ? isCorrect
+        ? [s.answerTouchable, s.correctAnswer]
+        : [s.answerTouchable, s.wrongAnswer]
+      : s.answerTouchable;
+
+  const feedbackMsg = useMemo(() => {
+    if (!showImmediateFeedback || !isSelected) return null;
+    return isCorrect
+      ? CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)]
+      : WRONG_MESSAGES[Math.floor(Math.random() * WRONG_MESSAGES.length)];
+  }, [showImmediateFeedback, isSelected, isCorrect]);
+
+  return (
+    <Animated.View
+      style={[
+        {
+          transform: [
+            {
+              translateX:
+                showImmediateFeedback && isSelected && !isCorrect
+                  ? translateX
+                  : 0,
+            },
+          ],
+        },
+        { marginBottom: rV(10) },
+      ]}
+    >
+      <TouchableOpacity
+        style={[answerStyle, isSelected && s.selectedAnswer]}
+        onPress={() => handleAnswerSelection(answer.id, questionId)}
+      >
+        {!questionsWithMultipleCorrectAnswers.includes(questionId) && (
+          <View style={s.circleContainer}>
+            <View style={[s.circle, isSelected && s.selectedCircle]}>
+              {isSelected && <View style={s.innerCircle} />}
+            </View>
+          </View>
+        )}
+        {questionsWithMultipleCorrectAnswers.includes(questionId) && (
+          <View style={[s.checkBox, isSelected && s.checkedBox]} />
+        )}
+        {answer?.text && (
+          <Text
+            style={[s.answerText, isSelected && s.selectedAnswerText]}
+          >
+            {answer.text}
+          </Text>
+        )}
+        {feedbackMsg && (
+          <Text
+            style={[
+              s.feedbackText,
+              isCorrect ? s.feedbackCorrect : s.feedbackWrong,
+            ]}
+          >
+            {feedbackMsg}
+          </Text>
+        )}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
 
 type QuestionProps = {
   practiceQuestions: any[];
@@ -16,6 +125,7 @@ type QuestionProps = {
   questionsWithMultipleCorrectAnswers: number[];
   isAnswerSelected: (questionId: number, answerId: number) => boolean;
   handleAnswerSelection: (answerId: number, questionId: number) => void;
+  showImmediateFeedback?: boolean;
   styles?: {
     container?: object;
     questionContainer?: object;
@@ -43,6 +153,7 @@ const Questions: React.FC<QuestionProps> = ({
   questionsWithMultipleCorrectAnswers,
   isAnswerSelected,
   handleAnswerSelection,
+  showImmediateFeedback = true,
   styles: externalStyles = {},
 }) => {
   const colorScheme = useColorScheme();
@@ -63,7 +174,7 @@ const Questions: React.FC<QuestionProps> = ({
     },
     answersContainer: {
       flex: 2,
-      alignItems: "center",
+      alignItems: "stretch",
       ...externalStyles.answersContainer,
     },
     questionText: {
@@ -74,9 +185,9 @@ const Questions: React.FC<QuestionProps> = ({
     },
     answerTouchable: {
       flexDirection: "row",
-      alignItems: "center",
-      marginBottom: rV(22),
-      width: "85%",
+      alignItems: "flex-start",
+      marginBottom: rV(10),
+      width: "100%",
       padding: rMS(27),
       borderRadius: 5,
       backgroundColor: themeColors.card,
@@ -124,13 +235,16 @@ const Questions: React.FC<QuestionProps> = ({
       marginLeft: rS(8),
       color: themeColors.text,
       flexWrap: "wrap",
-      maxWidth: "85%",
+      flex: 1,
+      textAlign: "left",
       ...externalStyles.answerText,
     },
     selectedAnswerText: {
       fontSize: SIZES.medium,
       marginLeft: rS(8),
       color: "#ccc",
+      flex: 1,
+      textAlign: "left",
       ...externalStyles.selectedAnswerText,
     },
     checkBox: {
@@ -146,6 +260,18 @@ const Questions: React.FC<QuestionProps> = ({
       backgroundColor: "#000",
       borderColor: "#fff",
       ...externalStyles.checkedBox,
+    },
+    feedbackText: {
+      fontSize: rMS(12),
+      fontWeight: "600",
+      marginTop: rV(4),
+      marginLeft: rS(8),
+    },
+    feedbackCorrect: {
+      color: "#097969",
+    },
+    feedbackWrong: {
+      color: "#D22B2B",
     },
   });
 
@@ -175,56 +301,36 @@ const Questions: React.FC<QuestionProps> = ({
                 answer.id
               );
               const isCorrect = answer.isRight;
-
-              const answerStyle = isSelected
-                ? isCorrect
-                  ? [styles.answerTouchable, styles.correctAnswer]
-                  : [styles.answerTouchable, styles.wrongAnswer]
-                : styles.answerTouchable;
-
               return (
-                <TouchableOpacity
+                <AnimatedAnswerRow
                   key={ansIndex}
-                  style={[answerStyle, isSelected && styles.selectedAnswer]}
-                  onPress={() =>
-                    handleAnswerSelection(
-                      answer.id,
-                      practiceQuestions[currentQuestion].id
-                    )
+                  answer={answer}
+                  isSelected={isSelected}
+                  isCorrect={isCorrect}
+                  questionsWithMultipleCorrectAnswers={
+                    questionsWithMultipleCorrectAnswers
                   }
-                >
-                  {!questionsWithMultipleCorrectAnswers.includes(
-                    practiceQuestions[currentQuestion].id
-                  ) && (
-                    <View style={styles.circleContainer}>
-                      <View
-                        style={[
-                          styles.circle,
-                          isSelected && styles.selectedCircle,
-                        ]}
-                      >
-                        {isSelected && <View style={styles.innerCircle} />}
-                      </View>
-                    </View>
-                  )}
-                  {questionsWithMultipleCorrectAnswers.includes(
-                    practiceQuestions[currentQuestion].id
-                  ) && (
-                    <View
-                      style={[styles.checkBox, isSelected && styles.checkedBox]}
-                    />
-                  )}
-                  {answer && answer.text && (
-                    <Text
-                      style={[
-                        styles.answerText,
-                        isSelected && styles.selectedAnswerText,
-                      ]}
-                    >
-                      {answer.text}
-                    </Text>
-                  )}
-                </TouchableOpacity>
+                  questionId={practiceQuestions[currentQuestion].id}
+                  handleAnswerSelection={handleAnswerSelection}
+                  showImmediateFeedback={showImmediateFeedback}
+                  styles={{
+                    answerTouchable: styles.answerTouchable,
+                    correctAnswer: styles.correctAnswer,
+                    wrongAnswer: styles.wrongAnswer,
+                    selectedAnswer: styles.selectedAnswer,
+                    circleContainer: styles.circleContainer,
+                    circle: styles.circle,
+                    selectedCircle: styles.selectedCircle,
+                    innerCircle: styles.innerCircle,
+                    checkBox: styles.checkBox,
+                    checkedBox: styles.checkedBox,
+                    answerText: styles.answerText,
+                    selectedAnswerText: styles.selectedAnswerText,
+                    feedbackText: styles.feedbackText,
+                    feedbackCorrect: styles.feedbackCorrect,
+                    feedbackWrong: styles.feedbackWrong,
+                  }}
+                />
               );
             })}
       </View>
