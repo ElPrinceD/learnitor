@@ -25,7 +25,7 @@ import ApiUrl from "../../config";
 
 const GameTopics: React.FC = () => {
   const { userToken } = useAuth();
-  const { course } = useLocalSearchParams();
+  const { course, isSinglePlayer } = useLocalSearchParams();
   const [selectedTopics, setSelectedTopics] = useState<Topic[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
@@ -148,18 +148,29 @@ const GameTopics: React.FC = () => {
       const gameCode = response.data.code;
       const gameId = response.data.id;
 
-      // Navigate to the GameWaiting screen with the necessary parameters
-      router.navigate({
-        pathname: "GameWaiting",
-        params: {
-          level: "all",
-          topics: JSON.stringify(parsedTopics),
-          course: course?.toString(),
-          isCreator: "true",
-          code: gameCode,
-          gameId: gameId,
-        },
-      });
+      if (isSinglePlayer === "true") {
+        router.navigate({
+          pathname: "SinglePlayerGame",
+          params: {
+            code: gameCode,
+            gameId: gameId,
+            course: course?.toString(),
+            topics: JSON.stringify(parsedTopics),
+          },
+        });
+      } else {
+        router.navigate({
+          pathname: "GameWaiting",
+          params: {
+            level: "all",
+            topics: JSON.stringify(parsedTopics),
+            course: course?.toString(),
+            isCreator: "true",
+            code: gameCode,
+            gameId: gameId,
+          },
+        });
+      }
     } catch (error) {
       // Let ErrorMessage component handle the user-friendly conversion
       console.log(error.response.data);

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link, Tabs } from "expo-router";
-import { Pressable, Text, StyleSheet, View, Animated } from "react-native";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Tabs } from "expo-router";
+import { Text, StyleSheet, View, Animated } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Colors from "../../constants/Colors";
 import { useColorScheme } from "../../components/useColorScheme";
 import { useClientOnlyValue } from "../../components/useClientOnlyValue";
@@ -108,25 +108,6 @@ export default function TabLayout() {
             <TabBarIcon name="home" color={color} focused={focused} />
           ),
           headerShadowVisible: false,
-          headerRight: () => (
-            <View style={styles.container}>
-              <Link href="/(game)/GameIntro" asChild>
-                <Pressable>
-                  {({ pressed }) => (
-                    <Ionicons
-                      name="game-controller-outline"
-                      size={27}
-                      color={Colors[colorScheme ?? "light"].text}
-                      style={{
-                        marginRight: 15,
-                        opacity: pressed ? 0.5 : 1,
-                      }}
-                    />
-                  )}
-                </Pressable>
-              </Link>
-            </View>
-          ),
           headerTitle: () => (
             <Text
               style={{
@@ -153,6 +134,17 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="(play)"
+        options={{
+          title: "Play",
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name="gamepad-variant" color={color} focused={focused} />
+          ),
+          headerShown: false,
+          headerShadowVisible: false,
+        }}
+      />
+      <Tabs.Screen
         name="(reminder)"
         options={{
           title: "Plan",
@@ -167,11 +159,11 @@ export default function TabLayout() {
       <Tabs.Screen
         name="(account)"
         options={{
-          title: "Settings",
+          title: "Profile",
           tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name="cog" color={color} focused={focused} />
+            <TabBarIcon name="account" color={color} focused={focused} />
           ),
-          headerTitle: "Settings",
+          headerTitle: "Profile",
           headerShown: false,
           headerShadowVisible: false,
         }}

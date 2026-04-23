@@ -22,6 +22,9 @@ export default function GameLayout() {
         options={{ headerShown: false, gestureEnabled: true }}
       />
       <Stack.Screen name="Game" options={{ headerShown: false }} />
+      <Stack.Screen name="SinglePlayerGame" options={{ headerShown: false }} />
+      <Stack.Screen name="Leaderboard" options={{ headerShown: false }} />
+      <Stack.Screen name="LeaderboardDetail" options={{ headerShown: false }} />
     </Stack>
     </GameAudioProvider>
   );

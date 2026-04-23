@@ -3,7 +3,7 @@ import React from "react";
 import { useColorScheme, Text } from "react-native";
 import Colors from "../../../constants/Colors";
 
-export default function Tab2Layout() {
+export default function AccountLayout() {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   return (
@@ -11,12 +11,17 @@ export default function Tab2Layout() {
       <Stack.Screen
         name="four"
         options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="SettingsPage"
+        options={{
           headerShown: true,
           headerTitle: () => (
             <Text
               style={{
                 color: themeColors.text,
-
                 fontSize: 20,
                 fontWeight: "bold",
               }}
@@ -28,8 +33,9 @@ export default function Tab2Layout() {
             backgroundColor: themeColors.background,
           },
           headerTitleAlign: "center",
-
+          headerBackTitle: "Back",
           headerShadowVisible: false,
+          presentation: "card",
         }}
       />
       <Stack.Screen
@@ -40,7 +46,6 @@ export default function Tab2Layout() {
             <Text
               style={{
                 color: themeColors.text,
-
                 fontSize: 20,
                 fontWeight: "bold",
               }}
@@ -65,7 +70,6 @@ export default function Tab2Layout() {
             <Text
               style={{
                 color: themeColors.text,
-
                 fontSize: 20,
                 fontWeight: "bold",
               }}
@@ -77,9 +81,7 @@ export default function Tab2Layout() {
             backgroundColor: themeColors.background,
           },
           headerTitleAlign: "center",
-
           headerShadowVisible: false,
-
           presentation: "modal",
         }}
       />

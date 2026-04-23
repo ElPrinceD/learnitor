@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import CoursesList from "../../components/CoursesList";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Course } from "../../components/types";
 import { useAuth } from "../../components/AuthContext";
 import Colors from "../../constants/Colors";
@@ -19,6 +19,7 @@ import ErrorMessage from "../../components/ErrorMessage";
 
 const GameCourses: React.FC = () => {
   const { userToken } = useAuth();
+  const { isSinglePlayer } = useLocalSearchParams();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const colorScheme = useColorScheme();
@@ -39,6 +40,7 @@ const GameCourses: React.FC = () => {
       pathname: "GameTopics",
       params: {
         course: JSON.stringify(course),
+        isSinglePlayer: isSinglePlayer,
       },
     });
   };

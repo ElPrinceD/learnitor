@@ -52,7 +52,11 @@ export default function GameIntro() {
   const shadow = useShadows();
 
   const createGame = () => {
-    router.navigate("GameCourses");
+    router.navigate({ pathname: "GameCourses", params: { isSinglePlayer: "false" } });
+  };
+
+  const createSinglePlayerGame = () => {
+    router.navigate({ pathname: "GameCourses", params: { isSinglePlayer: "true" } });
   };
 
   const joinGame = async () => {
@@ -123,7 +127,7 @@ export default function GameIntro() {
     const backHandler = BackHandler.addEventListener(
       "hardwareBackPress",
       () => {
-        router.replace("/(tabs)/home");
+        router.replace("/(tabs)/(play)/play");
         return true;
       }
     );
@@ -174,39 +178,41 @@ export default function GameIntro() {
     },
     heroTitle: {
       color: themeColors.text,
-      fontSize: SIZES.xxxLarge,
+      fontSize: SIZES.xxLarge,
       fontWeight: "bold",
+      textAlign: 'center',
     },
     cardsRow: {
       flexDirection: "row",
       gap: CARD_GAP,
       alignItems: "stretch",
+      marginBottom: CARD_GAP,
     },
     card: {
       flex: 1,
       backgroundColor: themeColors.tint,
       borderRadius: CARD_RADIUS,
-      padding: rMS(18),
+      padding: rMS(14),
       alignItems: "center",
       justifyContent: "space-between",
       ...shadow.medium,
     },
     iconCircle: {
-      width: 52,
-      height: 52,
-      borderRadius: 26,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: "#fff",
       alignItems: "center",
       justifyContent: "center",
-      marginBottom: rV(10),
+      marginBottom: rV(8),
     },
     cardHeader: {
       color: "#fff",
-      fontSize: SIZES.medium,
+      fontSize: SIZES.small,
       fontWeight: "bold",
       textTransform: "uppercase",
       letterSpacing: 0.5,
-      marginBottom: rV(10),
+      marginBottom: rV(8),
       textAlign: "center",
     },
     cardContent: {
@@ -215,25 +221,25 @@ export default function GameIntro() {
     },
     inputHint: {
       color: "rgba(255,255,255,0.85)",
-      fontSize: SIZES.small,
-      marginBottom: rV(6),
+      fontSize: rMS(11),
+      marginBottom: rV(4),
       textAlign: "center",
     },
     input: {
       width: "100%",
       backgroundColor: "#fff",
       borderRadius: INPUT_RADIUS,
-      paddingVertical: rV(10),
-      paddingHorizontal: rMS(12),
-      fontSize: SIZES.medium,
+      paddingVertical: rV(8),
+      paddingHorizontal: rMS(10),
+      fontSize: SIZES.small,
       color: "#000",
-      marginBottom: rV(10),
+      marginBottom: rV(8),
     },
     descText: {
       color: "rgba(255,255,255,0.9)",
-      fontSize: SIZES.medium,
+      fontSize: SIZES.small,
       textAlign: "center",
-      lineHeight: 22,
+      lineHeight: 18,
     },
     cardButton: {
       backgroundColor: themeColors.tintSecond ?? themeColors.tint,
@@ -254,9 +260,26 @@ export default function GameIntro() {
     },
     cardButtonText: {
       color: "#fff",
-      fontSize: SIZES.medium,
+      fontSize: SIZES.small,
       fontWeight: "bold",
     },
+    leaderboardBtn: {
+      position: 'absolute',
+      right: rS(16),
+      top: rV(16),
+      flexDirection: 'row',
+      backgroundColor: themeColors.tint + '20',
+      paddingVertical: rV(8),
+      paddingHorizontal: rMS(12),
+      borderRadius: rMS(20),
+      alignItems: 'center',
+      zIndex: 10,
+    },
+    leaderboardBtnText: {
+      color: themeColors.tint,
+      fontWeight: 'bold',
+      marginLeft: rS(6),
+    }
   });
 
   return (
@@ -270,6 +293,10 @@ export default function GameIntro() {
           barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
           backgroundColor={themeColors.background}
         />
+        <TouchableOpacity style={[styles.leaderboardBtn, { top: Math.max(rV(16), insets.top) }]} onPress={() => router.push("Leaderboard")}>
+          <Ionicons name="trophy" size={20} color={themeColors.tint} />
+          <Text style={styles.leaderboardBtnText}>Rankings</Text>
+        </TouchableOpacity>
       <GameTutorialOverlay
         visible={showTutorial}
         onDismiss={() => setShowTutorial(false)}
@@ -285,42 +312,39 @@ export default function GameIntro() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.hero}>
-          <Image
-            source={require("../../assets/images/game1.png")}
-            style={styles.heroImage}
-          />
           <Text style={styles.heroTitle}>Game Time!</Text>
         </View>
 
-        <View style={styles.cardsRow}>
-          {/* Join card */}
-          <View style={styles.card}>
-            <View style={styles.cardContent}>
-              <View style={styles.iconCircle}>
-                <Ionicons name="people" size={26} color={themeColors.tint} />
-              </View>
-              <Text style={styles.cardHeader}>Join a game</Text>
-              <Text style={styles.inputHint}>Type the 6-character code below</Text>
-              <TextInput
-                style={styles.input}
-                value={gameCode}
-                onChangeText={setGameCode}
-                placeholder="e.g. Cx893P"
-                placeholderTextColor={themeColors.placeholder}
-              />
+        <View style={styles.card}>
+          <View style={styles.cardContent}>
+            <View style={styles.iconCircle}>
+              <Ionicons name="people" size={26} color={themeColors.tint} />
             </View>
-            <TouchableOpacity
-              style={[
-                styles.cardButton,
-                joinGameDisabled && styles.cardButtonDisabled,
-              ]}
-              onPress={handleJoinPress}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.cardButtonText}>Join</Text>
-            </TouchableOpacity>
+            <Text style={styles.cardHeader}>Join a game</Text>
+            <Text style={styles.inputHint}>Type the 6-character code below</Text>
+            <TextInput
+              style={styles.input}
+              value={gameCode}
+              onChangeText={setGameCode}
+              placeholder="e.g. Cx893P"
+              placeholderTextColor={themeColors.placeholder}
+            />
           </View>
+          <TouchableOpacity
+            style={[
+              styles.cardButton,
+              joinGameDisabled && styles.cardButtonDisabled,
+            ]}
+            onPress={handleJoinPress}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.cardButtonText}>Join</Text>
+          </TouchableOpacity>
+        </View>
 
+        <View style={{ height: CARD_GAP }} />
+
+        <View style={styles.cardsRow}>
           {/* Create card */}
           <View style={styles.card}>
             <View style={styles.cardContent}>
@@ -336,6 +360,24 @@ export default function GameIntro() {
               activeOpacity={0.8}
             >
               <Text style={styles.cardButtonText}>Create</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Solo card */}
+          <View style={styles.card}>
+            <View style={styles.cardContent}>
+              <View style={styles.iconCircle}>
+                <Ionicons name="person" size={26} color={themeColors.tint} />
+              </View>
+              <Text style={styles.cardHeader}>Solo Practice</Text>
+              <Text style={styles.descText}>Play high-speed single player rounds</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.cardButton}
+              onPress={createSinglePlayerGame}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.cardButtonText}>Play Solo</Text>
             </TouchableOpacity>
           </View>
         </View>

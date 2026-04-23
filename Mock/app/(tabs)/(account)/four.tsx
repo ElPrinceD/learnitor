@@ -5,114 +5,159 @@ import {
   TouchableOpacity,
   StyleSheet,
   Image,
-  Share,
   useColorScheme,
   ScrollView,
-  Linking,
   ActivityIndicator,
 } from "react-native";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import axios from "axios";
+import Animated, {
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
 import { useAuth } from "../../../components/AuthContext";
 import * as ImagePicker from "expo-image-picker";
 import ApiUrl from "../../../config";
 import Colors from "../../../constants/Colors";
-import { SIZES, rMS, rS, rV } from "../../../constants";
-import { useCache } from "../../../contexts/CacheContext"; // New import for caching
-import AsyncStorage from "@react-native-async-storage/async-storage";
-// import AppImage from "../../../components/AppImage"; // Commented out for profile page
-import InAppBrowserLink from "../../../components/InAppBrowserLink";
-import { useAlert } from "../../../contexts/AlertContext";
+import { SIZES, rMS, rS, rV, useShadows } from "../../../constants";
 import { useErrorHandler } from "../../../hooks/useErrorHandler";
 
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+
+interface UserStats {
+  accuracy: number;
+  sessions: number;
+  streakAvg: number;
+  streakAvgDelta: number;
+  tier: string;
+}
+
+interface RankingSummary {
+  world: string | null;
+  country: string | null;
+  school: string | null;
+}
+
+interface SeasonEntry {
+  season_name: string;
+  final_score: number;
+  rank: number;
+  maxScore?: number;
+}
+
 const Profile = () => {
-  const { logout, userToken, userInfo, setUserInformation, setUserInfo } = useAuth();
-  const { clear } = useCache(); // Access clear from CacheContext
-  const { showErrorAlert } = useAlert();
+  const { userToken, userInfo, setUserInformation, setUserInfo } = useAuth();
   const { handleError } = useErrorHandler();
+  const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
-  const [imageUpdateKey, setImageUpdateKey] = useState(0); // Track image updates
+  const shadow = useShadows();
+
+  const [imageUpdateKey, setImageUpdateKey] = useState(0);
   const [imageLoading, setImageLoading] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [currentImageUri, setCurrentImageUri] = useState<string | undefined>(
     userInfo?.user.profile_picture
   );
 
-  // Sync currentImageUri with userInfo when it changes
+  const [stats, setStats] = useState<UserStats>({
+    accuracy: 0,
+    sessions: 0,
+    streakAvg: 0,
+    streakAvgDelta: 0,
+    tier: "Learner",
+  });
+
+  const [rankings, setRankings] = useState<RankingSummary>({
+    world: null,
+    country: null,
+    school: null,
+  });
+
+  const [seasonHistory, setSeasonHistory] = useState<SeasonEntry[]>([]);
+
+  // Settings icon press scale
+  const settingsScale = useSharedValue(1);
+  const settingsAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: settingsScale.value }],
+  }));
+
   useEffect(() => {
-    if (userInfo?.user.profile_picture && userInfo.user.profile_picture.trim() !== "") {
-      // Use plain URL to allow proper caching - only add cache-busting when explicitly needed
+    if (
+      userInfo?.user.profile_picture &&
+      userInfo.user.profile_picture.trim() !== ""
+    ) {
       setCurrentImageUri(userInfo.user.profile_picture);
     } else {
       setCurrentImageUri(undefined);
     }
   }, [userInfo?.user.profile_picture]);
 
-  const handleAccountSettings = () => {
-    router.navigate("AccountSettings");
-  };
-
-  const clearUserDataCache = async () => {
-    try {
-      await clear(); // Replace sqliteClear with clear from CacheContext
-    } catch (e) {
-      console.error("Error clearing SQLite storage:", e);
-    }
-  };
-
-  const clearUserTokenDataCache = async () => {
-    try {
-      await AsyncStorage.multiRemove(["token", "user"]);
-    } catch (e) {
-      console.error("Error clearing AsyncStorage:", e);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await clearUserDataCache(); // Ensure this is awaited
-      await clearUserTokenDataCache();
-      logout();
-      router.replace("Intro");
-    } catch (error) {
-      console.error("Error logging out:", error);
-    }
-  };
-
-  const handleTellAFriend = async () => {
-    try {
-      const shareOptions = {
-        message: "Check out this cool app Buddy!",
-        url: "https://your-app-url.com",
-        title: "Share with Friends",
-      };
-      const result = await Share.share(shareOptions);
-      if (result.action === Share.sharedAction) {
-      } else if (result.action === Share.dismissedAction) {
+  // Fetch user stats
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await axios.get(`${ApiUrl}/api/user/stats`, {
+          headers: { Authorization: `Token ${userToken?.token}` },
+        });
+        setStats(res.data);
+      } catch (e) {
+        // Mock data
+        setStats({
+          accuracy: 74.2,
+          sessions: 1204,
+          streakAvg: 4.82,
+          streakAvgDelta: 0.12,
+          tier: "Pro Tier",
+        });
       }
-    } catch (error) {
-      console.error("Error sharing:", error);
-    }
-  };
+    };
+    fetchStats();
+  }, [userToken?.token]);
 
-  const handleReportProblem = () => {
-    router.navigate("ReportProblem");
-  };
+  // Fetch rankings
+  useEffect(() => {
+    const fetchRankings = async () => {
+      try {
+        const res = await axios.get(
+          `${ApiUrl}/api/leaderboards/rankings/summary`,
+          {
+            headers: { Authorization: `Token ${userToken?.token}` },
+          }
+        );
+        setRankings(res.data);
+      } catch (e) {
+        setRankings({ world: "#142", country: "#12", school: "#01" });
+      }
+    };
+    fetchRankings();
+  }, [userToken?.token]);
 
-  const handleHelpCenter = () => {
-    router.navigate("FAQScreen");
-  };
-
-  const handlePrivacySettings = () => {
-    router.navigate("ConsentSettings");
-  };
+  // Fetch season history
+  useEffect(() => {
+    const fetchSeasonHistory = async () => {
+      try {
+        const res = await axios.get(`${ApiUrl}/api/user/season-history`, {
+          headers: { Authorization: `Token ${userToken?.token}` },
+        });
+        setSeasonHistory(res.data);
+      } catch (e) {
+        setSeasonHistory([
+          { season_name: "Season 03", final_score: 14290, rank: 112, maxScore: 17000 },
+          { season_name: "Season 02", final_score: 12105, rank: 304, maxScore: 17000 },
+          { season_name: "Season 01", final_score: 9842, rank: 540, maxScore: 17000 },
+        ]);
+      }
+    };
+    fetchSeasonHistory();
+  }, [userToken?.token]);
 
   const handleProfilePictureUpdate = async () => {
     try {
-
-
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: "images",
         allowsEditing: true,
@@ -123,7 +168,6 @@ const Profile = () => {
       if (!result.canceled) {
         const uri = result.assets[0].uri;
         const formData = new FormData();
-
         const fileName = uri.split("/").pop() || "image";
         const fileType = fileName.split(".").pop() || "jpg";
 
@@ -147,7 +191,6 @@ const Profile = () => {
         );
 
         if (userInfo) {
-          // Clear current image first
           setCurrentImageUri(undefined);
           setImageLoading(true);
           setImageError(false);
@@ -160,16 +203,11 @@ const Profile = () => {
             },
           };
 
-          // Update user info in storage
           setUserInformation(updatedUserInfo);
-          // Update user info in context state
           setUserInfo(updatedUserInfo);
 
-          // Force image cache invalidation and set new URI
           setImageUpdateKey((prev) => {
             const newKey = prev + 1;
-            // Set new image URI after a small delay to ensure the old one is cleared
-            // Use imageUpdateKey for controlled cache invalidation
             setTimeout(() => {
               setCurrentImageUri(
                 `${response.data.profile_picture}?cacheKey=${newKey}`
@@ -186,18 +224,13 @@ const Profile = () => {
 
   const handleProfilePictureDelete = async () => {
     try {
-      await axios.delete(
-        `${ApiUrl}/api/delete-profile-picture/`,
-        {
-          headers: {
-            Authorization: `Token ${userToken?.token}`,
-          },
-        }
-      );
+      await axios.delete(`${ApiUrl}/api/delete-profile-picture/`, {
+        headers: {
+          Authorization: `Token ${userToken?.token}`,
+        },
+      });
 
-      // If request succeeds, update the UI
       if (userInfo) {
-        // Clear current image
         setCurrentImageUri(undefined);
         setImageLoading(false);
         setImageError(false);
@@ -210,56 +243,102 @@ const Profile = () => {
           },
         };
 
-        // Update user info in storage
         setUserInformation(updatedUserInfo);
-        // Update user info in context state
         setUserInfo(updatedUserInfo);
-
-        // Force image cache invalidation
         setImageUpdateKey((prev) => prev + 1);
       }
     } catch (error: any) {
-      console.log(error.message);
       handleError(error, "Delete Failed");
     }
   };
 
+  const getProgressPercent = (score: number, maxScore?: number) => {
+    const max = maxScore || 17000;
+    return Math.min((score / max) * 100, 100);
+  };
+
+  const standingsData = [
+    {
+      label: "World",
+      sublabel: "Global Leaderboard",
+      icon: "earth" as const,
+      iconBg: themeColors.tint + "15",
+      iconColor: themeColors.tint,
+      rank: rankings.world,
+    },
+    {
+      label: "Country",
+      sublabel: "National Ranking",
+      icon: "flag" as const,
+      iconBg: (themeColors.tintSecond || themeColors.tint) + "15",
+      iconColor: themeColors.tintSecond || themeColors.tint,
+      rank: rankings.country,
+    },
+    {
+      label: "School",
+      sublabel: "Institutional Ranking",
+      icon: "school" as const,
+      iconBg: themeColors.tint + "20",
+      iconColor: themeColors.tint,
+      rank: rankings.school,
+    },
+  ];
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      paddingTop: rV(18),
       backgroundColor: themeColors.background,
     },
-    profileContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      paddingHorizontal: rS(25),
-      paddingBottom: rV(25),
+    scrollContent: {
+      paddingHorizontal: rS(16),
+      paddingTop: Math.max(rV(12), insets.top + rV(8)),
+      paddingBottom: Math.max(rV(40), insets.bottom + rV(20)),
     },
-    profileImageContainer: {
+    // Top bar
+    topBar: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      marginBottom: rV(12),
+    },
+    settingsBtn: {
+      width: rMS(36),
+      height: rMS(36),
+      borderRadius: rMS(12),
+      backgroundColor: themeColors.card,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    // Profile header
+    profileHeader: {
+      flexDirection: "row",
+      alignItems: "flex-end",
+      gap: rS(16),
+      marginBottom: rV(24),
+    },
+    avatarContainer: {
       position: "relative",
     },
-    profileImage: {
-      width: 115,
-      height: 115,
-      borderRadius: rMS(50),
+    avatar: {
+      width: rMS(100),
+      height: rMS(100),
+      borderRadius: rMS(28),
       backgroundColor: themeColors.card,
     },
     cameraIcon: {
       position: "absolute",
-      bottom: 0,
-      right: 0,
+      bottom: -2,
+      right: -2,
       backgroundColor: themeColors.background,
-      borderRadius: 15,
-      padding: 6,
+      borderRadius: 14,
+      padding: 5,
     },
     deleteIcon: {
       position: "absolute",
-      top: 0,
-      left: 0,
+      top: -2,
+      left: -2,
       backgroundColor: themeColors.background,
-      borderRadius: 15,
-      padding: 6,
+      borderRadius: 14,
+      padding: 5,
     },
     imageLoadingOverlay: {
       position: "absolute",
@@ -268,209 +347,529 @@ const Profile = () => {
       right: 0,
       bottom: 0,
       backgroundColor: "rgba(0,0,0,0.3)",
-      borderRadius: rMS(50),
+      borderRadius: rMS(28),
       justifyContent: "center",
       alignItems: "center",
     },
-    title: {
-      marginLeft: rS(20),
+    profileInfo: {
       flex: 1,
+      paddingBottom: rV(4),
     },
-    fullName: {
-      color: themeColors.text,
-      fontSize: SIZES.xLarge,
-      fontWeight: "bold",
-    },
-    email: {
-      fontSize: SIZES.medium,
-      color: themeColors.textSecondary,
-    },
-    editProfileButton: {
-      marginTop: rV(10),
-      borderWidth: 1,
-      borderColor: themeColors.border,
-      borderRadius: 5,
-      paddingVertical: rV(5),
-      paddingHorizontal: rS(20),
-      backgroundColor: "transparent",
-      alignItems: "center",
-    },
-    editProfileButtonText: {
-      color: themeColors.text,
-      fontSize: SIZES.medium,
-      fontWeight: "bold",
-    },
-    bottomContainer: {
-      flex: 1,
-      backgroundColor: themeColors.background,
-      paddingHorizontal: rS(25),
-      paddingTop: rV(10),
-    },
-    sectionTitle: {
-      fontSize: SIZES.large,
-      fontWeight: "bold",
-      color: themeColors.text,
-      marginBottom: rV(10),
-    },
-    option: {
+    levelBadge: {
       flexDirection: "row",
       alignItems: "center",
-      paddingVertical: rV(15),
-      paddingHorizontal: rS(10),
-      backgroundColor: themeColors.card,
-      borderRadius: 10,
-      marginBottom: rV(10),
+      gap: rS(4),
+      backgroundColor: themeColors.tint + "18",
+      paddingHorizontal: rMS(10),
+      paddingVertical: rV(3),
+      borderRadius: rMS(16),
+      alignSelf: "flex-start",
+      marginBottom: rV(8),
     },
-    optionText: {
-      fontSize: SIZES.medium,
+    levelBadgeText: {
+      fontSize: rMS(8),
+      fontWeight: "800",
+      textTransform: "uppercase",
+      letterSpacing: 1.5,
+      color: themeColors.tint,
+    },
+    profileName: {
+      fontSize: rMS(28),
+      fontWeight: "800",
       color: themeColors.text,
-      marginLeft: rS(10),
+      letterSpacing: -1,
+      lineHeight: rMS(30),
     },
-    icon: {
-      marginRight: rS(10),
+    profileId: {
+      fontSize: rMS(11),
+      color: themeColors.textSecondary,
+      fontWeight: "500",
+      letterSpacing: 0.5,
+      marginTop: rV(4),
     },
-    logoutContainer: {
-      marginTop: rV(30),
-      paddingHorizontal: rS(25),
-      paddingBottom: rV(25),
+    // Bento stats
+    bentoGrid: {
+      gap: rV(12),
+      marginBottom: rV(24),
+    },
+    heroStatCard: {
+      backgroundColor: themeColors.tint,
+      borderRadius: rMS(24),
+      padding: rMS(20),
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      overflow: "hidden",
+      position: "relative",
+    },
+    heroStatLabel: {
+      fontSize: rMS(9),
+      fontWeight: "700",
+      textTransform: "uppercase",
+      letterSpacing: 1.5,
+      color: "#fff",
+      opacity: 0.8,
+      marginBottom: rV(4),
+    },
+    heroStatValue: {
+      fontSize: rMS(36),
+      fontWeight: "800",
+      color: "#fff",
+      letterSpacing: -1.5,
+    },
+    heroStatRight: {
+      alignItems: "flex-end",
+    },
+    statusLabel: {
+      fontSize: rMS(9),
+      fontWeight: "700",
+      textTransform: "uppercase",
+      letterSpacing: 1.5,
+      color: "#fff",
+      opacity: 0.8,
+      marginBottom: rV(4),
+    },
+    statusBadge: {
+      backgroundColor: "rgba(255,255,255,0.2)",
+      paddingVertical: rV(4),
+      paddingHorizontal: rMS(10),
+      borderRadius: rMS(8),
+    },
+    statusBadgeText: {
+      fontSize: rMS(11),
+      fontWeight: "700",
+      color: "#fff",
+    },
+    heroIconOverlay: {
+      position: "absolute",
+      right: -rS(8),
+      bottom: -rV(8),
+      opacity: 0.08,
+    },
+    smallStatsRow: {
+      flexDirection: "row",
+      gap: rS(12),
+    },
+    smallStatCard: {
+      flex: 1,
+      backgroundColor: themeColors.card,
+      borderRadius: rMS(24),
+      padding: rMS(18),
+      height: rV(120),
+      justifyContent: "space-between",
+    },
+    smallStatLabel: {
+      fontSize: rMS(9),
+      fontWeight: "700",
+      textTransform: "uppercase",
+      letterSpacing: 1.5,
+      color: themeColors.textSecondary,
+    },
+    smallStatValue: {
+      fontSize: rMS(26),
+      fontWeight: "800",
+      color: themeColors.text,
+      letterSpacing: -0.5,
+    },
+    smallStatDelta: {
+      fontSize: rMS(10),
+      fontWeight: "700",
+      color: themeColors.tint,
+      marginLeft: rS(4),
+    },
+    smallStatValueRow: {
+      flexDirection: "row",
+      alignItems: "baseline",
+    },
+    // Standings section
+    sectionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: rV(14),
+    },
+    sectionTitle: {
+      fontSize: rMS(16),
+      fontWeight: "800",
+      color: themeColors.text,
+      letterSpacing: -0.2,
+    },
+    sectionAction: {
+      fontSize: rMS(9),
+      fontWeight: "700",
+      textTransform: "uppercase",
+      letterSpacing: 1.5,
+      color: themeColors.tint,
+    },
+    standingCard: {
+      backgroundColor: themeColors.card,
+      padding: rMS(14),
+      borderRadius: rMS(16),
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: rV(8),
+    },
+    standingCardLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: rS(12),
+    },
+    standingIconBox: {
+      width: rMS(36),
+      height: rMS(36),
+      borderRadius: rMS(10),
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    standingLabel: {
+      fontSize: SIZES.small,
+      fontWeight: "700",
+      color: themeColors.text,
+    },
+    standingSublabel: {
+      fontSize: rMS(8),
+      fontWeight: "600",
+      textTransform: "uppercase",
+      letterSpacing: 0.8,
+      color: themeColors.textSecondary,
+      marginTop: rV(1),
+    },
+    standingRank: {
+      fontSize: rMS(16),
+      fontWeight: "800",
+      color: themeColors.tint,
+    },
+    // Season section
+    seasonSection: {
+      marginTop: rV(8),
+      marginBottom: rV(16),
+    },
+    seasonScroll: {
+      marginHorizontal: -rS(4),
+    },
+    seasonScrollContent: {
+      paddingHorizontal: rS(4),
+      gap: rS(12),
+    },
+    seasonCard: {
+      width: rS(140),
+      backgroundColor: themeColors.card,
+      padding: rMS(16),
+      borderRadius: rMS(24),
+      justifyContent: "space-between",
+    },
+    seasonCardActive: {
+      backgroundColor: themeColors.tint + "12",
+    },
+    seasonName: {
+      fontSize: rMS(9),
+      fontWeight: "700",
+      textTransform: "uppercase",
+      letterSpacing: 1.5,
+      color: themeColors.textSecondary,
+      marginBottom: rV(12),
+    },
+    seasonScore: {
+      fontSize: rMS(18),
+      fontWeight: "800",
+      color: themeColors.text,
+      letterSpacing: -0.5,
+    },
+    seasonScoreLabel: {
+      fontSize: rMS(8),
+      fontWeight: "700",
+      textTransform: "uppercase",
+      letterSpacing: 1.5,
+      color: themeColors.textSecondary,
+      marginTop: rV(2),
+      marginBottom: rV(12),
+    },
+    seasonBarTrack: {
+      height: rV(4),
+      backgroundColor: themeColors.background,
+      borderRadius: 2,
+      overflow: "hidden",
+    },
+    seasonBarFill: {
+      height: "100%",
+      borderRadius: 2,
     },
   });
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.profileContainer}>
-        <TouchableOpacity
-          onPress={handleProfilePictureUpdate}
-          style={styles.profileImageContainer}
+    <View style={styles.container}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Top Bar — Settings Icon */}
+        <Animated.View
+          entering={FadeInDown.duration(400).delay(50)}
+          style={styles.topBar}
         >
-          <View key={`profile-image-${imageUpdateKey}`}>
-            <Image
-              source={
-                currentImageUri
-                  ? { uri: currentImageUri }
-                  : require("../../../assets/images/profile-placeholder.png")
-              }
-              style={styles.profileImage}
-              resizeMode="cover"
-              onLoadStart={() => setImageLoading(true)}
-              onLoad={() => {
-                setImageLoading(false);
-                setImageError(false);
-              }}
-              onError={() => {
-                setImageLoading(false);
-                setImageError(true);
-              }}
-            />
-            {imageLoading && (
-              <View style={styles.imageLoadingOverlay}>
-                <ActivityIndicator size="small" color={themeColors.tint} />
-              </View>
-            )}
-          </View>
-          <Ionicons
-            name="camera-outline"
-            size={SIZES.large}
-            color={themeColors.icon}
-            style={styles.cameraIcon}
-          />
-          {currentImageUri && (
-            <TouchableOpacity
-              onPress={handleProfilePictureDelete}
-              style={styles.deleteIcon}
-            >
-              <Ionicons name="close" size={SIZES.medium} color="#DC2626" />
-            </TouchableOpacity>
-          )}
-        </TouchableOpacity>
-        <View style={styles.title}>
-          <Text style={styles.fullName}>
-            {userInfo?.user.first_name} {userInfo?.user.last_name}
-          </Text>
-          <Text style={styles.email}>{userInfo?.user.email}</Text>
-          <TouchableOpacity
-            style={styles.editProfileButton}
-            onPress={handleAccountSettings}
+          <AnimatedTouchable
+            style={[styles.settingsBtn, settingsAnimStyle]}
+            onPress={() => router.navigate("SettingsPage")}
+            onPressIn={() => {
+              settingsScale.value = withSpring(0.9, {
+                damping: 15,
+                stiffness: 300,
+              });
+            }}
+            onPressOut={() => {
+              settingsScale.value = withSpring(1, {
+                damping: 15,
+                stiffness: 300,
+              });
+            }}
+            activeOpacity={1}
           >
-            <Text style={styles.editProfileButtonText}>
-              <MaterialCommunityIcons
-                name="account-cog-outline"
-                size={SIZES.medium}
-                color={themeColors.text}
-              />{" "}
-              Edit Profile
-            </Text>
+            <Ionicons name="menu" size={20} color={themeColors.text} />
+          </AnimatedTouchable>
+        </Animated.View>
+
+        {/* Profile Header */}
+        <Animated.View
+          entering={FadeInDown.duration(500).delay(100)}
+          style={styles.profileHeader}
+        >
+          <TouchableOpacity
+            onPress={handleProfilePictureUpdate}
+            style={styles.avatarContainer}
+            activeOpacity={0.8}
+          >
+            <View key={`profile-image-${imageUpdateKey}`}>
+              <Image
+                source={
+                  currentImageUri
+                    ? { uri: currentImageUri }
+                    : require("../../../assets/images/profile-placeholder.png")
+                }
+                style={styles.avatar}
+                resizeMode="cover"
+                onLoadStart={() => setImageLoading(true)}
+                onLoad={() => {
+                  setImageLoading(false);
+                  setImageError(false);
+                }}
+                onError={() => {
+                  setImageLoading(false);
+                  setImageError(true);
+                }}
+              />
+              {imageLoading && (
+                <View style={styles.imageLoadingOverlay}>
+                  <ActivityIndicator size="small" color="#fff" />
+                </View>
+              )}
+            </View>
+            <View style={styles.cameraIcon}>
+              <Ionicons
+                name="camera-outline"
+                size={16}
+                color={themeColors.icon}
+              />
+            </View>
+            {currentImageUri && (
+              <TouchableOpacity
+                onPress={handleProfilePictureDelete}
+                style={styles.deleteIcon}
+              >
+                <Ionicons name="close" size={14} color="#DC2626" />
+              </TouchableOpacity>
+            )}
           </TouchableOpacity>
-        </View>
-      </View>
-      <View style={styles.bottomContainer}>
-        <Text style={styles.sectionTitle}>Support</Text>
-        <TouchableOpacity style={styles.option} onPress={handleReportProblem}>
-          <Ionicons
-            name="alert-circle-outline"
-            size={24}
-            color={themeColors.icon}
-            style={styles.icon}
-          />
-          <Text style={styles.optionText}>Report a Problem</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.option} onPress={handleHelpCenter}>
-          <Ionicons
-            name="help-circle-outline"
-            size={24}
-            color={themeColors.icon}
-            style={styles.icon}
-          />
-          <Text style={styles.optionText}>FAQs</Text>
-        </TouchableOpacity>
 
-        <Text style={styles.sectionTitle}>Privacy</Text>
-        <TouchableOpacity style={styles.option} onPress={handlePrivacySettings}>
-          <Ionicons
-            name="shield-checkmark-outline"
-            size={24}
-            color={themeColors.icon}
-            style={styles.icon}
-          />
-          <Text style={styles.optionText}>Privacy Settings</Text>
-        </TouchableOpacity>
+          <View style={styles.profileInfo}>
+            <View style={styles.levelBadge}>
+              <Ionicons
+                name="checkmark-circle"
+                size={12}
+                color={themeColors.tint}
+              />
+              <Text style={styles.levelBadgeText}>{stats.tier}</Text>
+            </View>
+            <Text style={styles.profileName} numberOfLines={1}>
+              {userInfo?.user.first_name} {userInfo?.user.last_name}
+            </Text>
+            <Text style={styles.profileId}>
+              ID: #{userInfo?.user.id}-LEARN
+            </Text>
+          </View>
+        </Animated.View>
 
-        <Text style={styles.sectionTitle}>Terms</Text>
-        <InAppBrowserLink url={`${ApiUrl}/terms-and-conditions/`}>
-          <View style={styles.option}>
-            <Ionicons
-              name="document-text-outline"
-              size={24}
-              color={themeColors.icon}
-              style={styles.icon}
-            />
-            <Text style={styles.optionText}>Terms of Use</Text>
+        {/* Bento Stats Grid */}
+        <Animated.View
+          entering={FadeInDown.duration(500).delay(200)}
+          style={styles.bentoGrid}
+        >
+          {/* Hero Stat — Accuracy */}
+          <View style={styles.heroStatCard}>
+            <View>
+              <Text style={styles.heroStatLabel}>Accuracy</Text>
+              <Text style={styles.heroStatValue}>{stats.accuracy}%</Text>
+            </View>
+            <View style={styles.heroStatRight}>
+              <Text style={styles.statusLabel}>Status</Text>
+              <View style={styles.statusBadge}>
+                <Text style={styles.statusBadgeText}>{stats.tier}</Text>
+              </View>
+            </View>
+            <View style={styles.heroIconOverlay}>
+              <Ionicons name="trending-up" size={100} color="#fff" />
+            </View>
           </View>
-        </InAppBrowserLink>
-        <InAppBrowserLink url={`${ApiUrl}/privacy-policy/`}>
-          <View style={styles.option}>
-            <Ionicons
-              name="shield-checkmark-outline"
-              size={24}
-              color={themeColors.icon}
-              style={styles.icon}
-            />
-            <Text style={styles.optionText}>Privacy</Text>
+
+          {/* Small Stats Row */}
+          <View style={styles.smallStatsRow}>
+            <View style={styles.smallStatCard}>
+              <Text style={styles.smallStatLabel}>Sessions</Text>
+              <Text style={styles.smallStatValue}>
+                {stats.sessions.toLocaleString()}
+              </Text>
+            </View>
+            <View style={styles.smallStatCard}>
+              <Text style={styles.smallStatLabel}>Streak Avg</Text>
+              <View style={styles.smallStatValueRow}>
+                <Text style={styles.smallStatValue}>{stats.streakAvg}</Text>
+                {stats.streakAvgDelta > 0 && (
+                  <Text style={styles.smallStatDelta}>
+                    +{stats.streakAvgDelta}
+                  </Text>
+                )}
+              </View>
+            </View>
           </View>
-        </InAppBrowserLink>
-      </View>
-      <View style={styles.logoutContainer}>
-        <TouchableOpacity style={styles.option} onPress={handleLogout}>
-          <Ionicons
-            name="log-out-outline"
-            size={24}
-            color={themeColors.errorBackground}
-            style={styles.icon}
-          />
-          <Text style={styles.optionText}>Log Out</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+        </Animated.View>
+
+        {/* Global Standings */}
+        <Animated.View entering={FadeInDown.duration(500).delay(300)}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Global Standings</Text>
+            <TouchableOpacity
+              onPress={() =>
+                router.push({
+                  pathname: "/(game)/Leaderboard",
+                  params: { id: "world", name: "World Rankings" },
+                })
+              }
+            >
+              <Text style={styles.sectionAction}>View All</Text>
+            </TouchableOpacity>
+          </View>
+
+          {standingsData.map((item, index) => (
+            <Animated.View
+              key={item.label}
+              entering={FadeInDown.duration(400).delay(350 + index * 60)}
+            >
+              <TouchableOpacity
+                style={styles.standingCard}
+                activeOpacity={0.7}
+                onPress={() =>
+                  router.push({
+                    pathname: "/(game)/LeaderboardDetail",
+                    params: {
+                      id: item.label.toLowerCase(),
+                      name: item.label,
+                      timeframe: "season",
+                    },
+                  })
+                }
+              >
+                <View style={styles.standingCardLeft}>
+                  <View
+                    style={[
+                      styles.standingIconBox,
+                      { backgroundColor: item.iconBg },
+                    ]}
+                  >
+                    <Ionicons
+                      name={item.icon}
+                      size={20}
+                      color={item.iconColor}
+                    />
+                  </View>
+                  <View>
+                    <Text style={styles.standingLabel}>{item.label}</Text>
+                    <Text style={styles.standingSublabel}>
+                      {item.sublabel}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.standingRank}>
+                  {item.rank || "—"}
+                </Text>
+              </TouchableOpacity>
+            </Animated.View>
+          ))}
+        </Animated.View>
+
+        {/* Season Performance */}
+        {seasonHistory.length > 0 && (
+          <Animated.View
+            entering={FadeInDown.duration(500).delay(550)}
+            style={styles.seasonSection}
+          >
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Season Performance</Text>
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.seasonScroll}
+              contentContainerStyle={styles.seasonScrollContent}
+            >
+              {seasonHistory.map((season, index) => {
+                const progress = getProgressPercent(
+                  season.final_score,
+                  season.maxScore
+                );
+                const isFirst = index === 0;
+                return (
+                  <View
+                    key={index}
+                    style={[
+                      styles.seasonCard,
+                      isFirst && styles.seasonCardActive,
+                    ]}
+                  >
+                    <Text style={styles.seasonName}>{season.season_name}</Text>
+                    <View>
+                      <Text
+                        style={[
+                          styles.seasonScore,
+                          !isFirst && { color: themeColors.textSecondary },
+                        ]}
+                      >
+                        {season.final_score.toLocaleString()}
+                      </Text>
+                      <Text style={styles.seasonScoreLabel}>Points</Text>
+                    </View>
+                    <View style={styles.seasonBarTrack}>
+                      <View
+                        style={[
+                          styles.seasonBarFill,
+                          {
+                            width: `${progress}%`,
+                            backgroundColor: isFirst
+                              ? themeColors.tint
+                              : themeColors.textSecondary,
+                          },
+                        ]}
+                      />
+                    </View>
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </Animated.View>
+        )}
+      </ScrollView>
+    </View>
   );
 };
 
