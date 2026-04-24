@@ -18,6 +18,7 @@ import { rMS, rV, rS, SIZES } from "../../constants/index.js";
 import ApiUrl from "../../config";
 import ErrorMessage from "../../components/ErrorMessage";
 
+
 export default function SinglePlayerGame() {
   const { userToken, userInfo } = useAuth();
   const { playCorrect, playWrong, startMusic, stopMusic, musicMuted } = useGameAudio();
@@ -235,16 +236,16 @@ export default function SinglePlayerGame() {
     header: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      paddingHorizontal: rS(16),
-      marginTop: Math.max(rV(8), insets.top),
+      paddingHorizontal: rS(20),
+      marginTop: Math.max(rV(10), insets.top),
       alignItems: 'center',
     },
     timerBarContainer: {
-      height: rV(5),
+      height: rV(6),
       backgroundColor: themeColors.border,
-      marginHorizontal: rS(16),
-      marginTop: rV(8),
-      borderRadius: 2.5,
+      marginHorizontal: rS(20),
+      marginTop: rV(10),
+      borderRadius: 3,
       overflow: 'hidden',
     },
     timerBar: {
@@ -255,37 +256,37 @@ export default function SinglePlayerGame() {
       alignItems: 'flex-end',
     },
     scoreText: {
-      fontSize: SIZES.large,
+      fontSize: SIZES.xLarge,
       fontWeight: 'bold',
       color: themeColors.text,
     },
     streakText: {
-      fontSize: SIZES.small,
+      fontSize: SIZES.medium,
       color: '#FF8C00', // Fire color
       fontWeight: 'bold',
     },
     questionCounter: {
-      fontSize: SIZES.medium,
+      fontSize: SIZES.large,
       color: themeColors.textSecondary,
     },
     questionContainer: {
       flex: 1,
-      padding: rS(16),
+      padding: rS(20),
       justifyContent: 'center',
     },
     questionText: {
-      fontSize: SIZES.xLarge,
+      fontSize: SIZES.xxLarge,
       fontWeight: 'bold',
       color: themeColors.text,
       textAlign: 'center',
-      marginBottom: rV(24),
+      marginBottom: rV(30),
     },
     answersContainer: {
-      gap: rV(12),
+      gap: rV(15),
     },
     answerButton: {
-      padding: rMS(12),
-      borderRadius: rMS(8),
+      padding: rMS(15),
+      borderRadius: rMS(10),
       borderWidth: 2,
       borderColor: themeColors.border,
       backgroundColor: themeColors.card,
@@ -295,7 +296,7 @@ export default function SinglePlayerGame() {
       backgroundColor: themeColors.tint + '20',
     },
     answerText: {
-      fontSize: SIZES.medium,
+      fontSize: SIZES.large,
       color: themeColors.text,
       textAlign: 'center',
     },
