@@ -25,6 +25,7 @@ export default function GameLayout() {
       <Stack.Screen name="SinglePlayerGame" options={{ headerShown: false }} />
       <Stack.Screen name="Leaderboard" options={{ headerShown: false }} />
       <Stack.Screen name="LeaderboardDetail" options={{ headerShown: false }} />
+      <Stack.Screen name="WeeklyExam" options={{ headerShown: false }} />
     </Stack>
     </GameAudioProvider>
   );

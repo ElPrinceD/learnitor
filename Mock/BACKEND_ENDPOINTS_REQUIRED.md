@@ -274,14 +274,176 @@ Returns the authenticated user's performance history across past seasons.
 
 The leaderboard uses a "season" system for time-based competition:
 
-- **Current Season**: Scores accumulated within the current season period
-- **All-Time**: Lifetime accumulated scores
+- **Current Season**: Scores accumulated within the current season period. Each season is exactly **13 Study Weeks** long (~3 months).
+- **All-Time**: Lifetime accumulated scores.
 
 The backend needs to:
-1. Define season duration (e.g., monthly, quarterly)
-2. Reset season scores at the start of each new season  
-3. Archive previous season results
-4. Support both `season` and `all_time` timeframe queries
+1. Define the 13-week season duration boundary.
+2. Reset season scores at the start of each new season.
+3. Archive previous season results.
+4. Support both `season` and `all_time` timeframe queries.
+
+---
+
+## 9. Weekly Exam Status
+
+**`GET /api/weekly-exam/status`**
+
+Returns the current exam window status and whether the user has already completed this week's exam.
+
+**Headers:**
+- `Authorization: Token <user_token>`
+
+**Response (200 OK):**
+```json
+{
+  "isActive": true,
+  "hasCompleted": false,
+  "startsAt": "2026-04-24T19:00:00Z",
+  "endsAt": "2026-04-26T23:59:00Z",
+  "currentWeek": 11,
+  "globalAverage": 88,
+  "userScore": null
+}
+```
+
+**Notes:**
+- Exam window: Friday 7pm UTC → Sunday 11:59pm UTC
+- `hasCompleted` is per-user per-week
+- `currentWeek` is the current Study Week out of 13
+- `globalAverage` is the average score of all users globally for the current week
+- `userScore` is the requesting user's score for the current week (returns `null` if not taken yet)
+
+---
+
+## 10. Weekly Exam Questions
+
+**`GET /api/weekly-exam/questions`**
+
+Returns 30 randomized questions from the 300-question pool.
+
+**Headers:**
+- `Authorization: Token <user_token>`
+
+**Response (200 OK):**
+```json
+{
+  "questions": [
+    { "id": 9001, "content": "What is...", "level": "medium", "duration": 20 }
+  ]
+}
+```
+
+**Notes:**
+- Returns exactly 30 questions
+- Randomized per user, consistent within a session
+- Only callable during active exam window if user hasn't completed
+
+---
+
+## 11. Submit Weekly Exam
+
+**`POST /api/weekly-exam/submit`**
+
+**Request Body:**
+```json
+{ "finalScore": 1340, "highestStreak": 8 }
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "weeklyRank": 12,
+  "h2hResult": { "opponentName": "Jordan Lee", "opponentScore": 60, "result": "won" }
+}
+```
+
+---
+
+## 12. 1v1 Battles Current Matchup
+
+**`GET /api/h2h/current`**
+
+Returns the user's current 1v1 Battles matchup in default leagues.
+
+**Response (200 OK):**
+```json
+{
+  "id": "h2h-1",
+  "opponentName": "Jordan Lee",
+  "opponentAvatar": null,
+  "userScore": 134,
+  "opponentScore": 60,
+  "status": "won",
+  "round": 2,
+  "totalRounds": 4
+}
+```
+
+**Notes:**
+- `status`: `"pending"` | `"won"` | `"lost"` | `"draw"`
+- Pairings assigned at Friday 7pm UTC
+- Returns `null` if no active knockout
+
+---
+
+## 13. Knockout Bracket
+
+**`GET /api/knockout/bracket`**
+
+**Response (200 OK):**
+```json
+{
+  "rounds": [
+    { "round": 1, "matches": [{ "player1": "You", "player2": "Chen_L", "score1": 134, "score2": 40, "winner": "player1" }] }
+  ],
+  "totalRounds": 4,
+  "currentRound": 2
+}
+```
+
+**Notes:**
+- Single elimination. Rounds are dynamically calculated by the backend based on the number of members in the squad (using `Math.ceil(Math.log2(memberCount))`).
+- The knockout starts at `Season End Week (13) - Total Rounds + 1`.
+- Odd squads: "Average" virtual participant (FPL-style, score = global average of all users that Study Week).
+- Unbalanced brackets (not a perfect power of 2): Top performers from the qualifying week receive a BYE.
+
+---
+
+## 14. Create Custom Leaderboard (Updated)
+
+**`POST /api/leaderboards/custom/create`** — now accepts `scoringMode`:
+
+```json
+{ "name": "My Squad", "scoringMode": "all_points" }
+```
+
+**`scoringMode`:** `"all_points"` | `"exam_only"` | `"custom_1v1"`
+
+---
+
+## 15. Custom 1v1 Matches
+
+**`GET /api/h2h/custom/{squadId}/matches`**
+
+**Response (200 OK):**
+```json
+[{ "id": "ch1", "player1": "You", "player2": "Jordan Lee", "score1": 134, "score2": 60, "result": "w", "round": 2 }]
+```
+
+---
+
+## 16. Custom 1v1 Standings
+
+**`GET /api/h2h/custom/{squadId}/standings`**
+
+**Response (200 OK):**
+```json
+[{ "rank": 1, "name": "You", "pts": 9, "w": 3, "d": 0, "l": 0, "totalScore": 412, "weekScore": 134, "tiebreaker": null }]
+```
+
+**Tiebreaker Order:** Pts → Total Score → 1v1 record → Virtual coin toss (🪙 COIN badge)
 
 ---
 

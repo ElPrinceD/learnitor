@@ -10,6 +10,7 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Platform,
+  Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -39,7 +40,138 @@ interface CustomLeaderboard {
   id: string;
   name: string;
   memberCount?: number;
+  scoringMode?: "all_points" | "exam_only" | "custom_1v1";
 }
+
+interface H2HMatchup {
+  id: string;
+  opponentName: string;
+  opponentAvatar: string | null;
+  userScore: number | null;
+  opponentScore: number | null;
+  status: "pending" | "won" | "lost" | "draw";
+  round: number;
+  totalRounds: number;
+}
+
+interface WeeklyExamStatus {
+  isActive: boolean;
+  hasCompleted: boolean;
+  startsAt: string;
+  endsAt: string;
+}
+
+type RankMovement = "up" | "down" | "same";
+
+// Mock data for H2H cup mode
+const MOCK_H2H: H2HMatchup = {
+  id: "h2h-1",
+  opponentName: "Jordan Lee",
+  opponentAvatar: null,
+  userScore: 134,
+  opponentScore: 60,
+  status: "won",
+  round: 2,
+  totalRounds: 4,
+};
+
+const MOCK_EXAM_STATUS: WeeklyExamStatus = {
+  isActive: true,
+  hasCompleted: false,
+  startsAt: "2026-04-24T19:00:00Z",
+  endsAt: "2026-04-26T23:59:00Z",
+};
+
+const MOCK_RANK_MOVEMENTS: Record<string, RankMovement> = {
+  world: "up",
+  country: "down",
+  school: "same",
+};
+
+interface CustomH2HStanding {
+  rank: number;
+  name: string;
+  pts: number;
+  w: number;
+  d: number;
+  l: number;
+  totalScore: number;
+  weekScore: number;
+  tiebreaker?: "standoff";
+}
+
+interface CustomH2HMatchItem {
+  id: string;
+  player1: string;
+  player2: string;
+  score1: number | null;
+  score2: number | null;
+  result: "w" | "d" | "l" | "pending";
+}
+
+const MOCK_CUSTOM_H2H_STANDINGS: CustomH2HStanding[] = [
+  { rank: 1, name: "You", pts: 9, w: 3, d: 0, l: 0, totalScore: 412, weekScore: 134 },
+  { rank: 2, name: "Alex Johnson", pts: 7, w: 2, d: 1, l: 0, totalScore: 388, weekScore: 120 },
+  { rank: 3, name: "Sam Smith", pts: 7, w: 2, d: 1, l: 0, totalScore: 388, weekScore: 120, tiebreaker: "standoff" },
+  { rank: 4, name: "Jordan Lee", pts: 3, w: 1, d: 0, l: 2, totalScore: 250, weekScore: 60 },
+];
+
+const MOCK_CUSTOM_H2H_MATCHES: CustomH2HMatchItem[] = [
+  { id: "ch1", player1: "You", player2: "Jordan Lee", score1: 134, score2: 60, result: "w" },
+  { id: "ch2", player1: "Alex Johnson", player2: "Sam Smith", score1: 120, score2: 120, result: "d" },
+];
+
+interface UserCupItem {
+  id: string;
+  name: string;
+  studyWeek: string;
+  result: "w" | "l" | "pending";
+}
+
+const MOCK_USER_CUPS: UserCupItem[] = [
+  { id: "c1", name: "Classico", studyWeek: "SW 11", result: "w" },
+  { id: "c2", name: "Agba ballers", studyWeek: "SW 11", result: "w" },
+  { id: "c3", name: "Goal Diggers", studyWeek: "SW 11", result: "w" },
+  { id: "c4", name: "KNUST CAMPUS", studyWeek: "SW 9", result: "l" },
+  { id: "c5", name: "Midnight", studyWeek: "", result: "pending" },
+];
+
+// Mock exam scores for this week
+const MOCK_EXAM_SCORES = {
+  userScore: 134 as number | null, // null if not taken
+  globalAverage: 88,
+  currentWeek: 11,
+};
+
+// Helper: format UTC date to user's local timezone
+const formatToLocalTime = (utcDateStr: string): string => {
+  const d = new Date(utcDateStr);
+  return d.toLocaleString(undefined, {
+    weekday: "short",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZoneName: "short",
+  });
+};
+
+// Helper: get exam button state based on current time
+type ExamButtonState = "hidden" | "teaser" | "active" | "completed" | "expired";
+const getExamButtonState = (exam: WeeklyExamStatus, now: Date): ExamButtonState => {
+  const start = new Date(exam.startsAt);
+  const end = new Date(exam.endsAt);
+  const oneDayBefore = new Date(start.getTime() - 24 * 60 * 60 * 1000);
+  const oneDayAfter = new Date(end.getTime() + 24 * 60 * 60 * 1000);
+
+  if (exam.hasCompleted) {
+    return now > oneDayAfter ? "expired" : "completed";
+  }
+  if (now < oneDayBefore) return "hidden";
+  if (now >= oneDayBefore && now < start) return "teaser";
+  if (now >= start && now <= end) return "active";
+  if (now > end && now <= oneDayAfter) return "expired";
+  return "hidden";
+};
 
 export default function PlayScreen() {
   const { userToken, userInfo } = useAuth();
@@ -58,6 +190,18 @@ export default function PlayScreen() {
     school: null,
   });
   const [customLeaderboards, setCustomLeaderboards] = useState<CustomLeaderboard[]>([]);
+  const [activeMode, setActiveMode] = useState<"rankings" | "knockout">("rankings");
+  const [h2hMatchup, setH2hMatchup] = useState<H2HMatchup | null>(MOCK_H2H);
+  const [examStatus, setExamStatus] = useState<WeeklyExamStatus>(MOCK_EXAM_STATUS);
+  const [rankMovements, setRankMovements] = useState<Record<string, RankMovement>>(MOCK_RANK_MOVEMENTS);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [customH2HTab, setCustomH2HTab] = useState<"matches" | "standings">("matches");
+  const [examScores] = useState(MOCK_EXAM_SCORES);
+
+  // Compute exam button state
+  const examButtonState = getExamButtonState(examStatus, new Date());
+  const examStartLocal = formatToLocalTime(examStatus.startsAt);
+  const examEndLocal = formatToLocalTime(examStatus.endsAt);
 
   // Animated press scales
   const multiplayerScale = useSharedValue(1);
@@ -95,14 +239,15 @@ export default function PlayScreen() {
     }
   };
 
-  const createSquad = async () => {
+  const createSquad = async (scoringMode: "all_points" | "exam_only" | "custom_1v1" = "all_points") => {
     try {
       const res = await axios.post(
         `${ApiUrl}/api/leaderboards/custom/create`,
-        {},
+        { scoringMode },
         { headers: { Authorization: `Token ${userToken?.token}` } }
       );
       showToast(`Squad created! Code: ${res.data.invite_code}`);
+      setShowCreateModal(false);
       fetchCustomLeaderboards();
     } catch (error) {
       showToast("Error creating squad. Try again.");
@@ -187,10 +332,10 @@ export default function PlayScreen() {
     });
   };
 
-  const openLeaderboard = (id: string, name: string) => {
+  const openLeaderboard = (id: string, name: string, type?: string) => {
     router.push({
       pathname: "/(game)/LeaderboardDetail",
-      params: { id, name, timeframe: "season" },
+      params: { id, name, timeframe: "season", ...(type ? { type } : {}) },
     });
   };
 
@@ -222,6 +367,7 @@ export default function PlayScreen() {
       icon: "earth" as const,
       rank: rankings.world,
       color: themeColors.tint,
+      movement: rankMovements.world,
     },
     {
       id: "country",
@@ -229,6 +375,7 @@ export default function PlayScreen() {
       icon: "flag" as const,
       rank: rankings.country,
       color: themeColors.tintSecond ?? themeColors.tint,
+      movement: rankMovements.country,
     },
     {
       id: "school",
@@ -236,8 +383,15 @@ export default function PlayScreen() {
       icon: "school" as const,
       rank: rankings.school,
       color: "#8b3b8f",
+      movement: rankMovements.school,
     },
   ];
+
+  const renderRankIndicator = (movement?: RankMovement) => {
+    if (movement === "up") return <Text style={{ color: "#4CAF50", fontSize: rMS(12), fontWeight: "800" }}>▲</Text>;
+    if (movement === "down") return <Text style={{ color: "#F44336", fontSize: rMS(12), fontWeight: "800" }}>▼</Text>;
+    return <Text style={{ color: themeColors.textSecondary, fontSize: rMS(12), fontWeight: "800" }}>—</Text>;
+  };
 
   const styles = StyleSheet.create({
     container: {
@@ -520,6 +674,235 @@ export default function PlayScreen() {
       fontSize: SIZES.small,
       color: themeColors.textSecondary,
     },
+    // Toggle pill
+    toggleContainer: {
+      flexDirection: "row",
+      backgroundColor: themeColors.card,
+      borderRadius: rMS(12),
+      padding: rMS(3),
+      marginBottom: rV(20),
+    },
+    toggleButton: {
+      flex: 1,
+      paddingVertical: rV(10),
+      borderRadius: rMS(10),
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    toggleButtonActive: {
+      backgroundColor: themeColors.tint,
+    },
+    toggleText: {
+      fontSize: rMS(13),
+      fontWeight: "700",
+      color: themeColors.textSecondary,
+    },
+    toggleTextActive: {
+      color: "#fff",
+    },
+    // Cup mode H2H card
+    h2hCard: {
+      backgroundColor: themeColors.card,
+      borderRadius: rMS(16),
+      padding: rMS(18),
+      marginBottom: rV(16),
+      borderWidth: 1.5,
+      borderColor: themeColors.tint + "25",
+    },
+    h2hVsRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: rV(14),
+    },
+    h2hPlayer: {
+      alignItems: "center",
+      flex: 1,
+    },
+    h2hPlayerName: {
+      fontSize: rMS(13),
+      fontWeight: "700",
+      color: themeColors.text,
+      marginTop: rV(6),
+    },
+    h2hAvatar: {
+      width: rMS(48),
+      height: rMS(48),
+      borderRadius: rMS(24),
+      backgroundColor: themeColors.tint + "20",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    h2hVsText: {
+      fontSize: rMS(16),
+      fontWeight: "900",
+      color: themeColors.textSecondary,
+      marginHorizontal: rS(8),
+    },
+    h2hScoreRow: {
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+      gap: rS(10),
+      marginBottom: rV(10),
+    },
+    h2hScoreText: {
+      fontSize: rMS(22),
+      fontWeight: "900",
+      color: themeColors.tint,
+    },
+    h2hResultBadge: {
+      paddingHorizontal: rMS(10),
+      paddingVertical: rV(3),
+      borderRadius: rMS(6),
+    },
+    h2hResultBadgeText: {
+      fontSize: rMS(10),
+      fontWeight: "800",
+      letterSpacing: 1,
+    },
+    h2hRoundInfo: {
+      fontSize: rMS(11),
+      color: themeColors.textSecondary,
+      textAlign: "center",
+      fontWeight: "600",
+    },
+    // Exam button
+    examButton: {
+      backgroundColor: themeColors.tint,
+      borderRadius: rMS(12),
+      paddingVertical: rV(14),
+      alignItems: "center",
+      marginTop: rV(10),
+    },
+    examButtonText: {
+      color: "#fff",
+      fontSize: rMS(14),
+      fontWeight: "800",
+    },
+    examCompletedText: {
+      color: "#4CAF50",
+      fontSize: rMS(12),
+      fontWeight: "700",
+      textAlign: "center",
+      marginTop: rV(10),
+    },
+    // Create squad modal
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      justifyContent: "flex-end",
+    },
+    modalContent: {
+      backgroundColor: themeColors.background,
+      borderTopLeftRadius: rMS(24),
+      borderTopRightRadius: rMS(24),
+      padding: rMS(24),
+      paddingBottom: Math.max(rV(32), insets.bottom + rV(16)),
+    },
+    modalHandle: {
+      width: rS(40),
+      height: rV(4),
+      backgroundColor: themeColors.textSecondary + "40",
+      borderRadius: 2,
+      alignSelf: "center",
+      marginBottom: rV(16),
+    },
+    modalTitle: {
+      fontSize: rMS(20),
+      fontWeight: "800",
+      color: themeColors.text,
+      marginBottom: rV(6),
+    },
+    modalSubtitle: {
+      fontSize: rMS(13),
+      color: themeColors.textSecondary,
+      marginBottom: rV(20),
+      lineHeight: rMS(18),
+    },
+    modeOption: {
+      backgroundColor: themeColors.card,
+      borderRadius: rMS(14),
+      padding: rMS(16),
+      marginBottom: rV(10),
+      borderWidth: 1.5,
+      borderColor: "transparent",
+    },
+    modeOptionLabel: {
+      fontSize: rMS(15),
+      fontWeight: "800",
+      color: themeColors.text,
+      marginBottom: rV(4),
+    },
+    modeOptionDesc: {
+      fontSize: rMS(12),
+      color: themeColors.textSecondary,
+      lineHeight: rMS(17),
+    },
+    modalCancelBtn: {
+      alignItems: "center",
+      paddingVertical: rV(14),
+      marginTop: rV(6),
+    },
+    modalCancelText: {
+      fontSize: rMS(14),
+      fontWeight: "700",
+      color: themeColors.textSecondary,
+    },
+    // Exam score card
+    examScoreCard: {
+      flexDirection: "row",
+      backgroundColor: themeColors.card,
+      borderRadius: rMS(16),
+      padding: rMS(16),
+      marginBottom: rV(16),
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    examScoreStat: {
+      flex: 1,
+      alignItems: "center",
+    },
+    examScoreValue: {
+      fontSize: rMS(22),
+      fontWeight: "800",
+      color: themeColors.text,
+    },
+    examScoreLabel: {
+      fontSize: rMS(10),
+      fontWeight: "600",
+      color: themeColors.textSecondary,
+      marginTop: rV(2),
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    examScoreDivider: {
+      width: 1,
+      height: rV(32),
+      backgroundColor: themeColors.border,
+    },
+    // Exam button
+    examActionBtn: {
+      borderRadius: rMS(14),
+      paddingVertical: rV(14),
+      paddingHorizontal: rMS(20),
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: rV(6),
+      overflow: "hidden",
+    },
+    examActionBtnText: {
+      fontSize: rMS(14),
+      fontWeight: "800",
+      letterSpacing: 0.3,
+    },
+    examTimeText: {
+      fontSize: rMS(10),
+      color: themeColors.textSecondary,
+      textAlign: "center",
+      marginBottom: rV(16),
+      lineHeight: rMS(14),
+    },
   });
 
   return (
@@ -548,6 +931,106 @@ export default function PlayScreen() {
             <Text style={styles.heroSubtitle}>
               Track your standing and compete across knowledge communities.
             </Text>
+          </Animated.View>
+
+          {/* Exam Score Card */}
+          <Animated.View entering={FadeInDown.duration(500).delay(120)}>
+            <View style={styles.examScoreCard}>
+              <View style={styles.examScoreStat}>
+                <Text style={[styles.examScoreValue, { color: themeColors.tint }]}>
+                  {examScores.userScore ?? "—"}
+                </Text>
+                <Text style={styles.examScoreLabel}>Your Score</Text>
+              </View>
+              <View style={styles.examScoreDivider} />
+              <View style={styles.examScoreStat}>
+                <Text style={styles.examScoreValue}>{examScores.globalAverage}</Text>
+                <Text style={styles.examScoreLabel}>Global Avg</Text>
+              </View>
+              <View style={styles.examScoreDivider} />
+              <View style={styles.examScoreStat}>
+                <Text style={[styles.examScoreValue, { fontSize: rMS(16) }]}>
+                  SW {examScores.currentWeek}
+                </Text>
+                <Text style={styles.examScoreLabel}>Study Week</Text>
+              </View>
+            </View>
+          </Animated.View>
+
+          {/* Exam Time Display */}
+          <Animated.View entering={FadeInDown.duration(500).delay(130)}>
+            <Text style={styles.examTimeText}>
+              📅 Weekly Exam · {examStartLocal} — {examEndLocal}
+            </Text>
+          </Animated.View>
+
+          {/* Smart Exam Button */}
+          {examButtonState !== "hidden" && examButtonState !== "expired" && (
+            <Animated.View entering={FadeInDown.duration(500).delay(135)}>
+              <TouchableOpacity
+                style={[
+                  styles.examActionBtn,
+                  {
+                    backgroundColor:
+                      examButtonState === "active"
+                        ? themeColors.tint
+                        : examButtonState === "completed"
+                        ? "#4CAF50" + "20"
+                        : themeColors.card,
+                    borderWidth: examButtonState === "teaser" ? 1.5 : 0,
+                    borderColor: themeColors.tint + "50",
+                  },
+                ]}
+                activeOpacity={examButtonState === "active" ? 0.8 : 1}
+                disabled={examButtonState !== "active"}
+                onPress={() => router.push("/(game)/WeeklyExam")}
+              >
+                <Text
+                  style={[
+                    styles.examActionBtnText,
+                    {
+                      color:
+                        examButtonState === "active"
+                          ? "#fff"
+                          : examButtonState === "completed"
+                          ? "#4CAF50"
+                          : themeColors.textSecondary,
+                    },
+                  ]}
+                >
+                  {examButtonState === "teaser"
+                    ? "⏳ Exam opens soon"
+                    : examButtonState === "active"
+                    ? "📝 Start Weekly Exam"
+                    : "✓ Completed"}
+                </Text>
+              </TouchableOpacity>
+            </Animated.View>
+          )}
+
+          {/* Rankings / Knockout Toggle */}
+          <Animated.View
+            entering={FadeInDown.duration(500).delay(150)}
+            style={styles.toggleContainer}
+          >
+            <TouchableOpacity
+              style={[styles.toggleButton, activeMode === "rankings" && styles.toggleButtonActive]}
+              onPress={() => setActiveMode("rankings")}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.toggleText, activeMode === "rankings" && styles.toggleTextActive]}>
+                Rankings
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.toggleButton, activeMode === "knockout" && styles.toggleButtonActive]}
+              onPress={() => setActiveMode("knockout")}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.toggleText, activeMode === "knockout" && styles.toggleTextActive]}>
+                Knockout
+              </Text>
+            </TouchableOpacity>
           </Animated.View>
 
           {/* Action Grid - Multiplayer & Solo */}
@@ -621,157 +1104,352 @@ export default function PlayScreen() {
             </View>
           </Animated.View>
 
-          {/* Study Squads (Custom Communities) */}
-          <Animated.View
-            entering={FadeInDown.duration(500).delay(400)}
-            style={styles.squadSection}
-          >
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Study Squads</Text>
-              {customLeaderboards.length > 0 && (
-                <TouchableOpacity onPress={openFullLeaderboard}>
-                  <Text style={styles.sectionSeeAll}>See All</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {customLeaderboards.length === 0 ? (
-              <View style={styles.squadEmpty}>
-                <Ionicons
-                  name="people-outline"
-                  size={28}
-                  color={themeColors.textSecondary}
-                />
-                <Text style={styles.squadEmptyText}>
-                  Join or create a study squad to compete with friends
-                </Text>
-                
-                <View style={styles.squadActionsRow}>
-                  {/* Create Button */}
-                  <TouchableOpacity 
-                    style={[styles.squadActionButton, styles.squadActionButtonPrimary]}
-                    activeOpacity={0.8}
-                    onPress={createSquad}
-                  >
-                    <View style={styles.squadActionTextContent}>
-                      <Text style={[styles.squadActionLabel, { color: "#fff" }]}>New Squad</Text>
-                      <Text style={[styles.squadActionTitle, { color: "#fff" }]}>Create</Text>
-                    </View>
-                    <Ionicons name="add-circle" size={24} color="#fff" />
-                  </TouchableOpacity>
-
-                  {/* Join Button */}
-                  <TouchableOpacity 
-                    style={[styles.squadActionButton, styles.squadActionButtonSecondary]}
-                    activeOpacity={0.8}
-                    onPress={() => setShowJoinInput(!showJoinInput)}
-                  >
-                    <View style={styles.squadActionTextContent}>
-                      <Text style={[styles.squadActionLabel, { color: themeColors.tint }]}>Entry Code</Text>
-                      <Text style={[styles.squadActionTitle, { color: themeColors.tint }]}>Join</Text>
-                    </View>
-                    <Ionicons 
-                      name={showJoinInput ? "chevron-up" : "keypad"} 
-                      size={20} 
-                      color={themeColors.tint} 
-                    />
-                  </TouchableOpacity>
+          {activeMode === "rankings" ? (
+            <>
+              {/* Study Squads (Custom Communities) */}
+              <Animated.View
+                entering={FadeInDown.duration(500).delay(400)}
+                style={styles.squadSection}
+              >
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Study Squads</Text>
+                  {customLeaderboards.length > 0 && (
+                    <TouchableOpacity onPress={openFullLeaderboard}>
+                      <Text style={styles.sectionSeeAll}>See All</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
 
-                {showJoinInput && (
-                  <Animated.View 
-                    entering={FadeInDown.duration(300)}
-                    style={styles.squadJoinInputContainer}
-                  >
-                    <TextInput
-                      style={styles.squadJoinInput}
-                      value={squadJoinCode}
-                      onChangeText={setSquadJoinCode}
-                      placeholder="Enter invite code"
-                      placeholderTextColor={themeColors.textSecondary}
-                      autoCapitalize="characters"
-                    />
-                    <TouchableOpacity 
-                      style={[styles.squadJoinBtn, !squadJoinCode && { opacity: 0.5 }]}
-                      onPress={joinSquad}
-                      disabled={!squadJoinCode}
-                    >
-                      <Text style={styles.squadJoinBtnText}>Join</Text>
-                    </TouchableOpacity>
-                  </Animated.View>
-                )}
-              </View>
-            ) : (
-              customLeaderboards.map((lb) => (
-                <TouchableOpacity
-                  key={lb.id}
-                  style={styles.squadItem}
-                  onPress={() => openLeaderboard(lb.id, lb.name)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.squadItemLeft}>
-                    <View style={styles.squadIcon}>
-                      <Ionicons name="people" size={20} color={themeColors.tint} />
-                    </View>
-                    <View>
-                      <Text style={styles.squadName}>{lb.name}</Text>
-                      {lb.memberCount != null && (
-                        <Text style={styles.squadMembers}>
-                          {lb.memberCount} members
-                        </Text>
-                      )}
-                    </View>
-                  </View>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={20}
-                    color={themeColors.textSecondary}
-                  />
-                </TouchableOpacity>
-              ))
-            )}
-          </Animated.View>
-
-          {/* Global Standing */}
-          <Animated.View entering={FadeInDown.duration(500).delay(500)}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Global Standing</Text>
-            </View>
-
-            {globalStandingItems.map((item, index) => (
-              <Animated.View
-                key={item.id}
-                entering={FadeInDown.duration(400).delay(550 + index * 80)}
-              >
-                <TouchableOpacity
-                  style={styles.standingCard}
-                  onPress={() => openLeaderboard(item.id, item.name)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.standingCardLeft}>
-                    <View
-                      style={[styles.standingIconBox, { backgroundColor: item.color }]}
-                    >
-                      <Ionicons name={item.icon} size={24} color="#fff" />
-                    </View>
-                    <Text style={styles.standingName}>{item.name}</Text>
-                  </View>
-                  <View style={styles.standingCardRight}>
-                    {item.rank && (
-                      <Text style={styles.standingRank}>{item.rank}</Text>
-                    )}
+                {customLeaderboards.length === 0 ? (
+                  <View style={styles.squadEmpty}>
                     <Ionicons
-                      name="chevron-forward"
-                      size={20}
+                      name="people-outline"
+                      size={28}
                       color={themeColors.textSecondary}
                     />
+                    <Text style={styles.squadEmptyText}>
+                      Join or create a study squad to compete with friends
+                    </Text>
+                    
+                    <View style={styles.squadActionsRow}>
+                      <TouchableOpacity 
+                        style={[styles.squadActionButton, styles.squadActionButtonPrimary]}
+                        activeOpacity={0.8}
+                        onPress={() => setShowCreateModal(true)}
+                      >
+                        <View style={styles.squadActionTextContent}>
+                          <Text style={[styles.squadActionLabel, { color: "#fff" }]}>New Squad</Text>
+                          <Text style={[styles.squadActionTitle, { color: "#fff" }]}>Create</Text>
+                        </View>
+                        <Ionicons name="add-circle" size={24} color="#fff" />
+                      </TouchableOpacity>
+
+                      <TouchableOpacity 
+                        style={[styles.squadActionButton, styles.squadActionButtonSecondary]}
+                        activeOpacity={0.8}
+                        onPress={() => setShowJoinInput(!showJoinInput)}
+                      >
+                        <View style={styles.squadActionTextContent}>
+                          <Text style={[styles.squadActionLabel, { color: themeColors.tint }]}>Entry Code</Text>
+                          <Text style={[styles.squadActionTitle, { color: themeColors.tint }]}>Join</Text>
+                        </View>
+                        <Ionicons 
+                          name={showJoinInput ? "chevron-up" : "keypad"} 
+                          size={20} 
+                          color={themeColors.tint} 
+                        />
+                      </TouchableOpacity>
+                    </View>
+
+                    {showJoinInput && (
+                      <Animated.View 
+                        entering={FadeInDown.duration(300)}
+                        style={styles.squadJoinInputContainer}
+                      >
+                        <TextInput
+                          style={styles.squadJoinInput}
+                          value={squadJoinCode}
+                          onChangeText={setSquadJoinCode}
+                          placeholder="Enter invite code"
+                          placeholderTextColor={themeColors.textSecondary}
+                          autoCapitalize="characters"
+                        />
+                        <TouchableOpacity 
+                          style={[styles.squadJoinBtn, !squadJoinCode && { opacity: 0.5 }]}
+                          onPress={joinSquad}
+                          disabled={!squadJoinCode}
+                        >
+                          <Text style={styles.squadJoinBtnText}>Join</Text>
+                        </TouchableOpacity>
+                      </Animated.View>
+                    )}
                   </View>
-                </TouchableOpacity>
+                ) : (
+                  customLeaderboards.map((lb) => (
+                    <TouchableOpacity
+                      key={lb.id}
+                      style={styles.squadItem}
+                      onPress={() => openLeaderboard(lb.id, lb.name)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.squadItemLeft}>
+                        <View style={styles.squadIcon}>
+                          <Ionicons name="people" size={20} color={themeColors.tint} />
+                        </View>
+                        <View>
+                          <Text style={styles.squadName}>{lb.name}</Text>
+                          {lb.memberCount != null && (
+                            <Text style={styles.squadMembers}>
+                              {lb.memberCount} members
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+                      <Ionicons
+                        name="chevron-forward"
+                        size={20}
+                        color={themeColors.textSecondary}
+                      />
+                    </TouchableOpacity>
+                  ))
+                )}
               </Animated.View>
-            ))}
-          </Animated.View>
+
+              {/* Custom 1v1 Squads Section */}
+              {customLeaderboards.some((lb) => lb.scoringMode === "custom_1v1") && (
+                <Animated.View
+                  entering={FadeInDown.duration(500).delay(450)}
+                  style={{ marginBottom: rV(22) }}
+                >
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>1v1 Battles</Text>
+                  </View>
+
+                  {/* Matches / Standings sub-tab */}
+                  <View style={styles.toggleContainer}>
+                    <TouchableOpacity
+                      style={[styles.toggleButton, customH2HTab === "matches" && styles.toggleButtonActive]}
+                      onPress={() => setCustomH2HTab("matches")}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.toggleText, customH2HTab === "matches" && styles.toggleTextActive]}>
+                        Matches
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.toggleButton, customH2HTab === "standings" && styles.toggleButtonActive]}
+                      onPress={() => setCustomH2HTab("standings")}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.toggleText, customH2HTab === "standings" && styles.toggleTextActive]}>
+                        Standings
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {customH2HTab === "matches" ? (
+                    MOCK_CUSTOM_H2H_MATCHES.map((m) => (
+                      <View key={m.id} style={styles.standingCard}>
+                        <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+                          <View
+                            style={{
+                              width: rMS(8), height: rMS(8), borderRadius: 4,
+                              marginRight: rS(8),
+                              backgroundColor: m.result === "w" ? "#4CAF50" : m.result === "l" ? "#F44336" : themeColors.tint,
+                            }}
+                          />
+                          <Text style={styles.standingName}>
+                            {m.player1} vs {m.player2}
+                          </Text>
+                        </View>
+                        <Text style={[styles.standingRank, { fontSize: rMS(13) }]}>
+                          {m.score1} - {m.score2}
+                        </Text>
+                      </View>
+                    ))
+                  ) : (
+                    <>
+                      {/* Table header */}
+                      <View style={[styles.standingCard, { backgroundColor: "transparent", paddingVertical: rV(4) }]}>
+                        <Text style={[styles.standingName, { flex: 1, fontSize: rMS(9), color: themeColors.textSecondary, fontWeight: "700", letterSpacing: 1 }]}>#</Text>
+                        <Text style={[styles.standingName, { flex: 3, fontSize: rMS(9), color: themeColors.textSecondary, fontWeight: "700", letterSpacing: 1 }]}>PLAYER</Text>
+                        <Text style={[styles.standingName, { flex: 1, fontSize: rMS(9), color: themeColors.textSecondary, fontWeight: "700", letterSpacing: 1, textAlign: "center" }]}>PTS</Text>
+                        <Text style={[styles.standingName, { flex: 1, fontSize: rMS(9), color: themeColors.textSecondary, fontWeight: "700", letterSpacing: 1, textAlign: "center" }]}>W</Text>
+                        <Text style={[styles.standingName, { flex: 1, fontSize: rMS(9), color: themeColors.textSecondary, fontWeight: "700", letterSpacing: 1, textAlign: "center" }]}>D</Text>
+                        <Text style={[styles.standingName, { flex: 1, fontSize: rMS(9), color: themeColors.textSecondary, fontWeight: "700", letterSpacing: 1, textAlign: "center" }]}>L</Text>
+                      </View>
+                      {MOCK_CUSTOM_H2H_STANDINGS.map((s) => (
+                        <View key={s.rank} style={[styles.standingCard, s.name === "You" && { borderWidth: 1.5, borderColor: themeColors.tint + "40", backgroundColor: themeColors.tint + "08" }]}>
+                          <Text style={[styles.standingName, { flex: 1, fontSize: rMS(13), fontWeight: "800", color: themeColors.tint }]}>{s.rank}</Text>
+                          <View style={{ flex: 3, flexDirection: "row", alignItems: "center" }}>
+                            <Text style={[styles.standingName, { fontSize: rMS(13) }]}>{s.name}</Text>
+                            {s.tiebreaker && (
+                              <View style={{ backgroundColor: "#FF9800" + "20", paddingHorizontal: rMS(6), paddingVertical: rV(1), borderRadius: 4, marginLeft: rS(6) }}>
+                                <Text style={{ color: "#FF9800", fontSize: rMS(8), fontWeight: "800" }}>🪙 COIN</Text>
+                              </View>
+                            )}
+                          </View>
+                          <Text style={{ flex: 1, fontSize: rMS(13), fontWeight: "800", color: themeColors.text, textAlign: "center" }}>{s.pts}</Text>
+                          <Text style={{ flex: 1, fontSize: rMS(12), color: "#4CAF50", textAlign: "center", fontWeight: "700" }}>{s.w}</Text>
+                          <Text style={{ flex: 1, fontSize: rMS(12), color: themeColors.tint, textAlign: "center", fontWeight: "700" }}>{s.d}</Text>
+                          <Text style={{ flex: 1, fontSize: rMS(12), color: "#F44336", textAlign: "center", fontWeight: "700" }}>{s.l}</Text>
+                        </View>
+                      ))}
+                    </>
+                  )}
+                </Animated.View>
+              )}
+
+              {/* Global Standing */}
+              <Animated.View entering={FadeInDown.duration(500).delay(500)}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Your Rank</Text>
+                </View>
+
+                {globalStandingItems.map((item, index) => (
+                  <Animated.View
+                    key={item.id}
+                    entering={FadeInDown.duration(400).delay(550 + index * 80)}
+                  >
+                    <TouchableOpacity
+                      style={styles.standingCard}
+                      onPress={() => openLeaderboard(item.id, item.name)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.standingCardLeft}>
+                        <View
+                          style={[styles.standingIconBox, { backgroundColor: item.color }]}
+                        >
+                          <Ionicons name={item.icon} size={24} color="#fff" />
+                        </View>
+                        <Text style={styles.standingName}>{item.name}</Text>
+                      </View>
+                      <View style={styles.standingCardRight}>
+                        {renderRankIndicator(item.movement)}
+                        {item.rank && (
+                          <Text style={styles.standingRank}>{item.rank}</Text>
+                        )}
+                        <Ionicons
+                          name="chevron-forward"
+                          size={20}
+                          color={themeColors.textSecondary}
+                        />
+                      </View>
+                    </TouchableOpacity>
+                  </Animated.View>
+                ))}
+              </Animated.View>
+            </>
+          ) : (
+            /* Knockout Mode — Squad Knockouts */
+            <Animated.View entering={FadeInDown.duration(500).delay(400)}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Squad Knockouts</Text>
+              </View>
+
+              {/* Table header */}
+              <View style={[styles.standingCard, { backgroundColor: "transparent", paddingVertical: rV(4), borderBottomWidth: 1, borderBottomColor: themeColors.border, borderRadius: 0, marginBottom: rV(8) }]}>
+                <Text style={[styles.standingName, { flex: 2, fontSize: rMS(10), color: themeColors.textSecondary, fontWeight: "700" }]}>Squad</Text>
+                <Text style={[styles.standingName, { flex: 1, fontSize: rMS(10), color: themeColors.textSecondary, fontWeight: "700", textAlign: "right" }]}>Study Week</Text>
+                <Text style={[styles.standingName, { width: rMS(40), fontSize: rMS(10), color: themeColors.textSecondary, fontWeight: "700", textAlign: "right" }]}>Result</Text>
+              </View>
+
+              {MOCK_USER_CUPS.map((cup, idx) => (
+                <Animated.View
+                  key={cup.id}
+                  entering={FadeInDown.duration(400).delay(450 + idx * 80)}
+                >
+                  <TouchableOpacity
+                    style={[styles.standingCard, { borderBottomWidth: 1, borderBottomColor: themeColors.border + "40", borderRadius: 0, paddingVertical: rV(12), marginBottom: 0, backgroundColor: "transparent" }]}
+                    onPress={() => openLeaderboard(cup.id, cup.name, "knockout")}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.standingName, { flex: 2, fontSize: rMS(13), fontWeight: "800", color: themeColors.text }]}>{cup.name}</Text>
+                    <Text style={[styles.standingName, { flex: 1, fontSize: rMS(12), color: themeColors.textSecondary, textAlign: "right" }]}>{cup.studyWeek}</Text>
+                    <View style={{ width: rMS(40), alignItems: "flex-end" }}>
+                      {cup.result !== "pending" && (
+                        <View style={{ backgroundColor: cup.result === "w" ? "#4CAF50" : "#F44336", width: rMS(18), height: rMS(18), borderRadius: rMS(9), alignItems: "center", justifyContent: "center" }}>
+                          <Text style={{ color: "#fff", fontSize: rMS(10), fontWeight: "900" }}>{cup.result.toUpperCase()}</Text>
+                        </View>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                </Animated.View>
+              ))}
+
+              {MOCK_USER_CUPS.length === 0 && (
+                <View style={styles.squadEmpty}>
+                  <Ionicons name="trophy-outline" size={28} color={themeColors.textSecondary} />
+                  <Text style={styles.squadEmptyText}>
+                    You haven't joined any cups yet!
+                  </Text>
+                </View>
+              )}
+            </Animated.View>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
+      {/* Squad Creation Modal */}
+      <Modal
+        visible={showCreateModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCreateModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowCreateModal(false)}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Create a Squad</Text>
+            <Text style={styles.modalSubtitle}>
+              Choose how scores are tracked in your squad.
+            </Text>
+
+            <TouchableOpacity
+              style={[styles.modeOption, { borderColor: themeColors.tint }]}
+              activeOpacity={0.8}
+              onPress={() => createSquad("all_points")}
+            >
+              <Text style={styles.modeOptionLabel}>📊 All Points</Text>
+              <Text style={styles.modeOptionDesc}>
+                Points from multiplayer, solo games, and weekly exam all count.
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.modeOption}
+              activeOpacity={0.8}
+              onPress={() => createSquad("exam_only")}
+            >
+              <Text style={styles.modeOptionLabel}>📝 Exam Only</Text>
+              <Text style={styles.modeOptionDesc}>
+                Only weekly exam scores count towards the leaderboard.
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.modeOption}
+              activeOpacity={0.8}
+              onPress={() => createSquad("custom_1v1")}
+            >
+              <Text style={styles.modeOptionLabel}>⚔️ H2H League</Text>
+              <Text style={styles.modeOptionDesc}>
+                Members are matched weekly. Win=3 pts, Draw=1, Loss=0.
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.modalCancelBtn}
+              onPress={() => setShowCreateModal(false)}
+            >
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
