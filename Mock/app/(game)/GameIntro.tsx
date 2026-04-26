@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  Image,
   useColorScheme,
   BackHandler,
   ScrollView,
@@ -18,6 +17,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
+import { BlurView } from "expo-blur";
 import ApiUrl from "../../config";
 import { useAuth } from "../../components/AuthContext";
 import Toast from "react-native-root-toast";
@@ -27,11 +34,7 @@ import GameTutorialOverlay, {
 import Colors from "../../constants/Colors";
 import { SIZES, rMS, rS, rV, useShadows } from "../../constants";
 
-const CARD_RADIUS = 20;
-const INPUT_RADIUS = 12;
-const BUTTON_RADIUS = 22;
-
-const CARD_GAP = rS(16);
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 export default function GameIntro() {
   const { code } = useLocalSearchParams() as { code?: string };
@@ -50,6 +53,32 @@ export default function GameIntro() {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const shadow = useShadows();
+
+  // Animated press scales
+  const joinScale = useSharedValue(1);
+  const createScale = useSharedValue(1);
+  const soloScale = useSharedValue(1);
+  const rankingsScale = useSharedValue(1);
+
+  const joinAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: joinScale.value }],
+  }));
+  const createAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: createScale.value }],
+  }));
+  const soloAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: soloScale.value }],
+  }));
+  const rankingsAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: rankingsScale.value }],
+  }));
+
+  const onPressIn = (sv: Animated.SharedValue<number>) => {
+    sv.value = withSpring(0.95, { damping: 15, stiffness: 300 });
+  };
+  const onPressOut = (sv: Animated.SharedValue<number>) => {
+    sv.value = withSpring(1, { damping: 15, stiffness: 300 });
+  };
 
   const createGame = () => {
     router.navigate({ pathname: "GameCourses", params: { isSinglePlayer: "false" } });
@@ -157,133 +186,259 @@ export default function GameIntro() {
       flex: 1,
       backgroundColor: themeColors.background,
     },
+    // Glassmorphism background blobs
+    blob1: {
+      position: "absolute",
+      top: -rV(80),
+      left: -rS(60),
+      width: rS(260),
+      height: rS(260),
+      borderRadius: rS(130),
+      backgroundColor: themeColors.tint + "18",
+    },
+    blob2: {
+      position: "absolute",
+      bottom: rV(80),
+      right: -rS(100),
+      width: rS(300),
+      height: rS(300),
+      borderRadius: rS(150),
+      backgroundColor: "#6366F118",
+    },
+    blob3: {
+      position: "absolute",
+      top: rV(350),
+      left: -rS(40),
+      width: rS(180),
+      height: rS(180),
+      borderRadius: rS(90),
+      backgroundColor: "#10B98115",
+    },
+    // Frosted top bar
+    topBar: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      height: Math.max(rV(70), insets.top + rV(44)),
+      zIndex: 10,
+    },
+    topBarContent: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "flex-end",
+      justifyContent: "flex-end",
+      paddingHorizontal: rS(16),
+      paddingBottom: rV(10),
+    },
     keyboardAvoid: {
       flex: 1,
     },
     content: {
       flex: 1,
       paddingHorizontal: rMS(16),
-      paddingTop: Math.max(0, insets.top - rV(28)),
+      paddingTop: Math.max(rV(80), insets.top + rV(52)),
       paddingBottom: Math.max(rV(40), insets.bottom + rV(20)),
     },
+    // Hero
     hero: {
       alignItems: "center",
-      marginBottom: rV(12),
+      marginBottom: rV(28),
+      paddingHorizontal: rS(8),
     },
-    heroImage: {
-      width: rS(180),
-      height: rS(160),
-      resizeMode: "contain",
+    heroLabel: {
+      fontSize: rMS(10),
+      fontWeight: "800",
+      textTransform: "uppercase",
+      letterSpacing: 3,
+      color: themeColors.tint,
       marginBottom: rV(8),
     },
     heroTitle: {
       color: themeColors.text,
-      fontSize: SIZES.xxLarge,
-      fontWeight: "bold",
+      fontSize: rMS(36),
+      fontWeight: "900",
       textAlign: 'center',
+      letterSpacing: -1,
     },
-    cardsRow: {
-      flexDirection: "row",
-      gap: CARD_GAP,
-      alignItems: "stretch",
-      marginBottom: CARD_GAP,
+    heroSubtext: {
+      fontSize: rMS(13),
+      color: themeColors.textSecondary,
+      marginTop: rV(8),
+      textAlign: "center",
+      lineHeight: rMS(20),
     },
-    card: {
-      flex: 1,
-      backgroundColor: themeColors.tint,
-      borderRadius: CARD_RADIUS,
-      padding: rMS(14),
-      alignItems: "center",
-      justifyContent: "space-between",
+    // Rankings pill button
+    rankingsBtn: {
+      flexDirection: 'row',
+      backgroundColor: themeColors.cardGlass,
+      paddingVertical: rV(8),
+      paddingHorizontal: rMS(14),
+      borderRadius: rMS(24),
+      alignItems: 'center',
+      ...shadow.small,
+    },
+    rankingsBtnText: {
+      color: themeColors.tint,
+      fontWeight: '800',
+      marginLeft: rS(6),
+      fontSize: rMS(12),
+    },
+    // Join card — glassmorphic, extreme roundness
+    joinCard: {
+      backgroundColor: themeColors.cardGlass,
+      borderRadius: rMS(32),
+      padding: rMS(24),
+      marginBottom: rV(16),
+      borderWidth: 1,
+      borderColor: themeColors.border + "60",
       ...shadow.medium,
     },
-    iconCircle: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: "#fff",
+    joinCardHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: rV(14),
+    },
+    joinIconCircle: {
+      width: rMS(44),
+      height: rMS(44),
+      borderRadius: rMS(22),
+      backgroundColor: themeColors.tint + "15",
       alignItems: "center",
       justifyContent: "center",
-      marginBottom: rV(8),
+      marginRight: rS(14),
     },
-    cardHeader: {
+    joinTitle: {
+      fontSize: rMS(17),
+      fontWeight: "900",
+      color: themeColors.text,
+    },
+    joinSubtext: {
+      fontSize: rMS(12),
+      color: themeColors.textSecondary,
+      marginTop: rV(2),
+    },
+    inputRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: rS(12),
+    },
+    input: {
+      flex: 1,
+      backgroundColor: themeColors.background,
+      borderRadius: rMS(20),
+      paddingVertical: rV(12),
+      paddingHorizontal: rMS(16),
+      fontSize: SIZES.medium,
+      color: themeColors.text,
+      borderWidth: 1,
+      borderColor: themeColors.border,
+    },
+    joinButton: {
+      backgroundColor: themeColors.tint,
+      borderRadius: rMS(20),
+      paddingVertical: rV(12),
+      paddingHorizontal: rMS(20),
+      alignItems: "center",
+      justifyContent: "center",
+      ...shadow.small,
+    },
+    joinButtonDisabled: {
+      opacity: 0.5,
+    },
+    joinButtonText: {
       color: "#fff",
-      fontSize: SIZES.small,
-      fontWeight: "bold",
-      textTransform: "uppercase",
-      letterSpacing: 0.5,
-      marginBottom: rV(8),
-      textAlign: "center",
+      fontSize: rMS(14),
+      fontWeight: "800",
     },
-    cardContent: {
+    // Action cards row
+    cardsRow: {
+      flexDirection: "row",
+      gap: rS(12),
+      alignItems: "stretch",
+    },
+    // Action card — glassmorphic pill
+    actionCard: {
+      flex: 1,
+      backgroundColor: themeColors.cardGlass,
+      borderRadius: rMS(28),
+      padding: rMS(20),
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderWidth: 1,
+      borderColor: themeColors.border + "60",
+      ...shadow.medium,
+    },
+    actionCardContent: {
       alignItems: "center",
       width: "100%",
     },
-    inputHint: {
-      color: "rgba(255,255,255,0.85)",
+    actionIconCircle: {
+      width: rMS(52),
+      height: rMS(52),
+      borderRadius: rMS(26),
+      backgroundColor: themeColors.tint + "12",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: rV(12),
+    },
+    actionCardTitle: {
+      fontSize: rMS(15),
+      fontWeight: "900",
+      color: themeColors.text,
+      textAlign: "center",
+      marginBottom: rV(6),
+    },
+    actionCardDesc: {
+      color: themeColors.textSecondary,
       fontSize: rMS(11),
-      marginBottom: rV(4),
       textAlign: "center",
+      lineHeight: rMS(16),
     },
-    input: {
-      width: "100%",
-      backgroundColor: "#fff",
-      borderRadius: INPUT_RADIUS,
-      paddingVertical: rV(8),
-      paddingHorizontal: rMS(10),
-      fontSize: SIZES.small,
-      color: "#000",
-      marginBottom: rV(8),
-    },
-    descText: {
-      color: "rgba(255,255,255,0.9)",
-      fontSize: SIZES.small,
-      textAlign: "center",
-      lineHeight: 18,
-    },
-    cardButton: {
-      backgroundColor: themeColors.tintSecond ?? themeColors.tint,
-      borderRadius: BUTTON_RADIUS,
+    actionCardButton: {
+      backgroundColor: themeColors.tint,
+      borderRadius: rMS(22),
       paddingVertical: rV(10),
       paddingHorizontal: rMS(20),
       width: "100%",
-      marginTop: rV(12),
+      marginTop: rV(16),
       alignItems: "center",
-      shadowColor: themeColors.shadow,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.35,
-      shadowRadius: 8,
-      elevation: 8,
+      ...shadow.small,
     },
-    cardButtonDisabled: {
-      opacity: 0.6,
-    },
-    cardButtonText: {
+    actionCardButtonText: {
       color: "#fff",
-      fontSize: SIZES.small,
-      fontWeight: "bold",
+      fontSize: rMS(13),
+      fontWeight: "800",
     },
-    leaderboardBtn: {
-      position: 'absolute',
-      right: rS(16),
-      top: rV(16),
-      flexDirection: 'row',
-      backgroundColor: themeColors.tint + '20',
-      paddingVertical: rV(8),
-      paddingHorizontal: rMS(12),
-      borderRadius: rMS(20),
-      alignItems: 'center',
-      zIndex: 10,
-    },
-    leaderboardBtnText: {
-      color: themeColors.tint,
-      fontWeight: 'bold',
-      marginLeft: rS(6),
-    }
   });
 
   return (
     <View style={styles.container}>
+      {/* Glassmorphic background blobs */}
+      <View style={styles.blob1} />
+      <View style={styles.blob2} />
+      <View style={styles.blob3} />
+
+      {/* Frosted glass top bar */}
+      <BlurView
+        intensity={60}
+        tint={colorScheme === "dark" ? "dark" : "light"}
+        style={styles.topBar}
+      >
+        <View style={styles.topBarContent}>
+          <AnimatedTouchable
+            style={[styles.rankingsBtn, rankingsAnimStyle]}
+            onPress={() => router.push("Leaderboard")}
+            onPressIn={() => onPressIn(rankingsScale)}
+            onPressOut={() => onPressOut(rankingsScale)}
+            activeOpacity={1}
+          >
+            <Ionicons name="trophy" size={18} color={themeColors.tint} />
+            <Text style={styles.rankingsBtnText}>Rankings</Text>
+          </AnimatedTouchable>
+        </View>
+      </BlurView>
+
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -291,97 +446,122 @@ export default function GameIntro() {
       >
         <StatusBar
           barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
-          backgroundColor={themeColors.background}
+          backgroundColor="transparent"
+          translucent
         />
-        <TouchableOpacity style={[styles.leaderboardBtn, { top: Math.max(rV(16), insets.top) }]} onPress={() => router.push("Leaderboard")}>
-          <Ionicons name="trophy" size={20} color={themeColors.tint} />
-          <Text style={styles.leaderboardBtnText}>Rankings</Text>
-        </TouchableOpacity>
-      <GameTutorialOverlay
-        visible={showTutorial}
-        onDismiss={() => setShowTutorial(false)}
-      />
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={{
-          flexGrow: 1,
-          justifyContent: "center",
-          paddingBottom: rV(24),
-        }}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.hero}>
-          <Text style={styles.heroTitle}>Game Time!</Text>
-        </View>
-
-        <View style={styles.card}>
-          <View style={styles.cardContent}>
-            <View style={styles.iconCircle}>
-              <Ionicons name="people" size={26} color={themeColors.tint} />
-            </View>
-            <Text style={styles.cardHeader}>Join a game</Text>
-            <Text style={styles.inputHint}>Type the 6-character code below</Text>
-            <TextInput
-              style={styles.input}
-              value={gameCode}
-              onChangeText={setGameCode}
-              placeholder="e.g. Cx893P"
-              placeholderTextColor={themeColors.placeholder}
-            />
-          </View>
-          <TouchableOpacity
-            style={[
-              styles.cardButton,
-              joinGameDisabled && styles.cardButtonDisabled,
-            ]}
-            onPress={handleJoinPress}
-            activeOpacity={0.8}
+        <GameTutorialOverlay
+          visible={showTutorial}
+          onDismiss={() => setShowTutorial(false)}
+        />
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: "center",
+            paddingBottom: rV(24),
+          }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Hero */}
+          <Animated.View
+            entering={FadeInDown.duration(500).delay(100)}
+            style={styles.hero}
           >
-            <Text style={styles.cardButtonText}>Join</Text>
-          </TouchableOpacity>
-        </View>
+            <Text style={styles.heroLabel}>Game Mode</Text>
+            <Text style={styles.heroTitle}>Game Time!</Text>
+            <Text style={styles.heroSubtext}>
+              Challenge friends or sharpen your skills solo.
+            </Text>
+          </Animated.View>
 
-        <View style={{ height: CARD_GAP }} />
-
-        <View style={styles.cardsRow}>
-          {/* Create card */}
-          <View style={styles.card}>
-            <View style={styles.cardContent}>
-              <View style={styles.iconCircle}>
-                <Ionicons name="game-controller" size={26} color={themeColors.tint} />
+          {/* Join Game Card */}
+          <Animated.View entering={FadeInDown.duration(500).delay(200)}>
+            <View style={styles.joinCard}>
+              <View style={styles.joinCardHeader}>
+                <View style={styles.joinIconCircle}>
+                  <Ionicons name="people" size={24} color={themeColors.tint} />
+                </View>
+                <View>
+                  <Text style={styles.joinTitle}>Join a Game</Text>
+                  <Text style={styles.joinSubtext}>Enter 6-character code</Text>
+                </View>
               </View>
-              <Text style={styles.cardHeader}>Create a game</Text>
-              <Text style={styles.descText}>Pick a course and topic(s) to create a new game</Text>
+              <View style={styles.inputRow}>
+                <TextInput
+                  style={styles.input}
+                  value={gameCode}
+                  onChangeText={setGameCode}
+                  placeholder="e.g. Cx893P"
+                  placeholderTextColor={themeColors.placeholder}
+                />
+                <AnimatedTouchable
+                  style={[
+                    styles.joinButton,
+                    joinGameDisabled && styles.joinButtonDisabled,
+                    joinAnimStyle,
+                  ]}
+                  onPress={handleJoinPress}
+                  onPressIn={() => onPressIn(joinScale)}
+                  onPressOut={() => onPressOut(joinScale)}
+                  activeOpacity={1}
+                >
+                  <Text style={styles.joinButtonText}>Join</Text>
+                </AnimatedTouchable>
+              </View>
             </View>
-            <TouchableOpacity
-              style={styles.cardButton}
+          </Animated.View>
+
+          {/* Create & Solo Cards */}
+          <Animated.View
+            entering={FadeInUp.duration(500).delay(350)}
+            style={styles.cardsRow}
+          >
+            {/* Create Game */}
+            <AnimatedTouchable
+              style={[styles.actionCard, createAnimStyle]}
               onPress={createGame}
-              activeOpacity={0.8}
+              onPressIn={() => onPressIn(createScale)}
+              onPressOut={() => onPressOut(createScale)}
+              activeOpacity={1}
             >
-              <Text style={styles.cardButtonText}>Create</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Solo card */}
-          <View style={styles.card}>
-            <View style={styles.cardContent}>
-              <View style={styles.iconCircle}>
-                <Ionicons name="person" size={26} color={themeColors.tint} />
+              <View style={styles.actionCardContent}>
+                <View style={styles.actionIconCircle}>
+                  <Ionicons name="game-controller" size={26} color={themeColors.tint} />
+                </View>
+                <Text style={styles.actionCardTitle}>Create Game</Text>
+                <Text style={styles.actionCardDesc}>
+                  Pick a course and topic(s) to challenge others
+                </Text>
               </View>
-              <Text style={styles.cardHeader}>Solo Practice</Text>
-              <Text style={styles.descText}>Play high-speed single player rounds</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.cardButton}
+              <View style={styles.actionCardButton}>
+                <Text style={styles.actionCardButtonText}>Create</Text>
+              </View>
+            </AnimatedTouchable>
+
+            {/* Solo Practice */}
+            <AnimatedTouchable
+              style={[styles.actionCard, soloAnimStyle]}
               onPress={createSinglePlayerGame}
-              activeOpacity={0.8}
+              onPressIn={() => onPressIn(soloScale)}
+              onPressOut={() => onPressOut(soloScale)}
+              activeOpacity={1}
             >
-              <Text style={styles.cardButtonText}>Play Solo</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
+              <View style={styles.actionCardContent}>
+                <View style={styles.actionIconCircle}>
+                  <Ionicons name="person" size={26} color={themeColors.tint} />
+                </View>
+                <Text style={styles.actionCardTitle}>Solo Practice</Text>
+                <Text style={styles.actionCardDesc}>
+                  Play high-speed single player rounds
+                </Text>
+              </View>
+              <View style={styles.actionCardButton}>
+                <Text style={styles.actionCardButtonText}>Play Solo</Text>
+              </View>
+            </AnimatedTouchable>
+          </Animated.View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </View>
   );

@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   Animated,
 } from "react-native";
+import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
@@ -687,34 +688,69 @@ export default function Game() {
     }
   };
 
-  // Styles
   const styles = StyleSheet.create({
-    container: { flex: 1, marginTop: rV(10) },
+    container: { flex: 1, backgroundColor: themeColors.background },
+    // Background blur shapes for glassmorphism
+    blob1: {
+      position: "absolute",
+      top: -rV(100),
+      left: -rS(50),
+      width: rS(250),
+      height: rS(250),
+      borderRadius: rS(125),
+      backgroundColor: themeColors.tint + "18",
+    },
+    blob2: {
+      position: "absolute",
+      top: rV(300),
+      right: -rS(100),
+      width: rS(300),
+      height: rS(300),
+      borderRadius: rS(150),
+      backgroundColor: "#6366F118",
+    },
+    headerBlur: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      paddingTop: Math.max(rV(20), insets.top + rV(10)),
+      paddingBottom: rV(16),
+      borderBottomLeftRadius: rMS(32),
+      borderBottomRightRadius: rMS(32),
+      overflow: "hidden",
+      zIndex: 10,
+    },
     powerUpContainer: {
       flexDirection: "row",
       justifyContent: "space-around",
-      paddingHorizontal: rMS(16),
-      paddingVertical: rV(12),
-      paddingBottom: Math.max(rV(12), insets.bottom + rV(8)), // Use safe area bottom + padding
-      backgroundColor: themeColors.background,
-      borderTopWidth: 1,
-      borderTopColor: themeColors.textSecondary + "20",
+      paddingHorizontal: rS(16),
+      paddingVertical: rV(16),
+      paddingBottom: Math.max(rV(16), insets.bottom + rV(8)),
+      backgroundColor: themeColors.cardGlass,
+      borderTopLeftRadius: rMS(32),
+      borderTopRightRadius: rMS(32),
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: -4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 12,
+      elevation: 8,
     },
     powerUpCard: {
-      backgroundColor: themeColors.secondaryBackground,
-      borderRadius: rMS(12),
-      padding: rMS(8),
+      backgroundColor: themeColors.cardGlass,
+      borderRadius: rMS(28),
+      padding: rMS(10),
       alignItems: "center",
       justifyContent: "center",
       minWidth: rS(100),
       minHeight: rV(80),
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.2,
+      shadowOpacity: 0.1,
       shadowRadius: 4,
       elevation: 4,
       borderWidth: 1,
-      borderColor: "transparent",
+      borderColor: themeColors.border + "60",
     },
     powerUpButton: {
       alignItems: "center",
@@ -728,7 +764,7 @@ export default function Game() {
     },
     powerUpCardUsed: {
       opacity: 0.5,
-      backgroundColor: themeColors.textSecondary + "20",
+      backgroundColor: themeColors.textSecondary + "15",
     },
     powerUpIcon: {
       marginBottom: rV(4),
@@ -788,12 +824,11 @@ export default function Game() {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
-      marginVertical: rV(16),
-      paddingHorizontal: rS(20),
+      paddingHorizontal: rS(24),
     },
     questionCounterText: {
-      fontSize: rMS(18),
-      fontWeight: "bold",
+      fontSize: rMS(16),
+      fontWeight: "900",
       textAlign: "left",
     },
     progressBarContainer: {
@@ -803,25 +838,63 @@ export default function Game() {
     },
     progressBarBackground: {
       width: "100%",
-      height: rV(8),
-      backgroundColor: "rgba(13, 71, 161, 0.2)",
-      borderRadius: rMS(4),
+      height: rV(6),
+      backgroundColor: themeColors.background + "80",
+      borderRadius: rMS(3),
       overflow: "hidden",
     },
     progressBarFill: {
       height: "100%",
-      borderRadius: rMS(4),
-      alignSelf: "flex-end",
+      borderRadius: rMS(3),
+      alignSelf: "flex-start",
     },
-    answerButton: {
-      padding: rMS(10),
-      marginVertical: rV(5),
-      borderRadius: 5,
+    // Styles meant for Questions.tsx overrides
+    questionContainer: {
+      backgroundColor: themeColors.cardGlass,
+      borderRadius: rMS(36),
+      padding: rMS(24),
+      marginHorizontal: rS(16),
+      marginTop: rV(100), // Below fixed header
+      marginBottom: rV(24),
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 12,
+      elevation: 8,
       borderWidth: 1,
-      borderColor: "#ccc",
+      borderColor: themeColors.border + "60",
+      minHeight: rV(140),
     },
-    correctAnswer: { backgroundColor: "#097969" },
-    wrongAnswer: { backgroundColor: "#D22B2B" },
+    questionText: {
+      fontSize: rMS(20),
+      fontWeight: "900",
+      color: themeColors.text,
+      textAlign: "center",
+      lineHeight: rMS(28),
+    },
+    answersContainer: {
+      paddingHorizontal: rS(16),
+    },
+    answerTouchable: {
+      paddingVertical: rV(16),
+      paddingHorizontal: rMS(20),
+      marginVertical: rV(6),
+      borderRadius: rMS(32),
+      borderWidth: 1.5,
+      borderColor: themeColors.border + "60",
+      backgroundColor: themeColors.cardGlass,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    selectedAnswer: {
+      borderColor: themeColors.tint,
+      backgroundColor: themeColors.tint + "20",
+    },
+    correctAnswer: { backgroundColor: "#4CAF50" + "40", borderColor: "#4CAF50" },
+    wrongAnswer: { backgroundColor: "#F44336" + "40", borderColor: "#F44336" },
     errorMessage: {
       alignSelf: "center",
       fontSize: SIZES.medium,
@@ -836,7 +909,7 @@ export default function Game() {
     streakBadge: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: "#FF6B3520",
+      backgroundColor: "#F97316" + "18",
       paddingHorizontal: rMS(8),
       paddingVertical: rV(4),
       borderRadius: rMS(12),
@@ -845,7 +918,7 @@ export default function Game() {
     streakText: {
       fontSize: rMS(12),
       fontWeight: "600",
-      color: "#FF6B35",
+      color: "#F97316",
       marginLeft: rS(4),
     },
     fastAnswerCue: {
@@ -867,10 +940,17 @@ export default function Game() {
   return (
     <View style={styles.container}>
       <StatusBar hidden={true} />
+      <View style={styles.blob1} />
+      <View style={styles.blob2} />
 
-      {/* Timer and Question Counter Row */}
+      {/* Timer and Question Counter Row as Glass Header */}
       {!gameEnded && gameQuestions.length > 0 && !error && (
-        <View style={styles.timerRowContainer}>
+        <BlurView
+          intensity={80}
+          tint={colorScheme === "dark" ? "dark" : "light"}
+          style={styles.headerBlur}
+        >
+          <View style={styles.timerRowContainer}>
           <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
           <Animated.Text
             style={[
@@ -934,7 +1014,8 @@ export default function Game() {
             />
           </TouchableOpacity>
           </View>
-        </View>
+          </View>
+        </BlurView>
       )}
 
       {showFastAnswerCue && (

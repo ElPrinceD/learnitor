@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState, useRef } from "react"; // Add useEffect and useState
+import React, { useMemo, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,108 +8,28 @@ import {
   useColorScheme,
   BackHandler,
   TouchableOpacity,
-  Animated,
+  StatusBar,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { Player, GameDetailsResponse } from "../../components/types";
 import { useAuth } from "../../components/AuthContext";
 import Colors from "../../constants/Colors";
-import { SIZES, rMS, rS, rV } from "../../constants";
+import { SIZES, rMS, rS, rV, useShadows } from "../../constants";
 import { useQuery } from "@tanstack/react-query";
 import { getGameDetails } from "../../services/GamesApiCalls";
 import { useAdManager } from "../../components/ads/AdManager";
 import { Ionicons } from "@expo/vector-icons";
-const STAGGER_DELAY = 300;
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
+import { BlurView } from "expo-blur";
 
-const StaggeredPodiumSlot: React.FC<{
-  children: React.ReactNode;
-  index: number;
-}> = ({ children, index }) => {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(30)).current;
-  useEffect(() => {
-    const t = setTimeout(() => {
-      Animated.parallel([
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-        Animated.timing(translateY, {
-          toValue: 0,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }, index * STAGGER_DELAY);
-    return () => clearTimeout(t);
-  }, [index]);
-  return (
-    <Animated.View style={{ opacity, transform: [{ translateY }], flex: 1 }}>
-      {children}
-    </Animated.View>
-  );
-};
-
-const StaggeredPlayerRow: React.FC<{
-  item: any;
-  index: number;
-  isWinner: boolean;
-  styles: any;
-}> = ({ item, index, isWinner, styles: s }) => {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(20)).current;
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      Animated.parallel([
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-        Animated.timing(translateY, {
-          toValue: 0,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }, index * STAGGER_DELAY);
-    return () => clearTimeout(timer);
-  }, [index]);
-
-  const containerStyle = isWinner ? s.winnerContainer : s.playerContainer;
-  const scoreStyle = isWinner ? [s.profileName, s.winnerText] : s.profileName;
-
-  return (
-    <Animated.View
-      style={[
-        containerStyle,
-        { opacity, transform: [{ translateY }] },
-      ]}
-    >
-      <Image
-        source={
-          item.profile_picture
-            ? { uri: item.profile_picture }
-            : require("../../assets/images/profile-placeholder.png")
-        }
-        style={s.profileImage}
-      />
-      <Text style={s.profileName}>{item.profileName}: </Text>
-      <Text style={scoreStyle}>{item.score}</Text>
-      {isWinner && (
-        <Ionicons
-          name="trophy"
-          size={26}
-          color="#FFD700"
-          style={s.crownIcon}
-        />
-      )}
-    </Animated.View>
-  );
-};
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 export default function ResultsScreen() {
   const { userInfo, userToken } = useAuth();
@@ -121,10 +41,25 @@ export default function ResultsScreen() {
   const [adShown, setAdShown] = useState(false);
   const insets = useSafeAreaInsets();
   const [error, setError] = useState<string>("");
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
+  const shadow = useShadows();
 
-  // Animation refs for buttons
-  const homeButtonScale = useRef(new Animated.Value(1)).current;
-  const newGameButtonScale = useRef(new Animated.Value(1)).current;
+  // Animated scales
+  const homeScale = useSharedValue(1);
+  const newGameScale = useSharedValue(1);
+  const homeAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: homeScale.value }],
+  }));
+  const newGameAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: newGameScale.value }],
+  }));
+  const onPressIn = (sv: Animated.SharedValue<number>) => {
+    sv.value = withSpring(0.95, { damping: 15, stiffness: 300 });
+  };
+  const onPressOut = (sv: Animated.SharedValue<number>) => {
+    sv.value = withSpring(1, { damping: 15, stiffness: 300 });
+  };
 
   // Show ad when component mounts (game completion) - only once
   useEffect(() => {
@@ -154,9 +89,6 @@ export default function ResultsScreen() {
       return {};
     }
   }, [scoresParam]);
-
-  const colorScheme = useColorScheme();
-  const themeColors = Colors[colorScheme ?? "light"];
 
   if (!userInfo) {
     return null;
@@ -236,17 +168,17 @@ export default function ResultsScreen() {
 
   const scoreBasedMessage = useMemo(() => {
     if (userIsWinner) {
-      if (userScore >= 90) return "Crushed it!";
-      if (userScore >= 70) return "Nice work!";
-      return "You won!";
+      if (userScore >= 90) return "Crushed it! 🔥";
+      if (userScore >= 70) return "Nice work! 🎉";
+      return "You won! 🏆";
     }
-    if (userScore >= 90) return "Crushed it!";
-    if (userScore >= 70) return "Nice work!";
-    if (userScore >= 50) return "Close one!";
-    return "Room to improve!";
+    if (userScore >= 90) return "Crushed it! 🔥";
+    if (userScore >= 70) return "Nice work! 👏";
+    if (userScore >= 50) return "Close one! 💪";
+    return "Room to improve! 📚";
   }, [userIsWinner, userScore]);
 
-  // Podium: top 3 as [2nd, 1st, 3rd] for display, rest as list. Always return { top3, rest } for consistent typing.
+  // Podium: top 3 as [2nd, 1st, 3rd] for display, rest as list.
   const podiumPlayers = useMemo(() => {
     if (players.length < 2) return { top3: players, rest: [] as typeof players };
     const [first, second, third, ...rest] = players;
@@ -259,162 +191,248 @@ export default function ResultsScreen() {
   }, [players]);
 
   const handleCreateNewGame = () => {
-    // Animate button press
-    Animated.sequence([
-      Animated.timing(newGameButtonScale, {
-        toValue: 0.95,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(newGameButtonScale, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Navigate to GameIntro to create a new game
     router.dismissTo("GameIntro");
   };
 
   const handleBackToHome = () => {
-    // Animate button press
-    Animated.sequence([
-      Animated.timing(homeButtonScale, {
-        toValue: 0.95,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(homeButtonScale, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Add a back to home option
     router.replace("/(tabs)/home");
+  };
+
+  const getPodiumHeight = (place: number) => {
+    if (place === 1) return rV(100);
+    if (place === 2) return rV(72);
+    return rV(56);
   };
 
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      padding: rMS(10),
+      backgroundColor: themeColors.background,
     },
-    title: {
-      fontSize: 18,
-      fontWeight: "bold",
-      marginBottom: 16,
-      marginTop: 20,
+    blob1: {
+      position: "absolute",
+      top: -rV(80),
+      left: -rS(60),
+      width: rS(260),
+      height: rS(260),
+      borderRadius: rS(130),
+      backgroundColor: themeColors.tint + "18",
+    },
+    blob2: {
+      position: "absolute",
+      bottom: rV(100),
+      right: -rS(80),
+      width: rS(280),
+      height: rS(280),
+      borderRadius: rS(140),
+      backgroundColor: "#F5920018",
+    },
+    scrollContent: {
+      paddingHorizontal: rS(16),
+      paddingTop: Math.max(rV(60), insets.top + rV(24)),
+      paddingBottom: Math.max(rV(120), insets.bottom + rV(100)),
+    },
+    // Hero
+    heroSection: {
+      alignItems: "center",
+      marginBottom: rV(24),
+    },
+    heroLabel: {
+      fontSize: rMS(10),
+      fontWeight: "800",
+      textTransform: "uppercase",
+      letterSpacing: 3,
+      color: themeColors.tint,
+      marginBottom: rV(8),
+    },
+    heroTitle: {
+      fontSize: rMS(28),
+      fontWeight: "900",
       color: themeColors.text,
-      textDecorationLine: "underline",
+      letterSpacing: -0.5,
+      textAlign: "center",
     },
     tieTitle: {
-      fontSize: 20,
-      fontWeight: "800",
-      marginBottom: 16,
-      marginTop: 20,
+      fontSize: rMS(24),
+      fontWeight: "900",
       color: "#FFD700",
-      textDecorationLine: "underline",
-      textShadowColor: "rgba(0,0,0,0.3)",
-      textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 0,
-      includeFontPadding: false,
+      textAlign: "center",
+      marginTop: rV(4),
     },
-    topContainerTitle: {
-      color: themeColors.text,
-      fontSize: SIZES.xLarge,
-      fontWeight: "bold",
-      marginTop: rV(60),
-      alignItems: "flex-start",
-    },
-    playersList: {
-      paddingBottom: rV(60),
-    },
-    playerContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      padding: rMS(8),
-      backgroundColor: "transparent",
-      marginVertical: rV(3),
-      position: "relative",
-    },
-    winnerContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      padding: rMS(10),
-      backgroundColor: "#FFD700" + "25",
-      marginVertical: rV(3),
-      borderRadius: rMS(10),
-      borderWidth: 2,
-      borderColor: "#FFD700",
-      position: "relative",
-      shadowColor: "#FFD700",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.3,
-      shadowRadius: 4,
-      elevation: 4,
-    },
-    profileImage: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      marginRight: rS(12),
-    },
-    profileName: {
-      color: themeColors.text,
-      fontSize: SIZES.small,
-    },
-    buttonContainer: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      paddingTop: rV(5),
-      paddingBottom: Math.max(rV(20), insets.bottom + rV(10)), // Use safe area bottom + padding
-      paddingHorizontal: rMS(20),
-      gap: rS(16),
-    },
-    button: {
-      flex: 1,
-      backgroundColor: themeColors.background,
-      borderRadius: rMS(12),
+    // Score message banner
+    messageBanner: {
+      backgroundColor: themeColors.tint + "12",
       paddingVertical: rV(12),
-      paddingHorizontal: rMS(16),
-      shadowColor: colorScheme === "light" ? "rgba(0,0,0,0.1)" : "#000",
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: colorScheme === "light" ? 0.15 : 0.3,
-      shadowRadius: 8,
-      elevation: 8,
-      borderWidth: 2,
-      borderColor: "transparent",
-      alignItems: "center",
-      justifyContent: "center",
+      paddingHorizontal: rMS(24),
+      borderRadius: rMS(24),
+      alignSelf: "center",
+      marginBottom: rV(28),
+    },
+    messageBannerText: {
+      fontSize: rMS(16),
+      fontWeight: "900",
+      color: themeColors.tint,
+    },
+    // Podium
+    podiumContainer: {
       flexDirection: "row",
-      minHeight: rV(50),
+      alignItems: "flex-end",
+      justifyContent: "center",
+      marginBottom: rV(32),
+      paddingHorizontal: rS(8),
+    },
+    podiumSlot: {
+      alignItems: "center",
+      flex: 1,
+      paddingHorizontal: rMS(4),
+    },
+    podiumAvatarContainer: {
+      position: "relative",
+      marginBottom: rV(8),
+    },
+    podiumAvatar: {
+      width: rMS(52),
+      height: rMS(52),
+      borderRadius: rMS(26),
+      borderWidth: 3,
+      borderColor: themeColors.tint + "40",
+    },
+    podiumAvatarFirst: {
+      width: rMS(64),
+      height: rMS(64),
+      borderRadius: rMS(32),
+      borderWidth: 3,
+      borderColor: "#FFD700",
+    },
+    podiumCrown: {
+      position: "absolute",
+      top: -rV(16),
+      alignSelf: "center",
+    },
+    podiumName: {
+      fontSize: rMS(12),
+      fontWeight: "800",
+      color: themeColors.text,
+      textAlign: "center",
+      marginBottom: rV(4),
+    },
+    podiumScore: {
+      fontSize: rMS(11),
+      fontWeight: "700",
+      color: themeColors.textSecondary,
+    },
+    podiumBar: {
+      width: "100%",
+      borderTopLeftRadius: rMS(16),
+      borderTopRightRadius: rMS(16),
+      backgroundColor: themeColors.cardGlass,
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
+      marginTop: rV(8),
+      alignItems: "center",
+      justifyContent: "flex-end",
+      paddingBottom: rV(8),
+    },
+    podiumPlace: {
+      fontSize: rMS(14),
+      fontWeight: "900",
+      color: themeColors.textSecondary,
+    },
+    // Other players list
+    othersSection: {
+      marginBottom: rV(24),
+    },
+    othersSectionLabel: {
+      fontSize: rMS(10),
+      fontWeight: "800",
+      textTransform: "uppercase",
+      letterSpacing: 2,
+      color: themeColors.textSecondary,
+      marginBottom: rV(12),
+      paddingHorizontal: rS(8),
+    },
+    playerCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: themeColors.cardGlass,
+      padding: rMS(14),
+      borderRadius: rMS(28),
+      marginBottom: rV(10),
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
+      ...shadow.small,
+    },
+    playerCardWinner: {
+      borderColor: "#FFD700" + "60",
+      backgroundColor: "#FFD700" + "08",
+    },
+    playerImage: {
+      width: rMS(40),
+      height: rMS(40),
+      borderRadius: rMS(20),
+      marginRight: rS(14),
+    },
+    playerInfo: {
+      flex: 1,
+    },
+    playerName: {
+      color: themeColors.text,
+      fontSize: rMS(14),
+      fontWeight: "800",
+    },
+    playerScore: {
+      color: themeColors.tint,
+      fontSize: rMS(13),
+      fontWeight: "900",
+    },
+    winnerBadge: {
+      marginLeft: rS(8),
+    },
+    // Buttons
+    buttonContainer: {
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      flexDirection: "row",
+      paddingTop: rV(12),
+      paddingBottom: Math.max(rV(20), insets.bottom + rV(10)),
+      paddingHorizontal: rMS(16),
+      gap: rS(12),
+      backgroundColor: themeColors.background,
     },
     homeButton: {
-      backgroundColor: themeColors.tint + "20",
-      borderColor: themeColors.tint,
-    },
-    newGameButton: {
-      backgroundColor: themeColors.text + "20",
-      borderColor: themeColors.text,
-    },
-    buttonText: {
-      fontSize: rMS(14),
-      fontWeight: "bold",
-      color: themeColors.text,
-      marginLeft: rS(6),
+      flex: 1,
+      backgroundColor: themeColors.tint + "12",
+      borderRadius: rMS(24),
+      paddingVertical: rV(14),
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: rS(8),
+      borderWidth: 1.5,
+      borderColor: themeColors.tint + "30",
     },
     homeButtonText: {
       color: themeColors.tint,
+      fontSize: rMS(13),
+      fontWeight: "800",
+    },
+    newGameButton: {
+      flex: 1,
+      backgroundColor: themeColors.tint,
+      borderRadius: rMS(24),
+      paddingVertical: rV(14),
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: rS(8),
+      ...shadow.small,
     },
     newGameButtonText: {
-      color: themeColors.text,
-    },
-    buttonIcon: {
-      marginRight: rS(4),
+      color: "#fff",
+      fontSize: rMS(13),
+      fontWeight: "800",
     },
     errorMessage: {
       alignSelf: "center",
@@ -424,197 +442,165 @@ export default function ResultsScreen() {
       textAlign: "center",
       paddingHorizontal: rMS(20),
     },
-    crownIcon: {
-      position: "absolute",
-      top: -rV(8),
-      right: rS(8),
-      zIndex: 1,
-      shadowColor: "#FFD700",
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.5,
-      shadowRadius: 2,
-      elevation: 3,
-    },
-    winnerText: {
-      color: "#FFD700",
-      fontWeight: "bold",
-    },
-    podiumContainer: {
-      flexDirection: "row",
-      alignItems: "flex-end",
-      justifyContent: "center",
-      marginVertical: rV(24),
-      minHeight: rV(140),
-    },
-    podiumSlot: {
-      alignItems: "center",
-      flex: 1,
-      paddingHorizontal: rMS(8),
-    },
-    podiumAvatar: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      marginBottom: rV(6),
-    },
-    podiumName: {
-      fontSize: rMS(12),
-      fontWeight: "600",
-      color: themeColors.text,
-      textAlign: "center",
-    },
-    podiumScore: {
-      fontSize: rMS(11),
-      color: themeColors.textSecondary,
-      marginTop: rV(2),
-    },
-    podiumPlace: {
-      fontSize: rMS(10),
-      color: themeColors.textSecondary,
-      marginBottom: rV(8),
-    },
-    othersList: {
-      paddingHorizontal: rMS(20),
-      paddingBottom: rV(24),
-    },
-    scoreBasedBanner: {
-      paddingVertical: rV(12),
-      paddingHorizontal: rMS(20),
-      marginBottom: rV(16),
-      alignSelf: "center",
-      backgroundColor: themeColors.tint + "20",
-      borderRadius: rMS(12),
-    },
-    scoreBasedText: {
-      fontSize: rMS(14),
-      fontWeight: "bold",
-      color: themeColors.tint,
-    },
   });
 
   const renderPodiumSlot = (
     item: any,
-    _place: 1 | 2 | 3,
+    place: 1 | 2 | 3,
     placeLabel: string
   ) => (
-    <View key={item.id} style={styles.podiumSlot}>
-      <Text style={styles.podiumPlace}>{placeLabel}</Text>
-      <Image
-        source={
-          item.profile_picture
-            ? { uri: item.profile_picture }
-            : require("../../assets/images/profile-placeholder.png")
-        }
-        style={styles.podiumAvatar}
-      />
+    <Animated.View
+      key={item.id}
+      entering={FadeInUp.duration(500).delay(place === 1 ? 200 : place === 2 ? 100 : 300).springify()}
+      style={styles.podiumSlot}
+    >
+      <View style={styles.podiumAvatarContainer}>
+        {item.isWinner && (
+          <View style={styles.podiumCrown}>
+            <Ionicons name="trophy" size={20} color="#FFD700" />
+          </View>
+        )}
+        <Image
+          source={
+            item.profile_picture
+              ? { uri: item.profile_picture }
+              : require("../../assets/images/profile-placeholder.png")
+          }
+          style={place === 1 ? styles.podiumAvatarFirst : styles.podiumAvatar}
+        />
+      </View>
       <Text style={styles.podiumName} numberOfLines={1}>
         {item.profileName}
       </Text>
-      <Text style={[styles.podiumScore, item.isWinner && styles.winnerText]}>
-        {item.score}
+      <Text style={[styles.podiumScore, item.isWinner && { color: "#FFD700" }]}>
+        {item.score}%
       </Text>
-      {item.isWinner && (
-        <Ionicons name="trophy" size={24} color="#FFD700" />
-      )}
-    </View>
+      <View style={[styles.podiumBar, { height: getPodiumHeight(place) }]}>
+        <Text style={styles.podiumPlace}>{placeLabel}</Text>
+      </View>
+    </Animated.View>
   );
 
   return (
     <View style={styles.container}>
+      <StatusBar
+        barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
+        backgroundColor="transparent"
+        translucent
+      />
+      <View style={styles.blob1} />
+      <View style={styles.blob2} />
+
       {error ? (
-        <Text style={styles.errorMessage}>{error}</Text>
+        <View style={{ flex: 1, justifyContent: "center" }}>
+          <Text style={styles.errorMessage}>{error}</Text>
+        </View>
       ) : (
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={styles.playersList}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          showsHorizontalScrollIndicator={false}
         >
-          <Text style={styles.topContainerTitle}>{creator}'s Arena</Text>
-          <Text style={winnerCount > 1 ? styles.tieTitle : styles.title}>
-            {winnerCount > 1 ? `Tie! ${winnerCount} Winners` : "Scores"}
-          </Text>
-          <View style={styles.scoreBasedBanner}>
-            <Text style={styles.scoreBasedText}>{scoreBasedMessage}</Text>
-          </View>
+          {/* Hero */}
+          <Animated.View
+            entering={FadeInDown.duration(500).delay(100)}
+            style={styles.heroSection}
+          >
+            <Text style={styles.heroLabel}>Game Complete</Text>
+            <Text style={styles.heroTitle}>{creator}'s Arena</Text>
+            {winnerCount > 1 && (
+              <Text style={styles.tieTitle}>
+                Tie! {winnerCount} Winners
+              </Text>
+            )}
+          </Animated.View>
+
+          {/* Message Banner */}
+          <Animated.View entering={FadeInDown.duration(500).delay(150)}>
+            <View style={styles.messageBanner}>
+              <Text style={styles.messageBannerText}>{scoreBasedMessage}</Text>
+            </View>
+          </Animated.View>
+
+          {/* Podium */}
           {podiumPlayers.top3 && podiumPlayers.top3.length > 0 && (
             <View style={styles.podiumContainer}>
-              {podiumPlayers.top3.length >= 2 && (
-                <StaggeredPodiumSlot index={0}>
-                  {renderPodiumSlot(podiumPlayers.top3[0], 2, "2nd")}
-                </StaggeredPodiumSlot>
-              )}
-              {podiumPlayers.top3.length >= 1 && (
-                <StaggeredPodiumSlot index={1}>
-                  {renderPodiumSlot(
-                    podiumPlayers.top3[podiumPlayers.top3.length === 1 ? 0 : 1],
-                    1,
-                    "1st"
-                  )}
-                </StaggeredPodiumSlot>
-              )}
-              {podiumPlayers.top3.length >= 3 && (
-                <StaggeredPodiumSlot index={2}>
-                  {renderPodiumSlot(podiumPlayers.top3[2], 3, "3rd")}
-                </StaggeredPodiumSlot>
-              )}
+              {podiumPlayers.top3.length >= 2 &&
+                renderPodiumSlot(podiumPlayers.top3[0], 2, "2nd")}
+              {podiumPlayers.top3.length >= 1 &&
+                renderPodiumSlot(
+                  podiumPlayers.top3[podiumPlayers.top3.length === 1 ? 0 : 1],
+                  1,
+                  "1st"
+                )}
+              {podiumPlayers.top3.length >= 3 &&
+                renderPodiumSlot(podiumPlayers.top3[2], 3, "3rd")}
             </View>
           )}
+
+          {/* Other Players */}
           {podiumPlayers.rest && podiumPlayers.rest.length > 0 && (
-            <View style={styles.othersList}>
+            <View style={styles.othersSection}>
+              <Text style={styles.othersSectionLabel}>Other Players</Text>
               {podiumPlayers.rest.map((item, idx) => (
-                <StaggeredPlayerRow
+                <Animated.View
                   key={item.id}
-                  item={item}
-                  index={idx + 3}
-                  isWinner={item.isWinner}
-                  styles={styles}
-                />
+                  entering={FadeInDown.duration(400).delay(400 + idx * 80)}
+                >
+                  <View
+                    style={[
+                      styles.playerCard,
+                      item.isWinner && styles.playerCardWinner,
+                    ]}
+                  >
+                    <Image
+                      source={
+                        item.profile_picture
+                          ? { uri: item.profile_picture }
+                          : require("../../assets/images/profile-placeholder.png")
+                      }
+                      style={styles.playerImage}
+                    />
+                    <View style={styles.playerInfo}>
+                      <Text style={styles.playerName}>{item.profileName}</Text>
+                    </View>
+                    <Text style={styles.playerScore}>{item.score}%</Text>
+                    {item.isWinner && (
+                      <View style={styles.winnerBadge}>
+                        <Ionicons name="trophy" size={18} color="#FFD700" />
+                      </View>
+                    )}
+                  </View>
+                </Animated.View>
               ))}
             </View>
           )}
         </ScrollView>
       )}
-      <View style={styles.buttonContainer}>
-        <Animated.View
-          style={{ transform: [{ scale: homeButtonScale }], flex: 1 }}
-        >
-          <TouchableOpacity
-            onPress={handleBackToHome}
-            style={[styles.button, styles.homeButton]}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name="home"
-              size={24}
-              color={themeColors.tint}
-              style={styles.buttonIcon}
-            />
-            <Text style={[styles.buttonText, styles.homeButtonText]}>
-              Back to Home
-            </Text>
-          </TouchableOpacity>
-        </Animated.View>
 
-        <Animated.View
-          style={{ transform: [{ scale: newGameButtonScale }], flex: 1 }}
+      {/* Action Buttons */}
+      <View style={styles.buttonContainer}>
+        <AnimatedTouchable
+          style={[styles.homeButton, homeAnimStyle]}
+          onPress={handleBackToHome}
+          onPressIn={() => onPressIn(homeScale)}
+          onPressOut={() => onPressOut(homeScale)}
+          activeOpacity={1}
         >
-          <TouchableOpacity
-            onPress={handleCreateNewGame}
-            style={[styles.button, styles.newGameButton]}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name="game-controller"
-              size={24}
-              color={themeColors.text}
-              style={styles.buttonIcon}
-            />
-            <Text style={[styles.buttonText, styles.newGameButtonText]}>
-              New Game
-            </Text>
-          </TouchableOpacity>
-        </Animated.View>
+          <Ionicons name="home" size={20} color={themeColors.tint} />
+          <Text style={styles.homeButtonText}>Home</Text>
+        </AnimatedTouchable>
+
+        <AnimatedTouchable
+          style={[styles.newGameButton, newGameAnimStyle]}
+          onPress={handleCreateNewGame}
+          onPressIn={() => onPressIn(newGameScale)}
+          onPressOut={() => onPressOut(newGameScale)}
+          activeOpacity={1}
+        >
+          <Ionicons name="game-controller" size={20} color="#fff" />
+          <Text style={styles.newGameButtonText}>New Game</Text>
+        </AnimatedTouchable>
       </View>
     </View>
   );

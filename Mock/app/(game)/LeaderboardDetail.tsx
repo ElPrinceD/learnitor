@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   StatusBar,
   ActivityIndicator,
+  Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,12 +20,15 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
+  Easing,
 } from "react-native-reanimated";
 import { useAuth } from "../../components/AuthContext";
 import Colors from "../../constants/Colors";
 import { rMS, rV, rS, SIZES, useShadows } from "../../constants/index.js";
 import ApiUrl from "../../config";
 import ErrorMessage from "../../components/ErrorMessage";
+import { BlurView } from "expo-blur";
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -39,19 +43,18 @@ interface RankingItem {
 
 interface H2HMatch {
   id: string;
-  player1: string;
-  player2: string;
-  score1: number | null;
-  score2: number | null;
-  result: "player1" | "player2" | "draw" | "pending";
-  round: number;
+  p1Name: string;
+  p1Team: string;
+  p2Name: string;
+  p2Team: string;
+  p1Score: number | null;
+  p2Score: number | null;
+  roundText: string;
+  status: "won" | "lost" | "pending" | "bye";
 }
 
-// Mock user knockout matchups — only played rounds + immediate next
-// Cup rounds are calculated by backend based on squad member count (FPL-style)
-// Season = 13 weeks. Rounds = ceil(log2(members)). Cup starts at week (13 - rounds + 1).
-// If odd members, "Average" is a virtual player (score = global average that week)
-const MOCK_USER_KNOCKOUT_MATCHES = [
+// Mock user knockout matchups
+const MOCK_USER_KNOCKOUT_MATCHES: H2HMatch[] = [
   { id: "cm1", p1Name: "Adeniyi Adejobi", p1Team: "Edimoya", p2Name: "The Gyam", p2Team: "AnteMaggie", p1Score: 0, p2Score: 0, roundText: "SW 12 • Round of 32", status: "pending" },
   { id: "cm2", p1Name: "The Gyam", p1Team: "AnteMaggie", p2Name: "Edmond Fosu", p2Team: "OmontoGh", p1Score: 134, p2Score: 60, roundText: "SW 11 • Round of 64", status: "won" },
   { id: "cm3", p1Name: "The Gyam", p1Team: "AnteMaggie", p2Name: "Olubunmi Owaduge", p2Team: "J'blaze", p1Score: 60, p2Score: 47, roundText: "SW 10 • Round of 128", status: "won" },
@@ -75,13 +78,18 @@ export default function LeaderboardDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [rankings, setRankings] = useState<RankingItem[]>([]);
-  // Use "knockout" tab by default if type="knockout" was passed from play.tsx
   const [activeTab, setActiveTab] = useState<"rankings" | "knockout">(type === "knockout" ? "knockout" : "rankings");
   const [knockoutMatches] = useState(MOCK_USER_KNOCKOUT_MATCHES);
 
   const backScale = useSharedValue(1);
   const backAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: backScale.value }],
+  }));
+
+  // Animated tab indicator
+  const tabIndicatorX = useSharedValue(type === "knockout" ? 1 : 0);
+  const tabAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: tabIndicatorX.value }],
   }));
 
   useEffect(() => {
@@ -116,6 +124,7 @@ export default function LeaderboardDetail() {
 
   const getRankColor = (rank: number) => {
     if (rank === 1) return themeColors.tint;
+    if (rank <= 3) return "#FFD700";
     return themeColors.textSecondary + "90";
   };
 
@@ -127,51 +136,79 @@ export default function LeaderboardDetail() {
       flex: 1,
       backgroundColor: themeColors.background,
     },
+    // Background blur shapes for glassmorphism
+    blob1: {
+      position: "absolute",
+      top: -rV(100),
+      right: -rS(50),
+      width: rS(250),
+      height: rS(250),
+      borderRadius: rS(125),
+      backgroundColor: themeColors.tint + "18",
+    },
+    blob2: {
+      position: "absolute",
+      bottom: rV(100),
+      left: -rS(100),
+      width: rS(300),
+      height: rS(300),
+      borderRadius: rS(150),
+      backgroundColor: "#10B98118",
+    },
+    topBar: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      height: Math.max(rV(80), insets.top + rV(50)),
+      zIndex: 10,
+      flexDirection: "row",
+      alignItems: "flex-end",
+      paddingBottom: rV(8),
+      paddingHorizontal: rS(16),
+    },
     scrollContent: {
       paddingHorizontal: rS(16),
-      paddingTop: Math.max(rV(12), insets.top + rV(8)),
-      paddingBottom: Math.max(rV(40), insets.bottom + rV(20)),
-    },
-    backRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      marginBottom: rV(16),
+      paddingTop: Math.max(rV(80), insets.top + rV(50)),
+      paddingBottom: Math.max(rV(40), insets.bottom + rV(40)),
     },
     backButton: {
-      width: rMS(36),
-      height: rMS(36),
-      borderRadius: rMS(12),
-      backgroundColor: themeColors.card,
+      width: rMS(38),
+      height: rMS(38),
+      borderRadius: rMS(19),
+      backgroundColor: themeColors.cardGlass,
       alignItems: "center",
       justifyContent: "center",
+      ...shadow.light,
     },
     heroSection: {
-      marginBottom: rV(24),
+      marginBottom: rV(28),
+      paddingHorizontal: rS(8),
     },
     heroLabel: {
-      fontSize: rMS(9),
-      fontWeight: "700",
+      fontSize: rMS(10),
+      fontWeight: "800",
       textTransform: "uppercase",
-      letterSpacing: 2,
+      letterSpacing: 3,
       color: themeColors.tint,
-      marginBottom: rV(6),
+      marginBottom: rV(8),
     },
     heroTitle: {
-      fontSize: rMS(32),
-      fontWeight: "800",
+      fontSize: rMS(36),
+      fontWeight: "900",
       color: themeColors.text,
       letterSpacing: -1,
-      lineHeight: rMS(34),
+      lineHeight: rMS(38),
     },
     columnHeaders: {
       flexDirection: "row",
       justifyContent: "space-between",
-      paddingHorizontal: rS(20),
-      marginBottom: rV(10),
+      paddingHorizontal: rS(24),
+      marginBottom: rV(12),
     },
     columnLabel: {
-      fontSize: rMS(9),
-      fontWeight: "700",
+      fontSize: rMS(10),
+      fontWeight: "800",
       textTransform: "uppercase",
       letterSpacing: 2,
       color: themeColors.textSecondary,
@@ -180,10 +217,13 @@ export default function LeaderboardDetail() {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      backgroundColor: themeColors.card,
-      padding: rMS(14),
+      backgroundColor: themeColors.cardGlass,
+      padding: rMS(10),
       borderRadius: rMS(20),
-      marginBottom: rV(10),
+      marginBottom: rV(6),
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
+      ...shadow.small,
     },
     myRankCard: {
       backgroundColor: themeColors.tint + "12",
@@ -193,35 +233,36 @@ export default function LeaderboardDetail() {
     rankCardLeft: {
       flexDirection: "row",
       alignItems: "center",
-      gap: rS(14),
+      gap: rS(8),
       flex: 1,
     },
     rankNumber: {
-      fontSize: rMS(15),
-      fontWeight: "800",
-      width: rS(28),
+      fontSize: rMS(13),
+      fontWeight: "900",
+      width: rS(24),
+      textAlign: "center",
     },
     rankAvatar: {
-      width: rMS(40),
-      height: rMS(40),
-      borderRadius: rMS(14),
+      width: rMS(32),
+      height: rMS(32),
+      borderRadius: rMS(16),
       backgroundColor: themeColors.background,
     },
     rankInfo: {
       flex: 1,
     },
     rankName: {
-      fontSize: SIZES.small,
-      fontWeight: "700",
+      fontSize: rMS(12),
+      fontWeight: "800",
       color: themeColors.text,
     },
     myRankName: {
       color: themeColors.tint,
-      fontWeight: "800",
+      fontWeight: "900",
     },
     rankScore: {
-      fontSize: rMS(13),
-      fontWeight: "800",
+      fontSize: rMS(12),
+      fontWeight: "900",
       color: themeColors.tint,
     },
     loadingContainer: {
@@ -232,91 +273,131 @@ export default function LeaderboardDetail() {
     loadingText: {
       color: themeColors.textSecondary,
       fontSize: SIZES.small,
-      marginTop: rV(10),
+      marginTop: rV(12),
+      fontWeight: "700",
     },
     // Sub-tabs
     subTabRow: {
       flexDirection: "row",
-      backgroundColor: themeColors.card,
-      borderRadius: rMS(10),
-      padding: rMS(3),
-      marginBottom: rV(16),
+      backgroundColor: themeColors.cardGlass,
+      borderRadius: rMS(24),
+      padding: rMS(4),
+      marginBottom: rV(20),
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
+      position: "relative",
+    },
+    subTabIndicator: {
+      position: "absolute",
+      top: rMS(4),
+      bottom: rMS(4),
+      left: rMS(4),
+      width: "50%",
+      backgroundColor: themeColors.tint,
+      borderRadius: rMS(22),
     },
     subTab: {
       flex: 1,
-      paddingVertical: rV(8),
-      borderRadius: rMS(8),
+      paddingVertical: rV(10),
+      borderRadius: rMS(22),
       alignItems: "center",
-    },
-    subTabActive: {
-      backgroundColor: themeColors.tint,
+      zIndex: 1,
     },
     subTabText: {
-      fontSize: rMS(12),
-      fontWeight: "700",
+      fontSize: rMS(13),
+      fontWeight: "800",
       color: themeColors.textSecondary,
     },
     subTabTextActive: {
       color: "#fff",
     },
-    // H2H match row
+    // H2H match row - Bracket Cards
+    bracketContainer: {
+      paddingTop: rV(10),
+    },
+    matchCardOuter: {
+      marginBottom: rV(28),
+    },
     matchCard: {
-      backgroundColor: themeColors.card,
-      padding: rMS(14),
-      borderRadius: rMS(14),
-      marginBottom: rV(8),
       flexDirection: "row",
       alignItems: "center",
-      justifyContent: "space-between",
+      justifyContent: "center",
+      marginBottom: rV(12),
+      backgroundColor: themeColors.cardGlass,
+      padding: rMS(16),
+      borderRadius: rMS(32),
+      ...shadow.large,
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
     },
-    matchPlayers: {
+    matchPlayerLeft: {
       flex: 1,
+      alignItems: "flex-end",
+    },
+    matchPlayerRight: {
+      flex: 1,
+      alignItems: "flex-start",
     },
     matchPlayerText: {
-      fontSize: rMS(13),
-      fontWeight: "700",
-      color: themeColors.text,
-    },
-    matchScore: {
       fontSize: rMS(14),
       fontWeight: "800",
-      color: themeColors.tint,
-    },
-    matchPending: {
-      fontSize: rMS(12),
-      color: themeColors.textSecondary,
-      fontWeight: "600",
-    },
-    matchResultDot: {
-      width: rMS(8),
-      height: rMS(8),
-      borderRadius: rMS(4),
-      marginRight: rS(6),
-    },
-    // Bracket
-    bracketRound: {
-      marginBottom: rV(18),
-    },
-    bracketRoundTitle: {
-      fontSize: rMS(11),
-      fontWeight: "800",
-      textTransform: "uppercase",
-      letterSpacing: 2,
-      color: themeColors.tint,
-      marginBottom: rV(8),
-    },
-    bracketMatch: {
-      backgroundColor: themeColors.card,
-      padding: rMS(12),
-      borderRadius: rMS(10),
-      marginBottom: rV(6),
-      borderLeftWidth: 3,
-      borderLeftColor: themeColors.tint,
-    },
-    bracketMatchText: {
-      fontSize: rMS(13),
-      fontWeight: "600",
       color: themeColors.text,
+    },
+    matchPlayerTeam: {
+      fontSize: rMS(11),
+      color: themeColors.textSecondary,
+      marginTop: rV(2),
+      fontWeight: "600",
+    },
+    scoreBlock: {
+      backgroundColor: themeColors.background,
+      borderRadius: rMS(16),
+      paddingHorizontal: rMS(16),
+      paddingVertical: rV(8),
+      marginHorizontal: rS(16),
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      minWidth: rMS(80),
+      ...shadow.light,
+    },
+    scoreText: {
+      fontSize: rMS(18),
+      fontWeight: "900",
+      color: themeColors.text,
+    },
+    scoreDivider: {
+      width: 1,
+      height: rV(16),
+      backgroundColor: themeColors.border,
+      marginHorizontal: rS(10),
+    },
+    roundText: {
+      textAlign: "center",
+      fontSize: rMS(11),
+      fontWeight: "700",
+      color: themeColors.textSecondary,
+      textTransform: "uppercase",
+      letterSpacing: 1.5,
+    },
+    bracketInfoRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginVertical: rV(24),
+    },
+    bracketInfoLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: themeColors.border,
+    },
+    bracketInfoText: {
+      marginHorizontal: rS(16),
+      fontSize: rMS(10),
+      color: themeColors.textSecondary,
+      fontWeight: "700",
+      textAlign: "center",
+      lineHeight: rMS(16),
+      letterSpacing: 0.5,
     },
   });
 
@@ -337,33 +418,39 @@ export default function LeaderboardDetail() {
     <View style={styles.container}>
       <StatusBar
         barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
-        backgroundColor={themeColors.background}
+        backgroundColor="transparent"
+        translucent
       />
+      {/* Background blobs for glassmorphism effect */}
+      <View style={styles.blob1} />
+      <View style={styles.blob2} />
+
+      {/* Frosted glass top bar with sticky back button */}
+      <BlurView
+        intensity={60}
+        tint={colorScheme === "dark" ? "dark" : "light"}
+        style={styles.topBar}
+      >
+        <AnimatedTouchable
+          style={[styles.backButton, backAnimStyle]}
+          onPress={() => router.back()}
+          onPressIn={() => {
+            backScale.value = withSpring(0.9, { damping: 15, stiffness: 300 });
+          }}
+          onPressOut={() => {
+            backScale.value = withSpring(1, { damping: 15, stiffness: 300 });
+          }}
+          activeOpacity={1}
+        >
+          <Ionicons name="arrow-back" size={22} color={themeColors.text} />
+        </AnimatedTouchable>
+      </BlurView>
+
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Back Button */}
-        <Animated.View
-          entering={FadeInDown.duration(400).delay(50)}
-          style={styles.backRow}
-        >
-          <AnimatedTouchable
-            style={[styles.backButton, backAnimStyle]}
-            onPress={() => router.back()}
-            onPressIn={() => {
-              backScale.value = withSpring(0.9, { damping: 15, stiffness: 300 });
-            }}
-            onPressOut={() => {
-              backScale.value = withSpring(1, { damping: 15, stiffness: 300 });
-            }}
-            activeOpacity={1}
-          >
-            <Ionicons name="arrow-back" size={20} color={themeColors.text} />
-          </AnimatedTouchable>
-        </Animated.View>
-
         {/* Hero */}
         <Animated.View
           entering={FadeInDown.duration(500).delay(100)}
@@ -377,16 +464,23 @@ export default function LeaderboardDetail() {
           </Text>
         </Animated.View>
 
-        {/* Sub-Tabs: Rankings | Knockout */}
+        {/* Sub-Tabs: Rankings | Knockout — animated indicator */}
         <Animated.View
           entering={FadeInDown.duration(400).delay(200)}
           style={styles.subTabRow}
         >
-          {([{ key: "rankings", label: "Rankings" }, { key: "knockout", label: "Knockout" }] as const).map((tab) => (
+          <Animated.View style={[styles.subTabIndicator, tabAnimStyle]} />
+          {([{ key: "rankings", label: "Rankings" }, { key: "knockout", label: "Knockout" }] as const).map((tab, idx) => (
             <TouchableOpacity
               key={tab.key}
-              style={[styles.subTab, activeTab === tab.key && styles.subTabActive]}
-              onPress={() => setActiveTab(tab.key as "rankings" | "knockout")}
+              style={styles.subTab}
+              onPress={() => {
+                setActiveTab(tab.key as "rankings" | "knockout");
+                tabIndicatorX.value = withTiming(
+                  idx === 0 ? 0 : (Dimensions.get("window").width - rS(32) - rMS(8)) / 2,
+                  { duration: 280, easing: Easing.bezier(0.4, 0, 0.2, 1) }
+                );
+              }}
               activeOpacity={0.8}
             >
               <Text style={[styles.subTabText, activeTab === tab.key && styles.subTabTextActive]}>
@@ -429,13 +523,13 @@ export default function LeaderboardDetail() {
                       </Text>
                       {/* Rank movement indicator */}
                       {item.movement === "up" && (
-                        <Text style={{ color: "#4CAF50", fontSize: rMS(11), fontWeight: "800", marginRight: rS(4) }}>▲</Text>
+                        <Text style={{ color: "#4CAF50", fontSize: rMS(11), fontWeight: "900" }}>▲</Text>
                       )}
                       {item.movement === "down" && (
-                        <Text style={{ color: "#F44336", fontSize: rMS(11), fontWeight: "800", marginRight: rS(4) }}>▼</Text>
+                        <Text style={{ color: "#F44336", fontSize: rMS(11), fontWeight: "900" }}>▼</Text>
                       )}
                       {item.movement === "same" && (
-                        <Text style={{ color: themeColors.textSecondary, fontSize: rMS(11), fontWeight: "800", marginRight: rS(4) }}>—</Text>
+                        <Text style={{ color: themeColors.textSecondary, fontSize: rMS(11), fontWeight: "900" }}>—</Text>
                       )}
                       <Image
                         source={
@@ -467,68 +561,58 @@ export default function LeaderboardDetail() {
           </>
         )}
 
-        {activeTab === "cup" && (
-          <View style={{ paddingTop: rV(10) }}>
-            {cupMatches.map((match, idx) => (
+        {activeTab === "knockout" && (
+          <View style={styles.bracketContainer}>
+            {knockoutMatches.map((match, idx) => (
               <Animated.View
                 key={match.id}
                 entering={FadeInDown.duration(400).delay(250 + idx * 80)}
-                style={{ marginBottom: rV(32) }}
+                style={styles.matchCardOuter}
               >
-                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: rV(12) }}>
+                <View style={styles.matchCard}>
                   {/* Left Player (p1) */}
-                  <View style={{ flex: 1, alignItems: "flex-end" }}>
-                    <Text style={{ fontSize: rMS(13), fontWeight: "700", color: themeColors.text }}>{match.p1Name}</Text>
-                    <Text style={{ fontSize: rMS(10), color: themeColors.textSecondary, marginTop: rV(2) }}>{match.p1Team}</Text>
+                  <View style={styles.matchPlayerLeft}>
+                    <Text style={styles.matchPlayerText} numberOfLines={1}>{match.p1Name}</Text>
+                    <Text style={styles.matchPlayerTeam} numberOfLines={1}>{match.p1Team}</Text>
                   </View>
 
                   {/* Score/Status Center Block */}
-                  <View style={{ 
-                    backgroundColor: "#FFFFFF",
-                    borderRadius: rMS(6), 
-                    paddingHorizontal: rMS(12), 
-                    paddingVertical: rV(6), 
-                    marginHorizontal: rS(16),
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    minWidth: rMS(70)
-                  }}>
+                  <View style={styles.scoreBlock}>
                     {match.status === "bye" ? (
-                      <Text style={{ fontSize: rMS(16), fontWeight: "800", color: "#1a1a1a" }}>N/A</Text>
+                      <Text style={styles.scoreText}>N/A</Text>
                     ) : match.status === "pending" ? (
                       <>
-                        <Text style={{ fontSize: rMS(16), fontWeight: "800", color: "#1a1a1a" }}>0</Text>
-                        <View style={{ width: 1, height: rV(14), backgroundColor: "#e0e0e0", marginHorizontal: rS(8) }} />
-                        <Text style={{ fontSize: rMS(16), fontWeight: "800", color: "#1a1a1a" }}>0</Text>
+                        <Text style={styles.scoreText}>0</Text>
+                        <View style={styles.scoreDivider} />
+                        <Text style={styles.scoreText}>0</Text>
                       </>
                     ) : (
                       <>
-                        <Text style={{ fontSize: rMS(16), fontWeight: "800", color: "#1a1a1a" }}>{match.p1Score}</Text>
-                        <View style={{ width: 1, height: rV(14), backgroundColor: "#e0e0e0", marginHorizontal: rS(8) }} />
-                        <Text style={{ fontSize: rMS(16), fontWeight: "800", color: "#1a1a1a" }}>{match.p2Score}</Text>
+                        <Text style={styles.scoreText}>{match.p1Score}</Text>
+                        <View style={styles.scoreDivider} />
+                        <Text style={styles.scoreText}>{match.p2Score}</Text>
                       </>
                     )}
                   </View>
 
                   {/* Right Player (p2) */}
-                  <View style={{ flex: 1, alignItems: "flex-start" }}>
-                    <Text style={{ fontSize: rMS(13), fontWeight: "700", color: themeColors.text }}>{match.p2Name}</Text>
-                    <Text style={{ fontSize: rMS(10), color: themeColors.textSecondary, marginTop: rV(2) }}>{match.p2Team}</Text>
+                  <View style={styles.matchPlayerRight}>
+                    <Text style={styles.matchPlayerText} numberOfLines={1}>{match.p2Name}</Text>
+                    <Text style={styles.matchPlayerTeam} numberOfLines={1}>{match.p2Team}</Text>
                   </View>
                 </View>
 
                 {/* Round text below */}
-                <Text style={{ textAlign: "center", fontSize: rMS(10), color: themeColors.textSecondary }}>{match.roundText}</Text>
+                <Text style={styles.roundText}>{match.roundText}</Text>
               </Animated.View>
             ))}
 
-            <View style={{ flexDirection: "row", alignItems: "center", marginVertical: rV(20) }}>
-              <View style={{ flex: 1, height: 1, backgroundColor: themeColors.border }} />
-              <Text style={{ marginHorizontal: rS(12), fontSize: rMS(10), color: themeColors.textSecondary, fontWeight: "600", textAlign: "center" }}>
-                Knockout started in SW 8{"\n"}Rounds calculated based on squad members
+            <View style={styles.bracketInfoRow}>
+              <View style={styles.bracketInfoLine} />
+              <Text style={styles.bracketInfoText}>
+                KNOCKOUT STARTED IN SW 8{"\n"}ROUNDS CALCULATED BY SQUAD MEMBERS
               </Text>
-              <View style={{ flex: 1, height: 1, backgroundColor: themeColors.border }} />
+              <View style={styles.bracketInfoLine} />
             </View>
           </View>
         )}

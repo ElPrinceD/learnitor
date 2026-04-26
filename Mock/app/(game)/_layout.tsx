@@ -2,30 +2,44 @@ import { Stack } from "expo-router";
 import React from "react";
 import { GameAudioProvider } from "../../contexts/GameAudioContext";
 
+const smoothFade = {
+  animation: "fade" as const,
+  config: {
+    duration: 250,
+  },
+};
+
 export default function GameLayout() {
   return (
     <GameAudioProvider>
-    <Stack initialRouteName="GameIntro">
+    <Stack
+      initialRouteName="GameIntro"
+      screenOptions={{
+        headerShown: false,
+        animation: "fade_from_bottom",
+        animationDuration: 280,
+      }}
+    >
       <Stack.Screen
         name="GameIntro"
-        options={{ headerShown: false, gestureEnabled: true }}
+        options={{ gestureEnabled: true }}
       />
       <Stack.Screen
         name="GameCourses"
-        options={{ headerShown: false, gestureEnabled: true }}
+        options={{ gestureEnabled: true }}
       />
-      <Stack.Screen name="GameTopics" options={{ headerShown: false }} />
-      <Stack.Screen name="GameWaiting" options={{ headerShown: false }} />
-      <Stack.Screen name="GameLevel" options={{ headerShown: false }} />
+      <Stack.Screen name="GameTopics" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="GameWaiting" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="GameLevel" options={{ animation: "slide_from_right" }} />
       <Stack.Screen
         name="Results"
-        options={{ headerShown: false, gestureEnabled: true }}
+        options={{ gestureEnabled: true, animation: "fade" }}
       />
-      <Stack.Screen name="Game" options={{ headerShown: false }} />
-      <Stack.Screen name="SinglePlayerGame" options={{ headerShown: false }} />
-      <Stack.Screen name="Leaderboard" options={{ headerShown: false }} />
-      <Stack.Screen name="LeaderboardDetail" options={{ headerShown: false }} />
-      <Stack.Screen name="WeeklyExam" options={{ headerShown: false }} />
+      <Stack.Screen name="Game" options={{ animation: "fade" }} />
+      <Stack.Screen name="SinglePlayerGame" options={{ animation: "fade" }} />
+      <Stack.Screen name="Leaderboard" options={{ gestureEnabled: true }} />
+      <Stack.Screen name="LeaderboardDetail" options={{ gestureEnabled: true, animation: "slide_from_right" }} />
+      <Stack.Screen name="WeeklyExam" options={{ animation: "fade" }} />
     </Stack>
     </GameAudioProvider>
   );

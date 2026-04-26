@@ -1,11 +1,21 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { View, StyleSheet, Text, useColorScheme, Animated, TouchableOpacity } from "react-native";
+import { View, StyleSheet, Text, useColorScheme, TouchableOpacity, StatusBar } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import axios from "axios";
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  FadeInUp,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
+import { BlurView } from "expo-blur";
 
 import { useAuth } from "../../components/AuthContext";
 import { useGameAudio } from "../../hooks/useGameAudio";
@@ -14,16 +24,18 @@ import { getPracticeAnswers } from "../../services/CoursesApiCalls";
 import { Question, Answer, GameDetailsResponse } from "../../components/types";
 import { useGameStore } from "../../store/gameStore";
 import Colors from "../../constants/Colors";
-import { rMS, rV, rS, SIZES } from "../../constants/index.js";
+import { rMS, rV, rS, SIZES, useShadows } from "../../constants/index.js";
 import ApiUrl from "../../config";
 import ErrorMessage from "../../components/ErrorMessage";
 
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 export default function SinglePlayerGame() {
   const { userToken, userInfo } = useAuth();
   const { playCorrect, playWrong, startMusic, stopMusic, musicMuted } = useGameAudio();
   const { gameId, gameCode } = useLocalSearchParams();
   const insets = useSafeAreaInsets();
+  const shadow = useShadows();
   
   const { startGame, endGame, answerQuestion, score, streak, multiplier, timeLimit } = useGameStore();
 
@@ -38,8 +50,8 @@ export default function SinglePlayerGame() {
   const startTimeRef = useRef<number>(0);
   const questionStartMsRef = useRef<number>(0);
 
-  const progressBarWidth = useRef(new Animated.Value(100)).current;
-  const streakScale = useRef(new Animated.Value(1)).current;
+  const progressBarWidth = useSharedValue(100);
+  const streakScale = useSharedValue(1);
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -90,19 +102,19 @@ export default function SinglePlayerGame() {
     questionStartMsRef.current = Date.now();
     const durationMs = timeLimit * 1000;
     setTimeLeft(durationMs);
-    progressBarWidth.setValue(100);
+    progressBarWidth.value = 100;
 
     const interval = setInterval(() => {
       const elapsed = Date.now() - startTimeRef.current;
       const remaining = durationMs - elapsed;
       if (remaining <= 0) {
         setTimeLeft(0);
-        Animated.timing(progressBarWidth, { toValue: 0, duration: 1000, useNativeDriver: false }).start();
+        progressBarWidth.value = withTiming(0, { duration: 1000 });
         clearInterval(interval);
       } else {
         setTimeLeft(remaining);
         const newWidth = (remaining / durationMs) * 100;
-        Animated.timing(progressBarWidth, { toValue: newWidth, duration: 1000, useNativeDriver: false }).start();
+        progressBarWidth.value = withTiming(newWidth, { duration: 1000 });
       }
     }, 1000);
 
@@ -179,10 +191,9 @@ export default function SinglePlayerGame() {
       
       if (isCorrect) {
         // Animate streak
-        Animated.sequence([
-          Animated.timing(streakScale, { toValue: 1.4, duration: 200, useNativeDriver: true }),
-          Animated.timing(streakScale, { toValue: 1, duration: 200, useNativeDriver: true }),
-        ]).start();
+        streakScale.value = withSpring(1.4, {}, () => {
+          streakScale.value = withSpring(1);
+        });
         playCorrect();
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
@@ -199,117 +210,158 @@ export default function SinglePlayerGame() {
     });
   };
 
-  const renderActiveQuestion = () => {
-    const question = gameQuestions[currentQuestion];
-    if (!question) return null;
+  const animatedProgressStyle = useAnimatedStyle(() => ({
+    width: `${progressBarWidth.value}%`,
+  }));
 
-    return (
-      <View style={styles.questionContainer}>
-        <Text style={styles.questionText}>{question.content}</Text>
-        <View style={styles.answersContainer}>
-          {gameAnswers
-            .filter((a) => a.question === question.id)
-            .map((ans) => {
-              const isSelected = selectedAnswers[question.id]?.includes(ans.id);
-              return (
-                <TouchableOpacity
-                  key={ans.id}
-                  style={[
-                    styles.answerButton,
-                    isSelected && styles.answerButtonSelected,
-                  ]}
-                  onPress={() => handleAnswerSelection(ans.id, question.id)}
-                >
-                  <Text style={[styles.answerText, isSelected && styles.answerTextSelected]}>
-                    {ans.content}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-        </View>
-      </View>
-    );
-  };
+  const animatedStreakStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: streakScale.value }],
+  }));
+
+  const question = gameQuestions[currentQuestion];
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: themeColors.background },
-    header: {
+    blob1: {
+      position: "absolute",
+      top: -rV(100),
+      right: -rS(60),
+      width: rS(260),
+      height: rS(260),
+      borderRadius: rS(130),
+      backgroundColor: themeColors.tint + "18",
+    },
+    blob2: {
+      position: "absolute",
+      bottom: rV(60),
+      left: -rS(100),
+      width: rS(280),
+      height: rS(280),
+      borderRadius: rS(140),
+      backgroundColor: "#F9731618",
+    },
+    headerCard: {
+      overflow: "hidden",
+      borderBottomLeftRadius: rMS(32),
+      borderBottomRightRadius: rMS(32),
+      ...shadow.medium,
+      zIndex: 10,
+    },
+    headerBlur: {
+      paddingTop: Math.max(rV(20), insets.top + rV(10)),
+      paddingBottom: rV(20),
+      paddingHorizontal: rS(24),
+      backgroundColor: themeColors.tint + "08",
+    },
+    headerTopRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      paddingHorizontal: rS(20),
-      marginTop: Math.max(rV(10), insets.top),
       alignItems: 'center',
+      marginBottom: rV(12),
     },
-    timerBarContainer: {
-      height: rV(6),
-      backgroundColor: themeColors.border,
-      marginHorizontal: rS(20),
-      marginTop: rV(10),
-      borderRadius: 3,
-      overflow: 'hidden',
-    },
-    timerBar: {
-      height: '100%',
-      backgroundColor: themeColors.tint,
+    questionCounter: {
+      fontSize: rMS(14),
+      fontWeight: "800",
+      color: themeColors.textSecondary,
     },
     scoreStreakContainer: {
       alignItems: 'flex-end',
     },
     scoreText: {
-      fontSize: SIZES.xLarge,
-      fontWeight: 'bold',
+      fontSize: SIZES.large,
+      fontWeight: '900',
       color: themeColors.text,
     },
     streakText: {
-      fontSize: SIZES.medium,
-      color: '#FF8C00', // Fire color
-      fontWeight: 'bold',
+      fontSize: SIZES.small,
+      color: '#F97316',
+      fontWeight: '900',
+      marginTop: rV(2),
     },
-    questionCounter: {
-      fontSize: SIZES.large,
-      color: themeColors.textSecondary,
+    timerBarContainer: {
+      height: rV(6),
+      backgroundColor: themeColors.background + "80",
+      borderRadius: rMS(3),
+      overflow: 'hidden',
+      width: '100%',
     },
-    questionContainer: {
+    timerBar: {
+      height: '100%',
+      backgroundColor: themeColors.tint,
+      borderRadius: rMS(3),
+    },
+    contentArea: {
       flex: 1,
-      padding: rS(20),
+      paddingHorizontal: rS(16),
+      paddingTop: rV(24),
+      paddingBottom: Math.max(rV(24), insets.bottom + rV(12)),
+    },
+    questionCardContainer: {
+      borderRadius: rMS(36),
+      overflow: "hidden",
+      ...shadow.large,
+      marginBottom: rV(32),
+    },
+    questionCardBlur: {
+      padding: rMS(24),
+      minHeight: rV(140),
       justifyContent: 'center',
+      backgroundColor: themeColors.cardGlass,
     },
     questionText: {
-      fontSize: SIZES.xxLarge,
-      fontWeight: 'bold',
+      fontSize: rMS(20),
+      fontWeight: '900',
       color: themeColors.text,
       textAlign: 'center',
-      marginBottom: rV(30),
+      lineHeight: rMS(28),
     },
     answersContainer: {
-      gap: rV(15),
+      gap: rV(14),
     },
     answerButton: {
-      padding: rMS(15),
-      borderRadius: rMS(10),
-      borderWidth: 2,
-      borderColor: themeColors.border,
-      backgroundColor: themeColors.card,
+      paddingVertical: rV(16),
+      paddingHorizontal: rMS(20),
+      borderRadius: rMS(32),
+      borderWidth: 1.5,
+      borderColor: themeColors.border + "60",
+      backgroundColor: themeColors.cardGlass,
+      ...shadow.light,
     },
     answerButtonSelected: {
       borderColor: themeColors.tint,
       backgroundColor: themeColors.tint + '20',
     },
     answerText: {
-      fontSize: SIZES.large,
+      fontSize: SIZES.medium,
+      fontWeight: '700',
       color: themeColors.text,
       textAlign: 'center',
     },
     answerTextSelected: {
-      fontWeight: 'bold',
+      fontWeight: '900',
       color: themeColors.tint,
+    },
+    // Loading state
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    loadingText: {
+      color: themeColors.textSecondary,
+      fontSize: SIZES.small,
+      marginTop: rV(12),
+      fontWeight: '700',
     },
   });
 
   if (gameQuestions.length === 0) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ color: themeColors.text }}>Loading single player game...</Text>
+      <View style={[styles.container, styles.loadingContainer]}>
+        <StatusBar barStyle={colorScheme === "dark" ? "light-content" : "dark-content"} />
+        <View style={styles.blob1} />
+        <View style={styles.blob2} />
+        <Text style={styles.loadingText}>Loading single player game...</Text>
         <ErrorMessage message={error} visible={!!error} onDismiss={() => setError("")} />
       </View>
     );
@@ -317,23 +369,64 @@ export default function SinglePlayerGame() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.questionCounter}>
-          Q: {currentQuestion + 1}/{gameQuestions.length}
-        </Text>
-        <View style={styles.scoreStreakContainer}>
-          <Text style={styles.scoreText}>{Math.round(score)} pts</Text>
-          {streak > 1 && (
-            <Animated.Text style={[styles.streakText, { transform: [{ scale: streakScale }] }]}>
-              {streak} Streak! 🔥
-            </Animated.Text>
-          )}
+      <StatusBar barStyle={colorScheme === "dark" ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
+      <View style={styles.blob1} />
+      <View style={styles.blob2} />
+
+      {/* Frosted glass header */}
+      <Animated.View entering={FadeInDown.duration(400)} style={styles.headerCard}>
+        <BlurView intensity={70} tint={colorScheme === "dark" ? "dark" : "light"} style={styles.headerBlur}>
+          <View style={styles.headerTopRow}>
+            <Text style={styles.questionCounter}>
+              Q: {currentQuestion + 1} / {gameQuestions.length}
+            </Text>
+            <View style={styles.scoreStreakContainer}>
+              <Text style={styles.scoreText}>{Math.round(score)} pts</Text>
+              {streak > 1 && (
+                <Animated.Text style={[styles.streakText, animatedStreakStyle]}>
+                  {streak} Streak! 🔥
+                </Animated.Text>
+              )}
+            </View>
+          </View>
+          <View style={styles.timerBarContainer}>
+            <Animated.View style={[styles.timerBar, animatedProgressStyle]} />
+          </View>
+        </BlurView>
+      </Animated.View>
+
+      {/* Question & Answers */}
+      {question && (
+        <View style={styles.contentArea}>
+          <Animated.View key={`q-${currentQuestion}`} entering={FadeIn.duration(400)} style={styles.questionCardContainer}>
+            <BlurView intensity={80} tint={colorScheme === "dark" ? "dark" : "light"} style={styles.questionCardBlur}>
+              <Text style={styles.questionText}>{question.content}</Text>
+            </BlurView>
+          </Animated.View>
+
+          <View style={styles.answersContainer}>
+            {gameAnswers
+              .filter((a) => a.question === question.id)
+              .map((ans, idx) => {
+                const isSelected = selectedAnswers[question.id]?.includes(ans.id);
+                return (
+                  <Animated.View key={ans.id} entering={FadeInUp.duration(400).delay(idx * 100).springify()}>
+                    <AnimatedTouchable
+                      style={[styles.answerButton, isSelected && styles.answerButtonSelected]}
+                      onPress={() => handleAnswerSelection(ans.id, question.id)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.answerText, isSelected && styles.answerTextSelected]}>
+                        {ans.content}
+                      </Text>
+                    </AnimatedTouchable>
+                  </Animated.View>
+                );
+              })}
+          </View>
         </View>
-      </View>
-      <View style={styles.timerBarContainer}>
-        <Animated.View style={[styles.timerBar, { width: progressBarWidth.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }) }]} />
-      </View>
-      {renderActiveQuestion()}
+      )}
+      <ErrorMessage message={error} visible={!!error} onDismiss={() => setError("")} />
     </View>
   );
 }

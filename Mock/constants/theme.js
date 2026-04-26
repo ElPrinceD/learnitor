@@ -37,25 +37,40 @@ const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   
   return {
+    light: {
+      shadowColor: themeColors.shadow,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.12,
+      shadowRadius: 3,
+      elevation: 1,
+    },
     small: {
       shadowColor: themeColors.shadow,
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: 0.25,
-      shadowRadius: 3.84,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
       elevation: 2,
     },
     medium: {
       shadowColor: themeColors.shadow,
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: 0.25,
-      shadowRadius: 5.84,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.18,
+      shadowRadius: 8,
       elevation: 5,
+    },
+    large: {
+      shadowColor: themeColors.shadow,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.22,
+      shadowRadius: 16,
+      elevation: 8,
+    },
+    extraLarge: {
+      shadowColor: themeColors.shadow,
+      shadowOffset: { width: 0, height: 12 },
+      shadowOpacity: 0.28,
+      shadowRadius: 24,
+      elevation: 12,
     },
   };
 };

@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Modal,
+  Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -21,6 +22,8 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
+  Easing,
 } from "react-native-reanimated";
 import { useAuth } from "../../../components/AuthContext";
 import Toast from "react-native-root-toast";
@@ -204,8 +207,13 @@ export default function PlayScreen() {
   const examEndLocal = formatToLocalTime(examStatus.endsAt);
 
   // Animated press scales
-  const multiplayerScale = useSharedValue(1);
-  const soloScale = useSharedValue(1);
+  const playBtnScale = useSharedValue(1);
+
+  // Toggle indicator animation
+  const toggleIndicatorX = useSharedValue(0);
+  const toggleAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: toggleIndicatorX.value }],
+  }));
 
   useEffect(() => {
     setJoinGameDisabled(gameCode.length !== 6);
@@ -273,12 +281,8 @@ export default function PlayScreen() {
     }
   };
 
-  const navigateMultiplayer = () => {
-    router.navigate({ pathname: "/(game)/GameCourses", params: { isSinglePlayer: "false" } });
-  };
-
-  const navigateSoloPlay = () => {
-    router.navigate({ pathname: "/(game)/GameCourses", params: { isSinglePlayer: "true" } });
+  const navigateToGame = () => {
+    router.navigate({ pathname: "/(game)/GameIntro" });
   };
 
   const joinGame = async () => {
@@ -344,12 +348,8 @@ export default function PlayScreen() {
   };
 
   // Animated button styles
-  const multiplayerAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: multiplayerScale.value }],
-  }));
-
-  const soloAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: soloScale.value }],
+  const playBtnAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: playBtnScale.value }],
   }));
 
   const onPressIn = (scaleValue: Animated.SharedValue<number>) => {
@@ -400,7 +400,7 @@ export default function PlayScreen() {
     },
     scrollContent: {
       paddingHorizontal: rS(16),
-      paddingTop: Math.max(rV(12), insets.top + rV(6)),
+      paddingTop: Math.max(rV(60), insets.top + rV(44)),
       paddingBottom: Math.max(rV(32), insets.bottom + rV(16)),
     },
     // Hero
@@ -420,51 +420,53 @@ export default function PlayScreen() {
       marginTop: rV(4),
       lineHeight: rMS(18),
     },
-    // Action grid
-    actionGrid: {
+    // Action buttons row
+    actionRow: {
       flexDirection: "row",
-      gap: rS(12),
+      gap: rS(10),
       marginBottom: rV(20),
     },
-    actionButtonMultiplayer: {
+    playButton: {
       flex: 1,
       backgroundColor: themeColors.tint,
-      borderRadius: rMS(14),
-      paddingVertical: rV(16),
-      paddingHorizontal: rS(12),
+      borderRadius: rMS(24),
+      paddingVertical: rV(14),
       flexDirection: "row",
       alignItems: "center",
-      justifyContent: "space-between",
+      justifyContent: "center",
+      gap: rS(8),
+      ...shadow.medium,
     },
-    actionButtonSolo: {
+    playButtonText: {
+      color: "#fff",
+      fontSize: rMS(13),
+      fontWeight: "900",
+      letterSpacing: 0.3,
+    },
+    examBtnInline: {
       flex: 1,
-      backgroundColor: themeColors.card,
-      borderRadius: rMS(14),
-      paddingVertical: rV(16),
-      paddingHorizontal: rS(12),
+      borderRadius: rMS(24),
+      paddingVertical: rV(14),
       flexDirection: "row",
       alignItems: "center",
-      justifyContent: "space-between",
+      justifyContent: "center",
+      gap: rS(6),
+      overflow: "hidden",
     },
-    actionLabel: {
-      fontSize: rMS(9),
-      fontWeight: "700",
-      textTransform: "uppercase",
-      letterSpacing: 1.2,
-      opacity: 0.8,
-      marginBottom: rV(2),
-    },
-    actionTitle: {
-      fontSize: SIZES.medium,
+    examBtnInlineText: {
+      fontSize: rMS(12),
       fontWeight: "800",
+      letterSpacing: 0.2,
     },
     // Join card
     joinCard: {
-      backgroundColor: themeColors.card,
-      borderRadius: rMS(14),
+      backgroundColor: themeColors.cardGlass,
+      borderRadius: rMS(28),
       padding: rMS(14),
       marginBottom: rV(22),
-      ...shadow.small,
+      borderWidth: 1,
+      borderColor: themeColors.border + "60",
+      ...shadow.medium,
     },
     joinRow: {
       flexDirection: "row",
@@ -474,17 +476,17 @@ export default function PlayScreen() {
     joinInput: {
       flex: 1,
       backgroundColor: themeColors.background,
-      borderRadius: rMS(8),
+      borderRadius: rMS(20),
       paddingVertical: rV(10),
       paddingHorizontal: rMS(12),
       fontSize: SIZES.small,
       color: themeColors.text,
       borderWidth: 1,
-      borderColor: themeColors.tint + "30",
+      borderColor: themeColors.border,
     },
     joinButton: {
       backgroundColor: themeColors.tint,
-      borderRadius: rMS(8),
+      borderRadius: rMS(20),
       paddingVertical: rV(10),
       paddingHorizontal: rMS(14),
       alignItems: "center",
@@ -522,40 +524,42 @@ export default function PlayScreen() {
       color: themeColors.tint,
       fontWeight: "700",
     },
-    // Standing cards
+    // Standing cards — compact
     standingCard: {
-      backgroundColor: themeColors.card,
-      padding: rMS(12),
-      borderRadius: rMS(14),
+      backgroundColor: themeColors.cardGlass,
+      padding: rMS(10),
+      borderRadius: rMS(20),
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      marginBottom: rV(8),
+      marginBottom: rV(6),
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
     },
     standingCardLeft: {
       flexDirection: "row",
       alignItems: "center",
-      gap: rS(14),
+      gap: rS(10),
     },
     standingIconBox: {
-      width: rMS(40),
-      height: rMS(40),
-      borderRadius: rMS(12),
+      width: rMS(32),
+      height: rMS(32),
+      borderRadius: rMS(16),
       alignItems: "center",
       justifyContent: "center",
     },
     standingName: {
-      fontSize: SIZES.medium,
+      fontSize: rMS(12),
       fontWeight: "800",
       color: themeColors.text,
     },
     standingCardRight: {
       flexDirection: "row",
       alignItems: "center",
-      gap: rS(8),
+      gap: rS(4),
     },
     standingRank: {
-      fontSize: rMS(14),
+      fontSize: rMS(12),
       fontWeight: "bold",
       color: themeColors.tint,
     },
@@ -564,10 +568,12 @@ export default function PlayScreen() {
       marginBottom: rV(28),
     },
     squadEmpty: {
-      backgroundColor: themeColors.card,
-      borderRadius: rMS(14),
+      backgroundColor: themeColors.cardGlass,
+      borderRadius: rMS(28),
       padding: rMS(16),
       alignItems: "center",
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
     },
     squadEmptyText: {
       color: themeColors.textSecondary,
@@ -584,7 +590,7 @@ export default function PlayScreen() {
     squadActionButton: {
       flex: 1,
       height: rV(70),
-      borderRadius: rMS(14),
+      borderRadius: rMS(24),
       paddingHorizontal: rS(16),
       flexDirection: "row",
       alignItems: "center",
@@ -621,18 +627,18 @@ export default function PlayScreen() {
     },
     squadJoinInput: {
       flex: 1,
-      backgroundColor: themeColors.card,
-      borderRadius: rMS(10),
+      backgroundColor: themeColors.cardGlass,
+      borderRadius: rMS(20),
       paddingVertical: rV(10),
       paddingHorizontal: rMS(14),
       fontSize: SIZES.small,
       color: themeColors.text,
       borderWidth: 1,
-      borderColor: themeColors.tint + "30",
+      borderColor: themeColors.border,
     },
     squadJoinBtn: {
       backgroundColor: themeColors.tint,
-      borderRadius: rMS(10),
+      borderRadius: rMS(20),
       paddingVertical: rV(10),
       paddingHorizontal: rMS(16),
       justifyContent: "center",
@@ -644,13 +650,15 @@ export default function PlayScreen() {
       fontSize: SIZES.small,
     },
     squadItem: {
-      backgroundColor: themeColors.card,
+      backgroundColor: themeColors.cardGlass,
       padding: rMS(12),
-      borderRadius: rMS(12),
+      borderRadius: rMS(24),
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
       marginBottom: rV(6),
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
     },
     squadItemLeft: {
       flexDirection: "row",
@@ -677,20 +685,30 @@ export default function PlayScreen() {
     // Toggle pill
     toggleContainer: {
       flexDirection: "row",
-      backgroundColor: themeColors.card,
-      borderRadius: rMS(12),
+      backgroundColor: themeColors.cardGlass,
+      borderRadius: rMS(24),
       padding: rMS(3),
       marginBottom: rV(20),
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
+      position: "relative",
+    },
+    toggleIndicator: {
+      position: "absolute",
+      top: rMS(3),
+      bottom: rMS(3),
+      left: rMS(3),
+      width: "50%",
+      backgroundColor: themeColors.tint,
+      borderRadius: rMS(22),
     },
     toggleButton: {
       flex: 1,
       paddingVertical: rV(10),
-      borderRadius: rMS(10),
+      borderRadius: rMS(22),
       alignItems: "center",
       justifyContent: "center",
-    },
-    toggleButtonActive: {
-      backgroundColor: themeColors.tint,
+      zIndex: 1,
     },
     toggleText: {
       fontSize: rMS(13),
@@ -702,8 +720,8 @@ export default function PlayScreen() {
     },
     // Cup mode H2H card
     h2hCard: {
-      backgroundColor: themeColors.card,
-      borderRadius: rMS(16),
+      backgroundColor: themeColors.cardGlass,
+      borderRadius: rMS(28),
       padding: rMS(18),
       marginBottom: rV(16),
       borderWidth: 1.5,
@@ -770,7 +788,7 @@ export default function PlayScreen() {
     // Exam button
     examButton: {
       backgroundColor: themeColors.tint,
-      borderRadius: rMS(12),
+      borderRadius: rMS(24),
       paddingVertical: rV(14),
       alignItems: "center",
       marginTop: rV(10),
@@ -795,8 +813,8 @@ export default function PlayScreen() {
     },
     modalContent: {
       backgroundColor: themeColors.background,
-      borderTopLeftRadius: rMS(24),
-      borderTopRightRadius: rMS(24),
+      borderTopLeftRadius: rMS(36),
+      borderTopRightRadius: rMS(36),
       padding: rMS(24),
       paddingBottom: Math.max(rV(32), insets.bottom + rV(16)),
     },
@@ -804,7 +822,7 @@ export default function PlayScreen() {
       width: rS(40),
       height: rV(4),
       backgroundColor: themeColors.textSecondary + "40",
-      borderRadius: 2,
+      borderRadius: rMS(4),
       alignSelf: "center",
       marginBottom: rV(16),
     },
@@ -821,8 +839,8 @@ export default function PlayScreen() {
       lineHeight: rMS(18),
     },
     modeOption: {
-      backgroundColor: themeColors.card,
-      borderRadius: rMS(14),
+      backgroundColor: themeColors.cardGlass,
+      borderRadius: rMS(24),
       padding: rMS(16),
       marginBottom: rV(10),
       borderWidth: 1.5,
@@ -852,12 +870,14 @@ export default function PlayScreen() {
     // Exam score card
     examScoreCard: {
       flexDirection: "row",
-      backgroundColor: themeColors.card,
-      borderRadius: rMS(16),
+      backgroundColor: themeColors.cardGlass,
+      borderRadius: rMS(28),
       padding: rMS(16),
       marginBottom: rV(16),
       justifyContent: "space-between",
       alignItems: "center",
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
     },
     examScoreStat: {
       flex: 1,
@@ -883,7 +903,7 @@ export default function PlayScreen() {
     },
     // Exam button
     examActionBtn: {
-      borderRadius: rMS(14),
+      borderRadius: rMS(24),
       paddingVertical: rV(14),
       paddingHorizontal: rMS(20),
       alignItems: "center",
@@ -902,6 +922,54 @@ export default function PlayScreen() {
       textAlign: "center",
       marginBottom: rV(16),
       lineHeight: rMS(14),
+    },
+    // Cup card for knockout list
+    cupCard: {
+      backgroundColor: themeColors.cardGlass,
+      borderRadius: rMS(20),
+      padding: rMS(12),
+      marginBottom: rV(8),
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    cupCardLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: rS(10),
+      flex: 1,
+    },
+    cupIcon: {
+      width: rMS(32),
+      height: rMS(32),
+      borderRadius: rMS(16),
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    cupName: {
+      fontSize: rMS(13),
+      fontWeight: "800",
+      color: themeColors.text,
+    },
+    cupWeek: {
+      fontSize: rMS(10),
+      color: themeColors.textSecondary,
+      fontWeight: "600",
+      marginTop: rV(2),
+    },
+    cupResultBadge: {
+      width: rMS(24),
+      height: rMS(24),
+      borderRadius: rMS(12),
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    cupResultText: {
+      color: "#fff",
+      fontSize: rMS(10),
+      fontWeight: "900",
     },
   });
 
@@ -937,15 +1005,15 @@ export default function PlayScreen() {
           <Animated.View entering={FadeInDown.duration(500).delay(120)}>
             <View style={styles.examScoreCard}>
               <View style={styles.examScoreStat}>
+                <Text style={styles.examScoreValue}>{examScores.globalAverage}</Text>
+                <Text style={styles.examScoreLabel}>Global Avg</Text>
+              </View>
+              <View style={styles.examScoreDivider} />
+              <View style={styles.examScoreStat}>
                 <Text style={[styles.examScoreValue, { color: themeColors.tint }]}>
                   {examScores.userScore ?? "—"}
                 </Text>
                 <Text style={styles.examScoreLabel}>Your Score</Text>
-              </View>
-              <View style={styles.examScoreDivider} />
-              <View style={styles.examScoreStat}>
-                <Text style={styles.examScoreValue}>{examScores.globalAverage}</Text>
-                <Text style={styles.examScoreLabel}>Global Avg</Text>
               </View>
               <View style={styles.examScoreDivider} />
               <View style={styles.examScoreStat}>
@@ -960,34 +1028,50 @@ export default function PlayScreen() {
           {/* Exam Time Display */}
           <Animated.View entering={FadeInDown.duration(500).delay(130)}>
             <Text style={styles.examTimeText}>
-              📅 Weekly Exam · {examStartLocal} — {examEndLocal}
+              🕐 Weekly Exam · {examStartLocal} — {examEndLocal}
             </Text>
           </Animated.View>
 
-          {/* Smart Exam Button */}
-          {examButtonState !== "hidden" && examButtonState !== "expired" && (
-            <Animated.View entering={FadeInDown.duration(500).delay(135)}>
+          {/* Play Game + Exam — side by side */}
+          <Animated.View entering={FadeInDown.duration(500).delay(200)} style={styles.actionRow}>
+            <AnimatedTouchable
+              style={[styles.playButton, playBtnAnimStyle]}
+              onPress={navigateToGame}
+              onPressIn={() => onPressIn(playBtnScale)}
+              onPressOut={() => onPressOut(playBtnScale)}
+              activeOpacity={1}
+            >
+              <Ionicons name="game-controller" size={20} color="#fff" />
+              <Text style={styles.playButtonText}>Play Game</Text>
+            </AnimatedTouchable>
+
+            {examButtonState !== "hidden" && examButtonState !== "expired" && (
               <TouchableOpacity
                 style={[
-                  styles.examActionBtn,
+                  styles.examBtnInline,
                   {
                     backgroundColor:
                       examButtonState === "active"
                         ? themeColors.tint
                         : examButtonState === "completed"
                         ? "#4CAF50" + "20"
-                        : themeColors.card,
-                    borderWidth: examButtonState === "teaser" ? 1.5 : 0,
-                    borderColor: themeColors.tint + "50",
+                        : themeColors.cardGlass,
+                    borderWidth: examButtonState === "active" ? 0 : 1.5,
+                    borderColor: examButtonState === "completed" ? "#4CAF50" + "40" : themeColors.tint + "40",
                   },
                 ]}
                 activeOpacity={examButtonState === "active" ? 0.8 : 1}
                 disabled={examButtonState !== "active"}
                 onPress={() => router.push("/(game)/WeeklyExam")}
               >
+                <Ionicons
+                  name={examButtonState === "completed" ? "checkmark-circle" : examButtonState === "active" ? "document-text" : "time"}
+                  size={18}
+                  color={examButtonState === "active" ? "#fff" : examButtonState === "completed" ? "#4CAF50" : themeColors.textSecondary}
+                />
                 <Text
                   style={[
-                    styles.examActionBtnText,
+                    styles.examBtnInlineText,
                     {
                       color:
                         examButtonState === "active"
@@ -999,23 +1083,28 @@ export default function PlayScreen() {
                   ]}
                 >
                   {examButtonState === "teaser"
-                    ? "⏳ Exam opens soon"
+                    ? "Exam Soon"
                     : examButtonState === "active"
-                    ? "📝 Start Weekly Exam"
-                    : "✓ Completed"}
+                    ? "Weekly Exam"
+                    : "Completed"}
                 </Text>
               </TouchableOpacity>
-            </Animated.View>
-          )}
+            )}
+          </Animated.View>
 
-          {/* Rankings / Knockout Toggle */}
+          {/* Rankings / Knockout Toggle — animated indicator */}
           <Animated.View
-            entering={FadeInDown.duration(500).delay(150)}
+            entering={FadeInDown.duration(500).delay(250)}
             style={styles.toggleContainer}
           >
+            {/* Animated sliding indicator */}
+            <Animated.View style={[styles.toggleIndicator, toggleAnimatedStyle]} />
             <TouchableOpacity
-              style={[styles.toggleButton, activeMode === "rankings" && styles.toggleButtonActive]}
-              onPress={() => setActiveMode("rankings")}
+              style={styles.toggleButton}
+              onPress={() => {
+                setActiveMode("rankings");
+                toggleIndicatorX.value = withTiming(0, { duration: 280, easing: Easing.bezier(0.4, 0, 0.2, 1) });
+              }}
               activeOpacity={0.8}
             >
               <Text style={[styles.toggleText, activeMode === "rankings" && styles.toggleTextActive]}>
@@ -1023,85 +1112,20 @@ export default function PlayScreen() {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.toggleButton, activeMode === "knockout" && styles.toggleButtonActive]}
-              onPress={() => setActiveMode("knockout")}
+              style={styles.toggleButton}
+              onPress={() => {
+                setActiveMode("knockout");
+                toggleIndicatorX.value = withTiming(
+                  (Dimensions.get("window").width - rS(32) - rMS(6)) / 2,
+                  { duration: 280, easing: Easing.bezier(0.4, 0, 0.2, 1) }
+                );
+              }}
               activeOpacity={0.8}
             >
               <Text style={[styles.toggleText, activeMode === "knockout" && styles.toggleTextActive]}>
                 Knockout
               </Text>
             </TouchableOpacity>
-          </Animated.View>
-
-          {/* Action Grid - Multiplayer & Solo */}
-          <Animated.View
-            entering={FadeInDown.duration(500).delay(200)}
-            style={styles.actionGrid}
-          >
-            <AnimatedTouchable
-              style={[styles.actionButtonMultiplayer, multiplayerAnimStyle]}
-              onPress={navigateMultiplayer}
-              onPressIn={() => onPressIn(multiplayerScale)}
-              onPressOut={() => onPressOut(multiplayerScale)}
-              activeOpacity={1}
-            >
-              <View>
-                <Text style={[styles.actionLabel, { color: "#fff" }]}>
-                  With Friends
-                </Text>
-                <Text style={[styles.actionTitle, { color: "#fff" }]}>
-                  Multiplayer
-                </Text>
-              </View>
-              <Ionicons name="people" size={22} color="#fff" />
-            </AnimatedTouchable>
-
-            <AnimatedTouchable
-              style={[styles.actionButtonSolo, soloAnimStyle]}
-              onPress={navigateSoloPlay}
-              onPressIn={() => onPressIn(soloScale)}
-              onPressOut={() => onPressOut(soloScale)}
-              activeOpacity={1}
-            >
-              <View>
-                <Text style={[styles.actionLabel, { color: themeColors.tint }]}>
-                  Compete Solo
-                </Text>
-                <Text style={[styles.actionTitle, { color: themeColors.text }]}>
-                  Solo Play
-                </Text>
-              </View>
-              <Ionicons name="flash" size={22} color={themeColors.tint} />
-            </AnimatedTouchable>
-          </Animated.View>
-
-          {/* Join Game Card */}
-          <Animated.View
-            entering={FadeInDown.duration(500).delay(300)}
-            style={styles.joinCard}
-          >
-            <Text style={styles.joinLabel}>Got a game code?</Text>
-            <View style={styles.joinRow}>
-              <TextInput
-                style={styles.joinInput}
-                value={gameCode}
-                onChangeText={setGameCode}
-                placeholder="Enter 6-char code"
-                placeholderTextColor={themeColors.textSecondary}
-                autoCapitalize="characters"
-                maxLength={6}
-              />
-              <TouchableOpacity
-                style={[
-                  styles.joinButton,
-                  joinGameDisabled && styles.joinButtonDisabled,
-                ]}
-                onPress={handleJoinPress}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.joinButtonText}>Join</Text>
-              </TouchableOpacity>
-            </View>
           </Animated.View>
 
           {activeMode === "rankings" ? (
@@ -1347,32 +1371,36 @@ export default function PlayScreen() {
                 <Text style={styles.sectionTitle}>Squad Knockouts</Text>
               </View>
 
-              {/* Table header */}
-              <View style={[styles.standingCard, { backgroundColor: "transparent", paddingVertical: rV(4), borderBottomWidth: 1, borderBottomColor: themeColors.border, borderRadius: 0, marginBottom: rV(8) }]}>
-                <Text style={[styles.standingName, { flex: 2, fontSize: rMS(10), color: themeColors.textSecondary, fontWeight: "700" }]}>Squad</Text>
-                <Text style={[styles.standingName, { flex: 1, fontSize: rMS(10), color: themeColors.textSecondary, fontWeight: "700", textAlign: "right" }]}>Study Week</Text>
-                <Text style={[styles.standingName, { width: rMS(40), fontSize: rMS(10), color: themeColors.textSecondary, fontWeight: "700", textAlign: "right" }]}>Result</Text>
-              </View>
-
               {MOCK_USER_CUPS.map((cup, idx) => (
                 <Animated.View
                   key={cup.id}
                   entering={FadeInDown.duration(400).delay(450 + idx * 80)}
                 >
                   <TouchableOpacity
-                    style={[styles.standingCard, { borderBottomWidth: 1, borderBottomColor: themeColors.border + "40", borderRadius: 0, paddingVertical: rV(12), marginBottom: 0, backgroundColor: "transparent" }]}
+                    style={styles.cupCard}
                     onPress={() => openLeaderboard(cup.id, cup.name, "knockout")}
                     activeOpacity={0.7}
                   >
-                    <Text style={[styles.standingName, { flex: 2, fontSize: rMS(13), fontWeight: "800", color: themeColors.text }]}>{cup.name}</Text>
-                    <Text style={[styles.standingName, { flex: 1, fontSize: rMS(12), color: themeColors.textSecondary, textAlign: "right" }]}>{cup.studyWeek}</Text>
-                    <View style={{ width: rMS(40), alignItems: "flex-end" }}>
-                      {cup.result !== "pending" && (
-                        <View style={{ backgroundColor: cup.result === "w" ? "#4CAF50" : "#F44336", width: rMS(18), height: rMS(18), borderRadius: rMS(9), alignItems: "center", justifyContent: "center" }}>
-                          <Text style={{ color: "#fff", fontSize: rMS(10), fontWeight: "900" }}>{cup.result.toUpperCase()}</Text>
-                        </View>
-                      )}
+                    <View style={styles.cupCardLeft}>
+                      <View style={[styles.cupIcon, { backgroundColor: cup.result === "w" ? "#4CAF50" + "18" : cup.result === "l" ? "#F44336" + "18" : themeColors.tint + "15" }]}>
+                        <Ionicons
+                          name={cup.result === "w" ? "trophy" : cup.result === "l" ? "close-circle" : "time"}
+                          size={18}
+                          color={cup.result === "w" ? "#4CAF50" : cup.result === "l" ? "#F44336" : themeColors.tint}
+                        />
+                      </View>
+                      <View>
+                        <Text style={styles.cupName}>{cup.name}</Text>
+                        {cup.studyWeek ? <Text style={styles.cupWeek}>{cup.studyWeek}</Text> : null}
+                      </View>
                     </View>
+                    {cup.result !== "pending" ? (
+                      <View style={[styles.cupResultBadge, { backgroundColor: cup.result === "w" ? "#4CAF50" : "#F44336" }]}>
+                        <Text style={styles.cupResultText}>{cup.result.toUpperCase()}</Text>
+                      </View>
+                    ) : (
+                      <Ionicons name="chevron-forward" size={18} color={themeColors.textSecondary} />
+                    )}
                   </TouchableOpacity>
                 </Animated.View>
               ))}

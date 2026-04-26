@@ -1,6 +1,15 @@
-import { View, Text, StyleSheet, useColorScheme } from "react-native";
+import { View, Text, StyleSheet, useColorScheme, TouchableOpacity, StatusBar } from "react-native";
 import React, { useState, useCallback } from "react";
 import { router, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import Animated, {
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
+import { BlurView } from "expo-blur";
 import PracticeLevel from "../../components/PracticeLevel";
 import { Level } from "../../components/types";
 import { useAuth } from "../../components/AuthContext";
@@ -8,15 +17,24 @@ import ErrorMessage from "../../components/ErrorMessage";
 
 import axios from "axios";
 import ApiUrl from "../../config";
-import { SIZES, rMS, rV } from "../../constants";
+import { SIZES, rMS, rS, rV, useShadows } from "../../constants";
 import Colors from "../../constants/Colors";
+
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 const GameLevel: React.FC = () => {
   const { topics, topic, course } = useLocalSearchParams();
   const { userToken } = useAuth();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+  const insets = useSafeAreaInsets();
+  const shadow = useShadows();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const backScale = useSharedValue(1);
+  const backAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: backScale.value }],
+  }));
 
   const handleDismissError = useCallback(() => setErrorMessage(null), []);
 
@@ -109,23 +127,120 @@ const GameLevel: React.FC = () => {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
+      backgroundColor: themeColors.background,
+    },
+    blob1: {
+      position: "absolute",
+      top: -rV(70),
+      right: -rS(50),
+      width: rS(230),
+      height: rS(230),
+      borderRadius: rS(115),
+      backgroundColor: themeColors.tint + "15",
+    },
+    blob2: {
+      position: "absolute",
+      bottom: rV(80),
+      left: -rS(70),
+      width: rS(200),
+      height: rS(200),
+      borderRadius: rS(100),
+      backgroundColor: "#F59E0B12",
+    },
+    topBar: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      height: Math.max(rV(80), insets.top + rV(50)),
+      zIndex: 10,
+    },
+    scrollArea: {
+      flex: 1,
       padding: rMS(10),
-      marginTop: rV(50),
+      paddingTop: Math.max(rV(80), insets.top + rV(50)),
+    },
+    backRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: rV(8),
+      marginTop: rV(8),
+    },
+    backButton: {
+      width: rMS(44),
+      height: rMS(44),
+      borderRadius: rMS(22),
+      backgroundColor: themeColors.cardGlass,
+      alignItems: "center",
+      justifyContent: "center",
+      ...shadow.small,
+    },
+    heroSection: {
+      paddingHorizontal: rS(14),
+      marginBottom: rV(16),
+    },
+    heroLabel: {
+      fontSize: rMS(10),
+      fontWeight: "800",
+      textTransform: "uppercase",
+      letterSpacing: 3,
+      color: themeColors.tint,
+      marginBottom: rV(6),
     },
     header: {
       color: themeColors.text,
-      fontSize: SIZES.xLarge,
-      fontWeight: "bold",
-      marginTop: rV(8),
-      marginBottom: rV(10),
-      textAlign: "center",
+      fontSize: rMS(26),
+      fontWeight: "900",
+      letterSpacing: -0.5,
     },
   });
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Select a Level</Text>
-      <PracticeLevel onPress={handleLevelPress} levels={levels} />
+      <StatusBar
+        barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
+        backgroundColor="transparent"
+        translucent
+      />
+      <View style={styles.blob1} />
+      <View style={styles.blob2} />
+
+      <BlurView
+        intensity={60}
+        tint={colorScheme === "dark" ? "dark" : "light"}
+        style={styles.topBar}
+      />
+
+      <View style={styles.scrollArea}>
+        <Animated.View
+          entering={FadeInDown.duration(400).delay(50)}
+          style={styles.backRow}
+        >
+          <AnimatedTouchable
+            style={[styles.backButton, backAnimStyle]}
+            onPress={() => router.back()}
+            onPressIn={() => {
+              backScale.value = withSpring(0.9, { damping: 15, stiffness: 300 });
+            }}
+            onPressOut={() => {
+              backScale.value = withSpring(1, { damping: 15, stiffness: 300 });
+            }}
+            activeOpacity={1}
+          >
+            <Ionicons name="arrow-back" size={22} color={themeColors.text} />
+          </AnimatedTouchable>
+        </Animated.View>
+
+        <Animated.View
+          entering={FadeInDown.duration(500).delay(100)}
+          style={styles.heroSection}
+        >
+          <Text style={styles.heroLabel}>Difficulty</Text>
+          <Text style={styles.header}>Select a Level</Text>
+        </Animated.View>
+
+        <PracticeLevel onPress={handleLevelPress} levels={levels} />
+      </View>
       <ErrorMessage
         message={errorMessage}
         visible={!!errorMessage}

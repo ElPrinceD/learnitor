@@ -26,6 +26,7 @@ import Colors from "../../constants/Colors";
 import { rMS, rV, rS, SIZES, useShadows } from "../../constants/index.js";
 import ApiUrl from "../../config";
 import ErrorMessage from "../../components/ErrorMessage";
+import { BlurView } from "expo-blur";
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -123,6 +124,7 @@ export default function Leaderboard() {
 
   const getRankColor = (rank: number) => {
     if (rank === 1) return themeColors.tint;
+    if (rank <= 3) return "#FFD700"; // Gold for top 3
     return themeColors.textSecondary + "90";
   };
 
@@ -131,164 +133,197 @@ export default function Leaderboard() {
       flex: 1,
       backgroundColor: themeColors.background,
     },
+    // Background blur shapes for glassmorphism
+    blob1: {
+      position: "absolute",
+      top: -rV(100),
+      left: -rS(50),
+      width: rS(250),
+      height: rS(250),
+      borderRadius: rS(125),
+      backgroundColor: themeColors.tint + "18",
+    },
+    blob2: {
+      position: "absolute",
+      top: rV(200),
+      right: -rS(100),
+      width: rS(300),
+      height: rS(300),
+      borderRadius: rS(150),
+      backgroundColor: "#6366F118",
+    },
+    topBar: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      height: Math.max(rV(80), insets.top + rV(50)),
+      zIndex: 10,
+      flexDirection: "row",
+      alignItems: "flex-end",
+      paddingBottom: rV(8),
+      paddingHorizontal: rS(16),
+    },
     scrollContent: {
       paddingHorizontal: rS(16),
-      paddingTop: Math.max(rV(12), insets.top + rV(8)),
-      paddingBottom: Math.max(rV(40), insets.bottom + rV(20)),
-    },
-    // Back button
-    backRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      marginBottom: rV(16),
+      paddingTop: Math.max(rV(80), insets.top + rV(50)),
+      paddingBottom: Math.max(rV(40), insets.bottom + rV(40)),
     },
     backButton: {
-      width: rMS(36),
-      height: rMS(36),
-      borderRadius: rMS(12),
-      backgroundColor: themeColors.card,
+      width: rMS(38),
+      height: rMS(38),
+      borderRadius: rMS(19),
+      backgroundColor: themeColors.cardGlass,
       alignItems: "center",
       justifyContent: "center",
+      ...shadow.light,
     },
     // Hero
     heroSection: {
-      marginBottom: rV(28),
+      marginBottom: rV(32),
+      paddingHorizontal: rS(8),
     },
     heroLabel: {
-      fontSize: rMS(9),
-      fontWeight: "700",
+      fontSize: rMS(10),
+      fontWeight: "800",
       textTransform: "uppercase",
-      letterSpacing: 2,
+      letterSpacing: 3,
       color: themeColors.tint,
-      marginBottom: rV(6),
+      marginBottom: rV(8),
     },
     heroTitle: {
-      fontSize: rMS(36),
-      fontWeight: "800",
+      fontSize: rMS(40),
+      fontWeight: "900",
       color: themeColors.text,
       letterSpacing: -1.5,
-      lineHeight: rMS(38),
+      lineHeight: rMS(44),
     },
     heroSubtext: {
-      fontSize: rMS(11),
+      fontSize: rMS(12),
       color: themeColors.textSecondary,
-      marginTop: rV(10),
-      lineHeight: rMS(16),
-      maxWidth: "80%",
+      marginTop: rV(12),
+      lineHeight: rMS(18),
+      maxWidth: "85%",
     },
     // Column headers
     columnHeaders: {
       flexDirection: "row",
       justifyContent: "space-between",
-      paddingHorizontal: rS(20),
-      marginBottom: rV(10),
+      paddingHorizontal: rS(24),
+      marginBottom: rV(12),
     },
     columnLabel: {
-      fontSize: rMS(9),
-      fontWeight: "700",
+      fontSize: rMS(10),
+      fontWeight: "800",
       textTransform: "uppercase",
       letterSpacing: 2,
       color: themeColors.textSecondary,
     },
-    // Ranking card
+    // Ranking card - compact pill
     rankCard: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      backgroundColor: themeColors.card,
-      padding: rMS(14),
+      backgroundColor: themeColors.cardGlass,
+      padding: rMS(10),
       borderRadius: rMS(20),
-      marginBottom: rV(10),
+      marginBottom: rV(6),
+      ...shadow.small,
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
     },
     rankCardLeft: {
       flexDirection: "row",
       alignItems: "center",
-      gap: rS(14),
+      gap: rS(8),
       flex: 1,
     },
     rankNumber: {
-      fontSize: rMS(15),
-      fontWeight: "800",
-      width: rS(28),
+      fontSize: rMS(13),
+      fontWeight: "900",
+      width: rS(24),
+      textAlign: "center",
     },
     rankAvatar: {
-      width: rMS(40),
-      height: rMS(40),
-      borderRadius: rMS(14),
+      width: rMS(32),
+      height: rMS(32),
+      borderRadius: rMS(16),
       backgroundColor: themeColors.background,
     },
     rankInfo: {
       flex: 1,
     },
     rankName: {
-      fontSize: SIZES.small,
-      fontWeight: "700",
+      fontSize: rMS(12),
+      fontWeight: "800",
       color: themeColors.text,
+      marginBottom: rV(1),
     },
     rankBadge: {
       fontSize: rMS(8),
-      fontWeight: "700",
+      fontWeight: "800",
       textTransform: "uppercase",
       letterSpacing: 1.5,
       color: themeColors.textSecondary,
-      marginTop: rV(2),
     },
     rankScore: {
-      fontSize: rMS(13),
-      fontWeight: "800",
+      fontSize: rMS(12),
+      fontWeight: "900",
       color: themeColors.tint,
     },
-    // User Status Card
-    userStatusCard: {
-      marginTop: rV(24),
-      backgroundColor: themeColors.card,
-      padding: rMS(20),
-      borderRadius: rMS(24),
-      borderWidth: 2,
-      borderColor: themeColors.tint + "20",
+    // User Status Card - heavily rounded
+    userStatusCardContainer: {
+      marginTop: rV(32),
+      borderRadius: rMS(36),
+      overflow: "hidden",
+      ...shadow.large,
+    },
+    userStatusCardBlur: {
+      padding: rMS(24),
+      backgroundColor: themeColors.tint + "10",
     },
     userStatusTop: {
       flexDirection: "row",
       alignItems: "center",
-      gap: rS(14),
-      marginBottom: rV(14),
+      gap: rS(16),
+      marginBottom: rV(16),
     },
     userRankBadge: {
       backgroundColor: themeColors.tint,
-      paddingVertical: rV(6),
-      paddingHorizontal: rMS(12),
-      borderRadius: rMS(12),
+      paddingVertical: rV(8),
+      paddingHorizontal: rMS(16),
+      borderRadius: rMS(20),
     },
     userRankBadgeText: {
       color: "#fff",
-      fontSize: rMS(10),
-      fontWeight: "800",
-      letterSpacing: 0.5,
+      fontSize: rMS(11),
+      fontWeight: "900",
+      letterSpacing: 1,
     },
     userStatusInfo: {
       flex: 1,
     },
     userStatusTitle: {
-      fontSize: rMS(16),
-      fontWeight: "800",
+      fontSize: rMS(18),
+      fontWeight: "900",
       color: themeColors.text,
     },
     userStatusSubtext: {
-      fontSize: rMS(11),
+      fontSize: rMS(12),
       color: themeColors.textSecondary,
-      marginTop: rV(2),
+      marginTop: rV(4),
     },
     viewStatsBtn: {
-      backgroundColor: themeColors.tint,
-      paddingVertical: rV(12),
-      paddingHorizontal: rMS(24),
-      borderRadius: rMS(24),
+      backgroundColor: themeColors.text,
+      paddingVertical: rV(14),
+      paddingHorizontal: rMS(28),
+      borderRadius: rMS(28),
       alignSelf: "flex-start",
     },
     viewStatsBtnText: {
-      color: "#fff",
-      fontSize: rMS(10),
-      fontWeight: "800",
+      color: themeColors.background,
+      fontSize: rMS(11),
+      fontWeight: "900",
       textTransform: "uppercase",
       letterSpacing: 1.5,
     },
@@ -301,7 +336,8 @@ export default function Leaderboard() {
     loadingText: {
       color: themeColors.textSecondary,
       fontSize: SIZES.small,
-      marginTop: rV(10),
+      marginTop: rV(12),
+      fontWeight: "700",
     },
   });
 
@@ -322,32 +358,39 @@ export default function Leaderboard() {
     <View style={styles.container}>
       <StatusBar
         barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
-        backgroundColor={themeColors.background}
+        backgroundColor="transparent"
+        translucent
       />
+      {/* Background blobs for glassmorphism effect */}
+      <View style={styles.blob1} />
+      <View style={styles.blob2} />
+
+      {/* Frosted glass top bar with sticky back button */}
+      <BlurView
+        intensity={60}
+        tint={colorScheme === "dark" ? "dark" : "light"}
+        style={styles.topBar}
+      >
+        <AnimatedTouchable
+          style={[styles.backButton, backAnimStyle]}
+          onPress={() => router.back()}
+          onPressIn={() => {
+            backScale.value = withSpring(0.9, { damping: 15, stiffness: 300 });
+          }}
+          onPressOut={() => {
+            backScale.value = withSpring(1, { damping: 15, stiffness: 300 });
+          }}
+          activeOpacity={1}
+        >
+          <Ionicons name="arrow-back" size={22} color={themeColors.text} />
+        </AnimatedTouchable>
+      </BlurView>
+
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Back Button */}
-        <Animated.View
-          entering={FadeInDown.duration(400).delay(50)}
-          style={styles.backRow}
-        >
-          <AnimatedTouchable
-            style={[styles.backButton, backAnimStyle]}
-            onPress={() => router.back()}
-            onPressIn={() => {
-              backScale.value = withSpring(0.9, { damping: 15, stiffness: 300 });
-            }}
-            onPressOut={() => {
-              backScale.value = withSpring(1, { damping: 15, stiffness: 300 });
-            }}
-            activeOpacity={1}
-          >
-            <Ionicons name="arrow-back" size={20} color={themeColors.text} />
-          </AnimatedTouchable>
-        </Animated.View>
 
         {/* Hero Section */}
         <Animated.View
@@ -409,37 +452,43 @@ export default function Leaderboard() {
           </Animated.View>
         ))}
 
-        {/* User Status Card */}
+        {/* User Status Card with Glassmorphism */}
         {userStatus.rank && (
           <Animated.View
-            entering={FadeInUp.duration(500).delay(600)}
-            style={styles.userStatusCard}
+            entering={FadeInUp.duration(600).delay(400).springify()}
+            style={styles.userStatusCardContainer}
           >
-            <View style={styles.userStatusTop}>
-              <View style={styles.userRankBadge}>
-                <Text style={styles.userRankBadgeText}>
-                  YOUR RANK: {userStatus.rank}
-                </Text>
-              </View>
-              <View style={styles.userStatusInfo}>
-                <Text style={styles.userStatusTitle}>
-                  {userStatus.message || "Keep climbing!"}
-                </Text>
-                {userStatus.percentile && (
-                  <Text style={styles.userStatusSubtext}>
-                    You are in the {userStatus.percentile} of global learners
-                    this season.
-                  </Text>
-                )}
-              </View>
-            </View>
-            <TouchableOpacity
-              style={styles.viewStatsBtn}
-              activeOpacity={0.8}
-              onPress={() => {}}
+            <BlurView
+              intensity={80}
+              tint={colorScheme === "dark" ? "dark" : "light"}
+              style={styles.userStatusCardBlur}
             >
-              <Text style={styles.viewStatsBtnText}>View My Stats</Text>
-            </TouchableOpacity>
+              <View style={styles.userStatusTop}>
+                <View style={styles.userRankBadge}>
+                  <Text style={styles.userRankBadgeText}>
+                    YOUR RANK: {userStatus.rank}
+                  </Text>
+                </View>
+                <View style={styles.userStatusInfo}>
+                  <Text style={styles.userStatusTitle}>
+                    {userStatus.message || "Keep climbing!"}
+                  </Text>
+                  {userStatus.percentile && (
+                    <Text style={styles.userStatusSubtext}>
+                      You are in the {userStatus.percentile} of global learners
+                      this season.
+                    </Text>
+                  )}
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.viewStatsBtn}
+                activeOpacity={0.8}
+                onPress={() => {}}
+              >
+                <Text style={styles.viewStatsBtnText}>View My Stats</Text>
+              </TouchableOpacity>
+            </BlurView>
           </Animated.View>
         )}
 

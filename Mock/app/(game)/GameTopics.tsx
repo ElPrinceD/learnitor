@@ -8,20 +8,31 @@ import {
   TouchableOpacity,
   useColorScheme,
   BackHandler,
+  StatusBar,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons, Feather } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, {
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
+import { BlurView } from "expo-blur";
 import { Course, Topic } from "../../components/types";
 import { useAuth } from "../../components/AuthContext";
 import GameButton from "../../components/GameButton";
 import TimelineCategoryItem from "../../components/TimelineCategoryItem";
 import ErrorMessage from "../../components/ErrorMessage";
 import Colors from "../../constants/Colors";
-import { SIZES, rMS, rS, rV } from "../../constants";
+import { SIZES, rMS, rS, rV, useShadows } from "../../constants";
 import { getCourseTopics } from "../../services/CoursesApiCalls";
 import axios from "axios";
 import ApiUrl from "../../config";
+
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 const GameTopics: React.FC = () => {
   const { userToken } = useAuth();
@@ -33,6 +44,14 @@ const GameTopics: React.FC = () => {
   const screenWidth = Dimensions.get("window").width;
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+  const insets = useSafeAreaInsets();
+  const shadow = useShadows();
+
+  // Back button animation
+  const backScale = useSharedValue(1);
+  const backAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: backScale.value }],
+  }));
 
   const parsedCourse: Course | null = useMemo(() => {
     try {
@@ -63,21 +82,8 @@ const GameTopics: React.FC = () => {
   // Early return if no course data
   if (!parsedCourse) {
     return (
-      <View
-        style={[
-          {
-            flex: 1,
-            backgroundColor: themeColors.background,
-          },
-        ]}
-      >
-        <Text
-          style={{
-            color: themeColors.text,
-            textAlign: "center",
-            marginTop: 50,
-          }}
-        >
+      <View style={{ flex: 1, backgroundColor: themeColors.background, justifyContent: "center", alignItems: "center" }}>
+        <Text style={{ color: themeColors.text, textAlign: "center", marginTop: 50 }}>
           Course data not found. Please try again.
         </Text>
       </View>
@@ -243,29 +249,83 @@ const GameTopics: React.FC = () => {
       StyleSheet.create({
         container: {
           flex: 1,
-          padding: rMS(10),
-          marginTop: rV(50),
+          backgroundColor: themeColors.background,
+        },
+        blob1: {
+          position: "absolute",
+          top: -rV(60),
+          left: -rS(70),
+          width: rS(220),
+          height: rS(220),
+          borderRadius: rS(110),
+          backgroundColor: themeColors.tint + "15",
+        },
+        blob2: {
+          position: "absolute",
+          bottom: rV(120),
+          right: -rS(90),
+          width: rS(260),
+          height: rS(260),
+          borderRadius: rS(130),
+          backgroundColor: "#10B98112",
+        },
+        topBar: {
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: Math.max(rV(80), insets.top + rV(50)),
+          zIndex: 10,
+        },
+        scrollArea: {
+          flex: 1,
+          paddingTop: Math.max(rV(80), insets.top + rV(50)),
+          paddingHorizontal: rMS(10),
+        },
+        backRow: {
+          flexDirection: "row",
+          alignItems: "center",
+          marginBottom: rV(8),
+          marginTop: rV(8),
+        },
+        backButton: {
+          width: rMS(44),
+          height: rMS(44),
+          borderRadius: rMS(22),
+          backgroundColor: themeColors.cardGlass,
+          alignItems: "center",
+          justifyContent: "center",
+          ...shadow.small,
+        },
+        heroSection: {
+          paddingHorizontal: rS(14),
+          marginBottom: rV(12),
+        },
+        heroLabel: {
+          fontSize: rMS(10),
+          fontWeight: "800",
+          textTransform: "uppercase",
+          letterSpacing: 3,
+          color: themeColors.tint,
+          marginBottom: rV(6),
         },
         header: {
           color: themeColors.text,
-          fontSize: SIZES.xLarge,
-          fontWeight: "bold",
-          marginTop: rV(8),
-          marginBottom: rV(10),
-          textAlign: "center",
+          fontSize: rMS(26),
+          fontWeight: "900",
+          letterSpacing: -0.5,
+          marginBottom: rV(4),
         },
         instructionText: {
           color: themeColors.textSecondary,
-          fontSize: SIZES.small,
-          textAlign: "center",
-          marginBottom: rV(10),
-          fontStyle: "italic",
+          fontSize: rMS(12),
+          lineHeight: rMS(18),
         },
         row: {
           justifyContent: "space-between",
         },
         flatListContent: {
-          paddingBottom: rV(18),
+          paddingBottom: rV(100),
         },
         topicContainer: {
           flexDirection: "row",
@@ -290,24 +350,29 @@ const GameTopics: React.FC = () => {
           flexDirection: "row",
           alignItems: "center",
           alignSelf: "flex-end",
+          marginBottom: rV(12),
+          backgroundColor: themeColors.cardGlass,
+          paddingVertical: rV(8),
+          paddingHorizontal: rMS(14),
+          borderRadius: rMS(20),
+          ...shadow.light,
         },
         selectAllText: {
           color: themeColors.text,
-          fontSize: SIZES.medium,
-          fontWeight: "bold",
+          fontSize: rMS(12),
+          fontWeight: "800",
           marginLeft: rS(5),
         },
         continueButton: {
           position: "absolute",
-          bottom: rS(18),
-          width: rS(200),
+          bottom: Math.max(rS(24), insets.bottom + rS(12)),
+          width: rS(220),
           alignSelf: "center",
           padding: rMS(10),
-          borderTopLeftRadius: 20,
-          borderBottomRightRadius: 20,
+          borderRadius: rMS(28),
         },
       }),
-    [themeColors]
+    [themeColors, insets]
   );
 
   const renderItem = ({ item }: { item: Topic }) => {
@@ -324,7 +389,7 @@ const GameTopics: React.FC = () => {
                   color={themeColors.icon}
                 />
               ) : (
-                <Feather name="circle" size={24} color="black" />
+                <Feather name="circle" size={24} color={themeColors.textSecondary} />
               ))}
           </TouchableOpacity>
         </View>
@@ -347,43 +412,92 @@ const GameTopics: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Select Topic(s)</Text>
-      <Text style={styles.instructionText}>
-        Press and hold to select multiple topics
-      </Text>
-      <TouchableOpacity
-        onPress={handleSelectAll}
-        style={styles.selectAllContainer}
-      >
-        <View style={styles.checkBox}>
-          {selectedTopics.length === topics?.length ? (
-            <Ionicons
-              name="checkmark-circle-sharp"
-              size={24}
-              color={themeColors.icon}
-            />
-          ) : selectedTopics.length > 0 ? (
-            <Feather name="circle" size={22} color={themeColors.text} />
-          ) : (
-            <Ionicons
-              name="checkmark-circle-outline"
-              size={24}
-              color={themeColors.text}
-            />
-          )}
-        </View>
-        <Text style={styles.selectAllText}>Select All</Text>
-      </TouchableOpacity>
-      <FlatList
-        showsVerticalScrollIndicator={false}
-        data={topics}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id.toString()}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
-        contentContainerStyle={styles.flatListContent}
-        key={screenWidth}
+      <StatusBar
+        barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
+        backgroundColor="transparent"
+        translucent
       />
+      <View style={styles.blob1} />
+      <View style={styles.blob2} />
+
+      <BlurView
+        intensity={60}
+        tint={colorScheme === "dark" ? "dark" : "light"}
+        style={styles.topBar}
+      />
+
+      <View style={styles.scrollArea}>
+        {/* Back Button */}
+        <Animated.View
+          entering={FadeInDown.duration(400).delay(50)}
+          style={styles.backRow}
+        >
+          <AnimatedTouchable
+            style={[styles.backButton, backAnimStyle]}
+            onPress={() => router.back()}
+            onPressIn={() => {
+              backScale.value = withSpring(0.9, { damping: 15, stiffness: 300 });
+            }}
+            onPressOut={() => {
+              backScale.value = withSpring(1, { damping: 15, stiffness: 300 });
+            }}
+            activeOpacity={1}
+          >
+            <Ionicons name="arrow-back" size={22} color={themeColors.text} />
+          </AnimatedTouchable>
+        </Animated.View>
+
+        {/* Hero */}
+        <Animated.View
+          entering={FadeInDown.duration(500).delay(100)}
+          style={styles.heroSection}
+        >
+          <Text style={styles.heroLabel}>Step 2</Text>
+          <Text style={styles.header}>Select Topic(s)</Text>
+          <Text style={styles.instructionText}>
+            Tap to pick one, or press & hold to select multiple topics.
+          </Text>
+        </Animated.View>
+
+        {/* Select All */}
+        <Animated.View entering={FadeInDown.duration(400).delay(150)}>
+          <TouchableOpacity
+            onPress={handleSelectAll}
+            style={styles.selectAllContainer}
+          >
+            <View style={styles.checkBox}>
+              {selectedTopics.length === topics?.length ? (
+                <Ionicons
+                  name="checkmark-circle-sharp"
+                  size={22}
+                  color={themeColors.icon}
+                />
+              ) : selectedTopics.length > 0 ? (
+                <Feather name="circle" size={20} color={themeColors.text} />
+              ) : (
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={22}
+                  color={themeColors.text}
+                />
+              )}
+            </View>
+            <Text style={styles.selectAllText}>Select All</Text>
+          </TouchableOpacity>
+        </Animated.View>
+
+        <FlatList
+          showsVerticalScrollIndicator={false}
+          data={topics}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id.toString()}
+          numColumns={2}
+          columnWrapperStyle={styles.row}
+          contentContainerStyle={styles.flatListContent}
+          key={screenWidth}
+        />
+      </View>
+
       {selectedTopics.length > 0 && (
         <GameButton
           title="Continue"
