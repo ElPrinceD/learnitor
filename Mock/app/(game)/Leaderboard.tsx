@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
+import { getLeaderboardDetails, RankingItem, UserStatus } from "../../services/LeaderboardApiCalls";
 import Animated, {
   FadeInDown,
   FadeInUp,
@@ -30,20 +31,7 @@ import { BlurView } from "expo-blur";
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
-interface RankingItem {
-  id: number;
-  rank: number;
-  username: string;
-  avatarUrl: string | null;
-  score: number;
-  badge?: string;
-}
-
-interface UserStatus {
-  rank: number | null;
-  percentile: string | null;
-  message: string | null;
-}
+// Mock data will be kept below
 
 export default function Leaderboard() {
   const { id, name, timeframe: tfParam } = useLocalSearchParams<{
@@ -57,14 +45,7 @@ export default function Leaderboard() {
   const themeColors = Colors[colorScheme ?? "light"];
   const shadow = useShadows();
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [rankings, setRankings] = useState<RankingItem[]>([]);
-  const [userStatus, setUserStatus] = useState<UserStatus>({
-    rank: null,
-    percentile: null,
-    message: null,
-  });
+  // We can derive loading/error from react-query
 
   const leaderboardId = id || "world";
   const leaderboardName = name || "World Rankings";
@@ -74,45 +55,22 @@ export default function Leaderboard() {
   const backAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: backScale.value }],
   }));
+  // One-time animation flag
+  const hasAnimated = useRef(false);
+  useEffect(() => { hasAnimated.current = true; }, []);
+  const enterAnim = (delay: number) =>
+    hasAnimated.current ? undefined : FadeInDown.duration(300).delay(delay);
 
-  useEffect(() => {
-    fetchRankings();
-  }, [leaderboardId, tfParam]);
+  // React Query Hook
+  const { data: leaderboardData, isLoading: loading, error: queryError } = useQuery({
+    queryKey: ["leaderboardDetails", leaderboardId, tfParam],
+    queryFn: () => getLeaderboardDetails(leaderboardId, userToken?.token, tfParam || "season"),
+    enabled: !!userToken?.token,
+  });
 
-  const fetchRankings = async () => {
-    try {
-      setLoading(true);
-      const res = await axios.get(
-        `${ApiUrl}/api/leaderboards/details/${leaderboardId}`,
-        {
-          headers: { Authorization: `Token ${userToken?.token}` },
-          params: { timeframe: tfParam || "season" },
-        }
-      );
-      setRankings(res.data.rankings || []);
-      if (res.data.userStatus) {
-        setUserStatus(res.data.userStatus);
-      }
-    } catch (e) {
-      // Fallback mock data
-      setRankings([
-        { id: 1, rank: 1, username: "Elena_Quill", avatarUrl: null, score: 24850, badge: "Top Scholar" },
-        { id: 2, rank: 2, username: "Julian_Vance", avatarUrl: null, score: 22410, badge: "Rising Star" },
-        { id: 3, rank: 3, username: "Marcus_Aureli", avatarUrl: null, score: 21980, badge: "Academic Elite" },
-        { id: 4, rank: 4, username: "S_Tanaka", avatarUrl: null, score: 20150, badge: "Physics Expert" },
-        { id: 5, rank: 5, username: "D_Rodriguez", avatarUrl: null, score: 19720, badge: "History Buff" },
-        { id: 6, rank: 6, username: "Chen_L", avatarUrl: null, score: 18590, badge: "Math Wizard" },
-        { id: 7, rank: 7, username: "Omar_Z", avatarUrl: null, score: 17400, badge: "Bio Specialist" },
-      ]);
-      setUserStatus({
-        rank: 452,
-        percentile: "top 5%",
-        message: "Keep climbing, Learner!",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const rankings = leaderboardData?.rankings || [];
+  const userStatus = leaderboardData?.userStatus || { rank: null, percentile: null, message: null };
+  const error = queryError ? "Failed to load rankings" : "";
 
   const formatRank = (rank: number) => {
     return rank.toString().padStart(2, "0");
@@ -394,7 +352,7 @@ export default function Leaderboard() {
 
         {/* Hero Section */}
         <Animated.View
-          entering={FadeInDown.duration(500).delay(100)}
+          entering={enterAnim(50)}
           style={styles.heroSection}
         >
           <Text style={styles.heroLabel}>Global Leaderboard</Text>
@@ -409,7 +367,7 @@ export default function Leaderboard() {
 
         {/* Column Headers */}
         <Animated.View
-          entering={FadeInDown.duration(400).delay(200)}
+          entering={enterAnim(100)}
           style={styles.columnHeaders}
         >
           <Text style={styles.columnLabel}>Rank / Student</Text>
@@ -420,7 +378,7 @@ export default function Leaderboard() {
         {rankings.map((item, index) => (
           <Animated.View
             key={item.id}
-            entering={FadeInDown.duration(400).delay(250 + index * 60)}
+            entering={enterAnim(150 + index * 50)}
           >
             <View style={styles.rankCard}>
               <View style={styles.rankCardLeft}>

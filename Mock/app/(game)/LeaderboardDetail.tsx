@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -14,7 +14,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
+import { getLeaderboardDetails } from "../../services/LeaderboardApiCalls";
 import Animated, {
   FadeInDown,
   useAnimatedStyle,
@@ -32,14 +33,7 @@ import { BlurView } from "expo-blur";
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
-interface RankingItem {
-  id: number;
-  rank: number;
-  username: string;
-  avatarUrl: string | null;
-  score: number;
-  movement?: "up" | "down" | "same";
-}
+// Interfaces kept to avoid dependencies on internal types
 
 interface H2HMatch {
   id: string;
@@ -52,15 +46,6 @@ interface H2HMatch {
   roundText: string;
   status: "won" | "lost" | "pending" | "bye";
 }
-
-// Mock user knockout matchups
-const MOCK_USER_KNOCKOUT_MATCHES: H2HMatch[] = [
-  { id: "cm1", p1Name: "Adeniyi Adejobi", p1Team: "Edimoya", p2Name: "The Gyam", p2Team: "AnteMaggie", p1Score: 0, p2Score: 0, roundText: "SW 12 • Round of 32", status: "pending" },
-  { id: "cm2", p1Name: "The Gyam", p1Team: "AnteMaggie", p2Name: "Edmond Fosu", p2Team: "OmontoGh", p1Score: 134, p2Score: 60, roundText: "SW 11 • Round of 64", status: "won" },
-  { id: "cm3", p1Name: "The Gyam", p1Team: "AnteMaggie", p2Name: "Olubunmi Owaduge", p2Team: "J'blaze", p1Score: 60, p2Score: 47, roundText: "SW 10 • Round of 128", status: "won" },
-  { id: "cm4", p1Name: "The Gyam", p1Team: "AnteMaggie", p2Name: "Average", p2Team: "Virtual", p1Score: 90, p2Score: 88, roundText: "SW 9 • Round of 256", status: "won" },
-  { id: "cm5", p1Name: "The Gyam", p1Team: "AnteMaggie", p2Name: "BYE", p2Team: "BYE", p1Score: null, p2Score: null, roundText: "SW 8 • Round of 512", status: "bye" },
-];
 
 export default function LeaderboardDetail() {
   const { id, name, timeframe, type } = useLocalSearchParams<{
@@ -75,11 +60,9 @@ export default function LeaderboardDetail() {
   const themeColors = Colors[colorScheme ?? "light"];
   const shadow = useShadows();
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [rankings, setRankings] = useState<RankingItem[]>([]);
+  // We can derive loading/error from react-query
   const [activeTab, setActiveTab] = useState<"rankings" | "knockout">(type === "knockout" ? "knockout" : "rankings");
-  const [knockoutMatches] = useState(MOCK_USER_KNOCKOUT_MATCHES);
+  const [knockoutMatches] = useState<H2HMatch[]>([]);
 
   const backScale = useSharedValue(1);
   const backAnimStyle = useAnimatedStyle(() => ({
@@ -92,32 +75,21 @@ export default function LeaderboardDetail() {
     transform: [{ translateX: tabIndicatorX.value }],
   }));
 
-  useEffect(() => {
-    fetchRankings();
-  }, [id, timeframe]);
+  // One-time animation flag
+  const hasAnimated = useRef(false);
+  useEffect(() => { hasAnimated.current = true; }, []);
+  const enterAnim = (delay: number) =>
+    hasAnimated.current ? undefined : FadeInDown.duration(300).delay(delay);
 
-  const fetchRankings = async () => {
-    try {
-      setLoading(true);
-      const res = await axios.get(
-        `${ApiUrl}/api/leaderboards/details/${id}`,
-        {
-          headers: { Authorization: `Token ${userToken?.token}` },
-          params: { timeframe },
-        }
-      );
-      setRankings(res.data.rankings || []);
-    } catch (e) {
-      setRankings([
-        { id: 1, rank: 1, username: "Alex Johnson", avatarUrl: null, score: 9850, movement: "up" },
-        { id: 2, rank: 2, username: "Sam Smith", avatarUrl: null, score: 8700, movement: "down" },
-        { id: 3, rank: 3, username: "You", avatarUrl: null, score: 8520, movement: "same" },
-        { id: 4, rank: 4, username: "Jordan Lee", avatarUrl: null, score: 7900, movement: "up" },
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // React Query Hook
+  const { data: leaderboardData, isLoading: loading, error: queryError } = useQuery({
+    queryKey: ["leaderboardDetails", id, timeframe],
+    queryFn: () => getLeaderboardDetails(id, userToken?.token, timeframe),
+    enabled: !!userToken?.token,
+  });
+
+  const rankings = leaderboardData?.rankings || [];
+  const error = queryError ? "Failed to load rankings" : "";
 
   const formatRank = (rank: number) => rank.toString().padStart(2, "0");
   const formatScore = (score: number) => score.toLocaleString() + " PTS";
@@ -453,7 +425,7 @@ export default function LeaderboardDetail() {
       >
         {/* Hero */}
         <Animated.View
-          entering={FadeInDown.duration(500).delay(100)}
+          entering={enterAnim(50)}
           style={styles.heroSection}
         >
           <Text style={styles.heroLabel}>
@@ -466,7 +438,7 @@ export default function LeaderboardDetail() {
 
         {/* Sub-Tabs: Rankings | Knockout — animated indicator */}
         <Animated.View
-          entering={FadeInDown.duration(400).delay(200)}
+          entering={enterAnim(100)}
           style={styles.subTabRow}
         >
           <Animated.View style={[styles.subTabIndicator, tabAnimStyle]} />
@@ -494,7 +466,7 @@ export default function LeaderboardDetail() {
           <>
             {/* Column Headers */}
             <Animated.View
-              entering={FadeInDown.duration(400).delay(250)}
+              entering={enterAnim(150)}
               style={styles.columnHeaders}
             >
               <Text style={styles.columnLabel}>Rank / Student</Text>
@@ -507,7 +479,7 @@ export default function LeaderboardDetail() {
               return (
                 <Animated.View
                   key={item.id}
-                  entering={FadeInDown.duration(400).delay(300 + index * 60)}
+                  entering={enterAnim(200 + index * 50)}
                 >
                   <View
                     style={[styles.rankCard, userIsMe && styles.myRankCard]}
@@ -566,7 +538,7 @@ export default function LeaderboardDetail() {
             {knockoutMatches.map((match, idx) => (
               <Animated.View
                 key={match.id}
-                entering={FadeInDown.duration(400).delay(250 + idx * 80)}
+                entering={enterAnim(200 + idx * 50)}
                 style={styles.matchCardOuter}
               >
                 <View style={styles.matchCard}>

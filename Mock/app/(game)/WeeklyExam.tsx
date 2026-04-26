@@ -54,28 +54,6 @@ function getCountdownToExam(): string {
   return `${d}d ${h}h ${m}m`;
 }
 
-// Mock 30 questions for the weekly exam
-const MOCK_EXAM_QUESTIONS: Question[] = Array.from({ length: 30 }, (_, i) => ({
-  text: `Weekly Exam Question ${i + 1}`,
-  id: 9000 + i,
-  level: "medium",
-  duration: "20",
-  content: `What is the correct answer for concept #${i + 1}?`,
-}));
-
-const MOCK_EXAM_ANSWERS: Answer[] = MOCK_EXAM_QUESTIONS.flatMap((q) => {
-  const correctIdx = Math.floor(Math.random() * 4);
-  return Array.from({ length: 4 }, (_, j) => ({
-    text: `Option ${String.fromCharCode(65 + j)}`,
-    id: q.id * 10 + j,
-    isRight: j === correctIdx,
-    question: q.id,
-    isSelected: false,
-    isCorrect: j === correctIdx,
-    content: j === correctIdx ? "Correct Answer" : `Distractor ${j + 1}`,
-  }));
-});
-
 export default function WeeklyExam() {
   const { userToken, userInfo } = useAuth();
   const { playCorrect, playWrong, startMusic, stopMusic, musicMuted } = useGameAudio();
@@ -84,9 +62,9 @@ export default function WeeklyExam() {
 
   const { startGame, endGame, answerQuestion, score, streak, timeLimit } = useGameStore();
 
-  const [gameAnswers, setGameAnswers] = useState<Answer[]>(MOCK_EXAM_ANSWERS);
+  const [gameAnswers, setGameAnswers] = useState<Answer[]>([]);
   const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: number[] }>({});
-  const [gameQuestions] = useState<Question[]>(MOCK_EXAM_QUESTIONS);
+  const [gameQuestions] = useState<Question[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [timeLeft, setTimeLeft] = useState(20000);
   const [gameEnded, setGameEnded] = useState(false);

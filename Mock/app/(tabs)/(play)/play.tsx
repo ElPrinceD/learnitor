@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -16,14 +16,29 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import axios from "axios";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  getRankingsSummary,
+  getCustomLeaderboards,
+  createCustomLeaderboard,
+  joinCustomLeaderboard,
+  RankingSummary,
+  CustomLeaderboard,
+  H2HMatchup,
+  CustomH2HStanding,
+  CustomH2HMatchItem
+} from "../../../services/LeaderboardApiCalls";
+import {
+  getWeeklyExamStatus,
+  WeeklyExamStatus
+} from "../../../services/WeeklyExamApiCalls";
 import Animated, {
   FadeInDown,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
   withTiming,
   Easing,
+  interpolateColor,
 } from "react-native-reanimated";
 import { useAuth } from "../../../components/AuthContext";
 import Toast from "react-native-root-toast";
@@ -31,120 +46,9 @@ import Colors from "../../../constants/Colors";
 import { SIZES, rMS, rS, rV, useShadows } from "../../../constants";
 import ApiUrl from "../../../config";
 
-const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
-interface RankingSummary {
-  world: string | null;
-  country: string | null;
-  school: string | null;
-}
-
-interface CustomLeaderboard {
-  id: string;
-  name: string;
-  memberCount?: number;
-  scoringMode?: "all_points" | "exam_only" | "custom_1v1";
-}
-
-interface H2HMatchup {
-  id: string;
-  opponentName: string;
-  opponentAvatar: string | null;
-  userScore: number | null;
-  opponentScore: number | null;
-  status: "pending" | "won" | "lost" | "draw";
-  round: number;
-  totalRounds: number;
-}
-
-interface WeeklyExamStatus {
-  isActive: boolean;
-  hasCompleted: boolean;
-  startsAt: string;
-  endsAt: string;
-}
 
 type RankMovement = "up" | "down" | "same";
-
-// Mock data for H2H cup mode
-const MOCK_H2H: H2HMatchup = {
-  id: "h2h-1",
-  opponentName: "Jordan Lee",
-  opponentAvatar: null,
-  userScore: 134,
-  opponentScore: 60,
-  status: "won",
-  round: 2,
-  totalRounds: 4,
-};
-
-const MOCK_EXAM_STATUS: WeeklyExamStatus = {
-  isActive: true,
-  hasCompleted: false,
-  startsAt: "2026-04-24T19:00:00Z",
-  endsAt: "2026-04-26T23:59:00Z",
-};
-
-const MOCK_RANK_MOVEMENTS: Record<string, RankMovement> = {
-  world: "up",
-  country: "down",
-  school: "same",
-};
-
-interface CustomH2HStanding {
-  rank: number;
-  name: string;
-  pts: number;
-  w: number;
-  d: number;
-  l: number;
-  totalScore: number;
-  weekScore: number;
-  tiebreaker?: "standoff";
-}
-
-interface CustomH2HMatchItem {
-  id: string;
-  player1: string;
-  player2: string;
-  score1: number | null;
-  score2: number | null;
-  result: "w" | "d" | "l" | "pending";
-}
-
-const MOCK_CUSTOM_H2H_STANDINGS: CustomH2HStanding[] = [
-  { rank: 1, name: "You", pts: 9, w: 3, d: 0, l: 0, totalScore: 412, weekScore: 134 },
-  { rank: 2, name: "Alex Johnson", pts: 7, w: 2, d: 1, l: 0, totalScore: 388, weekScore: 120 },
-  { rank: 3, name: "Sam Smith", pts: 7, w: 2, d: 1, l: 0, totalScore: 388, weekScore: 120, tiebreaker: "standoff" },
-  { rank: 4, name: "Jordan Lee", pts: 3, w: 1, d: 0, l: 2, totalScore: 250, weekScore: 60 },
-];
-
-const MOCK_CUSTOM_H2H_MATCHES: CustomH2HMatchItem[] = [
-  { id: "ch1", player1: "You", player2: "Jordan Lee", score1: 134, score2: 60, result: "w" },
-  { id: "ch2", player1: "Alex Johnson", player2: "Sam Smith", score1: 120, score2: 120, result: "d" },
-];
-
-interface UserCupItem {
-  id: string;
-  name: string;
-  studyWeek: string;
-  result: "w" | "l" | "pending";
-}
-
-const MOCK_USER_CUPS: UserCupItem[] = [
-  { id: "c1", name: "Classico", studyWeek: "SW 11", result: "w" },
-  { id: "c2", name: "Agba ballers", studyWeek: "SW 11", result: "w" },
-  { id: "c3", name: "Goal Diggers", studyWeek: "SW 11", result: "w" },
-  { id: "c4", name: "KNUST CAMPUS", studyWeek: "SW 9", result: "l" },
-  { id: "c5", name: "Midnight", studyWeek: "", result: "pending" },
-];
-
-// Mock exam scores for this week
-const MOCK_EXAM_SCORES = {
-  userScore: 134 as number | null, // null if not taken
-  globalAverage: 88,
-  currentWeek: 11,
-};
 
 // Helper: format UTC date to user's local timezone
 const formatToLocalTime = (utcDateStr: string): string => {
@@ -178,6 +82,7 @@ const getExamButtonState = (exam: WeeklyExamStatus, now: Date): ExamButtonState 
 
 export default function PlayScreen() {
   const { userToken, userInfo } = useAuth();
+  const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -187,27 +92,92 @@ export default function PlayScreen() {
   const [joinGameDisabled, setJoinGameDisabled] = useState(true);
   const [squadJoinCode, setSquadJoinCode] = useState("");
   const [showJoinInput, setShowJoinInput] = useState(false);
-  const [rankings, setRankings] = useState<RankingSummary>({
-    world: null,
-    country: null,
-    school: null,
-  });
-  const [customLeaderboards, setCustomLeaderboards] = useState<CustomLeaderboard[]>([]);
   const [activeMode, setActiveMode] = useState<"rankings" | "knockout">("rankings");
-  const [h2hMatchup, setH2hMatchup] = useState<H2HMatchup | null>(MOCK_H2H);
-  const [examStatus, setExamStatus] = useState<WeeklyExamStatus>(MOCK_EXAM_STATUS);
-  const [rankMovements, setRankMovements] = useState<Record<string, RankMovement>>(MOCK_RANK_MOVEMENTS);
+  const [h2hMatchup, setH2hMatchup] = useState<H2HMatchup | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showSquadSheet, setShowSquadSheet] = useState(false);
   const [customH2HTab, setCustomH2HTab] = useState<"matches" | "standings">("matches");
-  const [examScores] = useState(MOCK_EXAM_SCORES);
+  
+  // Custom H2H data from queries
+  const customH2HStandings: CustomH2HStanding[] = [];
+  const customH2HMatches: CustomH2HMatchItem[] = [];
+  const userCups: any[] = [];
+
+  // React Query Hooks
+  const { data: rankingsQuery } = useQuery({
+    queryKey: ["rankingsSummary"],
+    queryFn: () => getRankingsSummary(userToken?.token),
+    enabled: !!userToken?.token,
+  });
+  const rankings = rankingsQuery || { world: null, country: null, school: null };
+
+  const { data: customLeaderboardsQuery } = useQuery({
+    queryKey: ["customLeaderboards"],
+    queryFn: () => getCustomLeaderboards(userToken?.token),
+    enabled: !!userToken?.token,
+  });
+  const customLeaderboards = customLeaderboardsQuery || [];
+
+  const { data: examStatusQuery } = useQuery({
+    queryKey: ["weeklyExamStatus"],
+    queryFn: () => getWeeklyExamStatus(userToken?.token),
+    enabled: !!userToken?.token,
+  });
+  const examStatus = examStatusQuery;
+
+  const createSquadMutation = useMutation({
+    mutationFn: (scoringMode: string) => createCustomLeaderboard(userToken?.token, "Squad", scoringMode),
+    onSuccess: (data) => {
+      showToast(`Squad created! Code: ${data?.invite_code || ''}`);
+      setShowSquadSheet(false);
+      queryClient.invalidateQueries({ queryKey: ["customLeaderboards"] });
+    },
+    onError: () => {
+      showToast("Error creating squad. Try again.");
+    }
+  });
+
+  const joinSquadMutation = useMutation({
+    mutationFn: (code: string) => joinCustomLeaderboard(userToken?.token, code),
+    onSuccess: (data) => {
+      showToast(`Joined squad!`);
+      setSquadJoinCode("");
+      setShowSquadSheet(false);
+      queryClient.invalidateQueries({ queryKey: ["customLeaderboards"] });
+    },
+    onError: () => {
+      showToast("Invalid code. Please check and try again.");
+    }
+  });
+
+  // One-time animation flag
+  const hasAnimated = useRef(false);
+  useEffect(() => {
+    hasAnimated.current = true;
+  }, []);
 
   // Compute exam button state
-  const examButtonState = getExamButtonState(examStatus, new Date());
-  const examStartLocal = formatToLocalTime(examStatus.startsAt);
-  const examEndLocal = formatToLocalTime(examStatus.endsAt);
+  const examButtonState = examStatus ? getExamButtonState(examStatus, new Date()) : "hidden";
+  const examStartLocal = examStatus ? formatToLocalTime(examStatus.startsAt) : "";
+  const examEndLocal = examStatus ? formatToLocalTime(examStatus.endsAt) : "";
 
-  // Animated press scales
-  const playBtnScale = useSharedValue(1);
+  // Animated press for ghost buttons
+  const playFill = useSharedValue(0);
+  const examFill = useSharedValue(0);
+
+  const playBtnAnimStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(playFill.value, [0, 1], ["transparent", themeColors.tint]),
+  }));
+  const examBtnAnimStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(examFill.value, [0, 1], ["transparent", themeColors.tint]),
+  }));
+
+  const ghostPressIn = (fill: Animated.SharedValue<number>) => {
+    fill.value = withTiming(1, { duration: 120 });
+  };
+  const ghostPressOut = (fill: Animated.SharedValue<number>) => {
+    fill.value = withTiming(0, { duration: 180 });
+  };
 
   // Toggle indicator animation
   const toggleIndicatorX = useSharedValue(0);
@@ -219,99 +189,28 @@ export default function PlayScreen() {
     setJoinGameDisabled(gameCode.length !== 6);
   }, [gameCode]);
 
-  useEffect(() => {
-    fetchRankingSummary();
-    fetchCustomLeaderboards();
-  }, []);
-
-  const fetchRankingSummary = async () => {
-    try {
-      const res = await axios.get(`${ApiUrl}/api/leaderboards/rankings/summary`, {
-        headers: { Authorization: `Token ${userToken?.token}` },
-      });
-      setRankings(res.data);
-    } catch (e) {
-      // Fallback data until backend is ready
-      setRankings({ world: "#12,842", country: "#482", school: "#3" });
-    }
+  const createSquad = (scoringMode: "all_points" | "exam_only" | "custom_1v1" = "all_points") => {
+    createSquadMutation.mutate(scoringMode);
   };
 
-  const fetchCustomLeaderboards = async () => {
-    try {
-      const res = await axios.get(`${ApiUrl}/api/leaderboards/custom`, {
-        headers: { Authorization: `Token ${userToken?.token}` },
-      });
-      setCustomLeaderboards(res.data);
-    } catch (e) {
-      setCustomLeaderboards([]);
-    }
-  };
-
-  const createSquad = async (scoringMode: "all_points" | "exam_only" | "custom_1v1" = "all_points") => {
-    try {
-      const res = await axios.post(
-        `${ApiUrl}/api/leaderboards/custom/create`,
-        { scoringMode },
-        { headers: { Authorization: `Token ${userToken?.token}` } }
-      );
-      showToast(`Squad created! Code: ${res.data.invite_code}`);
-      setShowCreateModal(false);
-      fetchCustomLeaderboards();
-    } catch (error) {
-      showToast("Error creating squad. Try again.");
-    }
-  };
-
-  const joinSquad = async () => {
+  const joinSquad = () => {
     if (squadJoinCode.length < 4) {
       showToast("Enter a valid invite code");
       return;
     }
-    try {
-      const res = await axios.post(
-        `${ApiUrl}/api/leaderboards/custom/join`,
-        { inviteCode: squadJoinCode },
-        { headers: { Authorization: `Token ${userToken?.token}` } }
-      );
-      showToast(`Joined ${res.data.name}!`);
-      setSquadJoinCode("");
-      fetchCustomLeaderboards();
-    } catch (error) {
-      showToast("Invalid code. Please check and try again.");
-    }
+    joinSquadMutation.mutate(squadJoinCode);
   };
 
   const navigateToGame = () => {
     router.navigate({ pathname: "/(game)/GameIntro" });
   };
 
-  const joinGame = async () => {
-    try {
-      const response = await axios.post(
-        `${ApiUrl}/games/join/`,
-        { game_code: gameCode },
-        { headers: { Authorization: `Token ${userToken?.token}` } }
-      );
-      if (response.status === 200) {
-        const id = response.data.id;
-        router.navigate({
-          pathname: "/(game)/GameWaiting",
-          params: { code: gameCode, id },
-        });
-      } else {
-        showToast("Invalid game code. Please check and try again.");
-      }
-    } catch (error: any) {
-      let errorMessage = "Unable to join game. Please try again.";
-      if (error.response?.status === 404) {
-        errorMessage = "Game not found. Please check the code.";
-      } else if (error.response?.status === 400) {
-        errorMessage = "Invalid game code. Please check and try again.";
-      } else if (error.response?.status === 403) {
-        errorMessage = "You don't have permission to join this game.";
-      }
-      showToast(errorMessage);
-    }
+  const joinGame = () => {
+    // We navigate to GameWaiting directly. The waiting screen handles the exact game validation.
+    router.navigate({
+      pathname: "/(game)/GameWaiting",
+      params: { code: gameCode },
+    });
   };
 
   const handleJoinPress = () => {
@@ -347,18 +246,6 @@ export default function PlayScreen() {
     router.push("/(game)/Leaderboard");
   };
 
-  // Animated button styles
-  const playBtnAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: playBtnScale.value }],
-  }));
-
-  const onPressIn = (scaleValue: Animated.SharedValue<number>) => {
-    scaleValue.value = withSpring(0.96, { damping: 15, stiffness: 300 });
-  };
-
-  const onPressOut = (scaleValue: Animated.SharedValue<number>) => {
-    scaleValue.value = withSpring(1, { damping: 15, stiffness: 300 });
-  };
 
   const globalStandingItems = [
     {
@@ -367,7 +254,7 @@ export default function PlayScreen() {
       icon: "earth" as const,
       rank: rankings.world,
       color: themeColors.tint,
-      movement: rankMovements.world,
+      movement: undefined,
     },
     {
       id: "country",
@@ -375,7 +262,7 @@ export default function PlayScreen() {
       icon: "flag" as const,
       rank: rankings.country,
       color: themeColors.tintSecond ?? themeColors.tint,
-      movement: rankMovements.country,
+      movement: undefined,
     },
     {
       id: "school",
@@ -383,15 +270,20 @@ export default function PlayScreen() {
       icon: "school" as const,
       rank: rankings.school,
       color: "#8b3b8f",
-      movement: rankMovements.school,
+      movement: undefined,
     },
   ];
 
   const renderRankIndicator = (movement?: RankMovement) => {
-    if (movement === "up") return <Text style={{ color: "#4CAF50", fontSize: rMS(12), fontWeight: "800" }}>▲</Text>;
-    if (movement === "down") return <Text style={{ color: "#F44336", fontSize: rMS(12), fontWeight: "800" }}>▼</Text>;
-    return <Text style={{ color: themeColors.textSecondary, fontSize: rMS(12), fontWeight: "800" }}>—</Text>;
+    const boxStyle = { width: rMS(18), height: rMS(18), alignItems: "center" as const, justifyContent: "center" as const };
+    if (movement === "up") return <View style={boxStyle}><Ionicons name="caret-up" size={12} color="#4CAF50" /></View>;
+    if (movement === "down") return <View style={boxStyle}><Ionicons name="caret-down" size={12} color="#F44336" /></View>;
+    return <View style={boxStyle}><Ionicons name="remove" size={12} color={themeColors.textSecondary} /></View>;
   };
+
+  // Animation helper — only animate on first mount
+  const enterAnim = (delay: number) =>
+    hasAnimated.current ? undefined : FadeInDown.duration(300).delay(delay);
 
   const styles = StyleSheet.create({
     container: {
@@ -400,63 +292,104 @@ export default function PlayScreen() {
     },
     scrollContent: {
       paddingHorizontal: rS(16),
-      paddingTop: Math.max(rV(60), insets.top + rV(44)),
+      paddingTop: Math.max(rV(20), insets.top + rV(12)),
       paddingBottom: Math.max(rV(32), insets.bottom + rV(16)),
     },
-    // Hero
-    heroSection: {
-      marginBottom: rV(18),
+    // Score card hero
+    scoreCardOuter: {
+      borderRadius: rMS(24),
+      overflow: "hidden",
+      marginBottom: rV(14),
+      borderWidth: 1,
+      borderColor: themeColors.tint + "20",
+      ...shadow.medium,
     },
-    heroTitle: {
-      fontSize: rMS(28),
-      fontWeight: "800",
+    scoreCardInner: {
+      backgroundColor: themeColors.tint + "08",
+      padding: rMS(22),
+      paddingBottom: rMS(18),
+      position: "relative",
+    },
+    scoreCardStripe: {
+      position: "absolute",
+      top: -rV(10),
+      right: -rS(40),
+      width: rS(200),
+      height: rS(200),
+      borderRadius: rS(100),
+      backgroundColor: themeColors.tint + "0C",
+      transform: [{ scaleX: 1.5 }],
+    },
+    scoreCardAccent: {
+      position: "absolute",
+      bottom: -rV(20),
+      left: -rS(20),
+      width: rS(80),
+      height: rS(80),
+      borderRadius: rS(40),
+      backgroundColor: themeColors.tint + "10",
+    },
+    scoreCardWeekLabel: {
+      fontSize: rMS(11),
+      fontWeight: "700",
+      color: themeColors.tint,
+      letterSpacing: 0.5,
+      marginBottom: rV(14),
+    },
+    scoreCardMain: {
+      alignItems: "center",
+      marginBottom: rV(16),
+    },
+    scoreCardValue: {
+      fontSize: rMS(64),
+      fontWeight: "900",
       color: themeColors.text,
-      letterSpacing: -0.5,
-      lineHeight: rMS(32),
+      letterSpacing: -1.5,
+      lineHeight: rMS(68),
     },
-    heroSubtitle: {
-      fontSize: SIZES.small,
-      color: themeColors.textSecondary,
+    scoreCardLabel: {
+      fontSize: rMS(11),
+      fontWeight: "700",
+      color: themeColors.tint,
       marginTop: rV(4),
-      lineHeight: rMS(18),
+      textTransform: "uppercase",
+      letterSpacing: 1.5,
     },
-    // Action buttons row
+    scoreCardBottom: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    scoreCardAvgText: {
+      fontSize: rMS(15),
+      fontWeight: "700",
+      color: themeColors.textSecondary,
+    },
+    scoreCardDeadline: {
+      fontSize: rMS(10),
+      fontWeight: "600",
+      color: themeColors.textSecondary + "BB",
+    },
+    // Action buttons — side by side ghost
     actionRow: {
       flexDirection: "row",
       gap: rS(10),
-      marginBottom: rV(20),
+      marginBottom: rV(16),
     },
-    playButton: {
-      flex: 1,
-      backgroundColor: themeColors.tint,
-      borderRadius: rMS(24),
+    ghostButton: {
+      borderRadius: rMS(22),
       paddingVertical: rV(14),
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
       gap: rS(8),
-      ...shadow.medium,
+      borderWidth: 1.5,
+      borderColor: themeColors.tint,
     },
-    playButtonText: {
-      color: "#fff",
+    ghostButtonText: {
       fontSize: rMS(13),
-      fontWeight: "900",
-      letterSpacing: 0.3,
-    },
-    examBtnInline: {
-      flex: 1,
-      borderRadius: rMS(24),
-      paddingVertical: rV(14),
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: rS(6),
-      overflow: "hidden",
-    },
-    examBtnInlineText: {
-      fontSize: rMS(12),
       fontWeight: "800",
-      letterSpacing: 0.2,
+      color: themeColors.tint,
     },
     // Join card
     joinCard: {
@@ -556,7 +489,7 @@ export default function PlayScreen() {
     standingCardRight: {
       flexDirection: "row",
       alignItems: "center",
-      gap: rS(4),
+      gap: rS(6),
     },
     standingRank: {
       fontSize: rMS(12),
@@ -617,6 +550,17 @@ export default function PlayScreen() {
     squadActionTitle: {
       fontSize: SIZES.medium,
       fontWeight: "800",
+    },
+    // Squad add button (glassmorphic)
+    squadAddBtn: {
+      width: rMS(32),
+      height: rMS(32),
+      borderRadius: rMS(16),
+      backgroundColor: themeColors.tint + "15",
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: themeColors.tint + "30",
     },
     squadJoinInputContainer: {
       width: "100%",
@@ -867,62 +811,6 @@ export default function PlayScreen() {
       fontWeight: "700",
       color: themeColors.textSecondary,
     },
-    // Exam score card
-    examScoreCard: {
-      flexDirection: "row",
-      backgroundColor: themeColors.cardGlass,
-      borderRadius: rMS(28),
-      padding: rMS(16),
-      marginBottom: rV(16),
-      justifyContent: "space-between",
-      alignItems: "center",
-      borderWidth: 1,
-      borderColor: themeColors.border + "40",
-    },
-    examScoreStat: {
-      flex: 1,
-      alignItems: "center",
-    },
-    examScoreValue: {
-      fontSize: rMS(22),
-      fontWeight: "800",
-      color: themeColors.text,
-    },
-    examScoreLabel: {
-      fontSize: rMS(10),
-      fontWeight: "600",
-      color: themeColors.textSecondary,
-      marginTop: rV(2),
-      textTransform: "uppercase",
-      letterSpacing: 0.5,
-    },
-    examScoreDivider: {
-      width: 1,
-      height: rV(32),
-      backgroundColor: themeColors.border,
-    },
-    // Exam button
-    examActionBtn: {
-      borderRadius: rMS(24),
-      paddingVertical: rV(14),
-      paddingHorizontal: rMS(20),
-      alignItems: "center",
-      justifyContent: "center",
-      marginBottom: rV(6),
-      overflow: "hidden",
-    },
-    examActionBtnText: {
-      fontSize: rMS(14),
-      fontWeight: "800",
-      letterSpacing: 0.3,
-    },
-    examTimeText: {
-      fontSize: rMS(10),
-      color: themeColors.textSecondary,
-      textAlign: "center",
-      marginBottom: rV(16),
-      lineHeight: rMS(14),
-    },
     // Cup card for knockout list
     cupCard: {
       backgroundColor: themeColors.cardGlass,
@@ -990,114 +878,96 @@ export default function PlayScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Hero Header */}
-          <Animated.View
-            entering={FadeInDown.duration(500).delay(100)}
-            style={styles.heroSection}
-          >
-            <Text style={styles.heroTitle}>Rankings</Text>
-            <Text style={styles.heroSubtitle}>
-              Track your standing and compete across knowledge communities.
-            </Text>
-          </Animated.View>
+          {/* Score Card Hero */}
+          <Animated.View entering={enterAnim(50)}>
+            <View style={styles.scoreCardOuter}>
+              <View style={styles.scoreCardInner}>
+                {/* Background art */}
+                <View style={styles.scoreCardStripe} />
+                <View style={styles.scoreCardAccent} />
 
-          {/* Exam Score Card */}
-          <Animated.View entering={FadeInDown.duration(500).delay(120)}>
-            <View style={styles.examScoreCard}>
-              <View style={styles.examScoreStat}>
-                <Text style={styles.examScoreValue}>{examScores.globalAverage}</Text>
-                <Text style={styles.examScoreLabel}>Global Avg</Text>
-              </View>
-              <View style={styles.examScoreDivider} />
-              <View style={styles.examScoreStat}>
-                <Text style={[styles.examScoreValue, { color: themeColors.tint }]}>
-                  {examScores.userScore ?? "—"}
-                </Text>
-                <Text style={styles.examScoreLabel}>Your Score</Text>
-              </View>
-              <View style={styles.examScoreDivider} />
-              <View style={styles.examScoreStat}>
-                <Text style={[styles.examScoreValue, { fontSize: rMS(16) }]}>
-                  SW {examScores.currentWeek}
-                </Text>
-                <Text style={styles.examScoreLabel}>Study Week</Text>
+                {/* Study week label */}
+                  <Text style={styles.scoreCardStudyWeek}>
+                    {examStatus?.currentWeek ? `Study Week ${examStatus.currentWeek}` : "Study Week"}
+                  </Text>
+
+                {/* Primary: user score — centered */}
+                <View style={styles.scoreCardMain}>
+                  <Text style={styles.scoreCardValue}>
+                    {examStatus?.userScore ?? "\u2014"}
+                  </Text>
+                  <Text style={styles.scoreCardLabel}>Your Score</Text>
+                </View>
+
+                {/* Bottom row: avg left, deadline right */}
+                <View style={styles.scoreCardBottom}>
+                  <Text style={styles.scoreCardAvgText}>
+                    Average · {examStatus?.globalAverage ?? "\u2014"}
+                  </Text>
+                  <Text style={styles.scoreCardDeadline}>
+                    Ends {examEndLocal}
+                  </Text>
+                </View>
               </View>
             </View>
           </Animated.View>
 
-          {/* Exam Time Display */}
-          <Animated.View entering={FadeInDown.duration(500).delay(130)}>
-            <Text style={styles.examTimeText}>
-              🕐 Weekly Exam · {examStartLocal} — {examEndLocal}
-            </Text>
-          </Animated.View>
-
-          {/* Play Game + Exam — side by side */}
-          <Animated.View entering={FadeInDown.duration(500).delay(200)} style={styles.actionRow}>
-            <AnimatedTouchable
-              style={[styles.playButton, playBtnAnimStyle]}
-              onPress={navigateToGame}
-              onPressIn={() => onPressIn(playBtnScale)}
-              onPressOut={() => onPressOut(playBtnScale)}
+          {/* Action Buttons — side by side ghost */}
+          <Animated.View entering={enterAnim(100)} style={styles.actionRow}>
+            <TouchableOpacity
               activeOpacity={1}
+              onPressIn={() => ghostPressIn(playFill)}
+              onPressOut={() => ghostPressOut(playFill)}
+              onPress={navigateToGame}
+              style={{ flex: 1 }}
             >
-              <Ionicons name="game-controller" size={20} color="#fff" />
-              <Text style={styles.playButtonText}>Play Game</Text>
-            </AnimatedTouchable>
+              <Animated.View style={[styles.ghostButton, playBtnAnimStyle]}>
+                <Animated.Text style={styles.ghostButtonText}>
+                  <Ionicons name="game-controller" size={18} color={themeColors.tint} />
+                </Animated.Text>
+                <Text style={styles.ghostButtonText}>Play Game</Text>
+              </Animated.View>
+            </TouchableOpacity>
 
             {examButtonState !== "hidden" && examButtonState !== "expired" && (
               <TouchableOpacity
-                style={[
-                  styles.examBtnInline,
-                  {
-                    backgroundColor:
-                      examButtonState === "active"
-                        ? themeColors.tint
-                        : examButtonState === "completed"
-                        ? "#4CAF50" + "20"
-                        : themeColors.cardGlass,
-                    borderWidth: examButtonState === "active" ? 0 : 1.5,
-                    borderColor: examButtonState === "completed" ? "#4CAF50" + "40" : themeColors.tint + "40",
-                  },
-                ]}
-                activeOpacity={examButtonState === "active" ? 0.8 : 1}
+                activeOpacity={1}
+                onPressIn={() => ghostPressIn(examFill)}
+                onPressOut={() => ghostPressOut(examFill)}
                 disabled={examButtonState !== "active"}
                 onPress={() => router.push("/(game)/WeeklyExam")}
+                style={{ flex: 1 }}
               >
-                <Ionicons
-                  name={examButtonState === "completed" ? "checkmark-circle" : examButtonState === "active" ? "document-text" : "time"}
-                  size={18}
-                  color={examButtonState === "active" ? "#fff" : examButtonState === "completed" ? "#4CAF50" : themeColors.textSecondary}
-                />
-                <Text
-                  style={[
-                    styles.examBtnInlineText,
-                    {
-                      color:
-                        examButtonState === "active"
-                          ? "#fff"
-                          : examButtonState === "completed"
-                          ? "#4CAF50"
-                          : themeColors.textSecondary,
-                    },
-                  ]}
-                >
-                  {examButtonState === "teaser"
-                    ? "Exam Soon"
-                    : examButtonState === "active"
-                    ? "Weekly Exam"
-                    : "Completed"}
-                </Text>
+                <Animated.View style={[
+                  styles.ghostButton,
+                  examBtnAnimStyle,
+                  examButtonState === "completed" && { borderColor: "#4CAF50" },
+                ]}>
+                  <Ionicons
+                    name={examButtonState === "completed" ? "checkmark-circle" : examButtonState === "active" ? "document-text" : "time"}
+                    size={16}
+                    color={examButtonState === "completed" ? "#4CAF50" : themeColors.tint}
+                  />
+                  <Text style={[
+                    styles.ghostButtonText,
+                    examButtonState === "completed" && { color: "#4CAF50" },
+                  ]}>
+                    {examButtonState === "teaser"
+                      ? "Exam Soon"
+                      : examButtonState === "active"
+                      ? "Weekly Exam"
+                      : "Completed"}
+                  </Text>
+                </Animated.View>
               </TouchableOpacity>
             )}
           </Animated.View>
 
-          {/* Rankings / Knockout Toggle — animated indicator */}
+          {/* Rankings / Knockout Toggle */}
           <Animated.View
-            entering={FadeInDown.duration(500).delay(250)}
+            entering={enterAnim(150)}
             style={styles.toggleContainer}
           >
-            {/* Animated sliding indicator */}
             <Animated.View style={[styles.toggleIndicator, toggleAnimatedStyle]} />
             <TouchableOpacity
               style={styles.toggleButton}
@@ -1132,16 +1002,25 @@ export default function PlayScreen() {
             <>
               {/* Study Squads (Custom Communities) */}
               <Animated.View
-                entering={FadeInDown.duration(500).delay(400)}
+                entering={enterAnim(200)}
                 style={styles.squadSection}
               >
                 <View style={styles.sectionHeader}>
                   <Text style={styles.sectionTitle}>Study Squads</Text>
-                  {customLeaderboards.length > 0 && (
-                    <TouchableOpacity onPress={openFullLeaderboard}>
-                      <Text style={styles.sectionSeeAll}>See All</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: rS(12) }}>
+                    {customLeaderboards.length > 0 && (
+                      <TouchableOpacity onPress={openFullLeaderboard}>
+                        <Text style={styles.sectionSeeAll}>See All</Text>
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity
+                      style={styles.squadAddBtn}
+                      onPress={() => setShowSquadSheet(true)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="add" size={20} color={themeColors.tint} />
                     </TouchableOpacity>
-                  )}
+                  </View>
                 </View>
 
                 {customLeaderboards.length === 0 ? (
@@ -1154,59 +1033,6 @@ export default function PlayScreen() {
                     <Text style={styles.squadEmptyText}>
                       Join or create a study squad to compete with friends
                     </Text>
-                    
-                    <View style={styles.squadActionsRow}>
-                      <TouchableOpacity 
-                        style={[styles.squadActionButton, styles.squadActionButtonPrimary]}
-                        activeOpacity={0.8}
-                        onPress={() => setShowCreateModal(true)}
-                      >
-                        <View style={styles.squadActionTextContent}>
-                          <Text style={[styles.squadActionLabel, { color: "#fff" }]}>New Squad</Text>
-                          <Text style={[styles.squadActionTitle, { color: "#fff" }]}>Create</Text>
-                        </View>
-                        <Ionicons name="add-circle" size={24} color="#fff" />
-                      </TouchableOpacity>
-
-                      <TouchableOpacity 
-                        style={[styles.squadActionButton, styles.squadActionButtonSecondary]}
-                        activeOpacity={0.8}
-                        onPress={() => setShowJoinInput(!showJoinInput)}
-                      >
-                        <View style={styles.squadActionTextContent}>
-                          <Text style={[styles.squadActionLabel, { color: themeColors.tint }]}>Entry Code</Text>
-                          <Text style={[styles.squadActionTitle, { color: themeColors.tint }]}>Join</Text>
-                        </View>
-                        <Ionicons 
-                          name={showJoinInput ? "chevron-up" : "keypad"} 
-                          size={20} 
-                          color={themeColors.tint} 
-                        />
-                      </TouchableOpacity>
-                    </View>
-
-                    {showJoinInput && (
-                      <Animated.View 
-                        entering={FadeInDown.duration(300)}
-                        style={styles.squadJoinInputContainer}
-                      >
-                        <TextInput
-                          style={styles.squadJoinInput}
-                          value={squadJoinCode}
-                          onChangeText={setSquadJoinCode}
-                          placeholder="Enter invite code"
-                          placeholderTextColor={themeColors.textSecondary}
-                          autoCapitalize="characters"
-                        />
-                        <TouchableOpacity 
-                          style={[styles.squadJoinBtn, !squadJoinCode && { opacity: 0.5 }]}
-                          onPress={joinSquad}
-                          disabled={!squadJoinCode}
-                        >
-                          <Text style={styles.squadJoinBtnText}>Join</Text>
-                        </TouchableOpacity>
-                      </Animated.View>
-                    )}
                   </View>
                 ) : (
                   customLeaderboards.map((lb) => (
@@ -1218,7 +1044,7 @@ export default function PlayScreen() {
                     >
                       <View style={styles.squadItemLeft}>
                         <View style={styles.squadIcon}>
-                          <Ionicons name="people" size={20} color={themeColors.tint} />
+                          <Ionicons name="people" size={18} color={themeColors.tint} />
                         </View>
                         <View>
                           <Text style={styles.squadName}>{lb.name}</Text>
@@ -1231,7 +1057,7 @@ export default function PlayScreen() {
                       </View>
                       <Ionicons
                         name="chevron-forward"
-                        size={20}
+                        size={16}
                         color={themeColors.textSecondary}
                       />
                     </TouchableOpacity>
@@ -1242,7 +1068,7 @@ export default function PlayScreen() {
               {/* Custom 1v1 Squads Section */}
               {customLeaderboards.some((lb) => lb.scoringMode === "custom_1v1") && (
                 <Animated.View
-                  entering={FadeInDown.duration(500).delay(450)}
+                  entering={enterAnim(250)}
                   style={{ marginBottom: rV(22) }}
                 >
                   <View style={styles.sectionHeader}>
@@ -1272,7 +1098,7 @@ export default function PlayScreen() {
                   </View>
 
                   {customH2HTab === "matches" ? (
-                    MOCK_CUSTOM_H2H_MATCHES.map((m) => (
+                    customH2HMatches.map((m) => (
                       <View key={m.id} style={styles.standingCard}>
                         <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
                           <View
@@ -1302,8 +1128,8 @@ export default function PlayScreen() {
                         <Text style={[styles.standingName, { flex: 1, fontSize: rMS(9), color: themeColors.textSecondary, fontWeight: "700", letterSpacing: 1, textAlign: "center" }]}>D</Text>
                         <Text style={[styles.standingName, { flex: 1, fontSize: rMS(9), color: themeColors.textSecondary, fontWeight: "700", letterSpacing: 1, textAlign: "center" }]}>L</Text>
                       </View>
-                      {MOCK_CUSTOM_H2H_STANDINGS.map((s) => (
-                        <View key={s.rank} style={[styles.standingCard, s.name === "You" && { borderWidth: 1.5, borderColor: themeColors.tint + "40", backgroundColor: themeColors.tint + "08" }]}>
+                      {customH2HStandings.map((s) => (
+                        <View key={s.rank} style={[styles.standingCard, s.isUser && { borderWidth: 1.5, borderColor: themeColors.tint + "40", backgroundColor: themeColors.tint + "08" }]}>
                           <Text style={[styles.standingName, { flex: 1, fontSize: rMS(13), fontWeight: "800", color: themeColors.tint }]}>{s.rank}</Text>
                           <View style={{ flex: 3, flexDirection: "row", alignItems: "center" }}>
                             <Text style={[styles.standingName, { fontSize: rMS(13) }]}>{s.name}</Text>
@@ -1325,7 +1151,7 @@ export default function PlayScreen() {
               )}
 
               {/* Global Standing */}
-              <Animated.View entering={FadeInDown.duration(500).delay(500)}>
+              <Animated.View entering={enterAnim(300)}>
                 <View style={styles.sectionHeader}>
                   <Text style={styles.sectionTitle}>Your Rank</Text>
                 </View>
@@ -1333,7 +1159,7 @@ export default function PlayScreen() {
                 {globalStandingItems.map((item, index) => (
                   <Animated.View
                     key={item.id}
-                    entering={FadeInDown.duration(400).delay(550 + index * 80)}
+                    entering={enterAnim(350 + index * 50)}
                   >
                     <TouchableOpacity
                       style={styles.standingCard}
@@ -1344,18 +1170,18 @@ export default function PlayScreen() {
                         <View
                           style={[styles.standingIconBox, { backgroundColor: item.color }]}
                         >
-                          <Ionicons name={item.icon} size={24} color="#fff" />
+                          <Ionicons name={item.icon} size={18} color="#fff" />
                         </View>
                         <Text style={styles.standingName}>{item.name}</Text>
                       </View>
                       <View style={styles.standingCardRight}>
-                        {renderRankIndicator(item.movement)}
+                        {renderRankIndicator(undefined)}
                         {item.rank && (
                           <Text style={styles.standingRank}>{item.rank}</Text>
                         )}
                         <Ionicons
                           name="chevron-forward"
-                          size={20}
+                          size={16}
                           color={themeColors.textSecondary}
                         />
                       </View>
@@ -1366,15 +1192,15 @@ export default function PlayScreen() {
             </>
           ) : (
             /* Knockout Mode — Squad Knockouts */
-            <Animated.View entering={FadeInDown.duration(500).delay(400)}>
+            <Animated.View entering={enterAnim(200)}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Squad Knockouts</Text>
               </View>
 
-              {MOCK_USER_CUPS.map((cup, idx) => (
+              {userCups.map((cup, idx) => (
                 <Animated.View
                   key={cup.id}
-                  entering={FadeInDown.duration(400).delay(450 + idx * 80)}
+                  entering={enterAnim(250 + idx * 50)}
                 >
                   <TouchableOpacity
                     style={styles.cupCard}
@@ -1405,7 +1231,7 @@ export default function PlayScreen() {
                 </Animated.View>
               ))}
 
-              {MOCK_USER_CUPS.length === 0 && (
+              {userCups.length === 0 && (
                 <View style={styles.squadEmpty}>
                   <Ionicons name="trophy-outline" size={28} color={themeColors.textSecondary} />
                   <Text style={styles.squadEmptyText}>
@@ -1417,25 +1243,26 @@ export default function PlayScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
-      {/* Squad Creation Modal */}
+      {/* Manage Squads Bottom Sheet */}
       <Modal
-        visible={showCreateModal}
+        visible={showSquadSheet}
         transparent
         animationType="slide"
-        onRequestClose={() => setShowCreateModal(false)}
+        onRequestClose={() => setShowSquadSheet(false)}
       >
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
-          onPress={() => setShowCreateModal(false)}
+          onPress={() => setShowSquadSheet(false)}
         >
-          <View style={styles.modalContent}>
+          <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
             <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Create a Squad</Text>
+            <Text style={styles.modalTitle}>Manage Squads</Text>
             <Text style={styles.modalSubtitle}>
-              Choose how scores are tracked in your squad.
+              Create a new squad or join one with an invite code.
             </Text>
 
+            {/* Create options */}
             <TouchableOpacity
               style={[styles.modeOption, { borderColor: themeColors.tint }]}
               activeOpacity={0.8}
@@ -1469,9 +1296,38 @@ export default function PlayScreen() {
               </Text>
             </TouchableOpacity>
 
+            {/* Join divider */}
+            <View style={{ flexDirection: "row", alignItems: "center", marginVertical: rV(16), gap: rS(10) }}>
+              <View style={{ flex: 1, height: 1, backgroundColor: themeColors.border + "60" }} />
+              <Text style={{ fontSize: rMS(11), fontWeight: "700", color: themeColors.textSecondary, letterSpacing: 1 }}>OR JOIN</Text>
+              <View style={{ flex: 1, height: 1, backgroundColor: themeColors.border + "60" }} />
+            </View>
+
+            {/* Join input */}
+            <View style={styles.squadJoinInputContainer}>
+              <TextInput
+                style={styles.squadJoinInput}
+                value={squadJoinCode}
+                onChangeText={setSquadJoinCode}
+                placeholder="Enter invite code"
+                placeholderTextColor={themeColors.textSecondary}
+                autoCapitalize="characters"
+              />
+              <TouchableOpacity
+                style={[styles.squadJoinBtn, !squadJoinCode && { opacity: 0.5 }]}
+                onPress={() => {
+                  joinSquad();
+                  setShowSquadSheet(false);
+                }}
+                disabled={!squadJoinCode}
+              >
+                <Text style={styles.squadJoinBtnText}>Join</Text>
+              </TouchableOpacity>
+            </View>
+
             <TouchableOpacity
               style={styles.modalCancelBtn}
-              onPress={() => setShowCreateModal(false)}
+              onPress={() => setShowSquadSheet(false)}
             >
               <Text style={styles.modalCancelText}>Cancel</Text>
             </TouchableOpacity>
