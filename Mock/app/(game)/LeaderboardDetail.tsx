@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
-import { getLeaderboardDetails } from "../../services/LeaderboardApiCalls";
+import { getLeaderboardDetails, getKnockoutBracket, KnockoutRound } from "../../services/LeaderboardApiCalls";
 import Animated, {
   FadeInDown,
   useAnimatedStyle,
@@ -33,19 +33,6 @@ import { BlurView } from "expo-blur";
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
-// Interfaces kept to avoid dependencies on internal types
-
-interface H2HMatch {
-  id: string;
-  p1Name: string;
-  p1Team: string;
-  p2Name: string;
-  p2Team: string;
-  p1Score: number | null;
-  p2Score: number | null;
-  roundText: string;
-  status: "won" | "lost" | "pending" | "bye";
-}
 
 export default function LeaderboardDetail() {
   const { id, name, timeframe, type } = useLocalSearchParams<{
@@ -62,7 +49,6 @@ export default function LeaderboardDetail() {
 
   // We can derive loading/error from react-query
   const [activeTab, setActiveTab] = useState<"rankings" | "knockout">(type === "knockout" ? "knockout" : "rankings");
-  const [knockoutMatches] = useState<H2HMatch[]>([]);
 
   const backScale = useSharedValue(1);
   const backAnimStyle = useAnimatedStyle(() => ({
@@ -89,7 +75,19 @@ export default function LeaderboardDetail() {
   });
 
   const rankings = leaderboardData?.rankings || [];
+  const squadInfo = leaderboardData?.squadInfo;
   const error = queryError ? "Failed to load rankings" : "";
+
+  // Build dynamic knockout info text
+  const knockoutInfoText = squadInfo?.knockoutStartWeek
+    ? squadInfo.knockoutStarted
+      ? `KNOCKOUT STARTED IN SW ${squadInfo.knockoutStartWeek}\nROUNDS CALCULATED BY SQUAD MEMBERS`
+      : `KNOCKOUT STARTS IN SW ${squadInfo.knockoutStartWeek}\nROUNDS CALCULATED BY SQUAD MEMBERS`
+    : "KNOCKOUT ROUNDS\nCALCULATED BY SQUAD MEMBERS";
+
+  // Bracket matches from the knockout section of squadInfo
+  // Build H2H match display from knockout bracket rounds
+  const knockoutBracketRounds: KnockoutRound[] = [];
 
   const formatRank = (rank: number) => rank.toString().padStart(2, "0");
   const formatScore = (score: number) => score.toLocaleString() + " PTS";
@@ -397,7 +395,7 @@ export default function LeaderboardDetail() {
       <View style={styles.blob1} />
       <View style={styles.blob2} />
 
-      {/* Frosted glass top bar with sticky back button */}
+      {/* Frosted glass top bar with sticky back button + settings gear */}
       <BlurView
         intensity={60}
         tint={colorScheme === "dark" ? "dark" : "light"}
@@ -416,6 +414,23 @@ export default function LeaderboardDetail() {
         >
           <Ionicons name="arrow-back" size={22} color={themeColors.text} />
         </AnimatedTouchable>
+
+        {/* Spacer */}
+        <View style={{ flex: 1 }} />
+
+        {/* Settings gear — only for squad creators */}
+        {(squadInfo?.isCreator) && (
+          <TouchableOpacity
+            style={[styles.backButton, { marginLeft: rS(8) }]}
+            onPress={() => router.push({
+              pathname: "/(game)/SquadSettings",
+              params: { id, name },
+            })}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="settings-outline" size={20} color={themeColors.text} />
+          </TouchableOpacity>
+        )}
       </BlurView>
 
       <ScrollView
@@ -535,54 +550,65 @@ export default function LeaderboardDetail() {
 
         {activeTab === "knockout" && (
           <View style={styles.bracketContainer}>
-            {knockoutMatches.map((match, idx) => (
-              <Animated.View
-                key={match.id}
-                entering={enterAnim(200 + idx * 50)}
-                style={styles.matchCardOuter}
-              >
-                <View style={styles.matchCard}>
-                  {/* Left Player (p1) */}
-                  <View style={styles.matchPlayerLeft}>
-                    <Text style={styles.matchPlayerText} numberOfLines={1}>{match.p1Name}</Text>
-                    <Text style={styles.matchPlayerTeam} numberOfLines={1}>{match.p1Team}</Text>
-                  </View>
+            {knockoutBracketRounds.length > 0 ? (
+              knockoutBracketRounds.map((round, rIdx) => (
+                <Animated.View key={`round-${round.round}`} entering={enterAnim(200 + rIdx * 100)}>
+                  <Text style={[styles.roundText, { marginBottom: rV(12), marginTop: rIdx > 0 ? rV(16) : 0 }]}>
+                    ROUND {round.round}
+                  </Text>
+                  {round.matches.map((match, mIdx) => (
+                    <View key={`match-${rIdx}-${mIdx}`} style={styles.matchCardOuter}>
+                      <View style={styles.matchCard}>
+                        {/* Left Player (p1) */}
+                        <View style={styles.matchPlayerLeft}>
+                          <Text style={[
+                            styles.matchPlayerText,
+                            isMe(match.player1) && { color: themeColors.tint },
+                          ]} numberOfLines={1}>{match.player1}</Text>
+                        </View>
 
-                  {/* Score/Status Center Block */}
-                  <View style={styles.scoreBlock}>
-                    {match.status === "bye" ? (
-                      <Text style={styles.scoreText}>N/A</Text>
-                    ) : match.status === "pending" ? (
-                      <>
-                        <Text style={styles.scoreText}>0</Text>
-                        <View style={styles.scoreDivider} />
-                        <Text style={styles.scoreText}>0</Text>
-                      </>
-                    ) : (
-                      <>
-                        <Text style={styles.scoreText}>{match.p1Score}</Text>
-                        <View style={styles.scoreDivider} />
-                        <Text style={styles.scoreText}>{match.p2Score}</Text>
-                      </>
-                    )}
-                  </View>
+                        {/* Score/Status Center Block */}
+                        <View style={styles.scoreBlock}>
+                          {match.score1 != null && match.score2 != null ? (
+                            <>
+                              <Text style={styles.scoreText}>{match.score1}</Text>
+                              <View style={styles.scoreDivider} />
+                              <Text style={styles.scoreText}>{match.score2}</Text>
+                            </>
+                          ) : (
+                            <>
+                              <Text style={styles.scoreText}>—</Text>
+                              <View style={styles.scoreDivider} />
+                              <Text style={styles.scoreText}>—</Text>
+                            </>
+                          )}
+                        </View>
 
-                  {/* Right Player (p2) */}
-                  <View style={styles.matchPlayerRight}>
-                    <Text style={styles.matchPlayerText} numberOfLines={1}>{match.p2Name}</Text>
-                    <Text style={styles.matchPlayerTeam} numberOfLines={1}>{match.p2Team}</Text>
-                  </View>
-                </View>
-
-                {/* Round text below */}
-                <Text style={styles.roundText}>{match.roundText}</Text>
-              </Animated.View>
-            ))}
+                        {/* Right Player (p2) */}
+                        <View style={styles.matchPlayerRight}>
+                          <Text style={[
+                            styles.matchPlayerText,
+                            isMe(match.player2) && { color: themeColors.tint },
+                          ]} numberOfLines={1}>{match.player2}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  ))}
+                </Animated.View>
+              ))
+            ) : (
+              <View style={{ alignItems: "center", paddingVertical: rV(32) }}>
+                <Ionicons name="trophy-outline" size={36} color={themeColors.textSecondary} />
+                <Text style={{ color: themeColors.textSecondary, fontSize: rMS(13), fontWeight: "600", marginTop: rV(10), textAlign: "center" }}>
+                  No knockout matches yet
+                </Text>
+              </View>
+            )}
 
             <View style={styles.bracketInfoRow}>
               <View style={styles.bracketInfoLine} />
               <Text style={styles.bracketInfoText}>
-                KNOCKOUT STARTED IN SW 8{"\n"}ROUNDS CALCULATED BY SQUAD MEMBERS
+                {knockoutInfoText}
               </Text>
               <View style={styles.bracketInfoLine} />
             </View>

@@ -20,6 +20,9 @@ export interface CustomLeaderboard {
   memberCount?: number;
   icon?: string;
   scoringMode?: "all_points" | "exam_only" | "custom_1v1";
+  invite_code?: string;
+  isCodePublic?: boolean;
+  isCreator?: boolean;
 }
 
 export interface RankingItem {
@@ -38,9 +41,26 @@ export interface UserStatus {
   message: string | null;
 }
 
+export interface SquadMember {
+  id: number;
+  username: string;
+  avatarUrl: string | null;
+}
+
+export interface SquadInfo {
+  knockoutStartWeek?: number;
+  knockoutStarted?: boolean;
+  totalKnockoutRounds?: number;
+  invite_code?: string;
+  isCodePublic?: boolean;
+  isCreator?: boolean;
+  members?: SquadMember[];
+}
+
 export interface LeaderboardDetailsResponse {
   rankings: RankingItem[];
   userStatus: UserStatus;
+  squadInfo?: SquadInfo;
 }
 
 export interface H2HMatchup {
@@ -94,6 +114,8 @@ export interface CustomH2HStanding {
   weekScore: number;
   tiebreaker?: "standoff";
 }
+
+// --- Existing API calls ---
 
 export const getRankingsSummary = async (token: string | null | undefined): Promise<RankingSummary> => {
   const response = await apiClient.get<RankingSummary>('/api/leaderboards/rankings/summary', {
@@ -182,4 +204,52 @@ export const getCustomH2HStandings = async (
     headers: { Authorization: `Token ${token}` },
   });
   return response.data;
+};
+
+// --- Squad Management API calls (NEW) ---
+
+export const updateSquadDetails = async (
+  id: string,
+  token: string | null | undefined,
+  data: { name?: string; isCodePublic?: boolean }
+): Promise<{ id: string; name: string; isCodePublic: boolean }> => {
+  const response = await apiClient.put(
+    `/api/leaderboards/custom/${id}`,
+    data,
+    { headers: { Authorization: `Token ${token}` } }
+  );
+  return response.data;
+};
+
+export const regenerateInviteCode = async (
+  id: string,
+  token: string | null | undefined
+): Promise<{ invite_code: string }> => {
+  const response = await apiClient.post(
+    `/api/leaderboards/custom/${id}/regenerate-code`,
+    {},
+    { headers: { Authorization: `Token ${token}` } }
+  );
+  return response.data;
+};
+
+export const removeSquadMember = async (
+  id: string,
+  userId: number,
+  token: string | null | undefined
+): Promise<void> => {
+  await apiClient.delete(
+    `/api/leaderboards/custom/${id}/members/${userId}`,
+    { headers: { Authorization: `Token ${token}` } }
+  );
+};
+
+export const deleteSquad = async (
+  id: string,
+  token: string | null | undefined
+): Promise<void> => {
+  await apiClient.delete(
+    `/api/leaderboards/custom/${id}`,
+    { headers: { Authorization: `Token ${token}` } }
+  );
 };

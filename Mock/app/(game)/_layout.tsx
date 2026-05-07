@@ -40,6 +40,7 @@ export default function GameLayout() {
       <Stack.Screen name="Leaderboard" options={{ gestureEnabled: true }} />
       <Stack.Screen name="LeaderboardDetail" options={{ gestureEnabled: true, animation: "slide_from_right" }} />
       <Stack.Screen name="WeeklyExam" options={{ animation: "fade" }} />
+      <Stack.Screen name="SquadSettings" options={{ gestureEnabled: true, animation: "slide_from_right" }} />
     </Stack>
     </GameAudioProvider>
   );

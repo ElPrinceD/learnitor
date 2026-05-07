@@ -87,9 +87,13 @@ export default function Game() {
   const [error, setError] = useState<string>(""); // Add error state
   const [wsError, setWsError] = useState<string>("");
   const [wsConnected, setWsConnected] = useState<boolean>(false);
-  const [wsConnectionAttempts, setWsConnectionAttempts] = useState<number>(0);
+
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showFastAnswerCue, setShowFastAnswerCue] = useState(false);
+
+  // Fast answer cue animation
+  const fastCueOpacity = useRef(new Animated.Value(0)).current;
+  const fastCueScale = useRef(new Animated.Value(0.8)).current;
 
   const handleDismissError = useCallback(() => setErrorMessage(null), []);
 
@@ -309,6 +313,7 @@ export default function Game() {
 
       try {
         const message = JSON.parse(event.data);
+        console.log(`Player ${userInfo?.user.id} received:`, message);
 
         if (
           message.type === "question.attempted" &&
@@ -328,6 +333,7 @@ export default function Game() {
           setGameEnded(true);
           if (webSocket.current) {
             webSocket.current.close();
+            console.log("WebSocket closed due to game end.");
           }
           if (!redirected) {
             setRedirected(true);
@@ -336,24 +342,9 @@ export default function Game() {
               params: { scores: JSON.stringify(scoresObject), gameId },
             });
           }
-        } else if (message.type === "game.start") {
-          // Game is already started, just ensure we're ready
-        } else if (
-          message.type === "game.update" ||
-          message.type === "game.state"
-        ) {
-          const payload = message.data || message;
-          if (payload.started && !payload.ended) {
-            // Game is already started, just ensure we're ready
-          }
         }
       } catch (error) {
-        const errorMsg = `Failed to parse WebSocket message: ${
-          error instanceof Error ? error.message : "Unknown parsing error"
-        }`;
-        setWsError(errorMsg);
-
-        // Don't show WebSocket parsing errors to users - they're not actionable
+        console.error("Failed to parse WebSocket message:", error);
       }
     };
   }, [currentQuestion, gameQuestions, gameId, gameEnded, userInfo, redirected]);
@@ -377,45 +368,28 @@ export default function Game() {
   useEffect(() => {
     if (!gameCode || !userToken?.token || gameEnded) return;
 
-    setWsConnectionAttempts((prev) => prev + 1);
-    setWsError("");
-
     const ws = new WebSocket(
       `${WsUrl}/ws/games/${gameCode}/ws/?token=${userToken.token}`
     );
     webSocket.current = ws;
 
     ws.onopen = () => {
+      console.log(`WebSocket opened for Player ${userInfo?.user.id}`);
       setWsConnected(true);
       setWsError("");
-      setWsConnectionAttempts(0);
-      // Send join_game message to ensure we're registered
-      ws.send(JSON.stringify({ type: "join_game" }));
     };
 
     ws.onerror = (error) => {
+      console.error(`WebSocket error for Player ${userInfo?.user.id}:`, error);
       setWsConnected(false);
-      const errorMsg = `WebSocket connection failed (attempt ${
-        wsConnectionAttempts + 1
-      }). Error: ${error?.type || "Unknown error"}`;
-      setWsError(errorMsg);
-
-      // Don't show WebSocket connection errors to users - they're not actionable
     };
 
     ws.onmessage = (event) => handleMessageRef.current(event);
 
-    ws.onclose = (event) => {
+    ws.onclose = () => {
+      console.log(`WebSocket closed for Player ${userInfo?.user.id}`);
       setWsConnected(false);
       webSocket.current = null;
-
-      if (event.code !== 1000) {
-        // Not a normal closure
-        const errorMsg = `WebSocket connection closed unexpectedly. Code: ${
-          event.code
-        }, Reason: ${event.reason || "No reason provided"}`;
-        setWsError(errorMsg);
-      }
     };
 
     return () => {
@@ -427,26 +401,9 @@ export default function Game() {
   const sendWebSocketMessage = (message: object) => {
     if (gameEnded) return;
     if (webSocket.current?.readyState === WebSocket.OPEN) {
-      try {
-        webSocket.current.send(JSON.stringify(message));
-        setWsError(""); // Clear any previous errors
-      } catch (error) {
-        const errorMsg = `Failed to send WebSocket message: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`;
-        setWsError(errorMsg);
-
-        // Show user-friendly error for game interaction failure
-        setErrorMessage("Unable to submit your answer. Please try again.");
-      }
+      webSocket.current.send(JSON.stringify(message));
     } else {
-      const errorMsg = `WebSocket is not connected (state: ${
-        webSocket.current?.readyState || "null"
-      }). Cannot send message.`;
-      setWsError(errorMsg);
-
-      // Show user-friendly error for connection issues
-      setErrorMessage("Connection issue. Your progress may not be saved.");
+      console.warn(`WebSocket not open for Player ${userInfo?.user.id}:`, message);
     }
   };
 
@@ -523,10 +480,22 @@ export default function Game() {
 
       if (didSubmit) {
         const elapsed = Date.now() - startTimeRef.current;
-        const fastThreshold = questionDuration * 0.3;
+        const fastThreshold = questionDuration * 2;
         if (isCorrect && elapsed < fastThreshold) {
-          setTimeout(() => setShowFastAnswerCue(true), 0);
-          setTimeout(() => setShowFastAnswerCue(false), 1500);
+          setTimeout(() => {
+            setShowFastAnswerCue(true);
+            fastCueOpacity.setValue(1);
+            fastCueScale.setValue(1);
+            Animated.parallel([
+              Animated.timing(fastCueOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+              Animated.spring(fastCueScale, { toValue: 1, friction: 6, useNativeDriver: true }),
+            ]).start();
+          }, 0);
+          setTimeout(() => {
+            Animated.timing(fastCueOpacity, { toValue: 0, duration: 400, useNativeDriver: true }).start(() => {
+              setShowFastAnswerCue(false);
+            });
+          }, 1200);
         }
         setTimeout(() => {
           try {
@@ -727,30 +696,22 @@ export default function Game() {
       paddingHorizontal: rS(16),
       paddingVertical: rV(16),
       paddingBottom: Math.max(rV(16), insets.bottom + rV(8)),
-      backgroundColor: themeColors.cardGlass,
+      backgroundColor: colorScheme === "dark" ? themeColors.cardGlass : "transparent",
       borderTopLeftRadius: rMS(32),
       borderTopRightRadius: rMS(32),
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: -4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 12,
-      elevation: 8,
+      borderTopWidth: 1,
+      borderTopColor: themeColors.border + "40",
     },
     powerUpCard: {
-      backgroundColor: themeColors.cardGlass,
+      backgroundColor: "transparent",
       borderRadius: rMS(28),
       padding: rMS(10),
       alignItems: "center",
       justifyContent: "center",
       minWidth: rS(100),
       minHeight: rV(80),
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 4,
-      borderWidth: 1,
-      borderColor: themeColors.border + "60",
+      borderWidth: 1.5,
+      borderColor: themeColors.border + "50",
     },
     powerUpButton: {
       alignItems: "center",
@@ -798,12 +759,19 @@ export default function Game() {
       fontWeight: "bold",
     },
     aiPrediction: {
-      backgroundColor: themeColors.tint + "20",
-      borderRadius: rMS(12),
-      padding: rMS(16),
-      margin: rMS(16),
-      borderLeftWidth: 4,
-      borderLeftColor: themeColors.tint,
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 200,
+      backgroundColor: colorScheme === "dark" ? "rgba(15,17,23,0.96)" : "rgba(245,246,250,0.96)",
+      borderBottomLeftRadius: rMS(24),
+      borderBottomRightRadius: rMS(24),
+      paddingTop: Math.max(rV(20), insets.top + rV(10)),
+      paddingBottom: rV(16),
+      paddingHorizontal: rS(20),
+      borderBottomWidth: 2,
+      borderBottomColor: themeColors.tint + "40",
     },
     aiPredictionTitleRow: {
       flexDirection: "row",
@@ -811,14 +779,15 @@ export default function Game() {
       marginBottom: rV(8),
     },
     aiPredictionTitle: {
-      fontSize: rMS(16),
-      fontWeight: "bold",
+      fontSize: rMS(15),
+      fontWeight: "800",
       color: themeColors.tint,
     },
     aiPredictionText: {
       fontSize: rMS(14),
       color: themeColors.text,
       fontStyle: "italic",
+      lineHeight: rMS(14) * 1.5,
     },
     timerRowContainer: {
       flexDirection: "row",
@@ -850,18 +819,13 @@ export default function Game() {
     },
     // Styles meant for Questions.tsx overrides
     questionContainer: {
-      backgroundColor: themeColors.cardGlass,
+      backgroundColor: colorScheme === "dark" ? themeColors.cardGlass : "transparent",
       borderRadius: rMS(36),
       padding: rMS(24),
       marginHorizontal: rS(16),
       marginTop: rV(100), // Below fixed header
       marginBottom: rV(24),
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 12,
-      elevation: 8,
-      borderWidth: 1,
+      borderWidth: colorScheme === "dark" ? 1 : 0,
       borderColor: themeColors.border + "60",
       minHeight: rV(140),
     },
@@ -881,13 +845,8 @@ export default function Game() {
       marginVertical: rV(6),
       borderRadius: rMS(32),
       borderWidth: 1.5,
-      borderColor: themeColors.border + "60",
-      backgroundColor: themeColors.cardGlass,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.05,
-      shadowRadius: 4,
-      elevation: 2,
+      borderColor: themeColors.border + "50",
+      backgroundColor: "transparent",
     },
     selectedAnswer: {
       borderColor: themeColors.tint,
@@ -922,17 +881,28 @@ export default function Game() {
       marginLeft: rS(4),
     },
     fastAnswerCue: {
-      alignSelf: "center",
-      marginVertical: rV(8),
-      paddingHorizontal: rMS(12),
-      paddingVertical: rV(6),
-      backgroundColor: themeColors.tint + "25",
-      borderRadius: rMS(8),
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 200,
+      backgroundColor: colorScheme === "dark" ? "rgba(15,17,23,0.96)" : "rgba(245,246,250,0.96)",
+      borderBottomLeftRadius: rMS(24),
+      borderBottomRightRadius: rMS(24),
+      paddingTop: Math.max(rV(20), insets.top + rV(10)),
+      paddingBottom: rV(14),
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: rS(8),
+      borderBottomWidth: 2,
+      borderBottomColor: themeColors.tint + "40",
     },
     fastAnswerCueText: {
-      fontSize: rMS(14),
-      fontWeight: "600",
+      fontSize: rMS(15),
+      fontWeight: "800",
       color: themeColors.tint,
+      letterSpacing: 0.3,
     },
   });
 
@@ -1019,9 +989,13 @@ export default function Game() {
       )}
 
       {showFastAnswerCue && (
-        <View style={styles.fastAnswerCue}>
+        <Animated.View style={[styles.fastAnswerCue, {
+          opacity: fastCueOpacity,
+          transform: [{ scale: fastCueScale }],
+        }]}>
+          <Text style={{ fontSize: rMS(18) }}>⚡</Text>
           <Text style={styles.fastAnswerCueText}>Quick thinking!</Text>
-        </View>
+        </Animated.View>
       )}
 
       {/* AI Prediction Display */}

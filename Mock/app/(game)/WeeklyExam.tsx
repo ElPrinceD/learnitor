@@ -24,11 +24,19 @@ import Colors from "../../constants/Colors";
 import { rMS, rV, rS, SIZES, useShadows } from "../../constants/index.js";
 import ApiUrl from "../../config";
 import ErrorMessage from "../../components/ErrorMessage";
+import { useQuery } from "@tanstack/react-query";
+import { getWeeklyExamStatus } from "../../services/WeeklyExamApiCalls";
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
-// --- UTC time window check ---
-function isExamWindowOpen(): boolean {
+// --- UTC time window check (uses backend dates when available) ---
+function isExamWindowOpenFromBackend(startsAt?: string, endsAt?: string): boolean {
+  if (!startsAt || !endsAt) return isExamWindowOpenFallback();
+  const now = new Date();
+  return now >= new Date(startsAt) && now <= new Date(endsAt);
+}
+
+function isExamWindowOpenFallback(): boolean {
   const now = new Date();
   const day = now.getUTCDay(); // 0=Sun, 5=Fri, 6=Sat
   const hour = now.getUTCHours();
@@ -39,19 +47,39 @@ function isExamWindowOpen(): boolean {
   return false;
 }
 
-function getCountdownToExam(): string {
+function getCountdownToDate(targetDateStr?: string): string {
   const now = new Date();
-  const daysUntilFriday = (5 - now.getUTCDay() + 7) % 7 || 7;
-  const next = new Date(now);
-  next.setUTCDate(now.getUTCDate() + daysUntilFriday);
-  next.setUTCHours(19, 0, 0, 0);
-  if (next <= now) next.setUTCDate(next.getUTCDate() + 7);
+  let target: Date;
+  
+  if (targetDateStr) {
+    target = new Date(targetDateStr);
+  } else {
+    // Fallback: calculate next Friday 7pm UTC
+    const daysUntilFriday = (5 - now.getUTCDay() + 7) % 7 || 7;
+    target = new Date(now);
+    target.setUTCDate(now.getUTCDate() + daysUntilFriday);
+    target.setUTCHours(19, 0, 0, 0);
+    if (target <= now) target.setUTCDate(target.getUTCDate() + 7);
+  }
 
-  const diff = next.getTime() - now.getTime();
+  const diff = target.getTime() - now.getTime();
+  if (diff <= 0) return "Now!";
   const d = Math.floor(diff / 86400000);
   const h = Math.floor((diff % 86400000) / 3600000);
   const m = Math.floor((diff % 3600000) / 60000);
   return `${d}d ${h}h ${m}m`;
+}
+
+function formatLocalDateTime(dateStr?: string): string {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  return d.toLocaleString(undefined, {
+    weekday: "long",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZoneName: "short",
+  });
 }
 
 export default function WeeklyExam() {
@@ -79,7 +107,17 @@ export default function WeeklyExam() {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
-  const windowOpen = useMemo(() => isExamWindowOpen(), []);
+  // Fetch exam status from backend
+  const { data: examStatus } = useQuery({
+    queryKey: ["weeklyExamStatus"],
+    queryFn: () => getWeeklyExamStatus(userToken?.token),
+    enabled: !!userToken?.token,
+  });
+
+  const windowOpen = useMemo(
+    () => isExamWindowOpenFromBackend(examStatus?.startsAt, examStatus?.endsAt),
+    [examStatus]
+  );
 
   useEffect(() => {
     if (windowOpen) {
@@ -368,6 +406,9 @@ export default function WeeklyExam() {
   });
 
   if (!windowOpen) {
+    const examIsUpcoming = examStatus && new Date() < new Date(examStatus.startsAt);
+    const examIsOver = examStatus && new Date() > new Date(examStatus.endsAt);
+
     return (
       <View style={styles.guardContainer}>
         <StatusBar barStyle={colorScheme === "dark" ? "light-content" : "dark-content"} />
@@ -378,9 +419,18 @@ export default function WeeklyExam() {
             <Ionicons name="time" size={64} color={themeColors.tint} />
             <Text style={styles.guardTitle}>Weekly Exam</Text>
             <Text style={styles.guardSubtext}>
-              The exam window opens every Friday at 7:00 PM UTC and closes Sunday at 11:59 PM UTC.
+              {examIsUpcoming
+                ? `The exam starts ${formatLocalDateTime(examStatus?.startsAt)}.`
+                : examIsOver
+                ? `The exam has ended. It ended ${formatLocalDateTime(examStatus?.endsAt)}.`
+                : "The exam window opens every Friday at 7:00 PM UTC and closes Sunday at 11:59 PM UTC."}
             </Text>
-            <Text style={styles.guardCountdown}>{getCountdownToExam()}</Text>
+            {examIsUpcoming && (
+              <Text style={styles.guardCountdown}>{getCountdownToDate(examStatus?.startsAt)}</Text>
+            )}
+            {!examIsUpcoming && !examIsOver && (
+              <Text style={styles.guardCountdown}>{getCountdownToDate()}</Text>
+            )}
             <TouchableOpacity style={styles.guardBackBtn} onPress={() => router.back()} activeOpacity={0.8}>
               <Text style={styles.guardBackBtnText}>Go Back</Text>
             </TouchableOpacity>

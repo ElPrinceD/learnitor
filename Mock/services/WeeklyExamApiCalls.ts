@@ -15,6 +15,7 @@ export interface WeeklyExamStatus {
   startsAt: string;
   endsAt: string;
   currentWeek?: number;
+  seasonName?: string;
   globalAverage?: number;
   userScore?: number | null;
 }

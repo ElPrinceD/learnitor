@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,9 +10,9 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Platform,
-  Modal,
   Dimensions,
 } from "react-native";
+import BottomSheet, { BottomSheetModal, BottomSheetBackdrop, BottomSheetTextInput, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -95,13 +95,40 @@ export default function PlayScreen() {
   const [activeMode, setActiveMode] = useState<"rankings" | "knockout">("rankings");
   const [h2hMatchup, setH2hMatchup] = useState<H2HMatchup | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showSquadSheet, setShowSquadSheet] = useState(false);
   const [customH2HTab, setCustomH2HTab] = useState<"matches" | "standings">("matches");
+  const [squadName, setSquadName] = useState("");
+  const [createdSquadCode, setCreatedSquadCode] = useState<string | null>(null);
+  const [sheetTab, setSheetTab] = useState<"create" | "join">("create");
+
+  // Bottom sheet ref
+  const squadSheetRef = useRef<BottomSheetModal>(null);
+  const sheetSnapPoints = useMemo(() => ["65%", "85%"], []);
+
+  const openSquadSheet = useCallback(() => {
+    setCreatedSquadCode(null);
+    setSquadName("");
+    setSquadJoinCode("");
+    setSheetTab("create");
+    squadSheetRef.current?.present();
+  }, []);
+
+  const closeSquadSheet = useCallback(() => {
+    squadSheetRef.current?.dismiss();
+    setCreatedSquadCode(null);
+    setSquadName("");
+    setSquadJoinCode("");
+  }, []);
+
+  const renderBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.5} />
+    ),
+    []
+  );
   
   // Custom H2H data from queries
   const customH2HStandings: CustomH2HStanding[] = [];
   const customH2HMatches: CustomH2HMatchItem[] = [];
-  const userCups: any[] = [];
 
   // React Query Hooks
   const { data: rankingsQuery } = useQuery({
@@ -118,6 +145,10 @@ export default function PlayScreen() {
   });
   const customLeaderboards = customLeaderboardsQuery || [];
 
+  // Derived: H2H squads go to Knockout tab, others go to Rankings
+  const rankingsSquads = customLeaderboards.filter((lb) => lb.scoringMode !== "custom_1v1");
+  const knockoutSquads = customLeaderboards.filter((lb) => lb.scoringMode === "custom_1v1");
+
   const { data: examStatusQuery } = useQuery({
     queryKey: ["weeklyExamStatus"],
     queryFn: () => getWeeklyExamStatus(userToken?.token),
@@ -126,10 +157,10 @@ export default function PlayScreen() {
   const examStatus = examStatusQuery;
 
   const createSquadMutation = useMutation({
-    mutationFn: (scoringMode: string) => createCustomLeaderboard(userToken?.token, "Squad", scoringMode),
+    mutationFn: ({ name, scoringMode }: { name: string; scoringMode: string }) =>
+      createCustomLeaderboard(userToken?.token, name || "My Squad", scoringMode),
     onSuccess: (data) => {
-      showToast(`Squad created! Code: ${data?.invite_code || ''}`);
-      setShowSquadSheet(false);
+      setCreatedSquadCode(data?.invite_code || null);
       queryClient.invalidateQueries({ queryKey: ["customLeaderboards"] });
     },
     onError: () => {
@@ -142,7 +173,7 @@ export default function PlayScreen() {
     onSuccess: (data) => {
       showToast(`Joined squad!`);
       setSquadJoinCode("");
-      setShowSquadSheet(false);
+      closeSquadSheet();
       queryClient.invalidateQueries({ queryKey: ["customLeaderboards"] });
     },
     onError: () => {
@@ -157,9 +188,11 @@ export default function PlayScreen() {
   }, []);
 
   // Compute exam button state
-  const examButtonState = examStatus ? getExamButtonState(examStatus, new Date()) : "hidden";
+  const now = new Date();
+  const examButtonState = examStatus ? getExamButtonState(examStatus, now) : "hidden";
   const examStartLocal = examStatus ? formatToLocalTime(examStatus.startsAt) : "";
   const examEndLocal = examStatus ? formatToLocalTime(examStatus.endsAt) : "";
+  const examIsActive = examStatus ? new Date(examStatus.startsAt) <= now && now <= new Date(examStatus.endsAt) : false;
 
   // Animated press for ghost buttons
   const playFill = useSharedValue(0);
@@ -185,12 +218,18 @@ export default function PlayScreen() {
     transform: [{ translateX: toggleIndicatorX.value }],
   }));
 
+  // Sheet tab sliding indicator
+  const sheetTabX = useSharedValue(0);
+  const sheetTabAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: sheetTabX.value }],
+  }));
+
   useEffect(() => {
     setJoinGameDisabled(gameCode.length !== 6);
   }, [gameCode]);
 
   const createSquad = (scoringMode: "all_points" | "exam_only" | "custom_1v1" = "all_points") => {
-    createSquadMutation.mutate(scoringMode);
+    createSquadMutation.mutate({ name: squadName.trim(), scoringMode });
   };
 
   const joinSquad = () => {
@@ -886,8 +925,9 @@ export default function PlayScreen() {
                 <View style={styles.scoreCardStripe} />
                 <View style={styles.scoreCardAccent} />
 
-                {/* Study week label */}
-                  <Text style={styles.scoreCardStudyWeek}>
+                {/* Season + Study week label */}
+                  <Text style={styles.scoreCardWeekLabel}>
+                    {examStatus?.seasonName ? `${examStatus.seasonName} · ` : ""}
                     {examStatus?.currentWeek ? `Study Week ${examStatus.currentWeek}` : "Study Week"}
                   </Text>
 
@@ -905,7 +945,11 @@ export default function PlayScreen() {
                     Average · {examStatus?.globalAverage ?? "\u2014"}
                   </Text>
                   <Text style={styles.scoreCardDeadline}>
-                    Ends {examEndLocal}
+                    {examIsActive
+                      ? `Ends ${examEndLocal}`
+                      : examButtonState === "completed" || examButtonState === "expired"
+                      ? "Exam completed"
+                      : `Starts ${examStartLocal}`}
                   </Text>
                 </View>
               </View>
@@ -1015,7 +1059,7 @@ export default function PlayScreen() {
                     )}
                     <TouchableOpacity
                       style={styles.squadAddBtn}
-                      onPress={() => setShowSquadSheet(true)}
+                      onPress={openSquadSheet}
                       activeOpacity={0.7}
                     >
                       <Ionicons name="add" size={20} color={themeColors.tint} />
@@ -1035,7 +1079,7 @@ export default function PlayScreen() {
                     </Text>
                   </View>
                 ) : (
-                  customLeaderboards.map((lb) => (
+                  rankingsSquads.map((lb) => (
                     <TouchableOpacity
                       key={lb.id}
                       style={styles.squadItem}
@@ -1191,51 +1235,47 @@ export default function PlayScreen() {
               </Animated.View>
             </>
           ) : (
-            /* Knockout Mode — Squad Knockouts */
+            /* Knockout Mode — H2H Squad Knockouts */
             <Animated.View entering={enterAnim(200)}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Squad Knockouts</Text>
               </View>
 
-              {userCups.map((cup, idx) => (
+              {knockoutSquads.map((lb, idx) => (
                 <Animated.View
-                  key={cup.id}
+                  key={lb.id}
                   entering={enterAnim(250 + idx * 50)}
                 >
                   <TouchableOpacity
                     style={styles.cupCard}
-                    onPress={() => openLeaderboard(cup.id, cup.name, "knockout")}
+                    onPress={() => openLeaderboard(lb.id, lb.name, "knockout")}
                     activeOpacity={0.7}
                   >
                     <View style={styles.cupCardLeft}>
-                      <View style={[styles.cupIcon, { backgroundColor: cup.result === "w" ? "#4CAF50" + "18" : cup.result === "l" ? "#F44336" + "18" : themeColors.tint + "15" }]}>
+                      <View style={[styles.cupIcon, { backgroundColor: themeColors.tint + "15" }]}>
                         <Ionicons
-                          name={cup.result === "w" ? "trophy" : cup.result === "l" ? "close-circle" : "time"}
+                          name="flash"
                           size={18}
-                          color={cup.result === "w" ? "#4CAF50" : cup.result === "l" ? "#F44336" : themeColors.tint}
+                          color={themeColors.tint}
                         />
                       </View>
                       <View>
-                        <Text style={styles.cupName}>{cup.name}</Text>
-                        {cup.studyWeek ? <Text style={styles.cupWeek}>{cup.studyWeek}</Text> : null}
+                        <Text style={styles.cupName}>{lb.name}</Text>
+                        {lb.memberCount != null && (
+                          <Text style={styles.cupWeek}>{lb.memberCount} members</Text>
+                        )}
                       </View>
                     </View>
-                    {cup.result !== "pending" ? (
-                      <View style={[styles.cupResultBadge, { backgroundColor: cup.result === "w" ? "#4CAF50" : "#F44336" }]}>
-                        <Text style={styles.cupResultText}>{cup.result.toUpperCase()}</Text>
-                      </View>
-                    ) : (
-                      <Ionicons name="chevron-forward" size={18} color={themeColors.textSecondary} />
-                    )}
+                    <Ionicons name="chevron-forward" size={18} color={themeColors.textSecondary} />
                   </TouchableOpacity>
                 </Animated.View>
               ))}
 
-              {userCups.length === 0 && (
+              {knockoutSquads.length === 0 && (
                 <View style={styles.squadEmpty}>
                   <Ionicons name="trophy-outline" size={28} color={themeColors.textSecondary} />
                   <Text style={styles.squadEmptyText}>
-                    You haven't joined any cups yet!
+                    Create an H2H League squad to compete in knockouts!
                   </Text>
                 </View>
               )}
@@ -1243,97 +1283,251 @@ export default function PlayScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
-      {/* Manage Squads Bottom Sheet */}
-      <Modal
-        visible={showSquadSheet}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowSquadSheet(false)}
+      {/* Squad Bottom Sheet */}
+      <BottomSheetModal
+        ref={squadSheetRef}
+        snapPoints={sheetSnapPoints}
+        enablePanDownToClose
+        enableDynamicSizing={false}
+        backdropComponent={renderBackdrop}
+        backgroundStyle={{
+          backgroundColor: themeColors.background,
+          borderRadius: rMS(28),
+        }}
+        handleIndicatorStyle={{
+          backgroundColor: themeColors.textSecondary + "50",
+          width: rS(40),
+        }}
+        keyboardBehavior="interactive"
+        keyboardBlurBehavior="restore"
+        android_keyboardInputMode="adjustResize"
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowSquadSheet(false)}
+        <BottomSheetScrollView
+          contentContainerStyle={{ paddingHorizontal: rS(20), paddingBottom: rV(30) }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Manage Squads</Text>
-            <Text style={styles.modalSubtitle}>
-              Create a new squad or join one with an invite code.
-            </Text>
-
-            {/* Create options */}
-            <TouchableOpacity
-              style={[styles.modeOption, { borderColor: themeColors.tint }]}
-              activeOpacity={0.8}
-              onPress={() => createSquad("all_points")}
-            >
-              <Text style={styles.modeOptionLabel}>📊 All Points</Text>
-              <Text style={styles.modeOptionDesc}>
-                Points from multiplayer, solo games, and weekly exam all count.
+          {createdSquadCode ? (
+            /* ── Success state: show invite code ── */
+            <View style={{ alignItems: "center", paddingVertical: rV(24) }}>
+              <Ionicons name="checkmark-circle" size={56} color="#4CAF50" />
+              <Text style={[styles.modalTitle, { marginTop: rV(12), textAlign: "center" }]}>Squad Created!</Text>
+              <Text style={[styles.modalSubtitle, { textAlign: "center" }]}>
+                Share this invite code with friends so they can join your squad.
               </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.modeOption}
-              activeOpacity={0.8}
-              onPress={() => createSquad("exam_only")}
-            >
-              <Text style={styles.modeOptionLabel}>📝 Exam Only</Text>
-              <Text style={styles.modeOptionDesc}>
-                Only weekly exam scores count towards the leaderboard.
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.modeOption}
-              activeOpacity={0.8}
-              onPress={() => createSquad("custom_1v1")}
-            >
-              <Text style={styles.modeOptionLabel}>⚔️ H2H League</Text>
-              <Text style={styles.modeOptionDesc}>
-                Members are matched weekly. Win=3 pts, Draw=1, Loss=0.
-              </Text>
-            </TouchableOpacity>
-
-            {/* Join divider */}
-            <View style={{ flexDirection: "row", alignItems: "center", marginVertical: rV(16), gap: rS(10) }}>
-              <View style={{ flex: 1, height: 1, backgroundColor: themeColors.border + "60" }} />
-              <Text style={{ fontSize: rMS(11), fontWeight: "700", color: themeColors.textSecondary, letterSpacing: 1 }}>OR JOIN</Text>
-              <View style={{ flex: 1, height: 1, backgroundColor: themeColors.border + "60" }} />
-            </View>
-
-            {/* Join input */}
-            <View style={styles.squadJoinInputContainer}>
-              <TextInput
-                style={styles.squadJoinInput}
-                value={squadJoinCode}
-                onChangeText={setSquadJoinCode}
-                placeholder="Enter invite code"
-                placeholderTextColor={themeColors.textSecondary}
-                autoCapitalize="characters"
-              />
+              <View style={{
+                backgroundColor: themeColors.cardGlass,
+                borderRadius: rMS(20),
+                paddingVertical: rV(14),
+                paddingHorizontal: rMS(28),
+                marginTop: rV(8),
+                borderWidth: 1.5,
+                borderColor: themeColors.tint + "30",
+                ...shadow.medium,
+              }}>
+                <Text style={{ fontSize: rMS(28), fontWeight: "900", color: themeColors.tint, letterSpacing: 4, textAlign: "center" }}>
+                  {createdSquadCode}
+                </Text>
+              </View>
               <TouchableOpacity
-                style={[styles.squadJoinBtn, !squadJoinCode && { opacity: 0.5 }]}
+                style={{ marginTop: rV(12), flexDirection: "row", alignItems: "center", gap: rS(6) }}
                 onPress={() => {
-                  joinSquad();
-                  setShowSquadSheet(false);
+                  try {
+                    const Clipboard = require("expo-clipboard");
+                    Clipboard.setStringAsync(createdSquadCode);
+                    showToast("Code copied!");
+                  } catch {
+                    showToast(createdSquadCode!);
+                  }
                 }}
-                disabled={!squadJoinCode}
               >
-                <Text style={styles.squadJoinBtnText}>Join</Text>
+                <Ionicons name="copy-outline" size={16} color={themeColors.tint} />
+                <Text style={{ fontSize: rMS(13), fontWeight: "700", color: themeColors.tint }}>Copy Code</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.squadJoinBtn, { width: "100%", marginTop: rV(20) }]}
+                onPress={closeSquadSheet}
+              >
+                <Text style={styles.squadJoinBtnText}>Done</Text>
               </TouchableOpacity>
             </View>
+          ) : (
+            /* ── Create / Join tabbed state ── */
+            <>
+              {/* Tab switcher */}
+              <View style={{
+                flexDirection: "row",
+                backgroundColor: themeColors.cardGlass,
+                borderRadius: rMS(16),
+                padding: rMS(3),
+                marginBottom: rV(18),
+                borderWidth: 1,
+                borderColor: themeColors.border + "30",
+                position: "relative",
+              }}>
+                {/* Sliding indicator */}
+                <Animated.View style={[{
+                  position: "absolute",
+                  top: rMS(3),
+                  bottom: rMS(3),
+                  left: rMS(3),
+                  width: "50%",
+                  backgroundColor: themeColors.tint,
+                  borderRadius: rMS(13),
+                }, sheetTabAnimStyle]} />
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    paddingVertical: rV(10),
+                    borderRadius: rMS(13),
+                    alignItems: "center",
+                    zIndex: 1,
+                  }}
+                  onPress={() => {
+                    setSheetTab("create");
+                    sheetTabX.value = withTiming(0, { duration: 280, easing: Easing.bezier(0.4, 0, 0.2, 1) });
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={{
+                    fontSize: rMS(13),
+                    fontWeight: "800",
+                    color: sheetTab === "create" ? "#fff" : themeColors.textSecondary,
+                  }}>Create Squad</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    paddingVertical: rV(10),
+                    borderRadius: rMS(13),
+                    alignItems: "center",
+                    zIndex: 1,
+                  }}
+                  onPress={() => {
+                    setSheetTab("join");
+                    sheetTabX.value = withTiming(
+                      (Dimensions.get("window").width - rS(40) - rMS(6)) / 2,
+                      { duration: 280, easing: Easing.bezier(0.4, 0, 0.2, 1) }
+                    );
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={{
+                    fontSize: rMS(13),
+                    fontWeight: "800",
+                    color: sheetTab === "join" ? "#fff" : themeColors.textSecondary,
+                  }}>Join Squad</Text>
+                </TouchableOpacity>
+              </View>
 
-            <TouchableOpacity
-              style={styles.modalCancelBtn}
-              onPress={() => setShowSquadSheet(false)}
-            >
-              <Text style={styles.modalCancelText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+              {sheetTab === "create" ? (
+                /* ── CREATE TAB ── */
+                <>
+                  {/* Squad Name Input */}
+                  <Text style={{ fontSize: rMS(11), fontWeight: "700", color: themeColors.textSecondary, marginBottom: rV(6), textTransform: "uppercase", letterSpacing: 1 }}>
+                    Squad Name
+                  </Text>
+                  <BottomSheetTextInput
+                    style={[styles.squadJoinInput, { width: "100%", marginBottom: rV(14) }]}
+                    value={squadName}
+                    onChangeText={setSquadName}
+                    placeholder="e.g. CS Study Squad"
+                    placeholderTextColor={themeColors.textSecondary}
+                    maxLength={40}
+                  />
+
+                  <Text style={{ fontSize: rMS(11), fontWeight: "700", color: themeColors.textSecondary, marginBottom: rV(10), textTransform: "uppercase", letterSpacing: 1 }}>
+                    Choose Scoring Mode
+                  </Text>
+
+                  <TouchableOpacity
+                    style={[styles.modeOption, { borderColor: themeColors.tint }]}
+                    activeOpacity={0.8}
+                    onPress={() => createSquad("all_points")}
+                  >
+                    <Text style={styles.modeOptionLabel}>📊 All Points</Text>
+                    <Text style={styles.modeOptionDesc}>
+                      Points from multiplayer, solo games, and weekly exam all count.
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.modeOption}
+                    activeOpacity={0.8}
+                    onPress={() => createSquad("exam_only")}
+                  >
+                    <Text style={styles.modeOptionLabel}>📝 Exam Only</Text>
+                    <Text style={styles.modeOptionDesc}>
+                      Only weekly exam scores count towards the leaderboard.
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.modeOption}
+                    activeOpacity={0.8}
+                    onPress={() => createSquad("custom_1v1")}
+                  >
+                    <Text style={styles.modeOptionLabel}>⚔️ H2H League</Text>
+                    <Text style={styles.modeOptionDesc}>
+                      Members are matched weekly. Win=3 pts, Draw=1, Loss=0.
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                /* ── JOIN TAB ── */
+                <>
+                  <View style={{ alignItems: "center", marginBottom: rV(20), marginTop: rV(8) }}>
+                    <View style={{
+                      width: rMS(56),
+                      height: rMS(56),
+                      borderRadius: rMS(28),
+                      backgroundColor: themeColors.tint + "12",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginBottom: rV(12),
+                    }}>
+                      <Ionicons name="enter-outline" size={28} color={themeColors.tint} />
+                    </View>
+                    <Text style={[styles.modalTitle, { textAlign: "center" }]}>Join a Squad</Text>
+                    <Text style={[styles.modalSubtitle, { textAlign: "center" }]}>
+                      Enter the invite code shared by your squad creator.
+                    </Text>
+                  </View>
+
+                  <BottomSheetTextInput
+                    style={[styles.squadJoinInput, {
+                      width: "100%",
+                      textAlign: "center",
+                      fontSize: rMS(20),
+                      fontWeight: "900",
+                      letterSpacing: 4,
+                      paddingVertical: rV(14),
+                      marginBottom: rV(16),
+                    }]}
+                    value={squadJoinCode}
+                    onChangeText={setSquadJoinCode}
+                    placeholder="INVITE CODE"
+                    placeholderTextColor={themeColors.textSecondary}
+                    autoCapitalize="characters"
+                    maxLength={10}
+                  />
+
+                  <TouchableOpacity
+                    style={[styles.squadJoinBtn, { width: "100%" }, !squadJoinCode.trim() && { opacity: 0.5 }]}
+                    onPress={joinSquad}
+                    disabled={!squadJoinCode.trim()}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.squadJoinBtnText}>
+                      {joinSquadMutation.isPending ? "Joining..." : "Join Squad"}
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </>
+          )}
+        </BottomSheetScrollView>
+      </BottomSheetModal>
     </View>
   );
 }

@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useRef, useMemo } from "react";
+import React, { memo, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -7,14 +7,15 @@ import {
   useColorScheme,
   Animated,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import Colors from "../constants/Colors";
 import { SIZES, rMS, rS, rV, useShadows } from "../constants";
 
-const CORRECT_MESSAGES = ["Nice!", "Got it!", "Correct!", "Yes!", "Boom!"];
-const WRONG_MESSAGES = ["Wrong", "Not quite", "Almost!", "Nope", "Not this time"];
+const ANSWER_LETTERS = ["A", "B", "C", "D", "E", "F"];
 
 const AnimatedAnswerRow: React.FC<{
   answer: { id: number; text: string };
+  index: number;
   isSelected: boolean;
   isCorrect: boolean;
   questionsWithMultipleCorrectAnswers: number[];
@@ -22,8 +23,10 @@ const AnimatedAnswerRow: React.FC<{
   handleAnswerSelection: (answerId: number, questionId: number) => void;
   styles: any;
   showImmediateFeedback: boolean;
+  themeColors: any;
 }> = ({
   answer,
+  index,
   isSelected,
   isCorrect,
   questionsWithMultipleCorrectAnswers,
@@ -31,19 +34,40 @@ const AnimatedAnswerRow: React.FC<{
   handleAnswerSelection,
   styles: s,
   showImmediateFeedback,
+  themeColors,
 }) => {
   const shakeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const borderGlowAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (showImmediateFeedback && isSelected && !isCorrect) {
-      shakeAnim.setValue(0);
+    if (showImmediateFeedback && isSelected) {
+      if (!isCorrect) {
+        // Shake animation for wrong answer
+        shakeAnim.setValue(0);
+        Animated.sequence([
+          Animated.timing(shakeAnim, { toValue: 1, duration: 50, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: 2, duration: 50, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: 3, duration: 50, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: 4, duration: 50, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+        ]).start();
+      } else {
+        // Subtle scale pop for correct answer
+        Animated.sequence([
+          Animated.timing(scaleAnim, { toValue: 1.03, duration: 120, useNativeDriver: true }),
+          Animated.timing(scaleAnim, { toValue: 1, duration: 120, useNativeDriver: true }),
+        ]).start();
+      }
+
+      // Glow border pulse
       Animated.sequence([
-        Animated.timing(shakeAnim, { toValue: 1, duration: 50, useNativeDriver: true }),
-        Animated.timing(shakeAnim, { toValue: 2, duration: 50, useNativeDriver: true }),
-        Animated.timing(shakeAnim, { toValue: 3, duration: 50, useNativeDriver: true }),
-        Animated.timing(shakeAnim, { toValue: 4, duration: 50, useNativeDriver: true }),
-        Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+        Animated.timing(borderGlowAnim, { toValue: 1, duration: 300, useNativeDriver: false }),
+        Animated.timing(borderGlowAnim, { toValue: 0.5, duration: 600, useNativeDriver: false }),
       ]).start();
+    } else {
+      scaleAnim.setValue(1);
+      borderGlowAnim.setValue(0);
     }
   }, [showImmediateFeedback, isSelected, isCorrect]);
 
@@ -52,66 +76,103 @@ const AnimatedAnswerRow: React.FC<{
     outputRange: [0, 8, -8, 8, 0],
   });
 
-  const answerStyle =
-    showImmediateFeedback && isSelected
-      ? isCorrect
-        ? [s.answerTouchable, s.correctAnswer]
-        : [s.answerTouchable, s.wrongAnswer]
-      : s.answerTouchable;
+  const isMultiCorrect = questionsWithMultipleCorrectAnswers.includes(questionId);
+  const showFeedback = showImmediateFeedback && isSelected;
+  const feedbackColor = showFeedback
+    ? isCorrect ? "#22C55E" : "#EF4444"
+    : "transparent";
 
-  const feedbackMsg = useMemo(() => {
-    if (!showImmediateFeedback || !isSelected) return null;
-    return isCorrect
-      ? CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)]
-      : WRONG_MESSAGES[Math.floor(Math.random() * WRONG_MESSAGES.length)];
-  }, [showImmediateFeedback, isSelected, isCorrect]);
+  // Interpolate border width for glow
+  const borderWidth = borderGlowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1.5, 2.5],
+  });
+
+  // Determine the letter badge background
+  const letterBg = showFeedback
+    ? isCorrect ? "#22C55E" : "#EF4444"
+    : isSelected
+    ? themeColors.tint
+    : themeColors.textSecondary + "20";
+
+  const letterColor = showFeedback || isSelected ? "#fff" : themeColors.textSecondary;
 
   return (
     <Animated.View
       style={[
         {
           transform: [
-            {
-              translateX:
-                showImmediateFeedback && isSelected && !isCorrect
-                  ? translateX
-                  : 0,
-            },
+            { translateX: showFeedback && !isCorrect ? translateX : 0 },
+            { scale: scaleAnim },
           ],
         },
         { marginBottom: rV(10) },
       ]}
     >
       <TouchableOpacity
-        style={[answerStyle, isSelected && s.selectedAnswer]}
+        activeOpacity={0.7}
         onPress={() => handleAnswerSelection(answer.id, questionId)}
+        style={[
+          s.answerCard,
+          isSelected && !showFeedback && s.answerCardSelected,
+          showFeedback && isCorrect && s.answerCardCorrect,
+          showFeedback && !isCorrect && s.answerCardWrong,
+        ]}
       >
-        {!questionsWithMultipleCorrectAnswers.includes(questionId) && (
-          <View style={s.circleContainer}>
-            <View style={[s.circle, isSelected && s.selectedCircle]}>
-              {isSelected && <View style={s.innerCircle} />}
-            </View>
-          </View>
-        )}
-        {questionsWithMultipleCorrectAnswers.includes(questionId) && (
-          <View style={[s.checkBox, isSelected && s.checkedBox]} />
-        )}
+        {/* Letter badge / checkbox */}
+        <Animated.View style={[
+          isMultiCorrect ? s.checkBox : s.letterBadge,
+          {
+            backgroundColor: letterBg,
+            borderColor: showFeedback ? feedbackColor : isSelected ? themeColors.tint : themeColors.border + "60",
+          },
+          showFeedback && { borderWidth },
+        ]}>
+          {isMultiCorrect ? (
+            isSelected ? (
+              <Ionicons
+                name={showFeedback ? (isCorrect ? "checkmark" : "close") : "checkmark"}
+                size={14}
+                color={letterColor}
+              />
+            ) : null
+          ) : (
+            showFeedback ? (
+              <Ionicons
+                name={isCorrect ? "checkmark" : "close"}
+                size={16}
+                color="#fff"
+              />
+            ) : (
+              <Text style={[s.letterText, { color: letterColor }]}>
+                {ANSWER_LETTERS[index] || "·"}
+              </Text>
+            )
+          )}
+        </Animated.View>
+
+        {/* Answer text */}
         {answer?.text && (
           <Text
-            style={[s.answerText, isSelected && s.selectedAnswerText]}
+            style={[
+              s.answerText,
+              isSelected && !showFeedback && { color: themeColors.text },
+              showFeedback && isCorrect && { color: "#22C55E" },
+              showFeedback && !isCorrect && { color: "#EF4444" },
+            ]}
           >
             {answer.text}
           </Text>
         )}
-        {feedbackMsg && (
-          <Text
-            style={[
-              s.feedbackText,
-              isCorrect ? s.feedbackCorrect : s.feedbackWrong,
-            ]}
-          >
-            {feedbackMsg}
-          </Text>
+
+        {/* Trailing icon for feedback */}
+        {showFeedback && (
+          <Ionicons
+            name={isCorrect ? "checkmark-circle" : "close-circle"}
+            size={22}
+            color={isCorrect ? "#22C55E" : "#EF4444"}
+            style={{ marginLeft: "auto", paddingLeft: rS(8) }}
+          />
         )}
       </TouchableOpacity>
     </Animated.View>
@@ -126,24 +187,7 @@ type QuestionProps = {
   isAnswerSelected: (questionId: number, answerId: number) => boolean;
   handleAnswerSelection: (answerId: number, questionId: number) => void;
   showImmediateFeedback?: boolean;
-  styles?: {
-    container?: object;
-    questionContainer?: object;
-    answersContainer?: object;
-    questionText?: object;
-    answerTouchable?: object;
-    circleContainer?: object;
-    circle?: object;
-    selectedCircle?: object;
-    innerCircle?: object;
-    selectedAnswer?: object;
-    correctAnswer?: object;
-    wrongAnswer?: object;
-    answerText?: object;
-    selectedAnswerText?: object;
-    checkBox?: object;
-    checkedBox?: object;
-  };
+  styles?: any;
 };
 
 const Questions: React.FC<QuestionProps> = ({
@@ -164,7 +208,7 @@ const Questions: React.FC<QuestionProps> = ({
     container: {
       flex: 1,
       padding: rMS(20),
-      ...externalStyles.container, // Apply external styles if provided
+      ...externalStyles.container,
     },
     questionContainer: {
       flex: 1,
@@ -181,97 +225,69 @@ const Questions: React.FC<QuestionProps> = ({
       fontSize: SIZES.xLarge,
       color: themeColors.text,
       fontWeight: "bold",
+      lineHeight: SIZES.xLarge * 1.35,
       ...externalStyles.questionText,
     },
-    answerTouchable: {
+
+    // --- Premium answer card ---
+    answerCard: {
       flexDirection: "row",
-      alignItems: "flex-start",
-      marginBottom: rV(10),
+      alignItems: "center",
       width: "100%",
-      padding: rMS(27),
-      borderRadius: 5,
-      backgroundColor: themeColors.card,
-      ...shadow.small,
-      ...externalStyles.answerTouchable,
+      paddingVertical: rV(16),
+      paddingHorizontal: rS(16),
+      borderRadius: rMS(18),
+      backgroundColor: "transparent",
+      borderWidth: 1.5,
+      borderColor: themeColors.border + "50",
     },
-    circleContainer: {
-      justifyContent: "center",
+    answerCardSelected: {
+      borderColor: themeColors.tint + "80",
+      backgroundColor: themeColors.tint + "08",
+    },
+    answerCardCorrect: {
+      borderColor: "#22C55E60",
+      backgroundColor: "#22C55E10",
+    },
+    answerCardWrong: {
+      borderColor: "#EF444460",
+      backgroundColor: "#EF444410",
+    },
+
+    // Letter badge (single-select)
+    letterBadge: {
+      width: rMS(32),
+      height: rMS(32),
+      borderRadius: rMS(10),
       alignItems: "center",
-      marginRight: rS(8),
-      ...externalStyles.circleContainer,
+      justifyContent: "center",
+      marginRight: rS(12),
+      borderWidth: 1.5,
     },
-    circle: {
-      width: rS(18),
-      height: rV(17),
-      borderRadius: 10,
+    letterText: {
+      fontSize: rMS(14),
+      fontWeight: "800",
+    },
+
+    // Checkbox (multi-select)
+    checkBox: {
+      width: rMS(28),
+      height: rMS(28),
+      borderRadius: rMS(8),
       borderWidth: 2,
-      borderColor: "#4b4a4a",
-      justifyContent: "center",
       alignItems: "center",
-      ...externalStyles.circle,
+      justifyContent: "center",
+      marginRight: rS(12),
     },
-    selectedCircle: {
-      backgroundColor: "#ffffff",
-      ...externalStyles.selectedCircle,
-    },
-    innerCircle: {
-      width: rS(8),
-      height: rV(8),
-      borderRadius: 5,
-      backgroundColor: "#4b4a4a",
-      ...externalStyles.innerCircle,
-    },
-    selectedAnswer: {
-      ...externalStyles.selectedAnswer,
-    },
-    correctAnswer: {
-      ...externalStyles.correctAnswer,
-    },
-    wrongAnswer: {
-      ...externalStyles.wrongAnswer,
-    },
+
     answerText: {
-      fontSize: SIZES.medium,
-      marginLeft: rS(8),
+      fontSize: rMS(15),
       color: themeColors.text,
       flexWrap: "wrap",
       flex: 1,
       textAlign: "left",
-      ...externalStyles.answerText,
-    },
-    selectedAnswerText: {
-      fontSize: SIZES.medium,
-      marginLeft: rS(8),
-      color: "#ccc",
-      flex: 1,
-      textAlign: "left",
-      ...externalStyles.selectedAnswerText,
-    },
-    checkBox: {
-      width: rS(18),
-      height: rV(17),
-      borderWidth: 2,
-      borderColor: "#888",
-      borderRadius: 3,
-      marginRight: rS(8),
-      ...externalStyles.checkBox,
-    },
-    checkedBox: {
-      backgroundColor: "#000",
-      borderColor: "#fff",
-      ...externalStyles.checkedBox,
-    },
-    feedbackText: {
-      fontSize: rMS(12),
-      fontWeight: "600",
-      marginTop: rV(4),
-      marginLeft: rS(8),
-    },
-    feedbackCorrect: {
-      color: "#097969",
-    },
-    feedbackWrong: {
-      color: "#D22B2B",
+      fontWeight: "500",
+      lineHeight: rMS(15) * 1.4,
     },
   });
 
@@ -305,6 +321,7 @@ const Questions: React.FC<QuestionProps> = ({
                 <AnimatedAnswerRow
                   key={ansIndex}
                   answer={answer}
+                  index={ansIndex}
                   isSelected={isSelected}
                   isCorrect={isCorrect}
                   questionsWithMultipleCorrectAnswers={
@@ -313,22 +330,16 @@ const Questions: React.FC<QuestionProps> = ({
                   questionId={practiceQuestions[currentQuestion].id}
                   handleAnswerSelection={handleAnswerSelection}
                   showImmediateFeedback={showImmediateFeedback}
+                  themeColors={themeColors}
                   styles={{
-                    answerTouchable: styles.answerTouchable,
-                    correctAnswer: styles.correctAnswer,
-                    wrongAnswer: styles.wrongAnswer,
-                    selectedAnswer: styles.selectedAnswer,
-                    circleContainer: styles.circleContainer,
-                    circle: styles.circle,
-                    selectedCircle: styles.selectedCircle,
-                    innerCircle: styles.innerCircle,
+                    answerCard: styles.answerCard,
+                    answerCardSelected: styles.answerCardSelected,
+                    answerCardCorrect: styles.answerCardCorrect,
+                    answerCardWrong: styles.answerCardWrong,
+                    letterBadge: styles.letterBadge,
+                    letterText: styles.letterText,
                     checkBox: styles.checkBox,
-                    checkedBox: styles.checkedBox,
                     answerText: styles.answerText,
-                    selectedAnswerText: styles.selectedAnswerText,
-                    feedbackText: styles.feedbackText,
-                    feedbackCorrect: styles.feedbackCorrect,
-                    feedbackWrong: styles.feedbackWrong,
                   }}
                 />
               );
