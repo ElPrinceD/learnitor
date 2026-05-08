@@ -8,7 +8,7 @@ import {
   useColorScheme,
   Dimensions,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Gamepad2, Lightbulb, Clock, type LucideIcon } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Colors from "../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../constants";
@@ -17,21 +17,21 @@ const GAME_TUTORIAL_SEEN_KEY = "game_tutorial_seen";
 const CARD_RADIUS = 18;
 const BUTTON_RADIUS = 22;
 
-const SLIDES = [
+const SLIDES: { title: string; text: string; IconComponent: LucideIcon }[] = [
   {
     title: "Welcome to the Arena!",
     text: "Join a game with a code from a friend, or create your own game to invite others.",
-    icon: "game-controller" as const,
+    IconComponent: Gamepad2,
   },
   {
     title: "Power-ups",
     text: " 'Double Dip' lets you pick 2 answers. 'Ask Prince' gives you a helpful hint. Use them wisely!",
-    icon: "bulb" as const,
+    IconComponent: Lightbulb,
   },
   {
     title: "Beat the Clock",
     text: "Answer before time runs out. Quick thinking pays off!",
-    icon: "time" as const,
+    IconComponent: Clock,
   },
 ];
 
@@ -77,8 +77,7 @@ export default function GameTutorialOverlay({ visible, onDismiss }: Props) {
           ]}
         >
           <View style={[styles.iconRing, { backgroundColor: themeColors.tint + "18" }]}>
-            <Ionicons
-              name={slide.icon}
+            <slide.IconComponent
               size={40}
               color={themeColors.tint}
             />

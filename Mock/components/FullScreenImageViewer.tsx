@@ -8,7 +8,7 @@ import {
   ToastAndroid,
   useColorScheme,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { X, Download } from "lucide-react-native";
 import ImageViewing from "react-native-image-viewing";
 import * as MediaLibrary from "expo-media-library";
 import * as FileSystem from "expo-file-system/legacy";
@@ -93,7 +93,7 @@ const FullScreenImageViewer: React.FC<FullScreenImageViewerProps> = ({
       onPress={onRequestClose}
       accessibilityLabel="Close image viewer"
     >
-      <Ionicons name="close" size={rS(30)} color="#fff" />
+      <X size={rS(28)} color="#fff" />
     </TouchableOpacity>
   );
 
@@ -109,7 +109,7 @@ const FullScreenImageViewer: React.FC<FullScreenImageViewerProps> = ({
         {isSaving ? (
           <ActivityIndicator size="small" color="#fff" />
         ) : (
-          <Ionicons name="download-outline" size={rS(30)} color="#fff" />
+          <Download size={rS(28)} color="#fff" />
         )}
       </TouchableOpacity>
       <Text style={styles.indexIndicator}>

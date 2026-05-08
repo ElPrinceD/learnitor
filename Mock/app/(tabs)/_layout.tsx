@@ -1,19 +1,30 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Tabs } from "expo-router";
-import { Text, StyleSheet, View, Animated } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { StyleSheet, View, Animated } from "react-native";
+import {
+  Home,
+  BookOpen,
+  Gamepad2,
+  CalendarClock,
+  UserRound,
+} from "lucide-react-native";
 import Colors from "../../constants/Colors";
 import { useColorScheme } from "../../components/useColorScheme";
 import { useClientOnlyValue } from "../../components/useClientOnlyValue";
-import { useThemeColor } from "../../components/Themed";
 import { rMS } from "../../constants";
-import { useAuth } from "../../components/AuthContext";
 
-// Animated TabBarIcon: the indicator uses a scale transform so that it starts at 0
-// in the middle and expands equally to left and right.
+// Lucide icon map — Lucide doesn't have outline variants, so we use
+// the same icon but vary strokeWidth (1.5 for inactive, 2.5 for active)
+const iconMap: Record<string, React.FC<any>> = {
+  home: Home,
+  book: BookOpen,
+  gamepad: Gamepad2,
+  calendar: CalendarClock,
+  account: UserRound,
+};
+
 function TabBarIcon(props: { name: string; color: string; focused: boolean }) {
   const [containerWidth, setContainerWidth] = useState(0);
-  // We'll animate scaleX from 0 (no indicator) to 1 (full width)
   const animatedScale = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -21,7 +32,7 @@ function TabBarIcon(props: { name: string; color: string; focused: boolean }) {
       Animated.timing(animatedScale, {
         toValue: 1,
         duration: 300,
-        useNativeDriver: true, // scale transforms can use native driver
+        useNativeDriver: true,
       }).start();
     } else {
       Animated.timing(animatedScale, {
@@ -31,6 +42,8 @@ function TabBarIcon(props: { name: string; color: string; focused: boolean }) {
       }).start();
     }
   }, [props.focused, animatedScale]);
+
+  const IconComponent = iconMap[props.name] || Home;
 
   return (
     <View
@@ -46,17 +59,16 @@ function TabBarIcon(props: { name: string; color: string; focused: boolean }) {
             styles.indicator,
             {
               backgroundColor: props.color,
-              // Set the base width to containerWidth; then scaleX will animate from the center.
               width: containerWidth,
               transform: [{ scaleX: animatedScale }],
             },
           ]}
         />
       )}
-      <MaterialCommunityIcons
-        name={props.focused ? props.name : (`${props.name}-outline` as any)}
+      <IconComponent
         size={rMS(20)}
         color={props.color}
+        strokeWidth={props.focused ? 2.5 : 1.5}
         style={{ marginBottom: -3 }}
       />
     </View>
@@ -65,23 +77,6 @@ function TabBarIcon(props: { name: string; color: string; focused: boolean }) {
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const currentHour = new Date().getHours();
-  let greeting = "";
-  if (currentHour >= 4 && currentHour < 12) {
-    greeting = "What's up";
-  } else if (currentHour >= 12 && currentHour < 18) {
-    greeting = "Hey";
-  } else {
-    greeting = "What's up";
-  }
-  const themeTextColor = useThemeColor(
-    {
-      light: Colors.light.text,
-      dark: Colors.dark.text,
-    },
-    "text"
-  );
-  const { userInfo } = useAuth();
 
   return (
     <Tabs
@@ -107,18 +102,8 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon name="home" color={color} focused={focused} />
           ),
+          headerShown: false,
           headerShadowVisible: false,
-          headerTitle: () => (
-            <Text
-              style={{
-                color: themeTextColor,
-                fontSize: 20,
-                fontWeight: "bold",
-              }}
-            >
-              {greeting}, {userInfo?.user.first_name}!
-            </Text>
-          ),
         }}
       />
       <Tabs.Screen
@@ -138,7 +123,7 @@ export default function TabLayout() {
         options={{
           title: "Play",
           tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name="gamepad-variant" color={color} focused={focused} />
+            <TabBarIcon name="gamepad" color={color} focused={focused} />
           ),
           headerShown: false,
           headerShadowVisible: false,
@@ -149,7 +134,7 @@ export default function TabLayout() {
         options={{
           title: "Plan",
           tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name="calendar-clock" color={color} focused={focused} />
+            <TabBarIcon name="calendar" color={color} focused={focused} />
           ),
           headerShadowVisible: false,
           headerShown: false,

@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, useColorScheme } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { FileText, ShieldCheck, ChevronRight } from "lucide-react-native";
 import Colors from "../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../constants";
 import InAppBrowserLink from "./InAppBrowserLink";
@@ -60,9 +60,8 @@ const SimpleLegalLinks: React.FC<SimpleLegalLinksProps> = ({
       <InAppBrowserLink url={termsOfUseUrl}>
         <View style={styles.linkItem}>
           <View style={styles.linkContent}>
-            <Ionicons
-              name="document-text-outline"
-              size={24}
+            <FileText
+              size={22}
               color={themeColors.tint}
               style={styles.linkIcon}
             />
@@ -73,9 +72,8 @@ const SimpleLegalLinks: React.FC<SimpleLegalLinksProps> = ({
               </Text>
             </View>
           </View>
-          <Ionicons
-            name="chevron-forward"
-            size={20}
+          <ChevronRight
+            size={18}
             color={themeColors.textSecondary}
             style={styles.chevronIcon}
           />
@@ -86,9 +84,8 @@ const SimpleLegalLinks: React.FC<SimpleLegalLinksProps> = ({
       <InAppBrowserLink url={privacyPolicyUrl}>
         <View style={styles.linkItem}>
           <View style={styles.linkContent}>
-            <Ionicons
-              name="shield-checkmark-outline"
-              size={24}
+            <ShieldCheck
+              size={22}
               color={themeColors.tint}
               style={styles.linkIcon}
             />
@@ -99,9 +96,8 @@ const SimpleLegalLinks: React.FC<SimpleLegalLinksProps> = ({
               </Text>
             </View>
           </View>
-          <Ionicons
-            name="chevron-forward"
-            size={20}
+          <ChevronRight
+            size={18}
             color={themeColors.textSecondary}
             style={styles.chevronIcon}
           />

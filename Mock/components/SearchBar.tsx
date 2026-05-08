@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, memo } from "react";
+import React, { useState, useCallback, memo } from "react";
 import {
   TextInput,
   StyleSheet,
@@ -6,9 +6,9 @@ import {
   TouchableOpacity,
   useColorScheme,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Search, X } from "lucide-react-native";
 import Colors from "../constants/Colors";
-import { SIZES, rS, rV } from "../constants";
+import { SIZES, rMS, rS, rV, useShadows } from "../constants";
 import debounce from "lodash.debounce";
 
 interface Props {
@@ -18,18 +18,13 @@ interface Props {
 const SearchBar: React.FC<Props> = ({ onSearch }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+  const shadow = useShadows();
   const [searchQuery, setSearchQuery] = useState("");
 
   const debouncedSearch = useCallback(
     debounce((query: string) => onSearch(query), 300),
     [onSearch]
   );
-
-  // useEffect(() => {
-  //   return () => {
-  //     debouncedSearch.cancel();
-  //   };
-  // }, [debouncedSearch]);
 
   const handleSearch = useCallback(
     (query: string) => {
@@ -39,62 +34,68 @@ const SearchBar: React.FC<Props> = ({ onSearch }) => {
     [debouncedSearch]
   );
 
-  const themeStyles = {
-    searchBarContainer: {
-      backgroundColor: themeColors.background,
-      borderColor: themeColors.border,
-    },
-    searchInput: {
-      color: themeColors.text,
-    },
-    placeholderTextColor: themeColors.placeholder,
-    iconColor: themeColors.icon,
-  };
+  const clearSearch = useCallback(() => {
+    setSearchQuery("");
+    onSearch("");
+  }, [onSearch]);
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.searchBarContainer, themeStyles.searchBarContainer]}>
+    <View style={styles(themeColors, shadow).container}>
+      <View style={styles(themeColors, shadow).searchBarContainer}>
+        <Search
+          size={18}
+          color={themeColors.textSecondary}
+          style={{ marginRight: rS(8) }}
+        />
         <TextInput
-          style={[styles.searchInput, themeStyles.searchInput]}
+          style={styles(themeColors, shadow).searchInput}
           placeholder="What do you want to learn today?"
-          placeholderTextColor={themeStyles.placeholderTextColor}
+          placeholderTextColor={themeColors.placeholder}
           onChangeText={handleSearch}
           value={searchQuery}
         />
-        <TouchableOpacity
-          style={styles.searchIcon}
-          onPress={() => onSearch(searchQuery)} // Immediate search on icon press
-        >
-          <Ionicons name="search" size={24} color={themeStyles.iconColor} />
-        </TouchableOpacity>
+        {searchQuery.length > 0 && (
+          <TouchableOpacity
+            style={styles(themeColors, shadow).clearButton}
+            onPress={clearSearch}
+          >
+            <X size={16} color={themeColors.textSecondary} />
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  searchBarContainer: {
-    flexDirection: "row",
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: rS(12),
-    width: "85%",
-    marginTop: rV(12),
-    marginBottom: rV(5),
-    height: rV(40), // Explicit height
-  },
-  container: {
-    height: rV(60),
-    alignItems: "center",
-  },
-  searchIcon: {
-    marginLeft: rS(8),
-    justifyContent: "center",
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: SIZES.medium,
-  },
-});
+const styles = (themeColors: any, shadow: any) =>
+  StyleSheet.create({
+    container: {
+      paddingHorizontal: rS(16),
+      paddingTop: rV(8),
+      paddingBottom: rV(6),
+    },
+    searchBarContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: themeColors.cardGlass,
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
+      borderRadius: rMS(24),
+      paddingHorizontal: rMS(16),
+      paddingVertical: rV(10),
+      ...shadow.small,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: rMS(13),
+      fontWeight: "600",
+      color: themeColors.text,
+      padding: 0,
+    },
+    clearButton: {
+      marginLeft: rS(8),
+      padding: rMS(2),
+    },
+  });
 
 export default memo(SearchBar);

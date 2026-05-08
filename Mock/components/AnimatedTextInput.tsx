@@ -14,7 +14,7 @@ import {
 import { SIZES, rMS, rS, rV } from "../constants";
 import Colors from "../constants/Colors";
 import { useColorScheme } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Eye, EyeOff } from "lucide-react-native";
 
 type AnimatedTextInputProps = {
   label?: string;
@@ -214,11 +214,11 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
             onPressIn={() => setShowPassword(!showPassword)}
             style={styles.toggleIcon}
           >
-            <Ionicons
-              name={showPassword ? "eye-off" : "eye"}
-              size={24}
-              color={themeColors.background}
-            />
+            {showPassword ? (
+              <EyeOff size={22} color={themeColors.background} />
+            ) : (
+              <Eye size={22} color={themeColors.background} />
+            )}
           </TouchableOpacity>
         </View>
       ) : (

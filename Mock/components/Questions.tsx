@@ -7,7 +7,7 @@ import {
   useColorScheme,
   Animated,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Check, X, CheckCircle2, XCircle } from "lucide-react-native";
 import Colors from "../constants/Colors";
 import { SIZES, rMS, rS, rV, useShadows } from "../constants";
 
@@ -130,19 +130,13 @@ const AnimatedAnswerRow: React.FC<{
         ]}>
           {isMultiCorrect ? (
             isSelected ? (
-              <Ionicons
-                name={showFeedback ? (isCorrect ? "checkmark" : "close") : "checkmark"}
-                size={14}
-                color={letterColor}
-              />
+              showFeedback ? (
+                isCorrect ? <Check size={14} color={letterColor} /> : <X size={14} color={letterColor} />
+              ) : <Check size={14} color={letterColor} />
             ) : null
           ) : (
             showFeedback ? (
-              <Ionicons
-                name={isCorrect ? "checkmark" : "close"}
-                size={16}
-                color="#fff"
-              />
+              isCorrect ? <Check size={16} color="#fff" /> : <X size={16} color="#fff" />
             ) : (
               <Text style={[s.letterText, { color: letterColor }]}>
                 {ANSWER_LETTERS[index] || "·"}
@@ -167,12 +161,19 @@ const AnimatedAnswerRow: React.FC<{
 
         {/* Trailing icon for feedback */}
         {showFeedback && (
-          <Ionicons
-            name={isCorrect ? "checkmark-circle" : "close-circle"}
-            size={22}
-            color={isCorrect ? "#22C55E" : "#EF4444"}
-            style={{ marginLeft: "auto", paddingLeft: rS(8) }}
-          />
+          isCorrect ? (
+            <CheckCircle2
+              size={22}
+              color="#22C55E"
+              style={{ marginLeft: "auto", paddingLeft: rS(8) }}
+            />
+          ) : (
+            <XCircle
+              size={22}
+              color="#EF4444"
+              style={{ marginLeft: "auto", paddingLeft: rS(8) }}
+            />
+          )
         )}
       </TouchableOpacity>
     </Animated.View>

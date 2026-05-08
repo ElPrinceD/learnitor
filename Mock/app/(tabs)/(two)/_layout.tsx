@@ -1,6 +1,6 @@
 import { Stack } from "expo-router";
 import React from "react";
-import { useColorScheme, Text } from "react-native";
+import { useColorScheme } from "react-native";
 import Colors from "../../../constants/Colors";
 
 export default function Tab2Layout() {
@@ -12,24 +12,7 @@ export default function Tab2Layout() {
       <Stack.Screen
         name="two"
         options={{
-          headerShown: true,
-          headerTitle: () => (
-            <Text
-              style={{
-                color: themeColors.text,
-
-                fontSize: 20,
-                fontWeight: "bold",
-              }}
-            >
-              Courses
-            </Text>
-          ),
-          headerStyle: {
-            backgroundColor: themeColors.background,
-          },
-          headerTitleAlign: "center",
-
+          headerShown: false,
           headerShadowVisible: false,
         }}
       />

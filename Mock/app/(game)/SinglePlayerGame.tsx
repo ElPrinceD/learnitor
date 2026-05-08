@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { View, StyleSheet, Text, useColorScheme, TouchableOpacity, StatusBar } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+// Icons handled by Lucide
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, router } from "expo-router";
 import * as Haptics from "expo-haptics";

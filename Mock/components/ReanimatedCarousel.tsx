@@ -9,7 +9,7 @@ import {
   useColorScheme,
 } from "react-native";
 import Carousel from "react-native-reanimated-carousel";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+// Icons handled by Lucide
 import Colors from "../constants/Colors";
 import { SIZES, rMS } from "../constants";
 

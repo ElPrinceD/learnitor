@@ -14,7 +14,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { ArrowLeft, Copy, RefreshCw } from "lucide-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Animated, {
@@ -490,7 +490,7 @@ export default function SquadSettings() {
           }}
           activeOpacity={1}
         >
-          <Ionicons name="arrow-back" size={22} color={themeColors.text} />
+          <ArrowLeft size={22} color={themeColors.text} />
         </AnimatedTouchable>
       </BlurView>
 
@@ -544,14 +544,14 @@ export default function SquadSettings() {
                   onPress={copyCode}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="copy-outline" size={18} color={themeColors.tint} />
+                  <Copy size={18} color={themeColors.tint} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.codeActionBtn}
                   onPress={handleRegenCode}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="refresh" size={18} color={themeColors.tint} />
+                  <RefreshCw size={18} color={themeColors.tint} />
                 </TouchableOpacity>
               </View>
             </View>

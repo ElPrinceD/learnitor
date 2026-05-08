@@ -13,6 +13,7 @@ import { Text } from "../../components/Themed";
 import { router, useGlobalSearchParams } from "expo-router";
 import axios from "axios";
 import ApiUrl from "../../config";
+import Animated, { FadeInDown } from "react-native-reanimated";
 
 import { useAuth } from "../../components/AuthContext";
 import Colors from "../../constants/Colors";
@@ -83,45 +84,73 @@ const LogIn = () => {
       justifyContent: "center",
       backgroundColor: themeColors.background,
     },
+    blob1: {
+      position: "absolute",
+      top: -rV(70),
+      right: -rS(50),
+      width: rS(220),
+      height: rS(220),
+      borderRadius: rS(110),
+      backgroundColor: themeColors.tint + "12",
+    },
+    blob2: {
+      position: "absolute",
+      bottom: rV(100),
+      left: -rS(80),
+      width: rS(260),
+      height: rS(260),
+      borderRadius: rS(130),
+      backgroundColor: "#6366F112",
+    },
     headerText: {
-      fontSize: SIZES.xxxLarge,
-      fontWeight: "bold",
+      fontSize: rMS(32),
+      fontWeight: "900",
       color: themeColors.text,
+      letterSpacing: -0.5,
     },
     inputContainer: {
-      width: rS(270),
+      width: rS(280),
     },
     forgotPasswordContainer: {
       alignSelf: "flex-end",
       flexDirection: "row",
-      paddingBottom: rMS(45),
+      paddingBottom: rMS(40),
     },
     forgotPasswordText: {
-      fontSize: SIZES.medium,
-      color: themeColors.selectedText,
-      fontWeight: "bold",
+      fontSize: rMS(13),
+      color: themeColors.tint,
+      fontWeight: "700",
     },
     bottomContainer: {
-      bottom: Math.max(rV(15), insets.bottom + rV(5)), // Use safe area bottom + small padding
+      bottom: Math.max(rV(15), insets.bottom + rV(5)),
       justifyContent: "flex-end",
       flexDirection: "row",
       alignItems: "center",
     },
     existingText: {
-      fontSize: SIZES.medium,
-      fontWeight: "bold",
-      color: themeColors.text,
+      fontSize: rMS(13),
+      color: themeColors.textSecondary,
     },
     loginText: {
-      fontSize: SIZES.medium,
-      fontWeight: "bold",
-      color: themeColors.buttonBackground,
-      marginLeft: rMS(8),
+      fontSize: rMS(13),
+      fontWeight: "700",
+      color: themeColors.tint,
+      marginLeft: rMS(4),
     },
-    errorMessage: {
-      alignSelf: "flex-start",
-      fontSize: SIZES.medium,
+    errorContainer: {
+      backgroundColor: "#D22B2B" + "12",
+      paddingVertical: rV(10),
+      paddingHorizontal: rMS(16),
+      borderRadius: rMS(16),
+      marginBottom: rV(8),
+      borderLeftWidth: 3,
+      borderLeftColor: "#D22B2B",
+      width: rS(280),
+    },
+    errorText: {
+      fontSize: rMS(12),
       color: "#D22B2B",
+      fontWeight: "600",
     },
   });
 
@@ -129,49 +158,64 @@ const LogIn = () => {
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <TouchableWithoutFeedback onPress={handleKeyboardDismiss}>
         <View style={styles.container}>
-          <StatusBar hidden={true} />
+          <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+          <View style={styles.blob1} />
+          <View style={styles.blob2} />
 
           <View style={styles.container}>
             <Typewriter
               text="Hello again!"
               delay={100}
-              style={[styles.headerText, { marginBottom: rMS(150) }]}
+              style={[styles.headerText, { marginBottom: rMS(120) }]}
               onComplete={() => setShowSecondText(true)}
             />
 
-            <AnimatedTextInput
-              label="Email"
-              value={email}
-              onChangeText={(text) => setEmail(text)}
-              placeholderTextColor={themeColors.textSecondary}
-              style={styles.inputContainer}
-            />
+            <Animated.View entering={FadeInDown.duration(400).delay(100)}>
+              <AnimatedTextInput
+                label="Email"
+                value={email}
+                onChangeText={(text) => setEmail(text)}
+                placeholderTextColor={themeColors.textSecondary}
+                style={styles.inputContainer}
+              />
+            </Animated.View>
 
-            <AnimatedTextInput
-              label="Password"
-              value={password}
-              onChangeText={setPassword}
-              placeholderTextColor={themeColors.textSecondary}
-              secureTextEntry={!showPassword}
-              showToggleIcon={true}
-              style={styles.inputContainer}
-            />
+            <Animated.View entering={FadeInDown.duration(400).delay(200)}>
+              <AnimatedTextInput
+                label="Password"
+                value={password}
+                onChangeText={setPassword}
+                placeholderTextColor={themeColors.textSecondary}
+                secureTextEntry={!showPassword}
+                showToggleIcon={true}
+                style={styles.inputContainer}
+              />
+            </Animated.View>
 
-            {error ? <Text style={styles.errorMessage}>{error}</Text> : null}
-            <View style={styles.forgotPasswordContainer}>
-              <Text
-                style={styles.forgotPasswordText}
-                onPress={handleForgotPassword}
-              >
-                Forgot password?
-              </Text>
-            </View>
+            {error ? (
+              <Animated.View entering={FadeInDown.duration(300)} style={styles.errorContainer}>
+                <Text style={styles.errorText}>{error}</Text>
+              </Animated.View>
+            ) : null}
 
-            <VerificationButton
-              onPress={handleLogin}
-              title={loading ? <ActivityIndicator color="white" /> : "Login"}
-              disabled={loading}
-            />
+            <Animated.View entering={FadeInDown.duration(400).delay(300)}>
+              <View style={styles.forgotPasswordContainer}>
+                <Text
+                  style={styles.forgotPasswordText}
+                  onPress={handleForgotPassword}
+                >
+                  Forgot password?
+                </Text>
+              </View>
+            </Animated.View>
+
+            <Animated.View entering={FadeInDown.duration(400).delay(400)}>
+              <VerificationButton
+                onPress={handleLogin}
+                title={loading ? <ActivityIndicator color="white" /> : "Login"}
+                disabled={loading}
+              />
+            </Animated.View>
           </View>
 
           <View style={styles.bottomContainer}>

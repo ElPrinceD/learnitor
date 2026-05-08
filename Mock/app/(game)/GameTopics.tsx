@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
-import { Ionicons, Feather } from "@expo/vector-icons";
+import { ArrowLeft, CheckCircle2, Circle, BookOpen } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
   FadeInDown,
@@ -24,7 +24,6 @@ import { BlurView } from "expo-blur";
 import { Course, Topic } from "../../components/types";
 import { useAuth } from "../../components/AuthContext";
 import GameButton from "../../components/GameButton";
-import TimelineCategoryItem from "../../components/TimelineCategoryItem";
 import ErrorMessage from "../../components/ErrorMessage";
 import Colors from "../../constants/Colors";
 import { SIZES, rMS, rS, rV, useShadows } from "../../constants";
@@ -321,47 +320,38 @@ const GameTopics: React.FC = () => {
           fontSize: rMS(12),
           lineHeight: rMS(18),
         },
-        row: {
-          justifyContent: "space-between",
-        },
-        flatListContent: {
-          paddingBottom: rV(100),
-        },
-        topicContainer: {
-          flexDirection: "row",
-          alignItems: "center",
-          marginBottom: rV(8),
-          position: "relative",
-        },
-        checkBoxContainer: {
-          position: "absolute",
-          top: rV(8),
-          right: 0,
-          zIndex: 1,
-        },
-        checkBox: {
-          width: rS(22),
-          height: rV(22),
-          justifyContent: "center",
-          alignItems: "center",
-          alignSelf: "flex-end",
-        },
-        selectAllContainer: {
-          flexDirection: "row",
-          alignItems: "center",
-          alignSelf: "flex-end",
-          marginBottom: rV(12),
+        topicCard: {
+          borderRadius: rMS(24),
+          padding: rMS(16),
+          marginBottom: rV(10),
+          borderWidth: 1.5,
+          borderColor: themeColors.border + "40",
           backgroundColor: themeColors.cardGlass,
-          paddingVertical: rV(8),
-          paddingHorizontal: rMS(14),
-          borderRadius: rMS(20),
-          ...shadow.light,
+          flexDirection: "row",
+          alignItems: "center",
+          ...shadow.small,
         },
-        selectAllText: {
+        topicCardChecked: {
+          borderColor: themeColors.tint,
+          backgroundColor: themeColors.tint + "12",
+        },
+        topicIconCircle: {
+          width: rMS(44),
+          height: rMS(44),
+          borderRadius: rMS(14),
+          alignItems: "center",
+          justifyContent: "center",
+          marginRight: rS(14),
+        },
+        topicTitle: {
+          flex: 1,
+          fontSize: rMS(14),
+          fontWeight: "700",
           color: themeColors.text,
-          fontSize: rMS(12),
-          fontWeight: "800",
-          marginLeft: rS(5),
+          letterSpacing: -0.2,
+        },
+        topicCheckbox: {
+          marginLeft: rS(8),
         },
         continueButton: {
           position: "absolute",
@@ -375,38 +365,41 @@ const GameTopics: React.FC = () => {
     [themeColors, insets]
   );
 
-  const renderItem = ({ item }: { item: Topic }) => {
-    const opacity = item.isChecked ? 0.9 : 1;
+  const renderItem = ({ item, index }: { item: Topic; index: number }) => {
+    const isChecked = item.isChecked;
     return (
-      <View style={styles.topicContainer}>
-        <View style={styles.checkBoxContainer}>
-          <TouchableOpacity onPress={() => handleTopicPress(item)}>
-            {selectionMode &&
-              (item.isChecked ? (
-                <Ionicons
-                  name="checkmark-circle-sharp"
-                  size={24}
-                  color={themeColors.icon}
-                />
+      <Animated.View entering={FadeInDown.duration(350).delay(80 + index * 50)}>
+        <TouchableOpacity
+          style={[
+            styles.topicCard,
+            isChecked && styles.topicCardChecked,
+          ]}
+          activeOpacity={0.7}
+          onPress={() => handleTopicPress(item)}
+          onLongPress={() => handleTopicLongPress(item)}
+        >
+          <View
+            style={[
+              styles.topicIconCircle,
+              { backgroundColor: (item.color || themeColors.tint) + "20" },
+            ]}
+          >
+            <BookOpen size={22} color={item.color || themeColors.tint} />
+          </View>
+          <Text style={styles.topicTitle} numberOfLines={2}>
+            {item.title}
+          </Text>
+          {selectionMode && (
+            <View style={styles.topicCheckbox}>
+              {isChecked ? (
+                <CheckCircle2 size={22} color={themeColors.tint} />
               ) : (
-                <Feather name="circle" size={24} color={themeColors.textSecondary} />
-              ))}
-          </TouchableOpacity>
-        </View>
-        <View style={{ opacity }}>
-          <TimelineCategoryItem
-            category={{
-              id: item.id.toString(),
-              name: item.title,
-              color: item.color,
-              icon: "book",
-            }}
-            onPress={() => handleTopicPress(item)}
-            onLongPress={() => handleTopicLongPress(item)}
-            width={screenWidth}
-          />
-        </View>
-      </View>
+                <Circle size={22} color={themeColors.textSecondary} />
+              )}
+            </View>
+          )}
+        </TouchableOpacity>
+      </Animated.View>
     );
   };
 
@@ -443,7 +436,7 @@ const GameTopics: React.FC = () => {
             }}
             activeOpacity={1}
           >
-            <Ionicons name="arrow-back" size={22} color={themeColors.text} />
+            <ArrowLeft size={22} color={themeColors.text} />
           </AnimatedTouchable>
         </Animated.View>
 
@@ -463,26 +456,35 @@ const GameTopics: React.FC = () => {
         <Animated.View entering={FadeInDown.duration(400).delay(150)}>
           <TouchableOpacity
             onPress={handleSelectAll}
-            style={styles.selectAllContainer}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              alignSelf: "flex-end",
+              marginBottom: rV(12),
+              backgroundColor: themeColors.cardGlass,
+              paddingVertical: rV(8),
+              paddingHorizontal: rMS(14),
+              borderRadius: rMS(20),
+              ...shadow.light,
+            }}
           >
-            <View style={styles.checkBox}>
+            <View style={{ width: rS(22), height: rV(22), justifyContent: "center", alignItems: "center" }}>
               {selectedTopics.length === topics?.length ? (
-                <Ionicons
-                  name="checkmark-circle-sharp"
+                <CheckCircle2
                   size={22}
-                  color={themeColors.icon}
+                  color={themeColors.tint}
                 />
               ) : selectedTopics.length > 0 ? (
-                <Feather name="circle" size={20} color={themeColors.text} />
+                <Circle size={20} color={themeColors.text} />
               ) : (
-                <Ionicons
-                  name="checkmark-circle-outline"
+                <CheckCircle2
                   size={22}
                   color={themeColors.text}
+                  strokeWidth={1.5}
                 />
               )}
             </View>
-            <Text style={styles.selectAllText}>Select All</Text>
+            <Text style={{ color: themeColors.text, fontSize: rMS(12), fontWeight: "800", marginLeft: rS(5) }}>Select All</Text>
           </TouchableOpacity>
         </Animated.View>
 
@@ -491,10 +493,7 @@ const GameTopics: React.FC = () => {
           data={topics}
           renderItem={renderItem}
           keyExtractor={(item) => item.id.toString()}
-          numColumns={2}
-          columnWrapperStyle={styles.row}
-          contentContainerStyle={styles.flatListContent}
-          key={screenWidth}
+          contentContainerStyle={{ paddingBottom: rV(100) }}
         />
       </View>
 

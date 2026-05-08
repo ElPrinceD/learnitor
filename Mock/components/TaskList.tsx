@@ -6,6 +6,7 @@ import {
   useColorScheme,
   TouchableOpacity,
 } from "react-native";
+import { CheckCircle, ChevronRight } from "lucide-react-native";
 import { SIZES, rMS, rS, rV, useShadows } from "../constants";
 import Colors from "../constants/Colors";
 
@@ -52,76 +53,99 @@ const TaskList: React.FC<Props> = ({ tasks, categoryNames }) => {
     container: {
       flex: 1,
     },
+    // Date badge — pill-shaped, tint-tinted
     header: {
       flexDirection: "row",
       alignItems: "center",
-      marginBottom: rMS(8),
+      marginBottom: rV(12),
     },
     dateContainer: {
-      backgroundColor: themeColors.card,
-      paddingHorizontal: rMS(12),
+      backgroundColor: themeColors.tint + "10",
+      paddingHorizontal: rMS(14),
       paddingVertical: rMS(8),
-      borderRadius: rMS(8),
-      marginRight: rMS(12),
+      borderRadius: rMS(16),
+      borderWidth: 1,
+      borderColor: themeColors.tint + "20",
     },
     dateText: {
-      fontSize: SIZES.small,
-      fontWeight: "600",
-      color: themeColors.text,
+      fontSize: rMS(10),
+      fontWeight: "700",
+      color: themeColors.tint,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
     },
     dayText: {
-      fontSize: SIZES.medium,
-      fontWeight: "bold",
+      fontSize: rMS(14),
+      fontWeight: "800",
       color: themeColors.text,
       marginTop: rV(2),
     },
+    // Task items — glassmorphic cards
     taskItem: {
-      backgroundColor: themeColors.card,
-      borderRadius: rMS(8),
-      padding: rMS(8),
-      marginBottom: rMS(4),
+      backgroundColor: themeColors.cardGlass,
+      borderRadius: rMS(20),
+      padding: rMS(12),
+      marginBottom: rV(8),
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    taskColorIndicator: {
+      width: rMS(4),
+      height: "80%",
+      borderRadius: rMS(2),
+      marginRight: rS(10),
+    },
+    taskContent: {
+      flex: 1,
     },
     taskHeader: {
       flexDirection: "row",
       alignItems: "center",
-      marginBottom: rMS(4),
+      marginBottom: rV(4),
     },
     categoryBadge: {
-      paddingHorizontal: rMS(6),
-      paddingVertical: rMS(2),
-      borderRadius: rMS(8),
+      paddingHorizontal: rMS(8),
+      paddingVertical: rMS(3),
+      borderRadius: rMS(12),
       marginRight: rMS(6),
     },
     categoryText: {
-      fontSize: SIZES.small,
-      fontWeight: "600",
+      fontSize: rMS(9),
+      fontWeight: "700",
       color: "white",
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
     },
     taskTitle: {
-      fontSize: SIZES.small,
-      fontWeight: "600",
+      fontSize: rMS(13),
+      fontWeight: "700",
       color: themeColors.text,
-      flex: 1,
-      lineHeight: rMS(16),
+      lineHeight: rMS(18),
     },
     taskDescription: {
-      fontSize: SIZES.small,
+      fontSize: rMS(11),
       color: themeColors.textSecondary,
       marginTop: rV(2),
-      lineHeight: rMS(14),
-      numberOfLines: 1,
-      ellipsizeMode: "tail",
+      lineHeight: rMS(15),
     },
+    // Empty state — matches Play's squadEmpty pattern
     emptyState: {
-      backgroundColor: themeColors.card,
-      borderRadius: rMS(12),
-      padding: rMS(20),
+      backgroundColor: themeColors.cardGlass,
+      borderRadius: rMS(24),
+      padding: rMS(24),
       alignItems: "center",
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
     },
     emptyText: {
-      fontSize: SIZES.medium,
+      fontSize: rMS(12),
       color: themeColors.textSecondary,
       textAlign: "center",
+      marginTop: rV(8),
+      fontWeight: "600",
+      lineHeight: rMS(18),
     },
   });
 
@@ -137,7 +161,13 @@ const TaskList: React.FC<Props> = ({ tasks, categoryNames }) => {
           </View>
         </View>
         <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>No tasks for today</Text>
+          <CheckCircle
+            size={28}
+            color={themeColors.textSecondary}
+          />
+          <Text style={styles.emptyText}>
+            No tasks for today — enjoy your free time!
+          </Text>
         </View>
       </View>
     );
@@ -165,26 +195,38 @@ const TaskList: React.FC<Props> = ({ tasks, categoryNames }) => {
             style={styles.taskItem}
             activeOpacity={0.7}
           >
-            <View style={styles.taskHeader}>
-              <View
-                style={[
-                  styles.categoryBadge,
-                  { backgroundColor: categoryColor },
-                ]}
-              >
-                <Text style={styles.categoryText}>{categoryName}</Text>
+            <View
+              style={[
+                styles.taskColorIndicator,
+                { backgroundColor: categoryColor },
+              ]}
+            />
+            <View style={styles.taskContent}>
+              <View style={styles.taskHeader}>
+                <View
+                  style={[
+                    styles.categoryBadge,
+                    { backgroundColor: categoryColor },
+                  ]}
+                >
+                  <Text style={styles.categoryText}>{categoryName}</Text>
+                </View>
               </View>
+              <Text style={styles.taskTitle}>{task.title}</Text>
+              {task.description && (
+                <Text
+                  style={styles.taskDescription}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {task.description}
+                </Text>
+              )}
             </View>
-            <Text style={styles.taskTitle}>{task.title}</Text>
-            {task.description && (
-              <Text
-                style={styles.taskDescription}
-                numberOfLines={1}
-                ellipsizeMode="tail"
-              >
-                {task.description}
-              </Text>
-            )}
+            <ChevronRight
+              size={16}
+              color={themeColors.textSecondary}
+            />
           </TouchableOpacity>
         );
       })}

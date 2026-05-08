@@ -13,7 +13,7 @@ import {
 import { SIZES, rMS } from "../constants";
 import Colors from "../constants/Colors";
 import { useColorScheme } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Eye, EyeOff } from "lucide-react-native";
 
 type AnimatedRoundTextInputProps = {
   label?: string;
@@ -192,11 +192,11 @@ const AnimatedRoundTextInput: React.FC<AnimatedRoundTextInputProps> = ({
             onPress={() => setShowPassword(!showPassword)}
             style={styles.toggleIcon}
           >
-            <Ionicons
-              name={showPassword ? "eye-off" : "eye"}
-              size={24}
-              color={themeColors.icon}
-            />
+            {showPassword ? (
+              <EyeOff size={22} color={themeColors.icon} />
+            ) : (
+              <Eye size={22} color={themeColors.icon} />
+            )}
           </TouchableOpacity>
         </View>
       ) : (

@@ -13,7 +13,7 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { Trophy, Users, Gamepad2, User } from "lucide-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -433,7 +433,7 @@ export default function GameIntro() {
             onPressOut={() => onPressOut(rankingsScale)}
             activeOpacity={1}
           >
-            <Ionicons name="trophy" size={18} color={themeColors.tint} />
+            <Trophy size={18} color={themeColors.tint} />
             <Text style={styles.rankingsBtnText}>Rankings</Text>
           </AnimatedTouchable>
         </View>
@@ -480,7 +480,7 @@ export default function GameIntro() {
             <View style={styles.joinCard}>
               <View style={styles.joinCardHeader}>
                 <View style={styles.joinIconCircle}>
-                  <Ionicons name="people" size={24} color={themeColors.tint} />
+                  <Users size={24} color={themeColors.tint} />
                 </View>
                 <View>
                   <Text style={styles.joinTitle}>Join a Game</Text>
@@ -527,7 +527,7 @@ export default function GameIntro() {
             >
               <View style={styles.actionCardContent}>
                 <View style={styles.actionIconCircle}>
-                  <Ionicons name="game-controller" size={26} color={themeColors.tint} />
+                  <Gamepad2 size={26} color={themeColors.tint} />
                 </View>
                 <Text style={styles.actionCardTitle}>Create Game</Text>
                 <Text style={styles.actionCardDesc}>
@@ -549,7 +549,7 @@ export default function GameIntro() {
             >
               <View style={styles.actionCardContent}>
                 <View style={styles.actionIconCircle}>
-                  <Ionicons name="person" size={26} color={themeColors.tint} />
+                  <User size={26} color={themeColors.tint} />
                 </View>
                 <Text style={styles.actionCardTitle}>Solo Practice</Text>
                 <Text style={styles.actionCardDesc}>

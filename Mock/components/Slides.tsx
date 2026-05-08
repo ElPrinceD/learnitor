@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   useColorScheme,
 } from "react-native";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { Presentation } from "lucide-react-native";
 import { SlideMaterial } from "./types";
 import Colors from "../constants/Colors";
 import { rMS, SIZES, rV } from "../constants";
@@ -63,9 +63,8 @@ const Slides: React.FC<SlidesProps> = ({
           onPress={() => handleSlidePress(slideMaterial)}
         >
           <View style={styles.materialCard}>
-            <MaterialCommunityIcons
-              name="presentation"
-              size={27}
+            <Presentation
+              size={25}
               color={themeColors.icon}
             />
             <View style={styles.detailsContainer}>

@@ -7,7 +7,7 @@ import {
   Animated,
   useColorScheme,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Play } from "lucide-react-native";
 import Colors from "../constants/Colors";
 import { rMS, rS, rV, SIZES } from "../constants";
 
@@ -52,6 +52,11 @@ const ThreeDButton: React.FC<ThreeDButtonProps> = ({ isQuestion, onPress }) => {
     }),
   };
 
+  // Theme-aware colors based on tint
+  const outerColor = themeColors.tint;
+  const heightColor = colorScheme === "dark" ? themeColors.tint + "80" : themeColors.tint + "CC";
+  const innerColor = colorScheme === "dark" ? themeColors.tint + "E0" : themeColors.tint;
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -68,19 +73,19 @@ const ThreeDButton: React.FC<ThreeDButtonProps> = ({ isQuestion, onPress }) => {
       padding: rMS(8),
       borderRadius: 10,
       transform: [{ rotate: "45deg" }],
-      backgroundColor: "#002968",
+      backgroundColor: outerColor,
       shadowColor: "#000",
       shadowOffset: { width: 4, height: 9 },
-      shadowOpacity: 1,
-      shadowRadius: 2,
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
       elevation: 5,
     },
     height: {
       borderRadius: 15,
-      backgroundColor: "#001a43",
+      backgroundColor: heightColor,
     },
     inner: {
-      backgroundColor: "#00378a",
+      backgroundColor: innerColor,
       alignItems: "center",
       justifyContent: "center",
       height: "100%",
@@ -104,11 +109,9 @@ const ThreeDButton: React.FC<ThreeDButtonProps> = ({ isQuestion, onPress }) => {
             <Animated.View style={[styles.height, heightStyle]}>
               <Animated.View style={[styles.inner, innerStyle]}>
                 {isQuestion ? (
-                  <Ionicons
-                    name="play-circle-outline"
-                    size={SIZES.xxLarge}
-                    color="black"
-                  />
+                  <View style={{ transform: [{ rotate: "-45deg" }] }}>
+                    <Play size={20} color="#fff" fill="#fff" />
+                  </View>
                 ) : (
                   <Text style={styles.buttonText}></Text>
                 )}

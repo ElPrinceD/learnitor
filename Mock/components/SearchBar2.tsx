@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   useColorScheme,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Search } from "lucide-react-native";
 import Colors from "../constants/Colors";
 import { SIZES, rS, rV } from "../constants";
 import debounce from "lodash.debounce";
@@ -68,7 +68,7 @@ const SearchBar2: React.FC<Props> = ({ onSearch }) => {
           style={styles.searchIcon}
           onPress={() => handleSearch(searchQuery)}
         >
-          <Ionicons name="search" size={24} color={themeStyles.iconColor} />
+          <Search size={22} color={themeStyles.iconColor} />
         </TouchableOpacity>
       </View>
     </View>

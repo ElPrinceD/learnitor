@@ -13,7 +13,7 @@ import { RecommendedCourse } from "./types";
 import Colors from "../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../constants";
 import { Skeleton } from "moti/skeleton";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { BookCopy } from "lucide-react-native";
 
 interface Props {
   RecommendedCoursesData: RecommendedCourse[];
@@ -118,9 +118,8 @@ const RecommendedCoursesList: React.FC<Props> = ({
               {item.title}
             </Text>
             <Text style={styles.topicsNumber}>
-              <MaterialCommunityIcons
-                name="notebook-multiple"
-                size={rMS(16)}
+              <BookCopy
+                size={rMS(15)}
                 color={themeColors.icon}
               />{" "}
               {item.topicsCount} Topics

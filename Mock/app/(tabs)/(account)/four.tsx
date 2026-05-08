@@ -10,7 +10,16 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import {
+  Menu,
+  Camera,
+  X,
+  BadgeCheck,
+  TrendingUp,
+  Globe,
+  Flag,
+  School,
+} from "lucide-react-native";
 import { router } from "expo-router";
 import axios from "axios";
 import Animated, {
@@ -261,7 +270,7 @@ const Profile = () => {
     {
       label: "World",
       sublabel: "Global Leaderboard",
-      icon: "earth" as const,
+      IconComponent: Globe,
       iconBg: themeColors.tint + "15",
       iconColor: themeColors.tint,
       rank: rankings.world,
@@ -269,7 +278,7 @@ const Profile = () => {
     {
       label: "Country",
       sublabel: "National Ranking",
-      icon: "flag" as const,
+      IconComponent: Flag,
       iconBg: (themeColors.tintSecond || themeColors.tint) + "15",
       iconColor: themeColors.tintSecond || themeColors.tint,
       rank: rankings.country,
@@ -277,7 +286,7 @@ const Profile = () => {
     {
       label: "School",
       sublabel: "Institutional Ranking",
-      icon: "school" as const,
+      IconComponent: School,
       iconBg: themeColors.tint + "20",
       iconColor: themeColors.tint,
       rank: rankings.school,
@@ -626,7 +635,7 @@ const Profile = () => {
             }}
             activeOpacity={1}
           >
-            <Ionicons name="menu" size={20} color={themeColors.text} />
+            <Menu size={20} color={themeColors.text} />
           </AnimatedTouchable>
         </Animated.View>
 
@@ -666,8 +675,7 @@ const Profile = () => {
               )}
             </View>
             <View style={styles.cameraIcon}>
-              <Ionicons
-                name="camera-outline"
+              <Camera
                 size={16}
                 color={themeColors.icon}
               />
@@ -677,18 +685,17 @@ const Profile = () => {
                 onPress={handleProfilePictureDelete}
                 style={styles.deleteIcon}
               >
-                <Ionicons name="close" size={14} color="#DC2626" />
+                <X size={14} color="#DC2626" />
               </TouchableOpacity>
             )}
           </TouchableOpacity>
 
           <View style={styles.profileInfo}>
             <View style={styles.levelBadge}>
-              <Ionicons
-                name="checkmark-circle"
-                size={12}
-                color={themeColors.tint}
-              />
+                <BadgeCheck
+                  size={12}
+                  color={themeColors.tint}
+                />
               <Text style={styles.levelBadgeText}>{stats.tier}</Text>
             </View>
             <Text style={styles.profileName} numberOfLines={1}>
@@ -718,7 +725,7 @@ const Profile = () => {
               </View>
             </View>
             <View style={styles.heroIconOverlay}>
-              <Ionicons name="trending-up" size={100} color="#fff" />
+              <TrendingUp size={100} color="#fff" />
             </View>
           </View>
 
@@ -786,8 +793,7 @@ const Profile = () => {
                       { backgroundColor: item.iconBg },
                     ]}
                   >
-                    <Ionicons
-                      name={item.icon}
+                    <item.IconComponent
                       size={20}
                       color={item.iconColor}
                     />

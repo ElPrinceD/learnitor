@@ -11,91 +11,105 @@ import { router, useLocalSearchParams } from "expo-router";
 import Colors from "../../../constants/Colors";
 import GameButton from "../../../components/GameButton";
 import CustomPicker from "../../../components/CustomPicker";
-import { SIZES, rMS, rS, rV } from "../../../constants";
+import { SIZES, rMS, rS, rV, useShadows } from "../../../constants";
 import Animated, { FadeInLeft, ReduceMotion } from "react-native-reanimated";
 
 const PracticeInstructions = () => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+  const shadow = useShadows();
 
   const { topic, level, course } = useLocalSearchParams();
 
   const [isTimed, setIsTimed] = useState(false);
-  const [duration, setDuration] = useState("10"); // Default to 10 minutes
+  const [duration, setDuration] = useState("10");
 
-  // Duration options for the picker
   const durationOptions = ["10", "15", "30", "45"];
 
   const handleStartQuiz = () => {
     router.navigate({
       pathname: "/(tabs)/(two)/PracticeQuestions",
       params: {
-        level: level?.toString(), // Ensure level is treated as a string
+        level: level?.toString(),
         topic: topic?.toString(),
-        isTimed: isTimed.toString(), // Convert boolean to string
-        duration: duration, // duration is already a string
+        isTimed: isTimed.toString(),
+        duration: duration,
         course: course?.toString(),
       },
     });
   };
-  // Determine styles based on color scheme
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
       alignItems: "center",
       justifyContent: "center",
+      backgroundColor: themeColors.background,
+      padding: rMS(16),
     },
     card: {
-      backgroundColor: themeColors.card,
-      borderRadius: 10,
-      padding: rMS(18),
-      width: "80%", // Adjust the width as needed
+      backgroundColor: themeColors.cardGlass,
+      borderRadius: rMS(24),
+      padding: rMS(22),
+      width: "90%",
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
+      ...shadow.medium,
     },
     title: {
-      fontSize: SIZES.xLarge,
-      fontWeight: "bold",
-      marginBottom: rV(18),
+      fontSize: rMS(20),
+      fontWeight: "900",
+      marginBottom: rV(14),
       textAlign: "center",
       color: themeColors.text,
+      letterSpacing: -0.3,
     },
     instructions: {
-      fontSize: SIZES.large,
-      marginBottom: rV(18),
+      fontSize: rMS(13),
+      marginBottom: rV(16),
       textAlign: "center",
-      color: themeColors.text,
+      color: themeColors.textSecondary,
+      fontWeight: "600",
+      lineHeight: rMS(19),
     },
     instructionContainer: {
-      marginBottom: rV(18),
+      marginBottom: rV(14),
+      backgroundColor: themeColors.tint + "08",
+      borderRadius: rMS(16),
+      padding: rMS(14),
     },
     instruction: {
-      fontSize: SIZES.medium,
-      marginBottom: rV(8),
+      fontSize: rMS(12),
+      marginBottom: rV(6),
       color: themeColors.text,
+      fontWeight: "600",
+      lineHeight: rMS(18),
     },
     startButton: {
-      backgroundColor: "transparent",
-      borderWidth: 1,
-      borderColor: themeColors.border,
-      paddingVertical: rV(8),
-      borderRadius: 10,
+      backgroundColor: themeColors.tint,
+      paddingVertical: rV(14),
+      borderRadius: rMS(24),
       alignSelf: "center",
-      width: "90%",
-      marginTop: rV(15),
+      width: "100%",
+      marginTop: rV(16),
     },
     startButtonText: {
-      fontSize: SIZES.medium,
-      fontWeight: "bold",
-      color: themeColors.text,
+      fontSize: rMS(14),
+      fontWeight: "800",
+      color: "#fff",
     },
     timerContainer: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
+      backgroundColor: themeColors.tint + "08",
+      borderRadius: rMS(16),
+      padding: rMS(14),
     },
     timerText: {
-      fontSize: SIZES.medium,
-      color: themeColors.textSecondary,
-      marginRight: rS(8),
+      fontSize: rMS(13),
+      color: themeColors.text,
+      fontWeight: "700",
     },
     durationContainer: {
       marginTop: rV(10),
@@ -121,25 +135,25 @@ const PracticeInstructions = () => {
             3. Select the correct answer(s) for each question.
           </Text>
           <Text style={styles.instruction}>
-            4.Quiz progress will be displayed at the top.
+            4. Quiz progress will be displayed at the top.
           </Text>
           <Text style={styles.instruction}>
             5. Score will be displayed at the end.
           </Text>
           <Text style={styles.instruction}>
-            6. You have the option to set a time limit for completing the quiz.
+            6. You have the option to set a time limit.
           </Text>
         </View>
         <View style={styles.timerContainer}>
-          <Text style={styles.timerText}>Timed Quiz:</Text>
+          <Text style={styles.timerText}>Timed Quiz</Text>
           <Switch
             value={isTimed}
             onValueChange={setIsTimed}
             trackColor={{
-              false: themeColors.text,
-              true: themeColors.buttonBackground,
+              false: themeColors.border,
+              true: themeColors.tint + "80",
             }}
-            thumbColor={themeColors.icon}
+            thumbColor={isTimed ? themeColors.tint : themeColors.textSecondary}
           />
         </View>
         {isTimed && (
@@ -160,7 +174,7 @@ const PracticeInstructions = () => {
         )}
 
         <GameButton
-          title="Start"
+          title="Start Quiz"
           onPress={handleStartQuiz}
           style={styles.startButton}
           textStyle={styles.startButtonText}

@@ -10,7 +10,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { ShieldCheck } from "lucide-react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import Colors from "../../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../../constants";
 import VerificationButton from "../../components/VerificationButton";
@@ -18,6 +19,7 @@ import { useConsent } from "../../contexts/ConsentContext";
 import InAppBrowserLink from "../../components/InAppBrowserLink";
 import ApiUrl from "../../config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { StatusBar } from "expo-status-bar";
 
 interface ConsentItem {
   id: string;
@@ -49,7 +51,7 @@ const ConsentScreen = () => {
       description:
         "Send you notifications about your learning goals, course updates, and study reminders to help you stay on track.",
       required: false,
-      enabled: true, // Default enabled
+      enabled: true,
     },
     {
       id: "analytics",
@@ -57,7 +59,7 @@ const ConsentScreen = () => {
       description:
         "Help us improve the app by sharing anonymous usage data and performance information. No personal data is shared.",
       required: false,
-      enabled: true, // Default enabled
+      enabled: true,
     },
     {
       id: "marketing",
@@ -65,7 +67,7 @@ const ConsentScreen = () => {
       description:
         "Send you occasional emails about new features, learning tips, and educational content to enhance your experience.",
       required: false,
-      enabled: true, // Default enabled
+      enabled: true,
     },
     {
       id: "advertising",
@@ -73,11 +75,9 @@ const ConsentScreen = () => {
       description:
         "Show you relevant ads based on your interests to support the free app experience. You can disable this anytime.",
       required: false,
-      enabled: true, // Default enabled
+      enabled: true,
     },
   ]);
-
-  const [allRequiredAccepted, setAllRequiredAccepted] = useState(false);
 
   const toggleConsent = (id: string) => {
     setConsents((prev) =>
@@ -89,26 +89,21 @@ const ConsentScreen = () => {
 
   const handleContinue = async () => {
     try {
-      // Convert consents array to object for batch update
       const consentUpdates: Record<string, boolean> = {};
       consents.forEach((consent) => {
         consentUpdates[consent.id] = consent.enabled;
       });
 
-      // Save all consent preferences in one batch
       await updateMultipleConsents(consentUpdates);
 
-      // Check what was actually saved
       const savedConsents = await AsyncStorage.getItem("user_consents");
 
-      // Navigate to login with pre-filled email
       router.replace({
         pathname: "LogIn",
         params: { email: email || "" },
       });
     } catch (error) {
       console.error("Error saving consents:", error);
-      // Still navigate to app even if consent saving fails
       router.replace("/(verification)/LogIn");
     }
   };
@@ -118,6 +113,24 @@ const ConsentScreen = () => {
       flex: 1,
       backgroundColor: themeColors.background,
     },
+    blob1: {
+      position: "absolute",
+      top: -rV(70),
+      left: -rS(60),
+      width: rS(220),
+      height: rS(220),
+      borderRadius: rS(110),
+      backgroundColor: themeColors.tint + "12",
+    },
+    blob2: {
+      position: "absolute",
+      bottom: rV(80),
+      right: -rS(80),
+      width: rS(260),
+      height: rS(260),
+      borderRadius: rS(130),
+      backgroundColor: "#10B98112",
+    },
     scrollContainer: {
       flex: 1,
       paddingHorizontal: rMS(20),
@@ -125,52 +138,63 @@ const ConsentScreen = () => {
     },
     header: {
       alignItems: "center",
-      marginBottom: rV(20), // Reduced from 40
+      marginBottom: rV(20),
+    },
+    iconCircle: {
+      width: rMS(72),
+      height: rMS(72),
+      borderRadius: rMS(36),
+      backgroundColor: themeColors.tint + "18",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: rV(16),
     },
     title: {
-      fontSize: SIZES.xxLarge,
-      fontWeight: "bold",
+      fontSize: rMS(24),
+      fontWeight: "900",
       color: themeColors.text,
       textAlign: "center",
       marginBottom: rV(10),
+      letterSpacing: -0.5,
     },
     subtitle: {
-      fontSize: SIZES.medium,
+      fontSize: rMS(13),
       color: themeColors.textSecondary,
       textAlign: "center",
-      lineHeight: 24,
+      lineHeight: rMS(20),
+      paddingHorizontal: rS(10),
     },
     consentItem: {
-      backgroundColor: themeColors.background,
-      borderRadius: rMS(6), // Further reduced
-      padding: rMS(12), // Further reduced
-      marginBottom: rV(16), // Further increased to prevent footer overlap
+      backgroundColor: themeColors.cardGlass || themeColors.background,
+      borderRadius: rMS(20),
+      padding: rMS(16),
+      marginBottom: rV(12),
       borderWidth: 1,
-      borderColor: themeColors.text + "40", // Darker shade with opacity
+      borderColor: themeColors.border + "40",
     },
     consentHeader: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      marginBottom: rV(4), // Reduced
+      marginBottom: rV(6),
     },
     consentTitle: {
-      fontSize: SIZES.large,
-      fontWeight: "600",
+      fontSize: rMS(14),
+      fontWeight: "700",
       color: themeColors.text,
       flex: 1,
     },
     requiredBadge: {
-      backgroundColor: themeColors.tint, // Changed to themeColors.tint
-      paddingHorizontal: rS(8),
-      paddingVertical: rV(4),
-      borderRadius: rMS(4),
+      backgroundColor: themeColors.tint,
+      paddingHorizontal: rS(10),
+      paddingVertical: rV(3),
+      borderRadius: rMS(12),
       marginLeft: rS(8),
     },
     requiredText: {
       color: "white",
-      fontSize: SIZES.small,
-      fontWeight: "600",
+      fontSize: rMS(10),
+      fontWeight: "700",
     },
     descriptionRow: {
       flexDirection: "row",
@@ -178,93 +202,87 @@ const ConsentScreen = () => {
       justifyContent: "space-between",
     },
     consentDescription: {
-      fontSize: SIZES.small, // Reduced from medium
+      fontSize: rMS(12),
       color: themeColors.textSecondary,
-      lineHeight: 16, // Reduced from 18
-      flex: 1, // Take up available space
-      marginRight: rS(12), // Space between text and toggle
-    },
-    switchContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "flex-end", // Move toggle to right
-      marginTop: rV(4), // Reduced further
-    },
-    switchLabel: {
-      fontSize: SIZES.medium,
-      color: themeColors.text,
+      lineHeight: rMS(17),
+      flex: 1,
       marginRight: rS(12),
     },
     footer: {
       paddingHorizontal: rMS(20),
-      paddingBottom: Math.max(rV(20), insets.bottom + rV(10)), // Use safe area bottom + padding
+      paddingBottom: Math.max(rV(20), insets.bottom + rV(10)),
       paddingTop: rV(10),
-      alignItems: "center", // Center the button
+      alignItems: "center",
     },
     privacyText: {
-      fontSize: SIZES.small,
+      fontSize: rMS(11),
       color: themeColors.textSecondary,
       textAlign: "center",
-      lineHeight: 18,
-      marginBottom: rV(20),
+      lineHeight: rMS(17),
+      marginBottom: rV(16),
     },
     privacyLink: {
-      color: themeColors.tint, // Changed to themeColors.tint
-      textDecorationLine: "underline",
-      fontSize: SIZES.small, // Match the parent text size
-      lineHeight: 18, // Match the parent line height
-      textAlignVertical: "center", // Ensure vertical alignment
+      color: themeColors.tint,
+      fontWeight: "600",
+      fontSize: rMS(11),
+      lineHeight: rMS(17),
     },
   });
 
   return (
     <View style={styles.container}>
+      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+      <View style={styles.blob1} />
+      <View style={styles.blob2} />
+
       <ScrollView
         style={styles.scrollContainer}
         contentContainerStyle={{ paddingBottom: rV(50) }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Ionicons
-            name="shield-checkmark"
-            size={48}
-            color={themeColors.text} // Changed to themeColors.text
-            style={{ marginBottom: rV(16) }}
-          />
+        <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.header}>
+          <View style={styles.iconCircle}>
+            <ShieldCheck size={rMS(32)} color={themeColors.tint} />
+          </View>
           <Text style={styles.title}>Your Privacy Matters</Text>
           <Text style={styles.subtitle}>
             We respect your privacy and want you to understand how we use your
             data. Please review and choose your preferences below.
           </Text>
-        </View>
+        </Animated.View>
 
-        {consents.map((consent) => (
-          <View key={consent.id} style={styles.consentItem}>
-            <View style={styles.consentHeader}>
-              <Text style={styles.consentTitle}>{consent.title}</Text>
-              {consent.required && (
-                <View style={styles.requiredBadge}>
-                  <Text style={styles.requiredText}>Required</Text>
-                </View>
-              )}
+        {consents.map((consent, index) => (
+          <Animated.View
+            key={consent.id}
+            entering={FadeInDown.duration(400).delay(200 + index * 60)}
+          >
+            <View style={styles.consentItem}>
+              <View style={styles.consentHeader}>
+                <Text style={styles.consentTitle}>{consent.title}</Text>
+                {consent.required && (
+                  <View style={styles.requiredBadge}>
+                    <Text style={styles.requiredText}>Required</Text>
+                  </View>
+                )}
+              </View>
+              <View style={styles.descriptionRow}>
+                <Text style={styles.consentDescription}>
+                  {consent.description}
+                </Text>
+                {!consent.required && (
+                  <Switch
+                    value={consent.enabled}
+                    onValueChange={() => toggleConsent(consent.id)}
+                    trackColor={{
+                      false: themeColors.border,
+                      true: themeColors.tint,
+                    }}
+                    thumbColor="white"
+                  />
+                )}
+              </View>
             </View>
-            <View style={styles.descriptionRow}>
-              <Text style={styles.consentDescription}>
-                {consent.description}
-              </Text>
-              {!consent.required && (
-                <Switch
-                  value={consent.enabled}
-                  onValueChange={() => toggleConsent(consent.id)}
-                  trackColor={{
-                    false: themeColors.text,
-                    true: themeColors.tint,
-                  }}
-                  thumbColor={consent.enabled ? "white" : themeColors.text}
-                />
-              )}
-            </View>
-          </View>
+          </Animated.View>
         ))}
       </ScrollView>
 
@@ -278,7 +296,7 @@ const ConsentScreen = () => {
           <InAppBrowserLink url={`${ApiUrl}/terms-and-conditions/`}>
             <Text style={styles.privacyLink}>Terms of Service</Text>
           </InAppBrowserLink>
-          {"   "} .You can change these settings anytime in your account
+          {"   "}.You can change these settings anytime in your account
           settings.
         </Text>
 

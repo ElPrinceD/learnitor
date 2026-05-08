@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import {
   TouchableOpacity,
   Text,
@@ -6,17 +6,18 @@ import {
   ViewStyle,
   TextStyle,
   useColorScheme,
+  Animated,
 } from "react-native";
-import { SIZES, rMS, rS } from "../constants";
+import { SIZES, rMS, rS, rV } from "../constants";
 import Colors from "../constants/Colors";
 
 type VerificationButtonProps = {
   onPress?: () => void;
-  title?: string | React.ReactElement; // Updated to accept a string or React element
+  title?: string | React.ReactElement;
   disabled?: boolean;
-  style?: ViewStyle | ViewStyle[]; // Updated to accept a list of styles
-  textStyle?: TextStyle | TextStyle[]; // Updated to accept a list of styles
-  children?: React.ReactNode; // Added children prop
+  style?: ViewStyle | ViewStyle[];
+  textStyle?: TextStyle | TextStyle[];
+  children?: React.ReactNode;
 };
 
 const VerificationButton: React.FC<VerificationButtonProps> = ({
@@ -29,50 +30,76 @@ const VerificationButton: React.FC<VerificationButtonProps> = ({
 }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const onPressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.96,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 300,
+    }).start();
+  };
+
+  const onPressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 300,
+    }).start();
+  };
 
   const styles = StyleSheet.create({
     button: {
-      padding: rMS(10),
+      paddingVertical: rV(14),
+      paddingHorizontal: rMS(24),
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: themeColors.buttonBackground,
-      width: rS(250),
-      borderRadius: 10,
+      backgroundColor: themeColors.tint,
+      width: rS(260),
+      borderRadius: rMS(28),
     },
     buttonDisabled: {
-      backgroundColor: themeColors.card,
+      opacity: 0.5,
     },
     text: {
-      fontSize: SIZES.medium,
-      fontWeight: "bold",
-      color: themeColors.text,
+      fontSize: rMS(15),
+      fontWeight: "700",
+      color: "#fff",
       textAlign: "center",
+      letterSpacing: 0.3,
     },
   });
+
   return (
-    <TouchableOpacity
-      style={[
-        styles.button,
-        disabled && styles.buttonDisabled,
-        ...(Array.isArray(style) ? style : [style]),
-      ]}
-      onPress={onPress}
-      disabled={disabled}
-      activeOpacity={0.6}
-    >
-      {children ? (
-        children
-      ) : (
-        <Text
-          style={[
-            styles.text,
-            ...(Array.isArray(textStyle) ? textStyle : [textStyle]),
-          ]}
-        >
-          {title}
-        </Text>
-      )}
-    </TouchableOpacity>
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <TouchableOpacity
+        style={[
+          styles.button,
+          disabled && styles.buttonDisabled,
+          ...(Array.isArray(style) ? style : [style]),
+        ]}
+        onPress={onPress}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        disabled={disabled}
+        activeOpacity={0.8}
+      >
+        {children ? (
+          children
+        ) : (
+          <Text
+            style={[
+              styles.text,
+              ...(Array.isArray(textStyle) ? textStyle : [textStyle]),
+            ]}
+          >
+            {title}
+          </Text>
+        )}
+      </TouchableOpacity>
+    </Animated.View>
   );
 };
 

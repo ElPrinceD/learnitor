@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { ArrowLeft } from "lucide-react-native";
 import Animated, {
   FadeInDown,
   useAnimatedStyle,
@@ -213,7 +213,7 @@ const GameCourses: React.FC = () => {
             }}
             activeOpacity={1}
           >
-            <Ionicons name="arrow-back" size={22} color={themeColors.text} />
+            <ArrowLeft size={22} color={themeColors.text} />
           </AnimatedTouchable>
         </Animated.View>
 

@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { View, ScrollView, RefreshControl, Text, StyleSheet, useColorScheme } from "react-native";
+import {
+  View,
+  ScrollView,
+  RefreshControl,
+  Text,
+  StyleSheet,
+  useColorScheme,
+} from "react-native";
 import { useGlobalSearchParams } from "expo-router";
+import { FileText } from "lucide-react-native";
 
 import { useAuth } from "../../../../components/AuthContext";
 import Articles from "../../../../components/Articles";
@@ -10,7 +18,7 @@ import { fetchTopicMaterials } from "../../../../services/CoursesApiCalls";
 import { queryClient } from "../../../../QueryClient";
 import ErrorMessage from "../../../../components/ErrorMessage";
 import Colors from "../../../../constants/Colors";
-import { SIZES, rMS, rV } from "../../../../constants";
+import { rMS, rV } from "../../../../constants";
 
 interface ArticleMaterialsProps {
   topic: Topic[];
@@ -22,6 +30,8 @@ const ArticleMaterials: React.FC<ArticleMaterialsProps> = () => {
   const { userToken } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
 
   const parsedTopic: Topic | null =
     typeof topic === "string" ? JSON.parse(topic) : topic || null;
@@ -37,7 +47,6 @@ const ArticleMaterials: React.FC<ArticleMaterialsProps> = () => {
       parsedTopic
         ? fetchTopicMaterials(parsedTopic.id, userToken?.token)
         : null,
-
     enabled: !!parsedTopic?.id,
   });
 
@@ -51,7 +60,6 @@ const ArticleMaterials: React.FC<ArticleMaterialsProps> = () => {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-
     try {
       await queryClient.invalidateQueries({
         queryKey: ["courses", userToken?.token],
@@ -65,9 +73,6 @@ const ArticleMaterials: React.FC<ArticleMaterialsProps> = () => {
 
   const handleDismissError = useCallback(() => setErrorMessage(null), []);
 
-  const colorScheme = useColorScheme();
-  const themeColors = Colors[colorScheme ?? "light"];
-
   // Filter articles from materials
   const articles = useMemo(() => {
     const materials = selectedArticleMaterials || [];
@@ -76,44 +81,29 @@ const ArticleMaterials: React.FC<ArticleMaterialsProps> = () => {
 
   const hasArticles = articles && articles.length > 0;
 
-  const styles = StyleSheet.create({
-    emptyContainer: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      padding: rMS(30),
-      minHeight: 300,
-    },
-    emptyText: {
-      fontSize: SIZES.large,
-      fontWeight: "600",
-      color: themeColors.text,
-      textAlign: "center",
-      lineHeight: rV(28),
-    },
-    emptySubtext: {
-      fontSize: SIZES.medium,
-      color: themeColors.textSecondary,
-      textAlign: "center",
-      marginTop: rV(10),
-      lineHeight: rV(22),
-    },
-  });
-
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: themeColors.background }}>
       <ScrollView
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={themeColors.tint}
+            colors={[themeColors.tint]}
+            progressBackgroundColor={themeColors.background}
+          />
         }
       >
         {!hasArticles && selectedArticleMaterialsStatus === "success" ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
-              📖 Stay tuned! Articles will be available soon.
+          <View style={styles(themeColors).emptyContainer}>
+            <View style={styles(themeColors).emptyIconContainer}>
+              <FileText size={28} color={themeColors.textSecondary} />
+            </View>
+            <Text style={styles(themeColors).emptyText}>
+              No articles yet
             </Text>
-            <Text style={styles.emptySubtext}>
-              We're working on providing the best articles for this topic!
+            <Text style={styles(themeColors).emptySubtext}>
+              Articles for this topic will be available soon!
             </Text>
           </View>
         ) : (
@@ -128,5 +118,42 @@ const ArticleMaterials: React.FC<ArticleMaterialsProps> = () => {
     </View>
   );
 };
+
+const styles = (themeColors: any) =>
+  StyleSheet.create({
+    emptyContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: rMS(30),
+      minHeight: 300,
+    },
+    emptyIconContainer: {
+      width: rMS(56),
+      height: rMS(56),
+      borderRadius: rMS(28),
+      backgroundColor: themeColors.cardGlass,
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: rV(12),
+    },
+    emptyText: {
+      fontSize: rMS(16),
+      fontWeight: "800",
+      color: themeColors.text,
+      textAlign: "center",
+      letterSpacing: -0.2,
+    },
+    emptySubtext: {
+      fontSize: rMS(12),
+      fontWeight: "600",
+      color: themeColors.textSecondary,
+      textAlign: "center",
+      marginTop: rV(6),
+      lineHeight: rMS(18),
+    },
+  });
 
 export default ArticleMaterials;

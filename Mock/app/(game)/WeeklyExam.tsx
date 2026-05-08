@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { View, StyleSheet, Text, useColorScheme, TouchableOpacity, StatusBar } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { Clock } from "lucide-react-native";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import axios from "axios";
@@ -416,7 +416,7 @@ export default function WeeklyExam() {
         <View style={styles.blob2} />
         <Animated.View entering={FadeInUp.duration(600).springify()} style={styles.guardCard}>
           <BlurView intensity={80} tint={colorScheme === "dark" ? "dark" : "light"} style={styles.guardCardBlur}>
-            <Ionicons name="time" size={64} color={themeColors.tint} />
+            <Clock size={64} color={themeColors.tint} />
             <Text style={styles.guardTitle}>Weekly Exam</Text>
             <Text style={styles.guardSubtext}>
               {examIsUpcoming

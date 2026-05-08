@@ -12,7 +12,7 @@ import {
   Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { ArrowLeft, Settings, Trophy } from "lucide-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { getLeaderboardDetails, getKnockoutBracket, KnockoutRound } from "../../services/LeaderboardApiCalls";
@@ -412,7 +412,7 @@ export default function LeaderboardDetail() {
           }}
           activeOpacity={1}
         >
-          <Ionicons name="arrow-back" size={22} color={themeColors.text} />
+          <ArrowLeft size={22} color={themeColors.text} />
         </AnimatedTouchable>
 
         {/* Spacer */}
@@ -428,7 +428,7 @@ export default function LeaderboardDetail() {
             })}
             activeOpacity={0.7}
           >
-            <Ionicons name="settings-outline" size={20} color={themeColors.text} />
+            <Settings size={20} color={themeColors.text} />
           </TouchableOpacity>
         )}
       </BlurView>
@@ -598,7 +598,7 @@ export default function LeaderboardDetail() {
               ))
             ) : (
               <View style={{ alignItems: "center", paddingVertical: rV(32) }}>
-                <Ionicons name="trophy-outline" size={36} color={themeColors.textSecondary} />
+                <Trophy size={36} color={themeColors.textSecondary} strokeWidth={1.5} />
                 <Text style={{ color: themeColors.textSecondary, fontSize: rMS(13), fontWeight: "600", marginTop: rV(10), textAlign: "center" }}>
                   No knockout matches yet
                 </Text>

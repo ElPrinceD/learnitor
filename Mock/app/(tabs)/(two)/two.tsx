@@ -5,7 +5,15 @@ import React, {
   useMemo,
   useRef,
 } from "react";
-import { View, StyleSheet, Animated } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  useColorScheme,
+  StatusBar,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import SearchBar from "../../../components/SearchBar";
 import CoursesList from "../../../components/CoursesList";
 import CoursesCategories from "../../../components/CoursesCategories";
@@ -19,16 +27,11 @@ import {
 } from "../../../services/CoursesApiCalls";
 import ErrorMessage from "../../../components/ErrorMessage";
 import { queryClient } from "../../../QueryClient";
-
-// Static styles
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
+import Colors from "../../../constants/Colors";
+import { rMS, rS, rV } from "../../../constants";
 
 interface CoursesScreenProps {
-  segment?: string; // Optional prop from router
+  segment?: string;
 }
 
 const CoursesScreen: React.FC<CoursesScreenProps> = ({ segment }) => {
@@ -38,7 +41,17 @@ const CoursesScreen: React.FC<CoursesScreenProps> = ({ segment }) => {
   );
   const { userToken, userInfo } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
+  const insets = useSafeAreaInsets();
+
+  // One-time animation flag
+  const hasAnimated = useRef(false);
+  useEffect(() => {
+    hasAnimated.current = true;
+  }, []);
+  const enterAnim = (delay: number) =>
+    hasAnimated.current ? undefined : FadeInDown.duration(300).delay(delay);
 
   const handleDismissError = useCallback(() => setErrorMessage(null), []);
 
@@ -117,15 +130,6 @@ const CoursesScreen: React.FC<CoursesScreenProps> = ({ segment }) => {
     setFilteredCourses(coursesData ?? []);
   }, [coursesData]);
 
-  // Fade in animation on mount
-  useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 400,
-      useNativeDriver: true,
-    }).start();
-  }, [fadeAnim]);
-
   const onRefresh = useCallback(async () => {
     try {
       await queryClient.invalidateQueries({
@@ -160,17 +164,69 @@ const CoursesScreen: React.FC<CoursesScreenProps> = ({ segment }) => {
   );
 
   return (
-    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      <SearchBar onSearch={handleSearch} />
-      <CoursesCategories {...coursesCategoriesProps} />
-      <CoursesList {...coursesListProps} />
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <StatusBar
+        barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
+        backgroundColor={themeColors.background}
+      />
+
+      {/* In-page header */}
+      <Animated.View
+        entering={enterAnim(50)}
+        style={[
+          styles.headerContainer,
+          { paddingTop: Math.max(rV(20), insets.top + rV(8)) },
+        ]}
+      >
+        <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+          Courses
+        </Text>
+        <Text style={[styles.headerSubtitle, { color: themeColors.textSecondary }]}>
+          Explore and learn something new
+        </Text>
+      </Animated.View>
+
+      <Animated.View entering={enterAnim(100)}>
+        <SearchBar onSearch={handleSearch} />
+      </Animated.View>
+
+      <Animated.View entering={enterAnim(150)}>
+        <CoursesCategories {...coursesCategoriesProps} />
+      </Animated.View>
+
+      <Animated.View entering={enterAnim(200)} style={{ flex: 1 }}>
+        <CoursesList {...coursesListProps} />
+      </Animated.View>
+
       <ErrorMessage
         message={errorMessage}
         visible={!!errorMessage}
         onDismiss={handleDismissError}
       />
-    </Animated.View>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  headerContainer: {
+    paddingHorizontal: rS(18),
+    paddingBottom: rV(4),
+  },
+  headerTitle: {
+    fontSize: rMS(28),
+    fontWeight: "900",
+    letterSpacing: -0.5,
+    lineHeight: rMS(34),
+  },
+  headerSubtitle: {
+    fontSize: rMS(13),
+    fontWeight: "600",
+    marginTop: rV(4),
+    letterSpacing: 0.1,
+  },
+});
 
 export default React.memo(CoursesScreen);

@@ -1,7 +1,7 @@
 import React from "react";
 import { TouchableOpacity, Text, View } from "react-native";
 import { useNavigation } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { ChevronLeft } from "lucide-react-native";
 import { useColorScheme } from "react-native";
 import Colors from "../constants/Colors";
 import { rMS } from "../constants";
@@ -18,8 +18,7 @@ export default function CustomBackButton({ label = "Back", icon = true }) {
         style={{ flexDirection: "row", alignItems: "center" }}
       >
         {icon && (
-          <Ionicons
-            name="chevron-back"
+          <ChevronLeft
             size={24}
             color={themeColors.text}
             style={{ marginRight: 1 }}

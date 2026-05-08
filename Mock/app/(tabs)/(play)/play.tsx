@@ -14,7 +14,25 @@ import {
 } from "react-native";
 import BottomSheet, { BottomSheetModal, BottomSheetBackdrop, BottomSheetTextInput, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import {
+  ChevronUp,
+  ChevronDown,
+  Minus,
+  Gamepad2,
+  FileText,
+  CheckCircle2,
+  Clock,
+  Plus,
+  Users,
+  ChevronRight,
+  Trophy,
+  Copy,
+  LogIn,
+  Zap,
+  Globe,
+  Flag,
+  School,
+} from "lucide-react-native";
 import { router } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -290,7 +308,7 @@ export default function PlayScreen() {
     {
       id: "world",
       name: "World Rankings",
-      icon: "earth" as const,
+      IconComponent: Globe,
       rank: rankings.world,
       color: themeColors.tint,
       movement: undefined,
@@ -298,7 +316,7 @@ export default function PlayScreen() {
     {
       id: "country",
       name: "Country Rankings",
-      icon: "flag" as const,
+      IconComponent: Flag,
       rank: rankings.country,
       color: themeColors.tintSecond ?? themeColors.tint,
       movement: undefined,
@@ -306,7 +324,7 @@ export default function PlayScreen() {
     {
       id: "school",
       name: "School Rankings",
-      icon: "school" as const,
+      IconComponent: School,
       rank: rankings.school,
       color: "#8b3b8f",
       movement: undefined,
@@ -315,9 +333,9 @@ export default function PlayScreen() {
 
   const renderRankIndicator = (movement?: RankMovement) => {
     const boxStyle = { width: rMS(18), height: rMS(18), alignItems: "center" as const, justifyContent: "center" as const };
-    if (movement === "up") return <View style={boxStyle}><Ionicons name="caret-up" size={12} color="#4CAF50" /></View>;
-    if (movement === "down") return <View style={boxStyle}><Ionicons name="caret-down" size={12} color="#F44336" /></View>;
-    return <View style={boxStyle}><Ionicons name="remove" size={12} color={themeColors.textSecondary} /></View>;
+    if (movement === "up") return <View style={boxStyle}><ChevronUp size={12} color="#4CAF50" /></View>;
+    if (movement === "down") return <View style={boxStyle}><ChevronDown size={12} color="#F44336" /></View>;
+    return <View style={boxStyle}><Minus size={12} color={themeColors.textSecondary} /></View>;
   };
 
   // Animation helper — only animate on first mount
@@ -967,7 +985,7 @@ export default function PlayScreen() {
             >
               <Animated.View style={[styles.ghostButton, playBtnAnimStyle]}>
                 <Animated.Text style={styles.ghostButtonText}>
-                  <Ionicons name="game-controller" size={18} color={themeColors.tint} />
+                  <Gamepad2 size={18} color={themeColors.tint} />
                 </Animated.Text>
                 <Text style={styles.ghostButtonText}>Play Game</Text>
               </Animated.View>
@@ -987,11 +1005,13 @@ export default function PlayScreen() {
                   examBtnAnimStyle,
                   examButtonState === "completed" && { borderColor: "#4CAF50" },
                 ]}>
-                  <Ionicons
-                    name={examButtonState === "completed" ? "checkmark-circle" : examButtonState === "active" ? "document-text" : "time"}
-                    size={16}
-                    color={examButtonState === "completed" ? "#4CAF50" : themeColors.tint}
-                  />
+                  {examButtonState === "completed" ? (
+                    <CheckCircle2 size={16} color="#4CAF50" />
+                  ) : examButtonState === "active" ? (
+                    <FileText size={16} color={themeColors.tint} />
+                  ) : (
+                    <Clock size={16} color={themeColors.tint} />
+                  )}
                   <Text style={[
                     styles.ghostButtonText,
                     examButtonState === "completed" && { color: "#4CAF50" },
@@ -1062,17 +1082,17 @@ export default function PlayScreen() {
                       onPress={openSquadSheet}
                       activeOpacity={0.7}
                     >
-                      <Ionicons name="add" size={20} color={themeColors.tint} />
+                      <Plus size={20} color={themeColors.tint} />
                     </TouchableOpacity>
                   </View>
                 </View>
 
                 {customLeaderboards.length === 0 ? (
                   <View style={styles.squadEmpty}>
-                    <Ionicons
-                      name="people-outline"
+                    <Users
                       size={28}
                       color={themeColors.textSecondary}
+                      strokeWidth={1.5}
                     />
                     <Text style={styles.squadEmptyText}>
                       Join or create a study squad to compete with friends
@@ -1088,7 +1108,7 @@ export default function PlayScreen() {
                     >
                       <View style={styles.squadItemLeft}>
                         <View style={styles.squadIcon}>
-                          <Ionicons name="people" size={18} color={themeColors.tint} />
+                          <Users size={18} color={themeColors.tint} />
                         </View>
                         <View>
                           <Text style={styles.squadName}>{lb.name}</Text>
@@ -1099,8 +1119,7 @@ export default function PlayScreen() {
                           )}
                         </View>
                       </View>
-                      <Ionicons
-                        name="chevron-forward"
+                      <ChevronRight
                         size={16}
                         color={themeColors.textSecondary}
                       />
@@ -1214,7 +1233,7 @@ export default function PlayScreen() {
                         <View
                           style={[styles.standingIconBox, { backgroundColor: item.color }]}
                         >
-                          <Ionicons name={item.icon} size={18} color="#fff" />
+                          <item.IconComponent size={18} color="#fff" />
                         </View>
                         <Text style={styles.standingName}>{item.name}</Text>
                       </View>
@@ -1223,8 +1242,7 @@ export default function PlayScreen() {
                         {item.rank && (
                           <Text style={styles.standingRank}>{item.rank}</Text>
                         )}
-                        <Ionicons
-                          name="chevron-forward"
+                        <ChevronRight
                           size={16}
                           color={themeColors.textSecondary}
                         />
@@ -1253,8 +1271,7 @@ export default function PlayScreen() {
                   >
                     <View style={styles.cupCardLeft}>
                       <View style={[styles.cupIcon, { backgroundColor: themeColors.tint + "15" }]}>
-                        <Ionicons
-                          name="flash"
+                        <Zap
                           size={18}
                           color={themeColors.tint}
                         />
@@ -1266,14 +1283,14 @@ export default function PlayScreen() {
                         )}
                       </View>
                     </View>
-                    <Ionicons name="chevron-forward" size={18} color={themeColors.textSecondary} />
+                    <ChevronRight size={18} color={themeColors.textSecondary} />
                   </TouchableOpacity>
                 </Animated.View>
               ))}
 
               {knockoutSquads.length === 0 && (
                 <View style={styles.squadEmpty}>
-                  <Ionicons name="trophy-outline" size={28} color={themeColors.textSecondary} />
+                  <Trophy size={28} color={themeColors.textSecondary} strokeWidth={1.5} />
                   <Text style={styles.squadEmptyText}>
                     Create an H2H League squad to compete in knockouts!
                   </Text>
@@ -1310,7 +1327,7 @@ export default function PlayScreen() {
           {createdSquadCode ? (
             /* ── Success state: show invite code ── */
             <View style={{ alignItems: "center", paddingVertical: rV(24) }}>
-              <Ionicons name="checkmark-circle" size={56} color="#4CAF50" />
+              <CheckCircle2 size={56} color="#4CAF50" />
               <Text style={[styles.modalTitle, { marginTop: rV(12), textAlign: "center" }]}>Squad Created!</Text>
               <Text style={[styles.modalSubtitle, { textAlign: "center" }]}>
                 Share this invite code with friends so they can join your squad.
@@ -1341,7 +1358,7 @@ export default function PlayScreen() {
                   }
                 }}
               >
-                <Ionicons name="copy-outline" size={16} color={themeColors.tint} />
+                <Copy size={16} color={themeColors.tint} />
                 <Text style={{ fontSize: rMS(13), fontWeight: "700", color: themeColors.tint }}>Copy Code</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -1486,7 +1503,7 @@ export default function PlayScreen() {
                       justifyContent: "center",
                       marginBottom: rV(12),
                     }}>
-                      <Ionicons name="enter-outline" size={28} color={themeColors.tint} />
+                      <LogIn size={28} color={themeColors.tint} />
                     </View>
                     <Text style={[styles.modalTitle, { textAlign: "center" }]}>Join a Squad</Text>
                     <Text style={[styles.modalSubtitle, { textAlign: "center" }]}>

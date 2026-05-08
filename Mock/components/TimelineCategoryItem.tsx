@@ -4,50 +4,60 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Platform,
+  useColorScheme,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { SIZES, rMS, rV, useShadows } from "../constants";
+import { Flame, Briefcase, Users, BookOpen, HelpCircle } from "lucide-react-native";
+import { rMS, rV, rS, useShadows } from "../constants";
+import Colors from "../constants/Colors";
+
+// Map of Lucide icon components
+const iconMap: Record<string, React.FC<any>> = {
+  "Exams TimeTable": Flame,
+  "TimeTable": Briefcase,
+  "Assignments & Projects": Users,
+  "Study TimeTable": BookOpen,
+};
 
 interface CategoryItemProps {
   category: {
     id: string;
     name: string;
     color?: string;
-    icon?: keyof typeof Ionicons.glyphMap;
+    icon?: string;
   };
   onPress: () => void;
-  onLongPress?: () => void; // Add onLongPress prop
+  onLongPress?: () => void;
   width: number;
 }
 
 const TimelineCategoryItem: React.FC<CategoryItemProps> = ({
   category,
   onPress,
-  onLongPress, // Destructure onLongPress prop
+  onLongPress,
   width,
 }) => {
   const shadow = useShadows();
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
+  const IconComponent = iconMap[category.name] || HelpCircle;
 
   const styles = StyleSheet.create({
     categoryBox: {
-      height: rV(140),
-      marginVertical: rV(10),
-      borderRadius: 10,
+      height: rV(130),
+      marginVertical: rV(8),
+      borderRadius: rMS(20),
       justifyContent: "center",
       alignItems: "center",
-      padding: rMS(10),
-      ...Platform.select({
-        ios: {
-          backgroundColor: "#fff",
-        },
-      }),
+      padding: rMS(14),
+      overflow: "hidden",
     },
     categoryText: {
-      fontSize: SIZES.medium,
-      fontWeight: "bold",
+      fontSize: rMS(12),
+      fontWeight: "800",
       color: "#fff",
-      marginTop: rV(10),
+      marginTop: rV(8),
+      letterSpacing: -0.1,
+      textAlign: "center",
     },
   });
 
@@ -58,15 +68,15 @@ const TimelineCategoryItem: React.FC<CategoryItemProps> = ({
         styles.categoryBox,
         {
           backgroundColor: category.color,
-          width: (width - 40) / 2,
+          width: (width - 48) / 2,
           ...shadow.medium,
         },
       ]}
-      activeOpacity={0.5}
+      activeOpacity={0.7}
       onPress={onPress}
-      onLongPress={onLongPress} // Pass onLongPress to TouchableOpacity
+      onLongPress={onLongPress}
     >
-      <Ionicons name={category.icon} size={SIZES.xxxLarge} color="#fff" />
+      <IconComponent size={rMS(32)} color="#fff" />
       <Text style={styles.categoryText}>{category.name}</Text>
     </TouchableOpacity>
   );

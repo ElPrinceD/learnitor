@@ -1,7 +1,15 @@
 import React, { useState, useCallback, useEffect, useMemo } from "react";
-import { View, RefreshControl, ScrollView, Text, StyleSheet, useColorScheme } from "react-native";
+import {
+  View,
+  RefreshControl,
+  ScrollView,
+  Text,
+  StyleSheet,
+  useColorScheme,
+} from "react-native";
 import { useGlobalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
+import { Video as VideoIcon } from "lucide-react-native";
 
 import { useAuth } from "../../../../components/AuthContext";
 import Videos from "../../../../components/Videos";
@@ -11,13 +19,15 @@ import { fetchTopicMaterials } from "../../../../services/CoursesApiCalls";
 import ErrorMessage from "../../../../components/ErrorMessage";
 import { queryClient } from "../../../../QueryClient";
 import Colors from "../../../../constants/Colors";
-import { SIZES, rMS, rV } from "../../../../constants";
+import { rMS, rV, useShadows } from "../../../../constants";
 
 const VideoMaterials: React.FC = () => {
   const { topic } = useGlobalSearchParams();
   const { userToken } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
 
   const parsedTopic: Topic | null =
     typeof topic === "string" ? JSON.parse(topic) : topic || null;
@@ -28,12 +38,12 @@ const VideoMaterials: React.FC = () => {
     error: selectedTopicMaterialsError,
     refetch: refetchSelectedTopicMaterials,
   } = useQuery({
-    queryKey: ["topicMaterials", parsedTopic?.id], // Use optional chaining to avoid accessing 'id' if parsedTopic is undefined
+    queryKey: ["topicMaterials", parsedTopic?.id],
     queryFn: () =>
       parsedTopic
         ? fetchTopicMaterials(parsedTopic.id, userToken?.token)
         : null,
-    enabled: !!parsedTopic?.id, // Ensure query only runs when parsedTopic and id are valid
+    enabled: !!parsedTopic?.id,
   });
 
   useEffect(() => {
@@ -44,7 +54,6 @@ const VideoMaterials: React.FC = () => {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-
     try {
       await queryClient.invalidateQueries({
         queryKey: ["courses", userToken?.token],
@@ -56,9 +65,6 @@ const VideoMaterials: React.FC = () => {
     }
   }, [queryClient, userToken?.token, refetchSelectedTopicMaterials]);
 
-  const colorScheme = useColorScheme();
-  const themeColors = Colors[colorScheme ?? "light"];
-
   // Filter videos from materials
   const videos = useMemo(() => {
     const materials = selectedTopicMaterials || [];
@@ -66,48 +72,31 @@ const VideoMaterials: React.FC = () => {
   }, [selectedTopicMaterials]);
 
   const hasVideos = videos && videos.length > 0;
-
-  const styles = StyleSheet.create({
-    emptyContainer: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      padding: rMS(30),
-      minHeight: 300,
-    },
-    emptyText: {
-      fontSize: SIZES.large,
-      fontWeight: "600",
-      color: themeColors.text,
-      textAlign: "center",
-      lineHeight: rV(28),
-    },
-    emptySubtext: {
-      fontSize: SIZES.medium,
-      color: themeColors.textSecondary,
-      textAlign: "center",
-      marginTop: rV(10),
-      lineHeight: rV(22),
-    },
-  });
-
   const handleDismissError = useCallback(() => setErrorMessage(null), []);
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: themeColors.background }}>
       <ScrollView
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={themeColors.tint}
+            colors={[themeColors.tint]}
+            progressBackgroundColor={themeColors.background}
+          />
         }
       >
-        {/* <TopicInformation topic={parsedTopic} /> */}
         {!hasVideos && selectedTopicMaterialsStatus === "success" ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
-              🎥 Stay tuned! Videos will be available soon.
+          <View style={styles(themeColors).emptyContainer}>
+            <View style={styles(themeColors).emptyIconContainer}>
+              <VideoIcon size={28} color={themeColors.textSecondary} />
+            </View>
+            <Text style={styles(themeColors).emptyText}>
+              No videos yet
             </Text>
-            <Text style={styles.emptySubtext}>
-              We're working on providing the best videos for this topic!
+            <Text style={styles(themeColors).emptySubtext}>
+              Videos for this topic will be available soon!
             </Text>
           </View>
         ) : (
@@ -122,5 +111,42 @@ const VideoMaterials: React.FC = () => {
     </View>
   );
 };
+
+const styles = (themeColors: any) =>
+  StyleSheet.create({
+    emptyContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: rMS(30),
+      minHeight: 300,
+    },
+    emptyIconContainer: {
+      width: rMS(56),
+      height: rMS(56),
+      borderRadius: rMS(28),
+      backgroundColor: themeColors.cardGlass,
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: rV(12),
+    },
+    emptyText: {
+      fontSize: rMS(16),
+      fontWeight: "800",
+      color: themeColors.text,
+      textAlign: "center",
+      letterSpacing: -0.2,
+    },
+    emptySubtext: {
+      fontSize: rMS(12),
+      fontWeight: "600",
+      color: themeColors.textSecondary,
+      textAlign: "center",
+      marginTop: rV(6),
+      lineHeight: rMS(18),
+    },
+  });
 
 export default VideoMaterials;

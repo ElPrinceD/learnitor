@@ -1,58 +1,17 @@
-import React, { SetStateAction, useState } from "react";
-import { StyleSheet, Text, View, useColorScheme, Image } from "react-native";
+import React, { useState } from "react";
+import { StyleSheet, Text, View, useColorScheme } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons, FontAwesome6 } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Colors from "../../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../../constants";
 import VerificationButton from "../../components/VerificationButton";
-import Animated, {
-  ReduceMotion,
-  StretchInY,
-  StretchOutY,
-} from "react-native-reanimated";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { StatusBar } from "expo-status-bar";
-
-// import { GoogleSignin, User } from "@react-native-google-signin/google-signin";
-// import { ios, googleSignIn, web } from "../../OAuth";
-//import { twitterSignIn, twitterClientId } from "../../OAuth";
-import { Alert } from "react-native";
-
-// GoogleSignin.configure({
-//   scopes: [
-//     "https://www.googleapis.com/auth/userinfo.email", // Access the user's email
-//     "https://www.googleapis.com/auth/userinfo.profile", // Access the user's public profile information
-//     "openid", // Use OpenID Connect to associate the user with their Google info
-//   ],
-//   offlineAccess: true,
-//   forceCodeForRefreshToken: true,
-//   webClientId: web,
-// });
 
 const SignUp = () => {
   const insets = useSafeAreaInsets();
-
-  // const handleGoogleSignIn = async () => {
-  //   try {
-  //     const userI = await googleSignIn();
-  //     if (userI) {
-  //       // Display user data using an alert
-  //       Alert.alert(
-  //         "Google Sign-In Success",
-  //         `Name: ${userI.data?.user.givenName}\nEmail: ${userI.data?.user.email} \nToken: ${userI.data?.idToken}`
-  //       );
-  //       setUserInfo(userI.data); // Set the complete user object
-  //     } else {
-  //       Alert.alert("No user data returned");
-  //     }
-  //   } catch (error) {
-  //     Alert.alert("Google Sign-In Error", error.message);
-  //   }
-  // };
-
-  const handleSignUpWithApple = () => {
-    // Handle sign up with Apple ID
-  };
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
 
   const handleSignUpWithEmail = () => {
     router.navigate("ContinueWithEmail");
@@ -62,97 +21,103 @@ const SignUp = () => {
     router.navigate("LogIn");
   };
 
-  const colorScheme = useColorScheme();
-  const themeColors = Colors[colorScheme ?? "light"];
-
   const styles = StyleSheet.create({
     container: {
       flex: 1,
       alignItems: "center",
       justifyContent: "center",
-      padding: rMS(1),
-      paddingVertical: rV(3),
+      padding: rMS(16),
       backgroundColor: themeColors.background,
     },
+    blob1: {
+      position: "absolute",
+      top: -rV(80),
+      right: -rS(40),
+      width: rS(200),
+      height: rS(200),
+      borderRadius: rS(100),
+      backgroundColor: themeColors.tint + "12",
+    },
+    blob2: {
+      position: "absolute",
+      bottom: rV(100),
+      left: -rS(80),
+      width: rS(260),
+      height: rS(260),
+      borderRadius: rS(130),
+      backgroundColor: "#F59E0B12",
+    },
     title: {
-      fontSize: SIZES.xLarge,
+      fontSize: rMS(22),
       color: themeColors.text,
-      fontWeight: "bold",
-      marginBottom: rMS(5),
-    },
-    buttonRow: {
-      flexDirection: "row",
-      marginBottom: rMS(5),
-      gap: rMS(5),
-    },
-    threeButtons: {
-      backgroundColor: "transparent",
-      borderColor: themeColors.text,
-      padding: rMS(16),
-      borderRadius: 10,
-      borderWidth: 1,
-      width: rS(100),
+      fontWeight: "900",
+      textAlign: "center",
+      letterSpacing: -0.3,
+      lineHeight: rMS(30),
+      paddingHorizontal: rS(20),
+      marginBottom: rV(32),
     },
     dividerRow: {
       flexDirection: "row",
       alignItems: "center",
-      marginBottom: rMS(5),
+      marginBottom: rV(24),
+      width: rS(260),
+    },
+    dividerLine: {
+      flex: 1,
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: themeColors.border,
     },
     dividerText: {
       color: themeColors.textSecondary,
-      fontSize: SIZES.medium,
-      fontWeight: "bold",
-      opacity: 0.6,
+      fontSize: rMS(12),
+      fontWeight: "600",
+      marginHorizontal: rS(16),
     },
     bottomContainer: {
-      bottom: Math.max(rV(10), insets.bottom + rV(5)), // Use safe area bottom + small padding
-      justifyContent: "flex-end",
+      position: "absolute",
+      bottom: Math.max(rV(20), insets.bottom + rV(10)),
       flexDirection: "row",
       alignItems: "center",
     },
     existingText: {
-      color: themeColors.text,
-      fontSize: SIZES.medium,
-      fontWeight: "bold",
+      color: themeColors.textSecondary,
+      fontSize: rMS(13),
     },
     loginText: {
-      fontSize: SIZES.medium,
-      fontWeight: "bold",
-      textDecorationLine: "underline",
-      color: themeColors.buttonBackground,
-      marginLeft: rMS(8),
+      fontSize: rMS(13),
+      fontWeight: "700",
+      color: themeColors.tint,
+      marginLeft: rMS(4),
     },
   });
 
   return (
     <View style={styles.container}>
-      <StatusBar hidden={true} />
+      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+      <View style={styles.blob1} />
+      <View style={styles.blob2} />
+
       <Animated.View
-        entering={StretchInY.delay(300)
-          .randomDelay()
-          .reduceMotion(ReduceMotion.Never)
-          .withInitialValues({ transform: [{ scaleY: 0.5 }] })}
-        exiting={StretchOutY.delay(300)
-          .randomDelay()
-          .reduceMotion(ReduceMotion.Never)
-          .withInitialValues({ transform: [{ scaleY: 0.5 }] })}
-        style={styles.container}
+        entering={FadeInDown.duration(500).delay(100)}
+        style={{ alignItems: "center" }}
       >
         <Text style={styles.title}>
           Create a free account to discover your personalized learning path
         </Text>
 
-        {status ? <Text>{status}</Text> : null}
         <View style={styles.dividerRow}>
-          <Text style={styles.dividerText}>
-            ---------------- or ----------------
-          </Text>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>or</Text>
+          <View style={styles.dividerLine} />
         </View>
+
         <VerificationButton
           onPress={handleSignUpWithEmail}
           title="Continue with email"
-        ></VerificationButton>
+        />
       </Animated.View>
+
       <View style={styles.bottomContainer}>
         <Text style={styles.existingText}>Existing User?</Text>
         <Text style={styles.loginText} onPress={handleNavigateToLogin}>

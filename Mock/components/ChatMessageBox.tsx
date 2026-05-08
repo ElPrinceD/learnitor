@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Reply } from "lucide-react-native";
 import React from "react";
 import { View, StyleSheet, Animated, useColorScheme } from "react-native";
 import {
@@ -52,9 +52,8 @@ const ChatMessageBox = ({
         ]}
       >
         <View style={styles.replyImageWrapper}>
-          <MaterialCommunityIcons
-            name="reply-circle"
-            size={26}
+          <Reply
+            size={24}
             color={themeColors.textSecondary}
           />
         </View>

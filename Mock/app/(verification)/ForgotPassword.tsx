@@ -18,7 +18,7 @@ import { SIZES, rMS, rS, rV } from "../../constants";
 import VerificationButton from "../../components/VerificationButton";
 import AnimatedTextInput from "../../components/AnimatedTextInput";
 import { StatusBar } from "expo-status-bar";
-import { Ionicons } from "@expo/vector-icons";
+import { Lock } from "lucide-react-native";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -124,6 +124,24 @@ const ForgotPassword = () => {
       flex: 1,
       backgroundColor: themeColors.background,
     },
+    blob1: {
+      position: "absolute",
+      top: -rV(70),
+      right: -rS(50),
+      width: rS(220),
+      height: rS(220),
+      borderRadius: rS(110),
+      backgroundColor: themeColors.tint + "12",
+    },
+    blob2: {
+      position: "absolute",
+      bottom: rV(100),
+      left: -rS(80),
+      width: rS(260),
+      height: rS(260),
+      borderRadius: rS(130),
+      backgroundColor: "#F97316" + "12",
+    },
     scrollContainer: {
       flexGrow: 1,
       paddingHorizontal: rS(24),
@@ -138,7 +156,7 @@ const ForgotPassword = () => {
       width: rS(80),
       height: rS(80),
       borderRadius: rS(40),
-      backgroundColor: themeColors.tint + "20",
+      backgroundColor: themeColors.tint + "18",
       justifyContent: "center",
       alignItems: "center",
       marginBottom: rV(24),
@@ -221,7 +239,9 @@ const ForgotPassword = () => {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <StatusBar hidden={true} />
+      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+      <View style={styles.blob1} />
+      <View style={styles.blob2} />
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
@@ -230,8 +250,7 @@ const ForgotPassword = () => {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.iconContainer}>
-            <Ionicons
-              name="lock-closed-outline"
+            <Lock
               size={rS(32)}
               color={themeColors.tint}
             />

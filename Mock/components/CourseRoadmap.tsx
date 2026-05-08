@@ -6,6 +6,7 @@ import {
   ScrollView,
   useColorScheme,
 } from "react-native";
+import { BookX } from "lucide-react-native";
 import ThreeDButton from "./ThreeDButton";
 import Colors from "../constants/Colors";
 import { Topic } from "./types";
@@ -34,8 +35,6 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
     timelineItem: {
       flexDirection: "row",
       alignItems: "center",
-      // marginBottom: rV(8),
-      // marginTop: rV(-40),
       position: "relative",
       minHeight: rV(80),
     },
@@ -60,10 +59,12 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
       zIndex: 1,
     },
     timelineText: {
-      fontSize: 15,
+      fontSize: rMS(13),
+      fontWeight: "700",
       color: themeColors.text,
       marginTop: rV(18),
       maxWidth: "80%",
+      letterSpacing: -0.1,
     },
     backgroundContainer: {
       position: "absolute",
@@ -93,21 +94,33 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
       minHeight: rV(160),
       paddingVertical: rV(10),
     },
+    // Empty state — glassmorphic, matches Play's squadEmpty
+    emptyContainer: {
+      backgroundColor: themeColors.cardGlass,
+      borderRadius: rMS(24),
+      padding: rMS(24),
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
+      margin: rMS(18),
+    },
+    emptyText: {
+      fontSize: rMS(13),
+      color: themeColors.textSecondary,
+      textAlign: "center",
+      marginTop: rV(8),
+      fontWeight: "600",
+      lineHeight: rMS(18),
+    },
   });
 
   // Early return if no topics
   if (!enrolledTopics || enrolledTopics.length === 0) {
     return (
-      <View
-        style={[
-          styles.container,
-          { justifyContent: "center", alignItems: "center", padding: 20 },
-        ]}
-      >
-        <Text
-          style={{ color: themeColors.text, fontSize: 16, textAlign: "center" }}
-        >
-          No topics available
+      <View style={styles.emptyContainer}>
+        <BookX size={28} color={themeColors.textSecondary} />
+        <Text style={styles.emptyText}>
+          No topics available yet
         </Text>
       </View>
     );
@@ -182,15 +195,6 @@ const CourseRoadmap: React.FC<CourseRoadmapProps> = ({
         {enrolledTopics.map((topic, index) => (
           <View key={topic.id} style={styles.topicContainer}>
             {renderTimelineItem(topic, index * 2, false)}
-            {/* <View style={styles.backgroundContainer}>
-              <View style={styles.pathContainer}>
-                {(index % 2 === 0) === (Math.floor(index / 5) % 2 === 0) ? (
-                  <PathA />
-                ) : (
-                  <PathB />
-                )}
-              </View>
-            </View> */}
             {renderTimelineItem(topic, index * 2 + 1, true)}
           </View>
         ))}

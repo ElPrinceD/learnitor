@@ -11,7 +11,7 @@ import {
   useColorScheme,
 } from "react-native";
 import { Sheet } from "@tamagui/sheet";
-import { Ionicons } from "@expo/vector-icons";
+import { X, Send } from "lucide-react-native";
 import { SIZES, rS, rV, rMS } from "../constants";
 import Colors from "../constants/Colors";
 
@@ -101,7 +101,7 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
                 activeOpacity={0.7}
                 style={styles.closeButton}
               >
-                <Ionicons name="close" size={rS(28)} color={themeColors.text} />
+                <X size={rS(26)} color={themeColors.text} />
               </TouchableOpacity>
             </View>
 
@@ -149,7 +149,7 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
                       disabled={isSendingImages}
                       activeOpacity={0.7}
                     >
-                      <Ionicons name="send" size={SIZES.large} color="#fff" />
+                      <Send size={SIZES.large} color="#fff" />
                     </TouchableOpacity>
                   )}
                 </View>

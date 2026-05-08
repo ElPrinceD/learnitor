@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { View, ScrollView, RefreshControl, Text, StyleSheet, useColorScheme } from "react-native";
+import {
+  View,
+  ScrollView,
+  RefreshControl,
+  Text,
+  StyleSheet,
+  useColorScheme,
+} from "react-native";
 import { useGlobalSearchParams } from "expo-router";
+import { BookOpen } from "lucide-react-native";
 
 import { useAuth } from "../../../../components/AuthContext";
 import { Topic, BookMaterial } from "../../../../components/types";
@@ -11,7 +19,7 @@ import { queryClient } from "../../../../QueryClient";
 import ErrorMessage from "../../../../components/ErrorMessage";
 import InAppBrowserLink from "../../../../components/InAppBrowserLink";
 import Colors from "../../../../constants/Colors";
-import { SIZES, rMS, rV } from "../../../../constants";
+import { rMS, rV } from "../../../../constants";
 
 interface BookMaterialsProps {
   topic: Topic[];
@@ -23,9 +31,12 @@ const BookMaterials: React.FC<BookMaterialsProps> = () => {
   const { userToken } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
 
   const parsedTopic: Topic | null =
     typeof topic === "string" ? JSON.parse(topic) : topic || null;
+
   const {
     status: selectedBookMaterialsStatus,
     data: selectedBookMaterials,
@@ -37,7 +48,6 @@ const BookMaterials: React.FC<BookMaterialsProps> = () => {
       parsedTopic
         ? fetchTopicMaterials(parsedTopic?.id, userToken?.token)
         : null,
-
     enabled: !!parsedTopic?.id,
   });
 
@@ -51,7 +61,6 @@ const BookMaterials: React.FC<BookMaterialsProps> = () => {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-
     try {
       await queryClient.invalidateQueries({
         queryKey: ["courses", userToken?.token],
@@ -65,9 +74,6 @@ const BookMaterials: React.FC<BookMaterialsProps> = () => {
 
   const handleDismissError = useCallback(() => setErrorMessage(null), []);
 
-  const colorScheme = useColorScheme();
-  const themeColors = Colors[colorScheme ?? "light"];
-
   // Filter books from materials
   const books = useMemo(() => {
     const materials = selectedBookMaterials || [];
@@ -76,44 +82,29 @@ const BookMaterials: React.FC<BookMaterialsProps> = () => {
 
   const hasBooks = books && books.length > 0;
 
-  const styles = StyleSheet.create({
-    emptyContainer: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      padding: rMS(30),
-      minHeight: 300,
-    },
-    emptyText: {
-      fontSize: SIZES.large,
-      fontWeight: "600",
-      color: themeColors.text,
-      textAlign: "center",
-      lineHeight: rV(28),
-    },
-    emptySubtext: {
-      fontSize: SIZES.medium,
-      color: themeColors.textSecondary,
-      textAlign: "center",
-      marginTop: rV(10),
-      lineHeight: rV(22),
-    },
-  });
-
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: themeColors.background }}>
       <ScrollView
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={themeColors.tint}
+            colors={[themeColors.tint]}
+            progressBackgroundColor={themeColors.background}
+          />
         }
       >
         {!hasBooks && selectedBookMaterialsStatus === "success" ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
-            📚 Stay tuned! Books will be available soon.
+          <View style={styles(themeColors).emptyContainer}>
+            <View style={styles(themeColors).emptyIconContainer}>
+              <BookOpen size={28} color={themeColors.textSecondary} />
+            </View>
+            <Text style={styles(themeColors).emptyText}>
+              No books yet
             </Text>
-            <Text style={styles.emptySubtext}>
-              We're working on providing the best books for this topic!
+            <Text style={styles(themeColors).emptySubtext}>
+              Books for this topic will be available soon!
             </Text>
           </View>
         ) : (
@@ -128,5 +119,42 @@ const BookMaterials: React.FC<BookMaterialsProps> = () => {
     </View>
   );
 };
+
+const styles = (themeColors: any) =>
+  StyleSheet.create({
+    emptyContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: rMS(30),
+      minHeight: 300,
+    },
+    emptyIconContainer: {
+      width: rMS(56),
+      height: rMS(56),
+      borderRadius: rMS(28),
+      backgroundColor: themeColors.cardGlass,
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: rV(12),
+    },
+    emptyText: {
+      fontSize: rMS(16),
+      fontWeight: "800",
+      color: themeColors.text,
+      textAlign: "center",
+      letterSpacing: -0.2,
+    },
+    emptySubtext: {
+      fontSize: rMS(12),
+      fontWeight: "600",
+      color: themeColors.textSecondary,
+      textAlign: "center",
+      marginTop: rV(6),
+      lineHeight: rMS(18),
+    },
+  });
 
 export default BookMaterials;

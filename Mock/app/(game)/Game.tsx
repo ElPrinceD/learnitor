@@ -16,8 +16,7 @@ import {
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { Flame, Music, Music2, Volume2, VolumeX, Lightbulb, RefreshCw } from "lucide-react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, router } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -938,7 +937,7 @@ export default function Game() {
           </Animated.Text>
           {currentStreak >= 2 && (
             <View style={styles.streakBadge}>
-              <Ionicons name="flame" size={16} color="#FF6B35" />
+              <Flame size={16} color="#FF6B35" />
               <Text style={styles.streakText}>{currentStreak}</Text>
             </View>
           )}
@@ -966,22 +965,22 @@ export default function Game() {
             style={[styles.muteButton, { marginLeft: rS(8) }]}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <MaterialIcons
-              name={musicMuted ? "music-off" : "music-note"}
-              size={24}
-              color={themeColors.textSecondary}
-            />
+            {musicMuted ? (
+              <Music2 size={22} color={themeColors.textSecondary} />
+            ) : (
+              <Music size={22} color={themeColors.textSecondary} />
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setSoundMuted(!soundMuted)}
             style={[styles.muteButton, { marginLeft: rS(4) }]}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons
-              name={soundMuted ? "volume-mute" : "volume-high"}
-              size={24}
-              color={themeColors.textSecondary}
-            />
+            {soundMuted ? (
+              <VolumeX size={22} color={themeColors.textSecondary} />
+            ) : (
+              <Volume2 size={22} color={themeColors.textSecondary} />
+            )}
           </TouchableOpacity>
           </View>
           </View>
@@ -1002,8 +1001,7 @@ export default function Game() {
       {askTheAIActive && aiPrediction !== null && (
         <View style={styles.aiPrediction}>
           <View style={styles.aiPredictionTitleRow}>
-            <Ionicons
-              name="bulb-outline"
+            <Lightbulb
               size={22}
               color={themeColors.tint}
               style={{ marginRight: rS(6) }}
@@ -1060,8 +1058,7 @@ export default function Game() {
             }
             style={styles.powerUpButton}
           >
-            <Ionicons
-              name="refresh"
+            <RefreshCw
               size={20}
               color={
                 doubleDipActive
@@ -1117,8 +1114,7 @@ export default function Game() {
             }
             style={styles.powerUpButton}
           >
-            <Ionicons
-              name="bulb"
+            <Lightbulb
               size={20}
               color={
                 askTheAIActive

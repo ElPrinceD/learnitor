@@ -8,6 +8,7 @@ import { ParamListBase, TabNavigationState } from "@react-navigation/native";
 import { withLayoutContext } from "expo-router";
 import Colors from "../../../../constants/Colors";
 import { useColorScheme } from "react-native";
+import { rMS, rV, rS } from "../../../../constants";
 
 const { Navigator } = createMaterialTopTabNavigator();
 
@@ -26,16 +27,26 @@ const TopicLayout = () => {
     <MaterialTopTabs
       screenOptions={{
         tabBarActiveTintColor: themeColors.tint,
-        
+        tabBarInactiveTintColor: themeColors.textSecondary,
         tabBarLabelStyle: {
-          fontSize: 14,
-          fontWeight: "bold",
+          fontSize: rMS(12),
+          fontWeight: "800",
           textTransform: "capitalize",
+          letterSpacing: 0.2,
         },
         tabBarIndicatorStyle: {
           backgroundColor: themeColors.tint,
           height: 3,
+          borderRadius: 2,
         },
+        tabBarStyle: {
+          backgroundColor: themeColors.background,
+          elevation: 0,
+          shadowOpacity: 0,
+          borderBottomWidth: 1,
+          borderBottomColor: themeColors.border + "30",
+        },
+        tabBarPressColor: themeColors.tint + "15",
       }}
     >
       <MaterialTopTabs.Screen

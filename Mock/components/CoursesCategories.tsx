@@ -31,46 +31,45 @@ const CoursesCategories: React.FC<Props> = ({
 
   const styles = StyleSheet.create({
     categoryContainer: {
-      flex: 1,
-      backgroundColor: "transparent",
+      paddingHorizontal: rS(12),
+      paddingVertical: rV(6),
     },
     categoryItem: {
-      padding: rMS(8),
-      marginHorizontal: rS(5),
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: themeColors.tabIconDefault,
+      paddingHorizontal: rMS(14),
+      paddingVertical: rMS(8),
+      marginHorizontal: rS(4),
+      borderRadius: rMS(20),
+      borderWidth: 1.5,
+      borderColor: themeColors.border + "60",
       backgroundColor: "transparent",
       justifyContent: "center",
       alignSelf: "center",
     },
     selectedCategoryItem: {
-      borderColor: themeColors.selectedItem,
-      borderWidth: 2,
+      borderColor: themeColors.tint,
+      backgroundColor: themeColors.tint,
     },
     categoryText: {
-      fontSize: SIZES.medium,
+      fontSize: rMS(12),
+      fontWeight: "700",
       color: themeColors.text,
+      letterSpacing: 0.2,
     },
     selectedCategoryText: {
-      color: themeColors.selectedText,
-      fontWeight: "bold",
+      color: "#fff",
+      fontWeight: "800",
     },
     skeletonContainer: {
-      flex: 0.7,
       flexDirection: "row",
-      marginHorizontal: rS(10),
-      marginTop: rV(10),
+      paddingHorizontal: rS(12),
+      paddingVertical: rV(6),
     },
-
     skeleton: {
-      flexDirection: "row",
-      marginVertical: rS(5),
-      marginHorizontal: rS(5),
-      borderRadius: 10,
-      gap: 5,
+      marginHorizontal: rS(4),
+      borderRadius: rMS(20),
     },
   });
+
   const keyExtractor = useCallback((item: Category) => item.id.toString(), []);
 
   if (loading) {
@@ -80,8 +79,9 @@ const CoursesCategories: React.FC<Props> = ({
           <View key={index} style={styles.skeleton}>
             <Skeleton
               colorMode={colorMode}
-              height={rV(24)}
-              width={rS(70)}
+              height={rV(32)}
+              width={rS(75)}
+              radius={rMS(20)}
               transition={{
                 type: "timing",
                 duration: 800,
@@ -107,6 +107,7 @@ const CoursesCategories: React.FC<Props> = ({
               item.id === selectedCategoryId && styles.selectedCategoryItem,
             ]}
             onPress={() => onPressCategory(item.id)}
+            activeOpacity={0.7}
           >
             <Text
               style={[

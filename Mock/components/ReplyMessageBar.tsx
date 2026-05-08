@@ -1,5 +1,5 @@
 import React from "react";
-import { Ionicons } from "@expo/vector-icons";
+import { XCircle } from "lucide-react-native";
 import { View, TouchableOpacity, Text, useColorScheme } from "react-native";
 import { IMessage } from "react-native-gifted-chat";
 import Animated, { FadeInDown, FadeOutDown } from "react-native-reanimated";
@@ -62,10 +62,9 @@ const ReplyMessageBar = ({ clearReply, message }: ReplyMessageBarProps) => {
             }}
           >
             <TouchableOpacity onPress={clearReply}>
-              <Ionicons
-                name="close-circle-outline"
+              <XCircle
+                size={26}
                 color={themeColors.tint}
-                size={28}
               />
             </TouchableOpacity>
           </View>

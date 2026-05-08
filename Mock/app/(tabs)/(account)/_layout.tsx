@@ -1,11 +1,23 @@
 import { Stack } from "expo-router";
 import React from "react";
-import { useColorScheme, Text } from "react-native";
+import { useColorScheme } from "react-native";
 import Colors from "../../../constants/Colors";
+import { rMS } from "../../../constants";
 
 export default function AccountLayout() {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+
+  const headerTitleStyle = {
+    fontWeight: "900" as const,
+    fontSize: rMS(16),
+    color: themeColors.text,
+  };
+
+  const headerStyle = {
+    backgroundColor: themeColors.background,
+  };
+
   return (
     <Stack>
       <Stack.Screen
@@ -18,69 +30,37 @@ export default function AccountLayout() {
         name="SettingsPage"
         options={{
           headerShown: true,
-          headerTitle: () => (
-            <Text
-              style={{
-                color: themeColors.text,
-                fontSize: 20,
-                fontWeight: "bold",
-              }}
-            >
-              Settings
-            </Text>
-          ),
-          headerStyle: {
-            backgroundColor: themeColors.background,
-          },
+          headerTitle: "Settings",
           headerTitleAlign: "center",
-          headerBackTitle: "Back",
+          headerTitleStyle,
+          headerStyle,
           headerShadowVisible: false,
           presentation: "card",
+          animation: "slide_from_right",
         }}
       />
       <Stack.Screen
         name="AccountSettings"
         options={{
           headerShown: true,
-          headerTitle: () => (
-            <Text
-              style={{
-                color: themeColors.text,
-                fontSize: 20,
-                fontWeight: "bold",
-              }}
-            >
-              Account
-            </Text>
-          ),
-          headerStyle: {
-            backgroundColor: themeColors.background,
-          },
+          headerTitle: "Account",
           headerTitleAlign: "center",
+          headerTitleStyle,
+          headerStyle,
           headerBackTitle: "Back",
           headerShadowVisible: false,
           presentation: "card",
+          animation: "slide_from_right",
         }}
       />
       <Stack.Screen
         name="ReportProblem"
         options={{
           headerShown: true,
-          headerTitle: () => (
-            <Text
-              style={{
-                color: themeColors.text,
-                fontSize: 20,
-                fontWeight: "bold",
-              }}
-            >
-              Report an Issue
-            </Text>
-          ),
-          headerStyle: {
-            backgroundColor: themeColors.background,
-          },
+          headerTitle: "Report an Issue",
           headerTitleAlign: "center",
+          headerTitleStyle,
+          headerStyle,
           headerShadowVisible: false,
           presentation: "modal",
         }}
@@ -89,21 +69,10 @@ export default function AccountLayout() {
         name="FAQScreen"
         options={{
           headerShown: true,
-          headerTitle: () => (
-            <Text
-              style={{
-                color: themeColors.text,
-                fontSize: 20,
-                fontWeight: "bold",
-              }}
-            >
-              FAQs
-            </Text>
-          ),
-          headerStyle: {
-            backgroundColor: themeColors.background,
-          },
+          headerTitle: "FAQs",
           headerTitleAlign: "center",
+          headerTitleStyle,
+          headerStyle,
           headerShadowVisible: false,
           presentation: "modal",
         }}
@@ -112,24 +81,14 @@ export default function AccountLayout() {
         name="ConsentSettings"
         options={{
           headerShown: true,
-          headerTitle: () => (
-            <Text
-              style={{
-                color: themeColors.text,
-                fontSize: 20,
-                fontWeight: "bold",
-              }}
-            >
-              Privacy Settings
-            </Text>
-          ),
-          headerStyle: {
-            backgroundColor: themeColors.background,
-          },
+          headerTitle: "Privacy Settings",
           headerTitleAlign: "center",
+          headerTitleStyle,
+          headerStyle,
           headerBackTitle: "Back",
           headerShadowVisible: false,
           presentation: "card",
+          animation: "slide_from_right",
         }}
       />
     </Stack>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, memo } from "react";
 import { Animated, StyleSheet, Text, TouchableOpacity } from "react-native";
 import { useColorScheme } from "react-native";
 import Colors from "../constants/Colors";
-import { Ionicons } from "@expo/vector-icons";
+import { X } from "lucide-react-native";
 import { SIZES, rMS, rS } from "../constants";
 
 // Function to convert technical error messages to user-friendly messages
@@ -257,8 +257,7 @@ const ErrorMessage: React.FC<ErrorMessageProps> = ({
         {userFriendlyMessage}
       </Text>
       <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-        <Ionicons
-          name="close"
+        <X
           size={SIZES.xLarge}
           color={themeColors.errorText}
         />

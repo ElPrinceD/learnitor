@@ -5,13 +5,14 @@ import {
   StyleSheet,
   Modal,
   TouchableOpacity,
+  TouchableHighlight,
   ScrollView,
 } from "react-native";
 import { Select } from "@tamagui/select";
 import { Adapt } from "@tamagui/adapt";
 import { Sheet } from "@tamagui/sheet";
 import type { SelectProps } from "@tamagui/select";
-import AntDesign from "@expo/vector-icons/AntDesign";
+import { CheckCircle2, ChevronDown, X } from "lucide-react-native";
 import { useColorScheme } from "../components/useColorScheme";
 import Colors from "../constants/Colors";
 import { rV, rS, rMS, SIZES } from "../constants";
@@ -28,7 +29,7 @@ const CustomPicker: React.FC<CustomPickerProps> = ({
   label,
   selectedValue,
   onValueChange,
-  options = [], // Default to an empty array
+  options = [],
   placeholder,
   ...selectProps
 }) => {
@@ -36,56 +37,66 @@ const CustomPicker: React.FC<CustomPickerProps> = ({
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
+  const highlightColor =
+    colorScheme === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
+
   const styles = StyleSheet.create({
     container: {
-      flexDirection: "row", // Change to row to place label and select side by side
+      flexDirection: "row",
       alignItems: "center",
-      // paddingVertical: rV(10),
-      justifyContent: "space-between", // Spread label and select apart
-      // Removed border - was only meant for ContinueWithEmail page
+      justifyContent: "space-between",
     },
     label: {
-      fontSize: SIZES.large,
+      fontSize: rMS(13),
       color: themeColors.text,
-      fontWeight: "bold",
-      marginRight: rS(10), // Space between label and select
+      fontWeight: "700",
+      marginRight: rS(10),
     },
     selectContainer: {
-      flex: 1, // Allow the select to take up remaining space
+      flex: 1,
     },
     modalOverlay: {
       flex: 1,
-      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      backgroundColor: "rgba(0, 0, 0, 0.4)",
       justifyContent: "flex-end",
     },
     modalContent: {
       backgroundColor: themeColors.background,
-      borderTopLeftRadius: rMS(20),
-      borderTopRightRadius: rMS(20),
-      paddingTop: rV(20),
-      maxHeight: "80%",
+      borderTopLeftRadius: rMS(24),
+      borderTopRightRadius: rMS(24),
+      paddingTop: rV(8),
+      maxHeight: "70%",
+    },
+    modalHandle: {
+      width: rS(36),
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: themeColors.border + "60",
+      alignSelf: "center",
+      marginBottom: rV(12),
     },
     modalHeader: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
       paddingHorizontal: rS(20),
-      paddingBottom: rV(15),
-      borderBottomWidth: 1,
-      borderBottomColor: themeColors.text,
+      paddingBottom: rV(12),
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: themeColors.border + "30",
     },
     modalTitle: {
-      fontSize: SIZES.large,
-      fontWeight: "bold",
+      fontSize: rMS(15),
+      fontWeight: "800",
       color: themeColors.text,
+      letterSpacing: -0.2,
     },
     closeButton: {
-      padding: rMS(5),
-    },
-    closeButtonText: {
-      fontSize: SIZES.large,
-      color: themeColors.text,
-      fontWeight: "bold",
+      width: rMS(28),
+      height: rMS(28),
+      borderRadius: rMS(14),
+      backgroundColor: themeColors.border + "20",
+      alignItems: "center",
+      justifyContent: "center",
     },
     optionsContainer: {
       maxHeight: 300,
@@ -94,19 +105,25 @@ const CustomPicker: React.FC<CustomPickerProps> = ({
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
-      paddingVertical: rV(15),
+      paddingVertical: rV(14),
       paddingHorizontal: rS(20),
     },
     selectedOption: {
-      backgroundColor: themeColors.tint + "20",
+      backgroundColor: themeColors.tint + "10",
     },
     optionText: {
-      fontSize: SIZES.medium,
+      fontSize: rMS(14),
       color: themeColors.text,
+      fontWeight: "500",
     },
     selectedOptionText: {
       color: themeColors.tint,
-      fontWeight: "bold",
+      fontWeight: "700",
+    },
+    separator: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: themeColors.border + "20",
+      marginLeft: rS(20),
     },
   });
 
@@ -135,7 +152,7 @@ const CustomPicker: React.FC<CustomPickerProps> = ({
               paddingVertical: rV(12),
               paddingHorizontal: rS(16),
               zIndex: 10,
-              flex: 1, // Ensure the trigger takes up the full width of its container
+              flex: 1,
               justifyContent: "flex-end",
             }}
           >
@@ -144,8 +161,8 @@ const CustomPicker: React.FC<CustomPickerProps> = ({
                 color: selectedValue
                   ? themeColors.text
                   : themeColors.textSecondary,
-                fontWeight: selectedValue ? "bold" : "normal",
-                fontSize: SIZES.medium,
+                fontWeight: selectedValue ? "700" : "500",
+                fontSize: rMS(13),
                 textAlign: "right",
               }}
               placeholder={placeholder || `Select ${label.toLowerCase()}`}
@@ -160,15 +177,20 @@ const CustomPicker: React.FC<CustomPickerProps> = ({
             animationType="slide"
             onRequestClose={() => setIsOpen(false)}
           >
-            <View style={styles.modalOverlay}>
+            <TouchableOpacity
+              style={styles.modalOverlay}
+              activeOpacity={1}
+              onPress={() => setIsOpen(false)}
+            >
               <View style={styles.modalContent}>
+                <View style={styles.modalHandle} />
                 <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>Select {label}</Text>
                   <TouchableOpacity
                     onPress={() => setIsOpen(false)}
                     style={styles.closeButton}
                   >
-                    <Text style={styles.closeButtonText}>✕</Text>
+                    <X size={14} color={themeColors.textSecondary} />
                   </TouchableOpacity>
                 </View>
                 <ScrollView
@@ -176,37 +198,44 @@ const CustomPicker: React.FC<CustomPickerProps> = ({
                   showsVerticalScrollIndicator={false}
                 >
                   {options?.map((option, index) => (
-                    <TouchableOpacity
-                      key={option}
-                      style={[
-                        styles.optionItem,
-                        selectedValue === option && styles.selectedOption,
-                      ]}
-                      onPress={() => {
-                        onValueChange(option);
-                        setIsOpen(false);
-                      }}
-                    >
-                      <Text
+                    <React.Fragment key={option}>
+                      <TouchableHighlight
+                        underlayColor={highlightColor}
                         style={[
-                          styles.optionText,
-                          selectedValue === option && styles.selectedOptionText,
+                          styles.optionItem,
+                          selectedValue === option && styles.selectedOption,
                         ]}
+                        onPress={() => {
+                          onValueChange(option);
+                          setIsOpen(false);
+                        }}
                       >
-                        {option}
-                      </Text>
-                      {selectedValue === option && (
-                        <AntDesign
-                          name="check-circle"
-                          size={16}
-                          color={themeColors.tint}
-                        />
+                        <>
+                          <Text
+                            style={[
+                              styles.optionText,
+                              selectedValue === option &&
+                                styles.selectedOptionText,
+                            ]}
+                          >
+                            {option}
+                          </Text>
+                          {selectedValue === option && (
+                            <CheckCircle2
+                              size={18}
+                              color={themeColors.tint}
+                            />
+                          )}
+                        </>
+                      </TouchableHighlight>
+                      {index < options.length - 1 && (
+                        <View style={styles.separator} />
                       )}
-                    </TouchableOpacity>
+                    </React.Fragment>
                   ))}
                 </ScrollView>
               </View>
-            </View>
+            </TouchableOpacity>
           </Modal>
 
           <Select.Content>
@@ -221,8 +250,8 @@ const CustomPicker: React.FC<CustomPickerProps> = ({
                   style={{
                     color: themeColors.text,
                     backgroundColor: themeColors.background,
-                    fontWeight: "bold",
-                    fontSize: SIZES.large,
+                    fontWeight: "800",
+                    fontSize: rMS(14),
                   }}
                 >
                   Options
@@ -237,14 +266,13 @@ const CustomPicker: React.FC<CustomPickerProps> = ({
                     <Select.ItemText
                       style={{
                         color: themeColors.textSecondary,
-                        fontSize: SIZES.medium,
+                        fontSize: rMS(13),
                       }}
                     >
                       {option}
                     </Select.ItemText>
                     <Select.ItemIndicator>
-                      <AntDesign
-                        name="check-circle"
+                      <CheckCircle2
                         size={16}
                         color={themeColors.tint}
                       />

@@ -1,10 +1,10 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { Link, router, Stack } from "expo-router";
+import { Stack, router } from "expo-router";
 import React from "react";
 import { Pressable, useColorScheme } from "react-native";
+import { PlusCircle } from "lucide-react-native";
 import Colors from "../../../constants/Colors";
-import CustomBackButton from "../../../components/CustomBackButton";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { rMS, rS } from "../../../constants";
 
 export default function Tab3Layout() {
   const colorScheme = useColorScheme();
@@ -19,21 +19,22 @@ export default function Tab3Layout() {
             headerShown: true,
             headerShadowVisible: false,
             headerStyle: {
-              backgroundColor: themeColors.tabIconSelected,
+              backgroundColor: themeColors.tint,
             },
             headerTitle: "Schedule",
             headerTitleAlign: "center",
             headerTitleStyle: {
-              fontWeight: "bold",
+              fontWeight: "900",
+              fontSize: rMS(18),
+              color: "#fff",
             },
             headerRight: () => (
               <Pressable onPressIn={() => router.navigate("createNewTime")}>
                 {({ pressed }) => (
-                  <MaterialCommunityIcons
-                    name="plus-circle"
-                    size={25}
-                    color={Colors[colorScheme ?? "light"].text}
-                    style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
+                  <PlusCircle
+                    size={24}
+                    color="#fff"
+                    style={{ marginRight: rS(12), opacity: pressed ? 0.5 : 1 }}
                   />
                 )}
               </Pressable>
@@ -52,7 +53,8 @@ export default function Tab3Layout() {
             headerTitle: "Edit Schedule",
             headerTitleAlign: "center",
             headerTitleStyle: {
-              fontWeight: "bold",
+              fontWeight: "900",
+              fontSize: rMS(16),
               color: themeColors.text,
             },
             headerShadowVisible: false,
@@ -64,14 +66,14 @@ export default function Tab3Layout() {
           options={{
             headerShown: true,
             presentation: "card",
-            // animation: "fade_from_bottom",
             headerStyle: {
               backgroundColor: themeColors.background,
             },
-            headerTitle: "New",
+            headerTitle: "New Schedule",
             headerTitleAlign: "center",
             headerTitleStyle: {
-              fontWeight: "bold",
+              fontWeight: "900",
+              fontSize: rMS(16),
               color: themeColors.text,
             },
             headerShadowVisible: false,

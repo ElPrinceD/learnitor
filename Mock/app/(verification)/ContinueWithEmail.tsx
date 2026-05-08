@@ -20,6 +20,7 @@ import VerificationButton from "../../components/VerificationButton";
 import { StatusBar } from "expo-status-bar";
 import { Typewriter } from "../../components/TypewriterText";
 import AnimatedTextInput from "../../components/AnimatedTextInput";
+import Animated, { FadeInDown } from "react-native-reanimated";
 
 const ContinueWithEmail = () => {
   const insets = useSafeAreaInsets();
@@ -43,33 +44,24 @@ const ContinueWithEmail = () => {
     setDob(dateString);
   };
 
-  // Clear errors when user starts typing in the specific field
   const handleEmailChange = (text: string) => {
     setEmail(text);
-    if (emailError) {
-      setEmailError("");
-    }
+    if (emailError) setEmailError("");
   };
 
   const handlePasswordChange = (text: string) => {
     setPassword(text);
-    if (passwordError) {
-      setPasswordError("");
-    }
+    if (passwordError) setPasswordError("");
   };
 
   const handleFirstNameChange = (text: string) => {
     setFirstName(text);
-    if (allFieldsError) {
-      setAllFieldsError("");
-    }
+    if (allFieldsError) setAllFieldsError("");
   };
 
   const handleSurnameChange = (text: string) => {
     setSurname(text);
-    if (allFieldsError) {
-      setAllFieldsError("");
-    }
+    if (allFieldsError) setAllFieldsError("");
   };
 
   const handleKeyboardDismiss = () => {
@@ -81,44 +73,6 @@ const ContinueWithEmail = () => {
     setPasswordError("");
     setAllFieldsError("");
   };
-
-  // const handleInstitutionSelect = () => {
-  //   if (Platform.OS === "ios") {
-  //     ActionSheetIOS.showActionSheetWithOptions(
-  //       {
-  //         options: [...institutionList.map((inst) => inst.name), "Cancel"],
-  //         cancelButtonIndex: institutionList.length,
-  //       },
-  //       (buttonIndex) => {
-  //         if (buttonIndex !== institutionList.length) {
-  //           const selectedInstitution = institutionList[buttonIndex];
-  //           setInstitution(selectedInstitution.id); // Set id
-  //         }
-  //       }
-  //     );
-  //   } else {
-  //     setShowInstitutionPicker(true);
-  //   }
-  // };
-
-  // const handleProgramSelect = () => {
-  //   if (Platform.OS === "ios") {
-  //     ActionSheetIOS.showActionSheetWithOptions(
-  //       {
-  //         options: [...programList.map((program) => program.name), "Cancel"],
-  //         cancelButtonIndex: programList.length,
-  //       },
-  //       (buttonIndex) => {
-  //         if (buttonIndex !== programList.length) {
-  //           const selectedProgram = programList[buttonIndex];
-  //           setProgramOfStudy(selectedProgram.id); // Set id
-  //         }
-  //       }
-  //     );
-  //   } else {
-  //     setShowProgramPicker(true);
-  //   }
-  // };
 
   const handleSignUp = () => {
     clearErrors();
@@ -171,6 +125,8 @@ const ContinueWithEmail = () => {
   const [showInstitutionPicker, setShowInstitutionPicker] = useState(false);
   const [showProgramPicker, setShowProgramPicker] = useState(false);
 
+  const hasError = !!(emailError || passwordError || allFieldsError);
+
   const styles = StyleSheet.create({
     scrollContainer: {
       flexGrow: 1,
@@ -184,10 +140,29 @@ const ContinueWithEmail = () => {
       padding: rMS(16),
       backgroundColor: themeColors.background,
     },
+    blob1: {
+      position: "absolute",
+      top: -rV(60),
+      left: -rS(70),
+      width: rS(230),
+      height: rS(230),
+      borderRadius: rS(115),
+      backgroundColor: themeColors.tint + "12",
+    },
+    blob2: {
+      position: "absolute",
+      bottom: rV(60),
+      right: -rS(90),
+      width: rS(270),
+      height: rS(270),
+      borderRadius: rS(135),
+      backgroundColor: "#10B98112",
+    },
     headerText: {
-      fontSize: SIZES.xxLarge,
-      fontWeight: "bold",
+      fontSize: rMS(28),
+      fontWeight: "900",
       color: themeColors.text,
+      letterSpacing: -0.5,
     },
     rowContainer: {
       flexDirection: "row",
@@ -196,87 +171,95 @@ const ContinueWithEmail = () => {
     halfInput: {
       flex: 1,
     },
-
     inputContainer: {
-      width: rS(270),
+      width: rS(280),
     },
     dateContainer: {
       borderWidth: 1,
       borderColor: themeColors.border,
-      borderRadius: rMS(8),
+      borderRadius: rMS(12),
       paddingHorizontal: rS(16),
       paddingVertical: rV(8),
       backgroundColor: themeColors.background,
-      width: rS(270),
+      width: rS(280),
       alignSelf: "center",
     },
     spacing: {
-      height: rV(24),
-    },
-    picker: {
-      height: 50,
-      width: rS(300),
-      backgroundColor: themeColors.background,
+      height: rV(20),
     },
     errorContainer: {
-      marginTop: rV(20),
-      paddingHorizontal: rMS(20),
+      backgroundColor: "#D22B2B" + "12",
+      paddingVertical: rV(10),
+      paddingHorizontal: rMS(16),
+      borderRadius: rMS(16),
+      marginTop: rV(12),
+      borderLeftWidth: 3,
+      borderLeftColor: "#D22B2B",
+      width: rS(280),
     },
-    errorMessage: {
-      fontSize: SIZES.medium,
+    errorText: {
+      fontSize: rMS(12),
       color: "#D22B2B",
-      marginBottom: rMS(8),
-      textAlign: "center",
+      fontWeight: "600",
     },
     bottomContainer: {
-      bottom: Math.max(rV(15), insets.bottom + rV(5)), // Use safe area bottom + small padding (matching LogIn)
+      bottom: Math.max(rV(15), insets.bottom + rV(5)),
       justifyContent: "flex-end",
       flexDirection: "row",
       alignItems: "center",
     },
     existingText: {
-      fontSize: SIZES.medium,
-      fontWeight: "bold",
-      color: themeColors.text,
+      fontSize: rMS(13),
+      color: themeColors.textSecondary,
     },
     loginText: {
-      fontSize: SIZES.medium,
-      fontWeight: "bold",
-      color: themeColors.buttonBackground,
-      marginLeft: rMS(8),
+      fontSize: rMS(13),
+      fontWeight: "700",
+      color: themeColors.tint,
+      marginLeft: rMS(4),
     },
   });
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <View style={styles.container}>
-        <StatusBar hidden={true} />
+        <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+        <View style={styles.blob1} />
+        <View style={styles.blob2} />
+
         <View style={styles.container}>
           <Typewriter
             text="Create an account"
             delay={100}
-            style={[styles.headerText, { marginBottom: rS(70) }]}
+            style={[styles.headerText, { marginBottom: rS(50) }]}
             onComplete={() => setShowSecondText(true)}
           />
-          <AnimatedTextInput
-            label="Email"
-            value={email}
-            onChangeText={handleEmailChange}
-            placeholderTextColor={themeColors.textSecondary}
-            style={styles.inputContainer}
-            labelColor={emailError ? "#D22B2B" : undefined}
-          />
-          <AnimatedTextInput
-            label="Password"
-            value={password}
-            onChangeText={handlePasswordChange}
-            placeholderTextColor={themeColors.textSecondary}
-            secureTextEntry={!showPassword}
-            showToggleIcon={true}
-            style={styles.inputContainer}
-            labelColor={passwordError ? "#D22B2B" : undefined}
-          />
-          <View style={styles.rowContainer}>
+
+          <Animated.View entering={FadeInDown.duration(400).delay(80)}>
+            <AnimatedTextInput
+              label="Email"
+              value={email}
+              onChangeText={handleEmailChange}
+              placeholderTextColor={themeColors.textSecondary}
+              style={styles.inputContainer}
+              labelColor={emailError ? "#D22B2B" : undefined}
+            />
+          </Animated.View>
+
+          <Animated.View entering={FadeInDown.duration(400).delay(150)}>
+            <AnimatedTextInput
+              label="Password"
+              value={password}
+              onChangeText={handlePasswordChange}
+              placeholderTextColor={themeColors.textSecondary}
+              secureTextEntry={!showPassword}
+              showToggleIcon={true}
+              style={styles.inputContainer}
+              labelColor={passwordError ? "#D22B2B" : undefined}
+            />
+          </Animated.View>
+
+          <Animated.View entering={FadeInDown.duration(400).delay(220)} style={styles.rowContainer}>
             <View style={[styles.halfInput, { marginRight: rS(20) }]}>
               <AnimatedTextInput
                 label="First Name"
@@ -296,33 +279,33 @@ const ContinueWithEmail = () => {
                 labelColor={allFieldsError ? "#D22B2B" : undefined}
               />
             </View>
-          </View>
+          </Animated.View>
 
-          <View style={styles.dateContainer}>
+          <Animated.View entering={FadeInDown.duration(400).delay(290)} style={styles.dateContainer}>
             <DateSelector
               label="Date of Birth"
               onDateChange={handleDateChange}
               minDate={false}
               startBlank={true}
             />
-          </View>
+          </Animated.View>
 
           <View style={styles.spacing} />
-          <VerificationButton onPress={handleSignUp} title="Register" />
 
-          {/* Error Messages Below Register Button */}
-          <View style={styles.errorContainer}>
-            {emailError ? (
-              <Text style={styles.errorMessage}>{emailError}</Text>
-            ) : null}
-            {passwordError ? (
-              <Text style={styles.errorMessage}>{passwordError}</Text>
-            ) : null}
-            {allFieldsError ? (
-              <Text style={styles.errorMessage}>{allFieldsError}</Text>
-            ) : null}
-          </View>
+          <Animated.View entering={FadeInDown.duration(400).delay(360)}>
+            <VerificationButton onPress={handleSignUp} title="Register" />
+          </Animated.View>
+
+          {/* Error Messages */}
+          {hasError && (
+            <Animated.View entering={FadeInDown.duration(300)} style={styles.errorContainer}>
+              {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+              {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
+              {allFieldsError ? <Text style={styles.errorText}>{allFieldsError}</Text> : null}
+            </Animated.View>
+          )}
         </View>
+
         <View style={styles.bottomContainer}>
           <Text style={styles.existingText}>Already have an account?</Text>
           <Text style={styles.loginText} onPress={handleSignIn}>

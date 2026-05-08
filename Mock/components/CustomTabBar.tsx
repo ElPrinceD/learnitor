@@ -2,7 +2,7 @@
 import React from "react";
 import { View, TouchableOpacity, StyleSheet, Text } from "react-native";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+// Icons rendered via tabBarIcon callbacks (now uses Lucide)
 import Colors from "../constants/Colors";
 import { useColorScheme } from "../../Mock/components/useColorScheme";
 

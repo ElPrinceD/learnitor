@@ -14,29 +14,31 @@ import { SIZES, rMS, rS, rV, useShadows } from "../constants";
 
 interface Props {
   onPress: (level: Level) => void;
-  levels: Level[]; // Add levels prop
+  levels: Level[];
 }
 
 const PracticeLevel: React.FC<Props> = ({ onPress, levels }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
-  const shadows = useShadows();
+  const shadow = useShadows();
 
   const styles = StyleSheet.create({
     item: {
-      backgroundColor: themeColors.card,
-      borderRadius: 10,
-      marginVertical: rV(13),
+      backgroundColor: themeColors.cardGlass,
+      borderRadius: rMS(20),
+      marginVertical: rV(8),
       flex: 1,
-      marginHorizontal: 5,
+      marginHorizontal: rS(6),
       height: rV(180),
-      ...shadows.small,
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
+      overflow: "hidden",
+      ...shadow.small,
     },
     imageContainer: {
       flex: 4,
       width: "100%",
       height: "70%",
-      borderRadius: 10,
       overflow: "hidden",
     },
     image: {
@@ -49,20 +51,28 @@ const PracticeLevel: React.FC<Props> = ({ onPress, levels }) => {
       backgroundColor: "transparent",
       alignItems: "center",
       justifyContent: "center",
+      paddingVertical: rV(4),
     },
     title: {
-      fontSize: SIZES.large,
-      fontWeight: "bold",
-      marginTop: 10,
-      marginBottom: rV(8),
+      fontSize: rMS(13),
+      fontWeight: "800",
       color: themeColors.text,
+      letterSpacing: -0.1,
+    },
+    listContainer: {
+      paddingHorizontal: rS(10),
+      paddingBottom: rV(8),
     },
   });
 
   const renderRowItem = ({ item }: { item: Level }) => (
-    <TouchableOpacity style={styles.item} onPress={() => onPress(item)}>
+    <TouchableOpacity
+      style={styles.item}
+      onPress={() => onPress(item)}
+      activeOpacity={0.7}
+    >
       <View style={styles.imageContainer}>
-        <Image source={item.image} style={styles.image} />
+        <Image source={item.image} style={styles.image} resizeMode="cover" />
       </View>
       <View style={styles.textContainer}>
         <Text style={styles.title}>{item.title}</Text>
@@ -71,14 +81,13 @@ const PracticeLevel: React.FC<Props> = ({ onPress, levels }) => {
   );
 
   return (
-    <View>
-      <FlatList
-        data={levels}
-        numColumns={2}
-        renderItem={renderRowItem}
-        keyExtractor={(item, index) => index.toString()}
-      />
-    </View>
+    <FlatList
+      data={levels}
+      numColumns={2}
+      renderItem={renderRowItem}
+      keyExtractor={(item, index) => index.toString()}
+      contentContainerStyle={styles.listContainer}
+    />
   );
 };
 

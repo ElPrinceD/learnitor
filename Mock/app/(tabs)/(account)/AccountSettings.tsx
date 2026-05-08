@@ -11,7 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { User, Calendar, Mail, GraduationCap } from "lucide-react-native";
 import { useAuth } from "../../../components/AuthContext";
 import ApiUrl from "../../../config";
 import axios from "axios";
@@ -179,14 +179,14 @@ const AccountSettings = () => {
       flexDirection: "row",
       alignItems: "center",
       borderWidth: 1,
-      borderRadius: rMS(10),
-      paddingHorizontal: rS(12),
+      borderRadius: rMS(16),
+      paddingHorizontal: rS(14),
       paddingVertical: rV(2),
-      marginBottom: rV(15),
-      borderColor: themeColors.border,
-      backgroundColor: themeColors.card,
+      marginBottom: rV(12),
+      borderColor: themeColors.border + "40",
+      backgroundColor: themeColors.cardGlass,
       width: "100%",
-      minHeight: rV(44),
+      minHeight: rV(48),
     },
     icon: {
       marginRight: rS(10),
@@ -194,38 +194,40 @@ const AccountSettings = () => {
     },
     input: {
       flex: 1,
-      height: rV(40),
+      height: rV(44),
       color: themeColors.text,
-      fontSize: SIZES.medium,
+      fontSize: rMS(14),
+      fontWeight: "500",
     },
     dateSelectorWrapper: {
       flex: 1,
       marginLeft: rS(0),
     },
     subTitle: {
-      fontSize: SIZES.large,
-      fontWeight: "bold",
+      fontSize: rMS(14),
+      fontWeight: "800",
       color: themeColors.text,
       marginTop: rV(20),
       marginBottom: rV(10),
       alignSelf: "flex-start",
+      letterSpacing: -0.1,
     },
     footer: {
-      paddingHorizontal: rS(20),
-      paddingVertical: rV(15),
+      paddingHorizontal: rS(16),
+      paddingVertical: rV(12),
       backgroundColor: themeColors.background,
     },
     button: {
-      borderRadius: rMS(10),
-      paddingVertical: rV(12),
+      borderRadius: rMS(24),
+      paddingVertical: rV(14),
       alignItems: "center",
-      backgroundColor: themeColors.buttonBackground,
+      backgroundColor: themeColors.tint,
       width: "100%",
     },
     buttonText: {
       color: "#fff",
-      fontSize: SIZES.medium,
-      fontWeight: "bold",
+      fontSize: rMS(14),
+      fontWeight: "800",
     },
     deleteButton: {
       marginTop: rV(10),
@@ -248,10 +250,9 @@ const AccountSettings = () => {
         <View style={styles.row}>
           <View style={styles.halfWidth}>
             <View style={styles.inputContainer}>
-              <Ionicons
-                name="person-outline"
+              <User
                 size={rMS(18)}
-                style={styles.icon}
+                color={themeColors.textSecondary}
               />
               <TextInput
                 style={styles.input}
@@ -264,10 +265,9 @@ const AccountSettings = () => {
           </View>
           <View style={styles.halfWidth}>
             <View style={styles.inputContainer}>
-              <Ionicons
-                name="person-outline"
+              <User
                 size={rMS(18)}
-                style={styles.icon}
+                color={themeColors.textSecondary}
               />
               <TextInput
                 style={styles.input}
@@ -282,10 +282,9 @@ const AccountSettings = () => {
 
         {/* Replace DOB TextInput with DateSelector */}
         <View style={styles.inputContainer}>
-          <Ionicons
-            name="calendar-outline"
+          <Calendar
             size={rMS(18)}
-            style={styles.icon}
+            color={themeColors.textSecondary}
           />
           <View style={styles.dateSelectorWrapper}>
             <DateSelector
@@ -298,7 +297,7 @@ const AccountSettings = () => {
         </View>
 
         <View style={styles.inputContainer}>
-          <Ionicons name="mail-outline" size={rMS(18)} style={styles.icon} />
+          <Mail size={rMS(18)} color={themeColors.textSecondary} />
           <TextInput
             style={styles.input}
             placeholder="Email Address"
@@ -310,7 +309,7 @@ const AccountSettings = () => {
 
         <Text style={styles.subTitle}>Institution Info</Text>
         <View style={styles.inputContainer}>
-          <Ionicons name="school-outline" size={rMS(18)} style={styles.icon} />
+          <GraduationCap size={rMS(18)} color={themeColors.textSecondary} />
           <TextInput
             style={styles.input}
             placeholder="School Name"

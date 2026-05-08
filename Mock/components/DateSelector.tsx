@@ -15,7 +15,7 @@ import { useColorScheme } from "./useColorScheme";
 import Colors from "../constants/Colors";
 import { rMS, rS, rV, SIZES } from "../constants";
 import { Calendar } from "react-native-calendars";
-import { Ionicons } from "@expo/vector-icons";
+import { ChevronDown, X } from "lucide-react-native";
 
 interface DateSelectorProps extends SelectProps {
   onDateChange: (date: string) => void;
@@ -134,12 +134,11 @@ const DateSelector: React.FC<DateSelectorProps> = ({
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      // Removed border - was only meant for ContinueWithEmail page
     },
     label: {
-      fontSize: SIZES.large,
+      fontSize: rMS(13),
       color: themeColors.text,
-      fontWeight: "bold",
+      fontWeight: "700",
       marginRight: rS(10),
     },
     selectContainer: {
@@ -147,37 +146,46 @@ const DateSelector: React.FC<DateSelectorProps> = ({
     },
     modalOverlay: {
       flex: 1,
-      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      backgroundColor: "rgba(0, 0, 0, 0.4)",
       justifyContent: "flex-end",
     },
     modalContent: {
       backgroundColor: themeColors.background,
-      borderTopLeftRadius: rMS(20),
-      borderTopRightRadius: rMS(20),
-      paddingTop: rV(20),
+      borderTopLeftRadius: rMS(24),
+      borderTopRightRadius: rMS(24),
+      paddingTop: rV(8),
       maxHeight: "80%",
+    },
+    modalHandle: {
+      width: rS(36),
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: themeColors.border + "60",
+      alignSelf: "center",
+      marginBottom: rV(12),
     },
     modalHeader: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
       paddingHorizontal: rS(20),
-      paddingBottom: rV(15),
-      borderBottomWidth: 1,
-      borderBottomColor: themeColors.text,
+      paddingBottom: rV(12),
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: themeColors.border + "30",
     },
     modalTitle: {
-      fontSize: SIZES.large,
-      fontWeight: "bold",
+      fontSize: rMS(15),
+      fontWeight: "800",
       color: themeColors.text,
+      letterSpacing: -0.2,
     },
     closeButton: {
-      padding: rMS(5),
-    },
-    closeButtonText: {
-      fontSize: SIZES.large,
-      color: themeColors.text,
-      fontWeight: "bold",
+      width: rMS(28),
+      height: rMS(28),
+      borderRadius: rMS(14),
+      backgroundColor: themeColors.border + "20",
+      alignItems: "center",
+      justifyContent: "center",
     },
     pickerHeader: {
       flexDirection: "row",
@@ -185,21 +193,24 @@ const DateSelector: React.FC<DateSelectorProps> = ({
       alignItems: "center",
       paddingHorizontal: rS(20),
       paddingVertical: rV(10),
-      borderBottomWidth: 1,
-      borderBottomColor: themeColors.text,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: themeColors.border + "20",
     },
     pickerButton: {
-      paddingHorizontal: rS(15),
+      flexDirection: "row",
+      alignItems: "center",
+      gap: rS(4),
+      paddingHorizontal: rS(14),
       paddingVertical: rV(8),
-      borderRadius: rMS(8),
-      backgroundColor: themeColors.card,
+      borderRadius: rMS(12),
+      backgroundColor: themeColors.cardGlass,
       borderWidth: 1,
-      borderColor: themeColors.border,
+      borderColor: themeColors.border + "30",
     },
     pickerButtonText: {
-      fontSize: SIZES.medium,
+      fontSize: rMS(13),
       color: themeColors.text,
-      fontWeight: "500",
+      fontWeight: "600",
     },
     pickerContainer: {
       maxHeight: rV(200),
@@ -209,20 +220,21 @@ const DateSelector: React.FC<DateSelectorProps> = ({
     pickerItem: {
       paddingVertical: rV(12),
       paddingHorizontal: rS(15),
-      borderRadius: rMS(8),
+      borderRadius: rMS(12),
       marginVertical: rV(2),
     },
     pickerItemSelected: {
       backgroundColor: themeColors.tint,
     },
     pickerItemText: {
-      fontSize: SIZES.medium,
+      fontSize: rMS(13),
       color: themeColors.text,
       textAlign: "center",
+      fontWeight: "500",
     },
     pickerItemTextSelected: {
       color: "#fff",
-      fontWeight: "600",
+      fontWeight: "700",
     },
   });
 
@@ -273,14 +285,15 @@ const DateSelector: React.FC<DateSelectorProps> = ({
             onRequestClose={() => setIsOpen(false)}
           >
             <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
+                <View style={styles.modalContent}>
+                <View style={styles.modalHandle} />
                 <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>Select Date</Text>
                   <TouchableOpacity
                     onPress={() => setIsOpen(false)}
                     style={styles.closeButton}
                   >
-                    <Text style={styles.closeButtonText}>✕</Text>
+                    <X size={14} color={themeColors.textSecondary} />
                   </TouchableOpacity>
                 </View>
 
@@ -291,13 +304,12 @@ const DateSelector: React.FC<DateSelectorProps> = ({
                     onPress={() => setShowYearPicker(!showYearPicker)}
                   >
                     <Text style={styles.pickerButtonText}>
-                      {currentYear}{" "}
-                      <Ionicons
-                        name="chevron-down"
-                        size={16}
-                        color={themeColors.text}
-                      />
+                      {currentYear}
                     </Text>
+                    <ChevronDown
+                      size={14}
+                      color={themeColors.textSecondary}
+                    />
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -305,13 +317,12 @@ const DateSelector: React.FC<DateSelectorProps> = ({
                     onPress={() => setShowMonthPicker(!showMonthPicker)}
                   >
                     <Text style={styles.pickerButtonText}>
-                      {monthNames[currentMonth - 1]}{" "}
-                      <Ionicons
-                        name="chevron-down"
-                        size={16}
-                        color={themeColors.text}
-                      />
+                      {monthNames[currentMonth - 1]}
                     </Text>
+                    <ChevronDown
+                      size={14}
+                      color={themeColors.textSecondary}
+                    />
                   </TouchableOpacity>
                 </View>
 

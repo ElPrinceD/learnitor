@@ -29,7 +29,7 @@ import Colors from "../../../constants/Colors";
 import { SIZES, rMS, rS, rV, useShadows } from "../../../constants";
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { useTimeline } from "../../../contexts/TimelineContext";
-import { FontAwesome6 } from "@expo/vector-icons";
+import { CalendarOff } from "lucide-react-native";
 import ErrorMessage from "../../../components/ErrorMessage";
 
 const Timeline = () => {
@@ -243,27 +243,51 @@ const Timeline = () => {
     scrollViewContent: { flexGrow: 1 },
     bottom: {
       backgroundColor: themeColors.background,
-      borderTopLeftRadius: rMS(40),
-      borderTopRightRadius: rMS(40),
+      borderTopLeftRadius: rMS(32),
+      borderTopRightRadius: rMS(32),
     },
-    plansContainer: { marginTop: rV(18) },
+    plansContainer: { marginTop: rV(14), paddingHorizontal: rS(4) },
     planItemWrapper: {
       flexDirection: "row",
       alignItems: "center",
-      marginVertical: rV(8),
+      marginVertical: rV(4),
     },
     planTime: {
       marginHorizontal: rS(10),
       textAlign: "left",
       color: themeColors.textSecondary,
       alignSelf: "flex-start",
+      fontWeight: "600",
+      fontSize: rMS(11),
+    },
+    noPlansContainer: {
+      alignItems: "center",
+      paddingVertical: rV(32),
+    },
+    noPlansIcon: {
+      width: rMS(56),
+      height: rMS(56),
+      borderRadius: rMS(28),
+      backgroundColor: themeColors.cardGlass,
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: rV(12),
     },
     noPlansText: {
-      fontSize: SIZES.large,
-      fontWeight: "bold",
+      fontSize: rMS(14),
+      fontWeight: "800",
+      color: themeColors.text,
+      textAlign: "center",
+      letterSpacing: -0.2,
+    },
+    noPlansSubtext: {
+      fontSize: rMS(12),
+      fontWeight: "600",
       color: themeColors.textSecondary,
       textAlign: "center",
-      paddingVertical: rV(20),
+      marginTop: rV(4),
     },
     planItemLine: {
       position: "absolute",
@@ -271,18 +295,18 @@ const Timeline = () => {
       left: 0,
       right: 0,
       height: 0.3,
-      backgroundColor: "#ccc",
+      backgroundColor: themeColors.border + "30",
     },
     addButton: {
       position: "absolute",
       right: rS(20),
       bottom: rV(20),
-      width: 60,
-      height: 60,
-      borderRadius: 20,
+      width: rMS(56),
+      height: rMS(56),
+      borderRadius: rMS(28),
       justifyContent: "center",
       alignItems: "center",
-      backgroundColor: themeColors.buttonBackground,
+      backgroundColor: themeColors.tint,
       ...shadow.medium,
     },
   });
@@ -301,7 +325,13 @@ const Timeline = () => {
               <ActivityIndicator size="large" color="#0D47A1" />
             </View>
           ) : memoizedPlans.length === 0 ? (
-            <Text style={styles.noPlansText}>Hey, you have a free day!</Text>
+            <View style={styles.noPlansContainer}>
+              <View style={styles.noPlansIcon}>
+                <CalendarOff size={24} color={themeColors.textSecondary} />
+              </View>
+              <Text style={styles.noPlansText}>You have a free day!</Text>
+              <Text style={styles.noPlansSubtext}>No plans scheduled</Text>
+            </View>
           ) : (
             memoizedPlans.map(
               (plan, index) =>
@@ -378,9 +408,13 @@ const Timeline = () => {
                   <ActivityIndicator size="large" color="#0D47A1" />
                 </View>
               ) : memoizedPlans.length === 0 ? (
-                <Text style={styles.noPlansText}>
-                  Hey, you have a free day!
-                </Text>
+                <View style={styles.noPlansContainer}>
+                  <View style={styles.noPlansIcon}>
+                    <CalendarOff size={24} color={themeColors.textSecondary} />
+                  </View>
+                  <Text style={styles.noPlansText}>You have a free day!</Text>
+                  <Text style={styles.noPlansSubtext}>No plans scheduled</Text>
+                </View>
               ) : (
                 memoizedPlans.map(
                   (plan, index) =>

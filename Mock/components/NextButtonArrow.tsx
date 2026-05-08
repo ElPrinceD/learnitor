@@ -1,14 +1,12 @@
 import React, { useRef } from 'react';
-import { StyleSheet, Text, Animated } from 'react-native';
-import { MaterialIcons } from "@expo/vector-icons"
+import { StyleSheet, Text, Animated, View } from 'react-native';
+import { ArrowRight, ChevronRight } from "lucide-react-native";
 import MyPressable from '../components/MyPressable';
 
 interface Props {
   onBtnPress: () => void;
   animationController: React.MutableRefObject<Animated.Value>;
 }
-
-const AnimatedMaterialIcons = Animated.createAnimatedComponent(MaterialIcons);
 
 const NextButtonArrow: React.FC<Props> = ({
   onBtnPress,
@@ -33,8 +31,8 @@ const NextButtonArrow: React.FC<Props> = ({
     outputRange: [0, 0, 1],
   });
   const iconTransitionAnim = arrowAnim.current.interpolate({
-    inputRange: [0, 0.35, 0.85, 1], // or [0, 0.85, 1],
-    outputRange: [0, 0, -36, -36], // or [0, 0, -36]
+    inputRange: [0, 0.35, 0.85, 1],
+    outputRange: [0, 0, -36, -36],
   });
 
   const widthAnim = arrowAnim.current.interpolate({
@@ -78,10 +76,10 @@ const NextButtonArrow: React.FC<Props> = ({
           ]}
         >
           <Text style={styles.signupText}>Sign Up</Text>
-          <MaterialIcons name="arrow-forward" size={24} color="white" />
+          <ArrowRight size={24} color="white" />
         </Animated.View>
 
-        <AnimatedMaterialIcons
+        <Animated.View
           style={[
             styles.icon,
             {
@@ -89,10 +87,9 @@ const NextButtonArrow: React.FC<Props> = ({
               transform: [{ translateY: iconTransitionAnim }],
             },
           ]}
-          name="arrow-forward-ios"
-          size={24}
-          color="white"
-        />
+        >
+          <ChevronRight size={24} color="white" />
+        </Animated.View>
       </MyPressable>
     </Animated.View>
   );

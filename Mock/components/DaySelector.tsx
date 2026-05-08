@@ -2,19 +2,16 @@ import React, { useState, useEffect, memo } from "react";
 import { View, StyleSheet, useColorScheme } from "react-native";
 import { Calendar } from "react-native-calendars";
 import Colors from "../constants/Colors";
-import { SIZES, rMS, rS, rV } from "../constants";
-import { Plan } from "./types";
+import { rMS, rS, rV } from "../constants";
 
 interface DaySelectorProps {
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
-  // plan: Plan;
 }
 
 const DaySelector: React.FC<DaySelectorProps> = ({
   selectedDate,
   setSelectedDate,
-  // plan,
 }) => {
   const [selected, setSelected] = useState(
     selectedDate.toISOString().split("T")[0]
@@ -29,9 +26,9 @@ const DaySelector: React.FC<DaySelectorProps> = ({
 
   const styles = StyleSheet.create({
     container: {
-      flex: 1,
-      paddingHorizontal: rS(18),
+      paddingHorizontal: rS(14),
       backgroundColor: themeColors.tint,
+      paddingBottom: rV(6),
     },
   });
 
@@ -47,22 +44,25 @@ const DaySelector: React.FC<DaySelectorProps> = ({
         markedDates={{
           [selected]: {
             selected: true,
-            selectedColor: themeColors.background,
+            selectedColor: "#fff",
           },
         }}
         theme={{
           backgroundColor: themeColors.tint,
           calendarBackground: themeColors.tint,
-          textSectionTitleColor: themeColors.text,
-          selectedDayTextColor: "#1434A4",
-          todayTextColor: "#FF6347",
-          dayTextColor: themeColors.text,
-          textDisabledColor: "#ccc",
-          monthTextColor: themeColors.text,
-          arrowColor: themeColors.text,
-          textMonthFontWeight: "bold",
-          textMonthFontSize: rMS(23),
-          textDayHeaderFontWeight: "bold",
+          textSectionTitleColor: "#ffffffCC",
+          selectedDayTextColor: themeColors.tint,
+          todayTextColor: "#FFD700",
+          dayTextColor: "#fff",
+          textDisabledColor: "#ffffff40",
+          monthTextColor: "#fff",
+          arrowColor: "#fff",
+          textMonthFontWeight: "900",
+          textMonthFontSize: rMS(20),
+          textDayHeaderFontWeight: "700",
+          textDayFontWeight: "600",
+          textDayFontSize: rMS(13),
+          textDayHeaderFontSize: rMS(11),
         }}
       />
     </View>

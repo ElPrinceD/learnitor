@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
-import { Ionicons } from "@expo/vector-icons";
+import { ArrowLeft, Copy, Share2 } from "lucide-react-native";
 import Animated, {
   FadeInDown,
   FadeInUp,
@@ -646,7 +646,7 @@ export default function GameWaitingScreen() {
                 onPressOut={() => onPressOut(backScale)}
                 activeOpacity={1}
               >
-                <Ionicons name="arrow-back" size={22} color={themeColors.text} />
+                <ArrowLeft size={22} color={themeColors.text} />
               </AnimatedTouchable>
             </Animated.View>
 
@@ -674,7 +674,7 @@ export default function GameWaitingScreen() {
                     onPressOut={() => onPressOut(copyScale)}
                     activeOpacity={1}
                   >
-                    <Ionicons name="copy-outline" size={18} color={themeColors.tint} />
+                    <Copy size={18} color={themeColors.tint} />
                     <Text style={styles.codeActionText}>Copy</Text>
                   </AnimatedTouchable>
                   <AnimatedTouchable
@@ -684,8 +684,7 @@ export default function GameWaitingScreen() {
                     onPressOut={() => onPressOut(shareScale)}
                     activeOpacity={1}
                   >
-                    <Ionicons
-                      name={Platform.OS === "ios" ? "share-outline" : "share-social-sharp"}
+                    <Share2
                       size={18}
                       color={themeColors.tint}
                     />

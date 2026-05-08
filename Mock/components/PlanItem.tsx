@@ -6,7 +6,7 @@ import {
   StyleSheet,
   useColorScheme,
 } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Pencil } from "lucide-react-native";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import { Plan } from "./types";
 import { SIZES, rMS, rS, rV, useShadows } from "../constants";
@@ -41,22 +41,22 @@ const PlanItem: React.FC<Props> = ({
     : "";
 
   const formattedTimeEnd = plan.due_time_end
-    ? plan.due_time_end.split(":").slice(0, 2).join(":") // Corrected this line
+    ? plan.due_time_end.split(":").slice(0, 2).join(":")
     : "";
 
   // Function to select SVG based on category name
   const renderSVGIcon = (categoryName: string) => {
     switch (categoryName) {
       case "Exams TimeTable":
-        return <StarSVG width={rMS(50)} height={rMS(50)} />;
+        return <StarSVG width={rMS(44)} height={rMS(44)} />;
       case "TimeTable":
-        return <SunSVG width={rMS(50)} height={rMS(50)} />;
+        return <SunSVG width={rMS(44)} height={rMS(44)} />;
       case "Assignments & Projects":
-        return <CrownSVG width={rMS(50)} height={rMS(50)} />;
+        return <CrownSVG width={rMS(44)} height={rMS(44)} />;
       case "Study TimeTable":
-        return <MapleSVG width={rMS(50)} height={rMS(50)} />;
+        return <MapleSVG width={rMS(44)} height={rMS(44)} />;
       default:
-        return <MapleSVG width={rMS(50)} height={rMS(50)} />;
+        return <MapleSVG width={rMS(44)} height={rMS(44)} />;
     }
   };
 
@@ -68,39 +68,44 @@ const PlanItem: React.FC<Props> = ({
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      marginVertical: rV(1),
+      marginVertical: rV(2),
     },
     planItemContainer: {
       flex: 1,
-      // marginHorizontal: rS(10),
-      borderTopLeftRadius: rMS(10),
-      borderBottomLeftRadius: rMS(10),
-      padding: rS(10),
-      ...shadow.small,
+      borderRadius: rMS(20),
+      padding: rS(12),
       flexDirection: "row",
-      alignItems: "center", // Changed from 'center' to 'flex-start' for vertical alignment
+      alignItems: "center",
+      backgroundColor: themeColors.cardGlass,
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
+      ...shadow.small,
     },
     planContent: {
-      flex: 1, // Allow the content to take up space
+      flex: 1,
     },
     planTitle: {
-      fontSize: SIZES.xlarge,
-      fontWeight: "bold",
-      marginBottom: rS(5),
-      textAlign: "left", // Align text to the left
+      fontSize: rMS(14),
+      fontWeight: "800",
+      marginBottom: rV(2),
+      textAlign: "left",
+      color: themeColors.text,
+      letterSpacing: -0.1,
     },
     svgWrapper: {
-      marginLeft: rS(-10),
+      marginRight: rS(10),
       overflow: "hidden",
     },
     planCategory: {
-      fontSize: SIZES.medium,
-      textAlign: "left", // Align text to the left
+      fontSize: rMS(11),
+      textAlign: "left",
+      color: themeColors.textSecondary,
+      fontWeight: "600",
     },
     planTime: {
-      fontSize: SIZES.large,
-      color: themeColors.text,
-      fontWeight: "bold",
+      fontSize: rMS(11),
+      color: themeColors.tint,
+      fontWeight: "800",
     },
     editButton: {
       backgroundColor: themeColors.tint,
@@ -108,20 +113,16 @@ const PlanItem: React.FC<Props> = ({
       height: "95%",
       justifyContent: "center",
       alignItems: "center",
-      width: rS(100),
+      width: rS(60),
+      borderTopRightRadius: rMS(20),
+      borderBottomRightRadius: rMS(20),
     },
     editActionContainer: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "flex-end",
-      width: rS(100),
+      width: rS(60),
       paddingHorizontal: rS(10),
-      backgroundColor: "green", // Edit action color
-    },
-    editActionText: {
-      color: "white",
-      fontSize: SIZES.medium,
-      fontWeight: "bold",
     },
   });
 
@@ -137,45 +138,25 @@ const PlanItem: React.FC<Props> = ({
             style={styles.editButton}
             onPress={() => handleEditPlan(plan)}
           >
-            <Feather name="edit" size={rMS(24)} color="white" />
+            <Pencil size={rMS(18)} color="#fff" />
           </TouchableOpacity>
         )}
         friction={2}
         rightThreshold={60}
       >
         <View style={styles.planItemWrapper}>
-          <View
-            style={[
-              styles.planItemContainer,
-              { backgroundColor: themeColors.background },
-            ]}
-          >
+          <View style={styles.planItemContainer}>
             <View style={styles.svgWrapper}>{renderSVGIcon(category)}</View>
             <View style={styles.planContent}>
-              <Text
-                style={[
-                  styles.planTitle,
-                  {
-                    color: themeColors.text,
-                  },
-                ]}
-              >
+              <Text style={styles.planTitle}>
                 {plan.title || ""}
               </Text>
-              <Text
-                style={[
-                  styles.planCategory,
-                  {
-                    color: themeColors.text,
-                  },
-                ]}
-              >
+              <Text style={styles.planCategory}>
                 {category}
               </Text>
             </View>
-            <Text style={[styles.planTime]}>
-              {formattedTimeStart}-{formattedTimeEnd}{" "}
-              {/* Corrected to show end time */}
+            <Text style={styles.planTime}>
+              {formattedTimeStart}-{formattedTimeEnd}
             </Text>
           </View>
         </View>

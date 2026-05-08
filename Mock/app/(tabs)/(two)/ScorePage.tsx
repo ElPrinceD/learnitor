@@ -49,100 +49,124 @@ const ScorePage: React.FC = () => {
     container: {
       justifyContent: "center",
       alignItems: "center",
-      padding: rMS(18),
+      padding: rMS(16),
     },
     topContainer: {
       flex: 1,
       width: "110%",
-      padding: rMS(48),
-      marginTop: -rMS(48),
+      padding: rMS(40),
+      marginTop: -rMS(40),
       justifyContent: "center",
       alignItems: "center",
       backgroundColor: themeColors.background,
     },
     title: {
-      fontSize: SIZES.xLarge,
-      fontWeight: "bold",
-      marginBottom: rV(18),
-      color: themeColors.text,
+      fontSize: rMS(16),
+      fontWeight: "800",
+      marginBottom: rV(8),
+      color: themeColors.textSecondary,
+      letterSpacing: -0.2,
+      textTransform: "uppercase",
     },
     scoreHeader: {
-      fontSize: SIZES.xLarge,
-      fontWeight: "bold",
-      color: themeColors.selectedText,
+      fontSize: rMS(18),
+      fontWeight: "900",
+      color: themeColors.tint,
     },
     score: {
-      fontSize: SIZES.xxxLarge,
-      fontWeight: "bold",
-      color: themeColors.selectedText,
+      fontSize: rMS(48),
+      fontWeight: "900",
+      color: themeColors.tint,
+      letterSpacing: -1,
     },
     buttonContainer: {
       flexDirection: "row",
-      marginTop: rV(18),
+      marginTop: rV(20),
       justifyContent: "space-between",
       width: "100%",
       paddingHorizontal: rS(2),
+      gap: rS(10),
     },
     button: {
       backgroundColor: "transparent",
-      borderWidth: 2,
+      borderWidth: 1.5,
       borderColor: themeColors.border,
-      paddingVertical: rV(8),
-      paddingHorizontal: rS(5),
-      borderRadius: 10,
+      paddingVertical: rV(12),
+      paddingHorizontal: rS(8),
+      borderRadius: rMS(24),
       alignItems: "center",
       justifyContent: "center",
       flex: 1,
-      marginHorizontal: rS(5),
-      minHeight: rV(35),
+      minHeight: rV(40),
+    },
+    doneButton: {
+      backgroundColor: themeColors.tint,
+      borderWidth: 0,
+      paddingVertical: rV(12),
+      paddingHorizontal: rS(8),
+      borderRadius: rMS(24),
+      alignItems: "center",
+      justifyContent: "center",
+      flex: 1,
+      minHeight: rV(40),
     },
     buttonText: {
-      fontSize: SIZES.large,
-      fontWeight: "bold",
+      fontSize: rMS(13),
+      fontWeight: "800",
       color: themeColors.text,
+    },
+    doneButtonText: {
+      fontSize: rMS(13),
+      fontWeight: "800",
+      color: "#fff",
     },
     answersContainer: {
       flex: 1,
-      marginTop: rV(20),
+      marginTop: rV(16),
       width: "100%",
     },
     card: {
-      marginBottom: rV(18),
-      padding: rMS(13),
-      backgroundColor: themeColors.card,
-      borderRadius: 10,
-      ...shadow.medium,
+      marginBottom: rV(12),
+      padding: rMS(16),
+      backgroundColor: themeColors.cardGlass,
+      borderRadius: rMS(20),
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
+      ...shadow.small,
     },
     questionText: {
-      fontSize: SIZES.large,
-      fontWeight: "bold",
+      fontSize: rMS(14),
+      fontWeight: "800",
       marginBottom: rV(8),
       color: themeColors.text,
+      letterSpacing: -0.1,
     },
     answersList: {
-      marginLeft: rS(18),
+      marginLeft: rS(14),
     },
     answerText: {
-      fontSize: SIZES.medium,
-      marginBottom: rV(3),
+      fontSize: rMS(12),
+      marginBottom: rV(4),
       color: themeColors.text,
+      fontWeight: "600",
+      lineHeight: rMS(18),
     },
     correctAnswer: {
       color: "#097969",
     },
     selectedAnswer: {
-      fontWeight: "bold",
+      fontWeight: "800",
     },
     bullet: {
-      marginRight: rS(11),
-      marginLeft: rS(-18),
+      marginRight: rS(8),
+      marginLeft: -rS(14),
       color: themeColors.text,
-      fontSize: SIZES.large,
-      fontWeight: "bold",
+      fontSize: rMS(14),
+      fontWeight: "800",
     },
     resultText: {
-      fontSize: SIZES.medium,
-      fontWeight: "bold",
+      fontSize: rMS(12),
+      fontWeight: "800",
       marginTop: rV(10),
     },
     correct: {
@@ -152,9 +176,10 @@ const ScorePage: React.FC = () => {
       color: "#D22B2B",
     },
     headerTitle: {
-      fontSize: SIZES.large,
-      fontWeight: "bold",
+      fontSize: rMS(14),
+      fontWeight: "800",
       color: themeColors.text,
+      letterSpacing: -0.1,
     },
     progressContainer: {
       alignItems: "center",
@@ -328,12 +353,12 @@ const ScorePage: React.FC = () => {
 
             <GameButton
               onPress={handleDone}
-              style={styles.button}
+              style={styles.doneButton}
               disabled={markTopicAsCompletedMutation.isPending}
             >
-              <Text style={styles.buttonText}>Done</Text>
+              <Text style={styles.doneButtonText}>Done</Text>
               {markTopicAsCompletedMutation.isPending && (
-                <ActivityIndicator size="small" color={themeColors.text} />
+                <ActivityIndicator size="small" color="#fff" />
               )}
             </GameButton>
           </View>

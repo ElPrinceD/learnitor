@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Search, ChevronUp, ChevronDown } from "lucide-react-native";
 import Colors from "../../../constants/Colors";
 import { rMS, rS, rV, SIZES } from "../../../constants";
 
@@ -205,12 +205,13 @@ const FAQScreen: React.FC = () => {
         <Text style={[styles.questionText, { color: themeColors.text }]}>
           {item.question}
         </Text>
-        <View style={styles.chevronContainer}>
-        <Ionicons
-          name={expandedFAQ === item.id ? "chevron-up" : "chevron-down"}
-          size={24}
-          color={themeColors.text}
-        />
+        <View style={styles.chevronContainer}
+        >
+        {expandedFAQ === item.id ? (
+          <ChevronUp size={20} color={themeColors.textSecondary} />
+        ) : (
+          <ChevronDown size={20} color={themeColors.textSecondary} />
+        )}
         </View>
       </TouchableOpacity>
       {expandedFAQ === item.id && (
@@ -231,67 +232,76 @@ const FAQScreen: React.FC = () => {
       padding: rS(16),
     },
     header: {
-      marginBottom: rV(20),
+      marginBottom: rV(16),
     },
     headerTitle: {
-      fontSize: SIZES.large,
-      fontWeight: "bold",
+      fontSize: rMS(16),
+      fontWeight: "800",
       color: themeColors.text,
-      marginBottom: rV(8),
+      marginBottom: rV(6),
+      letterSpacing: -0.2,
     },
     headerSubtitle: {
-      fontSize: SIZES.medium,
+      fontSize: rMS(12),
       color: themeColors.textSecondary,
+      fontWeight: "500",
     },
     searchContainer: {
       flexDirection: "row",
       alignItems: "center",
-      marginBottom: rV(20),
+      marginBottom: rV(16),
       borderWidth: 1,
-      borderColor: "#ccc",
-      borderRadius: rMS(8),
-      paddingHorizontal: rS(10),
-      paddingVertical: rV(5),
+      borderColor: themeColors.border + "40",
+      borderRadius: rMS(16),
+      paddingHorizontal: rS(14),
+      paddingVertical: rV(8),
+      backgroundColor: themeColors.cardGlass,
     },
     searchInput: {
       flex: 1,
-      fontSize: rS(16),
+      fontSize: rMS(14),
+      fontWeight: "500",
     },
     searchIcon: {
-      marginLeft: rS(10),
+      marginLeft: rS(8),
     },
     clearButton: {
       padding: rS(4),
     },
     faqItem: {
-      marginBottom: rV(15),
+      marginBottom: rV(8),
     },
     questionContainer: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "flex-start",
-      padding: rS(10),
-      backgroundColor: themeColors.secondaryBackground,
-      borderRadius: rMS(8),
+      padding: rS(14),
+      backgroundColor: themeColors.cardGlass,
+      borderRadius: rMS(16),
+      borderWidth: 1,
+      borderColor: themeColors.border + "30",
     },
     questionText: {
-      fontSize: rS(16),
-      fontWeight: "bold",
+      fontSize: rMS(13),
+      fontWeight: "700",
       flex: 1,
       marginRight: rS(10),
+      letterSpacing: -0.1,
     },
     chevronContainer: {
       paddingTop: rS(2),
     },
     answerContainer: {
-      padding: rS(10),
+      paddingHorizontal: rS(14),
+      paddingVertical: rV(10),
       backgroundColor: themeColors.background,
-      borderBottomLeftRadius: rMS(8),
-      borderBottomRightRadius: rMS(8),
+      borderBottomLeftRadius: rMS(16),
+      borderBottomRightRadius: rMS(16),
     },
     answerText: {
-      fontSize: rS(14),
+      fontSize: rMS(12),
       lineHeight: rV(20),
+      fontWeight: "500",
     },
     listContainer: {
       paddingBottom: rV(20),
@@ -308,13 +318,15 @@ const FAQScreen: React.FC = () => {
     emptyText: {
       textAlign: "center",
       padding: rV(20),
-      fontSize: rS(16),
+      fontSize: rMS(14),
+      fontWeight: "600",
     },
     emptySubtext: {
       textAlign: "center",
-      fontSize: SIZES.small,
+      fontSize: rMS(11),
       color: themeColors.textSecondary,
       marginTop: rV(8),
+      fontWeight: "500",
     },
     loadingContainer: {
       flex: 1,
@@ -323,14 +335,16 @@ const FAQScreen: React.FC = () => {
     },
     loadingText: {
       marginTop: rV(12),
-      fontSize: SIZES.medium,
+      fontSize: rMS(13),
       color: themeColors.textSecondary,
+      fontWeight: "600",
     },
     resultsCount: {
       paddingHorizontal: rS(16),
       paddingBottom: rV(8),
-      fontSize: SIZES.small,
+      fontSize: rMS(11),
       color: themeColors.textSecondary,
+      fontWeight: "600",
     },
   });
   if (isLoading) {
@@ -360,9 +374,8 @@ const FAQScreen: React.FC = () => {
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
-        <Ionicons
-          name="search"
-          size={20}
+        <Search
+          size={18}
           color={themeColors.textSecondary}
           style={styles.searchIcon}
         />

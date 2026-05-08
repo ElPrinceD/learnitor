@@ -1,6 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, View, TouchableOpacity, Image } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Sparkles, ArrowRightCircle } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SIZES, rMS, rS, rV } from "../constants";
 
@@ -13,7 +13,7 @@ const GradientCard = ({ card, handleCardPress }) => {
       style={styles.card}
     >
       <View style={styles.cardCategory}>
-        <Ionicons name="sparkles" size={rMS(15)} color="#D96B06" />
+        <Sparkles size={rMS(15)} color="#D96B06" />
         <Text style={styles.categoryText}>{card.category}</Text>
       </View>
 
@@ -22,7 +22,7 @@ const GradientCard = ({ card, handleCardPress }) => {
       {/* <Text style={styles.cardDescription}>{card.description}</Text> */}
 
       <TouchableOpacity onPress={handleCardPress} style={styles.forward}>
-        <Ionicons name="arrow-forward-circle" size={rMS(30)} color="#D96B06" />
+        <ArrowRightCircle size={rMS(30)} color="#D96B06" />
       </TouchableOpacity>
     </LinearGradient>
   );

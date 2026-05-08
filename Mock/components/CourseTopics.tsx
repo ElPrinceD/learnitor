@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Topic } from "./types";
-import { Ionicons } from "@expo/vector-icons";
+import { PlayCircle, X } from "lucide-react-native";
 import Colors from "../constants/Colors";
 import { SIZES, rMS, rS, rV, useShadows } from "../constants";
 
@@ -25,7 +25,7 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
 }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
-  const shadows = useShadows();
+  const shadow = useShadows();
 
   useEffect(() => {
     onSelectedTopicsChange(selectedTopics);
@@ -54,62 +54,87 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
   const styles = StyleSheet.create({
     topicsContainer: {
       backgroundColor: themeColors.background,
-      paddingVertical: rV(20),
-      paddingHorizontal: rS(10),
+      paddingVertical: rV(16),
+      paddingHorizontal: rS(14),
     },
-    topicCard: {
-      marginBottom: rV(15),
-      backgroundColor: themeColors.card,
-      padding: rMS(10),
-      margin: rMS(5),
-      borderRadius: 10,
-      ...shadows.small,
-      position: "relative",
-    },
-    icon: {
-      backgroundColor: themeColors.tint,
-      padding: rMS(5),
-      borderRadius: 50,
-      ...shadows.small,
-    },
-    topicTitle: {
-      fontSize: SIZES.large,
-      fontWeight: "bold",
-      paddingLeft: rS(8),
-      flexWrap: "wrap",
-      maxWidth: rMS(250),
-      color: themeColors.text,
-    },
-    topicDescription: {
-      fontSize: SIZES.medium,
-      color: themeColors.textSecondary,
-      marginLeft: rS(36),
-    },
-    orderNumber: {
-      position: "absolute",
-      top: rV(15),
-      right: rS(15),
-      fontSize: SIZES.small,
-      fontWeight: "bold",
-      color: themeColors.textSecondary,
+    headerRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: rV(14),
     },
     instructionText: {
-      fontSize: SIZES.large,
-      fontWeight: "bold",
-      textAlign: "center",
-      marginBottom: rV(8),
+      fontSize: rMS(14),
+      fontWeight: "800",
       color: themeColors.text,
+      letterSpacing: -0.2,
+      flex: 1,
     },
     clearButton: {
-      alignSelf: "flex-end",
-      backgroundColor: "#fff",
-      borderRadius: 50,
-      padding: rMS(1),
-      marginTop: -rV(10),
-      marginRight: rS(10),
+      backgroundColor: themeColors.tint + "15",
+      borderRadius: rMS(16),
+      padding: rMS(6),
+      borderWidth: 1,
+      borderColor: themeColors.tint + "30",
     },
-    clearButtonIcon: {
-      color: themeColors.buttonBackground,
+    topicCard: {
+      marginBottom: rV(10),
+      backgroundColor: themeColors.cardGlass,
+      padding: rMS(14),
+      borderRadius: rMS(20),
+      borderWidth: 1.5,
+      borderColor: themeColors.border + "40",
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    topicCardSelected: {
+      backgroundColor: themeColors.tint + "10",
+      borderColor: themeColors.tint + "40",
+    },
+    iconContainer: {
+      width: rMS(36),
+      height: rMS(36),
+      borderRadius: rMS(18),
+      backgroundColor: themeColors.tint,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: rS(12),
+    },
+    topicContent: {
+      flex: 1,
+    },
+    topicTitle: {
+      fontSize: rMS(14),
+      fontWeight: "800",
+      color: themeColors.text,
+      letterSpacing: -0.1,
+      marginBottom: rV(2),
+    },
+    topicDescription: {
+      fontSize: rMS(11),
+      color: themeColors.textSecondary,
+      lineHeight: rMS(16),
+      fontWeight: "600",
+    },
+    orderBadge: {
+      width: rMS(24),
+      height: rMS(24),
+      borderRadius: rMS(12),
+      backgroundColor: themeColors.tint,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    orderBadgeText: {
+      color: "#fff",
+      fontSize: rMS(11),
+      fontWeight: "900",
+    },
+    emptyBadge: {
+      width: rMS(24),
+      height: rMS(24),
+      borderRadius: rMS(12),
+      borderWidth: 1.5,
+      borderColor: themeColors.border,
     },
   });
 
@@ -118,22 +143,21 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
       contentContainerStyle={styles.topicsContainer}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={styles.instructionText}>
-        Select your topics in the order in which you want to learn them.
-      </Text>
-      {showClearButton && (
-        <TouchableOpacity
-          style={styles.clearButton}
-          onPress={clearSelection}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name="close"
-            size={SIZES.xLarge}
-            style={styles.clearButtonIcon}
-          />
-        </TouchableOpacity>
-      )}
+      <View style={styles.headerRow}>
+        <Text style={styles.instructionText}>
+          Select your topics to learn
+        </Text>
+        {showClearButton && (
+          <TouchableOpacity
+            style={styles.clearButton}
+            onPress={clearSelection}
+            activeOpacity={0.7}
+          >
+            <X size={16} color={themeColors.tint} />
+          </TouchableOpacity>
+        )}
+      </View>
+
       {topics.map((topic, index) => {
         const isSelected = selectedTopics.some((t) => t.id === topic.id);
         const orderNumber =
@@ -144,28 +168,31 @@ const CourseTopics: React.FC<CourseTopicsProps> = ({
             key={index}
             style={[
               styles.topicCard,
-              isSelected && {
-                backgroundColor: colorScheme === "dark" ? "#666" : "#ddd",
-              },
+              isSelected && styles.topicCardSelected,
             ]}
             onPress={() => toggleTopicSelection(topic.id)}
             activeOpacity={0.7}
           >
-            <Text style={styles.orderNumber}>
-              {isSelected ? orderNumber : ""}
-            </Text>
-            <View style={{ flexDirection: "row" }}>
-              <View>
-                <Ionicons
-                  name="play-circle"
-                  size={SIZES.large}
-                  color={"white"}
-                  style={styles.icon}
-                />
-              </View>
-              <Text style={styles.topicTitle}>{topic.title}</Text>
+            <View style={styles.iconContainer}>
+              <PlayCircle size={18} color="#fff" />
             </View>
-            <Text style={styles.topicDescription}>{topic.description}</Text>
+            <View style={styles.topicContent}>
+              <Text style={styles.topicTitle} numberOfLines={2}>
+                {topic.title}
+              </Text>
+              {topic.description ? (
+                <Text style={styles.topicDescription} numberOfLines={2}>
+                  {topic.description}
+                </Text>
+              ) : null}
+            </View>
+            {isSelected ? (
+              <View style={styles.orderBadge}>
+                <Text style={styles.orderBadgeText}>{orderNumber}</Text>
+              </View>
+            ) : (
+              <View style={styles.emptyBadge} />
+            )}
           </TouchableOpacity>
         );
       })}

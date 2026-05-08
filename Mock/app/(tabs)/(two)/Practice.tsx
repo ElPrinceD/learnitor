@@ -4,7 +4,7 @@ import { router, useLocalSearchParams, Stack } from "expo-router";
 import PracticeLevel from "../../../components/PracticeLevel";
 import { Topic, Level } from "../../../components/types";
 import Colors from "../../../constants/Colors";
-import { SIZES, rV } from "../../../constants";
+import { rMS, rV, rS } from "../../../constants";
 
 const Practice: React.FC = () => {
   const { topic, course } = useLocalSearchParams();
@@ -39,20 +39,6 @@ const Practice: React.FC = () => {
     { title: "Master", image: require("../../../assets/images/Master.jpg") },
   ];
 
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      justifyContent: "center",
-    },
-    headerTitle: {
-      marginVertical: rV(8),
-    },
-    description: {
-      fontSize: SIZES.medium,
-      color: themeColors.textSecondary,
-      textAlign: "center",
-    },
-  });
   return (
     <>
       <Stack.Screen
@@ -60,28 +46,47 @@ const Practice: React.FC = () => {
           headerShown: true,
           headerTitle: () => (
             <View style={styles.headerTitle}>
-              <Text
-                style={{
-                  color: themeColors.text,
-                  fontSize: SIZES.large,
-                  fontWeight: "bold",
-                }}
-              >
+              <Text style={[styles.titleText, { color: themeColors.text }]}>
                 {parsedTopic.title}
               </Text>
-              <Text style={styles.description}>Practice</Text>
+              <Text style={[styles.subtitleText, { color: themeColors.textSecondary }]}>
+                Choose your difficulty
+              </Text>
             </View>
           ),
           headerShadowVisible: false,
           headerTitleAlign: "center",
+          headerStyle: {
+            backgroundColor: themeColors.background,
+          },
         }}
       />
-      <View style={styles.container}>
-        {/* <PracticeInformation topic={parsedTopic} /> */}
+      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
         <PracticeLevel onPress={handleLevelPress} levels={levels} />
       </View>
     </>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingTop: rV(4),
+  },
+  headerTitle: {
+    alignItems: "center",
+    paddingVertical: rV(4),
+  },
+  titleText: {
+    fontSize: rMS(16),
+    fontWeight: "900",
+    letterSpacing: -0.2,
+  },
+  subtitleText: {
+    fontSize: rMS(11),
+    fontWeight: "600",
+    marginTop: rV(2),
+  },
+});
 
 export default Practice;

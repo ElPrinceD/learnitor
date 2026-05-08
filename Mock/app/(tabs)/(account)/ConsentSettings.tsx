@@ -7,7 +7,7 @@ import {
   Switch,
   useColorScheme,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Settings } from "lucide-react-native";
 import Colors from "../../../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../../../constants";
 import { useConsent } from "../../../contexts/ConsentContext";
@@ -108,38 +108,40 @@ const ConsentSettings = () => {
     },
     header: {
       alignItems: "center",
-      marginBottom: rV(20), // Reduced from 30
+      marginBottom: rV(20),
     },
     title: {
-      fontSize: SIZES.xxLarge,
-      fontWeight: "bold",
+      fontSize: rMS(20),
+      fontWeight: "900",
       color: themeColors.text,
       textAlign: "center",
-      marginBottom: rV(10),
+      marginBottom: rV(8),
+      letterSpacing: -0.3,
     },
     subtitle: {
-      fontSize: SIZES.medium,
+      fontSize: rMS(13),
       color: themeColors.textSecondary,
       textAlign: "center",
-      lineHeight: 24,
+      lineHeight: 20,
+      fontWeight: "500",
     },
     consentItem: {
       backgroundColor: themeColors.background,
-      borderRadius: rMS(6), // Further reduced
-      padding: rMS(12), // Further reduced
-      marginBottom: rV(16), // Further increased to prevent footer overlap
+      borderRadius: rMS(16),
+      padding: rMS(14),
+      marginBottom: rV(12),
       borderWidth: 1,
-      borderColor: themeColors.text + "40", // Darker shade with opacity
+      borderColor: themeColors.border + "30",
     },
     consentHeader: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      marginBottom: rV(4), // Reduced
+      marginBottom: rV(4),
     },
     consentTitle: {
-      fontSize: SIZES.large,
-      fontWeight: "600",
+      fontSize: rMS(14),
+      fontWeight: "700",
       color: themeColors.text,
       flex: 1,
     },
@@ -149,42 +151,45 @@ const ConsentSettings = () => {
       justifyContent: "space-between",
     },
     consentDescription: {
-      fontSize: SIZES.small, // Reduced from medium
+      fontSize: rMS(12),
       color: themeColors.textSecondary,
-      lineHeight: 16, // Reduced from 18
-      flex: 1, // Take up available space
-      marginRight: rS(12), // Space between text and toggle
+      lineHeight: 16,
+      flex: 1,
+      marginRight: rS(12),
+      fontWeight: "500",
     },
     switchContainer: {
       flexDirection: "row",
       alignItems: "center",
-      justifyContent: "flex-end", // Move toggle to right
-      marginTop: rV(8), // Added margin
+      justifyContent: "flex-end",
+      marginTop: rV(8),
     },
     switchLabel: {
-      fontSize: SIZES.medium,
+      fontSize: rMS(13),
       color: themeColors.text,
     },
     infoText: {
-      fontSize: SIZES.small,
+      fontSize: rMS(11),
       color: themeColors.textSecondary,
       textAlign: "center",
       lineHeight: 18,
       marginTop: rV(20),
       paddingHorizontal: rMS(20),
+      fontWeight: "500",
     },
     sectionDivider: {
-      height: 1,
-      backgroundColor: themeColors.border,
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: themeColors.border + "30",
       marginVertical: rV(24),
       marginHorizontal: rS(20),
     },
     sectionTitle: {
-      fontSize: SIZES.large,
-      fontWeight: "bold",
+      fontSize: rMS(14),
+      fontWeight: "800",
       color: themeColors.text,
-      marginBottom: rV(16),
+      marginBottom: rV(14),
       paddingHorizontal: rS(20),
+      letterSpacing: -0.1,
     },
   });
 
@@ -196,11 +201,10 @@ const ConsentSettings = () => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Ionicons
-            name="settings"
-            size={48}
-            color={themeColors.text} // Changed to themeColors.text
-            style={{ marginBottom: rV(16) }}
+          <Settings
+            size={40}
+            color={themeColors.textSecondary}
+            style={{ marginBottom: rV(14) }}
           />
           <Text style={styles.title}>Privacy Settings</Text>
           <Text style={styles.subtitle}>

@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { ArrowLeft } from "lucide-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { getLeaderboardDetails, RankingItem, UserStatus } from "../../services/LeaderboardApiCalls";
@@ -340,7 +340,7 @@ export default function Leaderboard() {
           }}
           activeOpacity={1}
         >
-          <Ionicons name="arrow-back" size={22} color={themeColors.text} />
+          <ArrowLeft size={22} color={themeColors.text} />
         </AnimatedTouchable>
       </BlurView>
 

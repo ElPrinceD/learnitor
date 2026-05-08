@@ -3,17 +3,16 @@ import { View, StyleSheet, Dimensions, useColorScheme } from "react-native";
 import axios from "axios";
 import { useAuth } from "../../../components/AuthContext";
 import apiUrl from "../../../config";
-import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import TimelineCategoryItem from "../../../components/TimelineCategoryItem"; // Adjust the import path as needed
-import { rMS } from "../../../constants";
+import TimelineCategoryItem from "../../../components/TimelineCategoryItem";
+import { rMS, rS, rV } from "../../../constants";
 import Colors from "../../../constants/Colors";
 
 interface TimelineCategory {
   id: string;
   name: string;
   color?: string;
-  icon?: keyof typeof Ionicons.glyphMap;
+  icon?: string;
 }
 
 const TimelineCategory: React.FC = () => {
@@ -22,7 +21,7 @@ const TimelineCategory: React.FC = () => {
   const { userToken } = useAuth();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
-  // Fetch categories from the API endpoint
+
   const fetchCategories = async () => {
     try {
       const response = await axios.get<TimelineCategory[]>(
@@ -37,7 +36,6 @@ const TimelineCategory: React.FC = () => {
         response.data.map((category: TimelineCategory) => ({
           ...category,
           color: getCategoryColor(category.name),
-          icon: getCategoryIcon(category.name),
         }))
       );
     } catch (error) {
@@ -68,40 +66,25 @@ const TimelineCategory: React.FC = () => {
     }
   };
 
-  // Function to get icon name based on category type
-  const getCategoryIcon = (type: string): keyof typeof Ionicons.glyphMap => {
-    switch (type) {
-      case "Exams TimeTable":
-        return "flame";
-      case "TimeTable":
-        return "briefcase";
-      case "Assignments & Projects":
-        return "people";
-      case "Study TimeTable":
-        return "book";
-      default:
-        return "help-circle"; // Default icon name
-    }
-  };
-
   useEffect(() => {
     fetchCategories();
-  }, []); // Fetch categories only once when the component mounts
+  }, []);
 
   const styles = StyleSheet.create({
     container: {
       flex: 1,
       justifyContent: "flex-start",
-      padding: rMS(10),
+      padding: rMS(12),
       backgroundColor: themeColors.background,
     },
-
     categoriesContainer: {
       flexDirection: "row",
       flexWrap: "wrap",
       justifyContent: "space-between",
+      gap: rS(8),
     },
   });
+
   return (
     <View style={styles.container}>
       <View style={styles.categoriesContainer}>

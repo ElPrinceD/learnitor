@@ -1,6 +1,8 @@
 import React, { memo } from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, useColorScheme } from "react-native";
 import isEqual from "lodash/isEqual"; // For deep equality comparison
+import Colors from "../constants/Colors";
+import { rMS } from "../constants";
 
 interface ProgressBarProps {
   progress: number;
@@ -24,17 +26,21 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
   containerStyle,
   fillStyle,
 }) => {
+  const colorScheme = useColorScheme();
+  const themeColors = Colors[colorScheme ?? "light"];
+
   const styles = StyleSheet.create({
     progressBar: {
       flex: 1,
-      backgroundColor: "#ffffff",
-      borderRadius: 5,
+      backgroundColor: themeColors.border,
+      borderRadius: rMS(4),
       marginRight: 10,
+      height: 6,
     },
     progressFill: {
       height: "100%",
-      backgroundColor: "#e6ac6a",
-      borderRadius: 5,
+      backgroundColor: themeColors.tint,
+      borderRadius: rMS(4),
     },
   });
 

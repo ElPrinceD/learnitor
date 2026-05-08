@@ -1,6 +1,6 @@
 import React from "react";
 import { View, FlatList, Text, useColorScheme } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Zap } from "lucide-react-native";
 import { Streak } from "./types";
 
 interface Props {
@@ -12,10 +12,11 @@ const StreakList: React.FC<Props> = ({ streakData }) => {
 
   const renderItem = ({ item }: { item: Streak }) => (
     <View style={{ marginHorizontal: 10, alignItems: "center" }}>
-      <Ionicons
-        name={item.streak ? "flash" : "flash-outline"}
-        size={55} // Adjust the size as needed for medium size
+      <Zap
+        size={55}
         color={item.streak ? "gold" : "grey"}
+        fill={item.streak ? "gold" : "none"}
+        strokeWidth={item.streak ? 2 : 1.5}
       />
       <Text style={{ color: colorScheme === "dark" ? "white" : "black" }}>
         {item.name}

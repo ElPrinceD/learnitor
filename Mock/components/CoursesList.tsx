@@ -9,7 +9,7 @@ import {
   RefreshControl,
 } from "react-native";
 import Colors from "../constants/Colors";
-import { SIZES, rMS, rS, rV } from "../constants";
+import { SIZES, rMS, rS, rV, useShadows } from "../constants";
 import AppImage from "./AppImage";
 import { Course } from "./types";
 import { Skeleton } from "moti/skeleton";
@@ -22,93 +22,41 @@ interface Props {
   loading: boolean;
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 9,
-    borderTopLeftRadius: rMS(30),
-    borderTopRightRadius: rMS(30),
-    padding: rMS(10),
-  },
-  courseList: {
-    paddingBottom: rMS(40),
-  },
-  courseListContainer: {
-    backgroundColor: Colors.light.card, // Fallback
-  },
-  courseItem: {
-    flex: 1,
-    margin: rMS(10),
-    borderRadius: rMS(10),
-    overflow: "hidden",
-    elevation: 1,
-  },
-  imageContainer: {
-    flex: 1,
-    borderRadius: rMS(10),
-    overflow: "hidden",
-  },
-  image: {
-    width: "100%",
-    height: rV(120),
-  },
-  textContainer: {
-    flex: 1,
-    padding: rMS(10),
-    backgroundColor: "transparent",
-  },
-  name: {
-    fontSize: SIZES.medium,
-    fontWeight: "bold",
-  },
-  skeletonContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    flex: 9,
-    borderTopLeftRadius: rMS(30),
-    borderTopRightRadius: rMS(30),
-    padding: rMS(10),
-  },
-  skeletonItem: {
-    width: "48%",
-    marginVertical: rS(5),
-    borderRadius: 10,
-    gap: 5,
-  },
-});
-
 const CourseItem: React.FC<{
   item: Course;
   onCoursePress: (course: Course) => void;
   themeColors: any;
+  shadow: any;
 }> = memo(
-  ({ item, onCoursePress, themeColors }) => {
+  ({ item, onCoursePress, themeColors, shadow }) => {
     const handlePress = useCallback(() => {
       onCoursePress(item);
     }, [onCoursePress, item]);
-
-    const cardStyle = useMemo(
-      () => [styles.courseListContainer, { backgroundColor: themeColors.card }],
-      [themeColors.card]
-    );
-
-    const textStyle = useMemo(
-      () => [styles.name, { color: themeColors.text }],
-      [themeColors.text]
-    );
 
     return (
       <TouchableOpacity
         onPress={handlePress}
         activeOpacity={0.7}
-        style={styles.courseItem}
+        style={staticStyles.courseItem}
       >
-        <View style={cardStyle}>
-          <View style={styles.imageContainer}>
-            <AppImage uri={item.url} style={styles.image} />
+        <View
+          style={[
+            staticStyles.cardContainer,
+            {
+              backgroundColor: themeColors.cardGlass,
+              borderColor: themeColors.border + "40",
+              ...shadow.small,
+            },
+          ]}
+        >
+          <View style={staticStyles.imageContainer}>
+            <AppImage uri={item.url} style={staticStyles.image} />
           </View>
-          <View style={styles.textContainer}>
-            <Text style={textStyle} numberOfLines={1}>
+          <View style={staticStyles.textContainer}>
+            <Text
+              style={[staticStyles.name, { color: themeColors.text }]}
+              numberOfLines={2}
+            >
               {item.title}
             </Text>
           </View>
@@ -122,11 +70,64 @@ const CourseItem: React.FC<{
       prevProps.item.title === nextProps.item.title &&
       prevProps.item.url === nextProps.item.url &&
       prevProps.onCoursePress === nextProps.onCoursePress &&
-      prevProps.themeColors.card === nextProps.themeColors.card &&
+      prevProps.themeColors.cardGlass === nextProps.themeColors.cardGlass &&
       prevProps.themeColors.text === nextProps.themeColors.text
     );
   }
 );
+
+const staticStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingHorizontal: rS(12),
+    paddingTop: rV(4),
+  },
+  courseList: {
+    paddingBottom: rMS(40),
+  },
+  courseItem: {
+    flex: 1,
+    margin: rMS(6),
+  },
+  cardContainer: {
+    borderRadius: rMS(20),
+    overflow: "hidden",
+    borderWidth: 1,
+  },
+  imageContainer: {
+    borderTopLeftRadius: rMS(20),
+    borderTopRightRadius: rMS(20),
+    overflow: "hidden",
+  },
+  image: {
+    width: "100%",
+    height: rV(120),
+  },
+  textContainer: {
+    padding: rMS(12),
+    backgroundColor: "transparent",
+  },
+  name: {
+    fontSize: rMS(13),
+    fontWeight: "800",
+    letterSpacing: -0.1,
+  },
+  // Skeleton loading
+  skeletonContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    flex: 1,
+    paddingHorizontal: rS(12),
+    paddingTop: rV(4),
+  },
+  skeletonItem: {
+    width: "48%",
+    marginVertical: rS(6),
+    borderRadius: rMS(20),
+    overflow: "hidden",
+  },
+});
 
 const CoursesList: React.FC<Props> = ({
   courses,
@@ -141,6 +142,7 @@ const CoursesList: React.FC<Props> = ({
     [colorScheme]
   );
   const colorMode = colorScheme === "dark" ? "dark" : "light";
+  const shadow = useShadows();
 
   const renderItem = useCallback(
     ({ item }: { item: Course }) => (
@@ -148,9 +150,10 @@ const CoursesList: React.FC<Props> = ({
         item={item}
         onCoursePress={onCoursePress}
         themeColors={themeColors}
+        shadow={shadow}
       />
     ),
-    [onCoursePress, themeColors]
+    [onCoursePress, themeColors, shadow]
   );
 
   const sortCourses = useCallback((list: Course[]) => {
@@ -186,32 +189,46 @@ const CoursesList: React.FC<Props> = ({
     return (
       <View
         style={[
-          styles.skeletonContainer,
+          staticStyles.skeletonContainer,
           { backgroundColor: themeColors.background },
         ]}
       >
         {[...Array(6)].map((_, index) => (
-          <View key={index} style={styles.skeletonItem}>
+          <View
+            key={index}
+            style={[
+              staticStyles.skeletonItem,
+              {
+                backgroundColor: themeColors.cardGlass,
+                borderWidth: 1,
+                borderColor: themeColors.border + "40",
+              },
+            ]}
+          >
             <Skeleton
               colorMode={colorMode}
               height={rV(120)}
               width={"100%"}
+              radius={0}
               transition={{
                 type: "timing",
                 duration: 800,
                 delay: index * 100,
               }}
             />
-            <Skeleton
-              colorMode={colorMode}
-              height={rV(18)}
-              width={"100%"}
-              transition={{
-                type: "timing",
-                duration: 800,
-                delay: index * 100 + 50,
-              }}
-            />
+            <View style={{ padding: rMS(12) }}>
+              <Skeleton
+                colorMode={colorMode}
+                height={rV(16)}
+                width={"80%"}
+                radius={rMS(8)}
+                transition={{
+                  type: "timing",
+                  duration: 800,
+                  delay: index * 100 + 50,
+                }}
+              />
+            </View>
           </View>
         ))}
       </View>
@@ -220,7 +237,10 @@ const CoursesList: React.FC<Props> = ({
 
   return (
     <View
-      style={[styles.container, { backgroundColor: themeColors.background }]}
+      style={[
+        staticStyles.container,
+        { backgroundColor: themeColors.background },
+      ]}
     >
       <FlatList
         data={sortedCourses}
@@ -230,7 +250,7 @@ const CoursesList: React.FC<Props> = ({
         windowSize={5}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
-        contentContainerStyle={styles.courseList}
+        contentContainerStyle={staticStyles.courseList}
         showsVerticalScrollIndicator={false}
         refreshControl={refreshControl}
         maintainVisibleContentPosition={{

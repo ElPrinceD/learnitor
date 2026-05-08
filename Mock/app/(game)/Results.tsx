@@ -19,7 +19,7 @@ import { SIZES, rMS, rS, rV, useShadows } from "../../constants";
 import { useQuery } from "@tanstack/react-query";
 import { getGameDetails } from "../../services/GamesApiCalls";
 import { useAdManager } from "../../components/ads/AdManager";
-import { Ionicons } from "@expo/vector-icons";
+import { Trophy, Home, Gamepad2 } from "lucide-react-native";
 import Animated, {
   FadeInDown,
   FadeInUp,
@@ -457,7 +457,7 @@ export default function ResultsScreen() {
       <View style={styles.podiumAvatarContainer}>
         {item.isWinner && (
           <View style={styles.podiumCrown}>
-            <Ionicons name="trophy" size={20} color="#FFD700" />
+            <Trophy size={20} color="#FFD700" />
           </View>
         )}
         <Image
@@ -567,7 +567,7 @@ export default function ResultsScreen() {
                     <Text style={styles.playerScore}>{item.score}%</Text>
                     {item.isWinner && (
                       <View style={styles.winnerBadge}>
-                        <Ionicons name="trophy" size={18} color="#FFD700" />
+                        <Trophy size={18} color="#FFD700" />
                       </View>
                     )}
                   </View>
@@ -587,7 +587,7 @@ export default function ResultsScreen() {
           onPressOut={() => onPressOut(homeScale)}
           activeOpacity={1}
         >
-          <Ionicons name="home" size={20} color={themeColors.tint} />
+          <Home size={20} color={themeColors.tint} />
           <Text style={styles.homeButtonText}>Home</Text>
         </AnimatedTouchable>
 
@@ -598,7 +598,7 @@ export default function ResultsScreen() {
           onPressOut={() => onPressOut(newGameScale)}
           activeOpacity={1}
         >
-          <Ionicons name="game-controller" size={20} color="#fff" />
+          <Gamepad2 size={20} color="#fff" />
           <Text style={styles.newGameButtonText}>New Game</Text>
         </AnimatedTouchable>
       </View>
