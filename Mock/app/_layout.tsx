@@ -37,7 +37,9 @@ import config from "../tamagui.config";
 import { vexo } from "vexo-analytics";
 import * as Sentry from "@sentry/react-native";
 import { isRunningInExpoGo } from "expo";
-import { StatusBar } from "react-native";
+import { StatusBar, LogBox } from "react-native";
+
+LogBox.ignoreLogs(["SafeAreaView has been deprecated"]);
 import Colors from "../constants/Colors";
 import * as SystemUI from "expo-system-ui";
 import { usePushNotifications } from "../usePushNotifications";

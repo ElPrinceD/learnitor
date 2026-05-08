@@ -25,7 +25,7 @@ export default function Tab3Layout() {
             headerTitleAlign: "center",
             headerTitleStyle: {
               fontWeight: "900",
-              fontSize: rMS(18),
+              fontSize: rMS(25),
               color: "#fff",
             },
             headerRight: () => (

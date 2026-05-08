@@ -210,7 +210,7 @@ const CustomPicker: React.FC<CustomPickerProps> = ({
                           setIsOpen(false);
                         }}
                       >
-                        <>
+                        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                           <Text
                             style={[
                               styles.optionText,
@@ -226,7 +226,7 @@ const CustomPicker: React.FC<CustomPickerProps> = ({
                               color={themeColors.tint}
                             />
                           )}
-                        </>
+                        </View>
                       </TouchableHighlight>
                       {index < options.length - 1 && (
                         <View style={styles.separator} />

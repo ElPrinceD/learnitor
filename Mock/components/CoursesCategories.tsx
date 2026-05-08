@@ -1,12 +1,12 @@
 import React, { useCallback } from "react";
 import {
-  FlatList,
   TouchableOpacity,
   View,
   StyleSheet,
   Text,
   useColorScheme,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import Colors from "../constants/Colors";
 import { Category } from "./types";
 import { SIZES, rMS, rS, rV } from "../constants";
@@ -96,7 +96,7 @@ const CoursesCategories: React.FC<Props> = ({
 
   return (
     <View style={styles.categoryContainer}>
-      <FlatList
+      <FlashList
         data={categories}
         horizontal
         showsHorizontalScrollIndicator={false}

@@ -52,11 +52,6 @@ const ThreeDButton: React.FC<ThreeDButtonProps> = ({ isQuestion, onPress }) => {
     }),
   };
 
-  // Theme-aware colors based on tint
-  const outerColor = themeColors.tint;
-  const heightColor = colorScheme === "dark" ? themeColors.tint + "80" : themeColors.tint + "CC";
-  const innerColor = colorScheme === "dark" ? themeColors.tint + "E0" : themeColors.tint;
-
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -73,19 +68,19 @@ const ThreeDButton: React.FC<ThreeDButtonProps> = ({ isQuestion, onPress }) => {
       padding: rMS(8),
       borderRadius: 10,
       transform: [{ rotate: "45deg" }],
-      backgroundColor: outerColor,
+      backgroundColor: "#002968",
       shadowColor: "#000",
       shadowOffset: { width: 4, height: 9 },
-      shadowOpacity: 0.3,
-      shadowRadius: 4,
+      shadowOpacity: 1,
+      shadowRadius: 2,
       elevation: 5,
     },
     height: {
       borderRadius: 15,
-      backgroundColor: heightColor,
+      backgroundColor: "#001a43",
     },
     inner: {
-      backgroundColor: innerColor,
+      backgroundColor: "#00378a",
       alignItems: "center",
       justifyContent: "center",
       height: "100%",
@@ -109,9 +104,7 @@ const ThreeDButton: React.FC<ThreeDButtonProps> = ({ isQuestion, onPress }) => {
             <Animated.View style={[styles.height, heightStyle]}>
               <Animated.View style={[styles.inner, innerStyle]}>
                 {isQuestion ? (
-                  <View style={{ transform: [{ rotate: "-45deg" }] }}>
-                    <Play size={20} color="#fff" fill="#fff" />
-                  </View>
+                  <Play size={rMS(20)} color="#000" fill= {themeColors.tint} />
                 ) : (
                   <Text style={styles.buttonText}></Text>
                 )}

@@ -1,47 +1,28 @@
-import React, { memo, useRef, useState } from "react";
+import React, { memo } from "react";
 import {
-  Image,
   View,
   StyleSheet,
-  ActivityIndicator,
   useColorScheme,
   ImageProps,
   TouchableOpacity,
   GestureResponderEvent,
 } from "react-native";
-import { Image as CachedImage } from "react-native-expo-image-cache";
+import { Image } from "expo-image";
 import { isEqual } from "lodash";
 import Colors from "../constants/Colors";
-import { rS } from "../constants";
-
-// Define props for CachedImage based on react-native-expo-image-cache
-interface CachedImageProps {
-  uri: string;
-  style?: ImageProps["style"];
-  defaultSource?: ImageProps["defaultSource"];
-  preview?: { uri: string };
-  options?: object;
-}
 
 interface AppImageProps {
   uri?: string;
   style?: ImageProps["style"];
-  onPress?: (event: GestureResponderEvent) => void; // Add optional onPress prop
-  cacheKey?: string; // Add cache key for forcing cache invalidation
+  onPress?: (event: GestureResponderEvent) => void;
+  cacheKey?: string;
 }
+
+const blurhash = "L6PZfSi_.AyE_3t7t7R**0o#DgR4";
 
 const styles = StyleSheet.create({
   container: {
     position: "relative",
-  },
-  placeholder: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
   },
   image: {
     width: "100%",
@@ -57,52 +38,28 @@ const AppImage: React.FC<AppImageProps> = ({
 }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
-  const isLoadingRef = useRef(true);
-  const [useFallback, setUseFallback] = useState(false);
-
-  const handleLoad = () => {
-    isLoadingRef.current = false;
-  };
-
-  const handleError = (error: any) => {
-    isLoadingRef.current = false;
-    setUseFallback(true);
-  };
 
   const isValidUri = uri && typeof uri === "string" && uri.startsWith("http");
+  const imageUri = isValidUri
+    ? cacheKey
+      ? `${uri}?cacheKey=${cacheKey}`
+      : uri
+    : undefined;
 
-  const renderImage = () => {
-    if (isValidUri && !useFallback) {
-      // Use cacheKey to force cache invalidation if provided
-      const imageUri = cacheKey ? `${uri}?cacheKey=${cacheKey}` : uri;
-      return (
-        <CachedImage
-          uri={imageUri}
-          style={[styles.image, style]}
-          onLoad={handleLoad}
-          onError={handleError}
-        />
-      );
-    } else if (isValidUri && useFallback) {
-      return (
-        <Image
-          source={{ uri }}
-          style={[styles.image, style]}
-          onLoad={handleLoad}
-          onError={handleError}
-          resizeMode="cover"
-        />
-      );
-    }
-    return (
-      <Image
-        source={require("../assets/images/placeholder.png")} // Adjust path
-        style={[styles.image, style]}
-        onLoad={handleLoad}
-        onError={handleError}
-      />
-    );
-  };
+  const imageSource = imageUri
+    ? { uri: imageUri }
+    : require("../assets/images/placeholder.png");
+
+  const renderImage = () => (
+    <Image
+      source={imageSource}
+      style={[styles.image, style]}
+      placeholder={{ blurhash }}
+      contentFit="cover"
+      transition={200}
+      cachePolicy="memory-disk"
+    />
+  );
 
   return (
     <View style={[styles.container, style]}>
@@ -110,16 +67,6 @@ const AppImage: React.FC<AppImageProps> = ({
         <TouchableOpacity onPress={onPress}>{renderImage()}</TouchableOpacity>
       ) : (
         renderImage()
-      )}
-      {!isValidUri && isLoadingRef.current && (
-        <View
-          style={[
-            styles.placeholder,
-            { backgroundColor: themeColors.background },
-          ]}
-        >
-          <ActivityIndicator size="small" color={themeColors.tint} />
-        </View>
       )}
     </View>
   );

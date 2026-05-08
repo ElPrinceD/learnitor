@@ -5,9 +5,9 @@ import {
   TouchableOpacity,
   StyleSheet,
   useColorScheme,
-  FlatList,
   RefreshControl,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import Colors from "../constants/Colors";
 import { SIZES, rMS, rS, rV, useShadows } from "../constants";
 import AppImage from "./AppImage";
@@ -242,22 +242,14 @@ const CoursesList: React.FC<Props> = ({
         { backgroundColor: themeColors.background },
       ]}
     >
-      <FlatList
+      <FlashList
         data={sortedCourses}
         numColumns={2}
-        initialNumToRender={6}
-        maxToRenderPerBatch={6}
-        windowSize={5}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         contentContainerStyle={staticStyles.courseList}
         showsVerticalScrollIndicator={false}
         refreshControl={refreshControl}
-        maintainVisibleContentPosition={{
-          minIndexForVisible: 0,
-          autoscrollToTopThreshold: 10,
-        }}
-        onEndReachedThreshold={0.5}
       />
     </View>
   );

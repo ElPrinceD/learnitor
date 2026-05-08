@@ -194,7 +194,6 @@ export default function SettingsPage() {
       <Text style={styles.sectionTitle}>Account</Text>
       {renderItem(User, "Account Settings", handleAccountSettings)}
       <View style={styles.separator} />
-      {renderItem(Share2, "Tell a Friend", handleTellAFriend)}
 
       <Text style={styles.sectionTitle}>Support</Text>
       {renderItem(AlertCircle, "Report a Problem", handleReportProblem)}

@@ -300,14 +300,15 @@ const Profile = () => {
     },
     scrollContent: {
       paddingHorizontal: rS(16),
-      paddingTop: Math.max(rV(12), insets.top + rV(8)),
+      paddingTop: Math.max(rV(12), insets.top + rV(8)) + rMS(36) + rV(12),
       paddingBottom: Math.max(rV(40), insets.bottom + rV(20)),
     },
     // Top bar
     topBar: {
-      flexDirection: "row",
-      justifyContent: "flex-end",
-      marginBottom: rV(12),
+      position: "absolute",
+      top: Math.max(rV(12), insets.top + rV(8)),
+      right: rS(16),
+      zIndex: 10,
     },
     settingsBtn: {
       width: rMS(36),
@@ -608,36 +609,37 @@ const Profile = () => {
 
   return (
     <View style={styles.container}>
+      {/* Top Bar — Settings Icon (fixed, outside scroll) */}
+      <Animated.View
+        entering={FadeInDown.duration(400).delay(50)}
+        style={styles.topBar}
+      >
+        <AnimatedTouchable
+          style={[styles.settingsBtn, settingsAnimStyle]}
+          onPress={() => router.navigate("SettingsPage")}
+          onPressIn={() => {
+            settingsScale.value = withSpring(0.9, {
+              damping: 15,
+              stiffness: 300,
+            });
+          }}
+          onPressOut={() => {
+            settingsScale.value = withSpring(1, {
+              damping: 15,
+              stiffness: 300,
+            });
+          }}
+          activeOpacity={1}
+        >
+          <Menu size={20} color={themeColors.text} />
+        </AnimatedTouchable>
+      </Animated.View>
+
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Top Bar — Settings Icon */}
-        <Animated.View
-          entering={FadeInDown.duration(400).delay(50)}
-          style={styles.topBar}
-        >
-          <AnimatedTouchable
-            style={[styles.settingsBtn, settingsAnimStyle]}
-            onPress={() => router.navigate("SettingsPage")}
-            onPressIn={() => {
-              settingsScale.value = withSpring(0.9, {
-                damping: 15,
-                stiffness: 300,
-              });
-            }}
-            onPressOut={() => {
-              settingsScale.value = withSpring(1, {
-                damping: 15,
-                stiffness: 300,
-              });
-            }}
-            activeOpacity={1}
-          >
-            <Menu size={20} color={themeColors.text} />
-          </AnimatedTouchable>
-        </Animated.View>
 
         {/* Profile Header */}
         <Animated.View

@@ -6,8 +6,8 @@ import {
   Image,
   StyleSheet,
   useColorScheme,
-  FlatList,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
 import { Course } from "./types";
 import ProgressBar from "./ProgressBar";
@@ -211,15 +211,11 @@ const EnrolledCoursesList: React.FC<Props> = ({
           <Text style={styles.seeAll}>See All</Text>
         </TouchableOpacity>
       </View>
-      <FlatList
+      <FlashList
         horizontal
         data={enrolledCoursesData}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
-        initialNumToRender={5}
-        maxToRenderPerBatch={10}
-        windowSize={10}
-        removeClippedSubviews={true}
         showsHorizontalScrollIndicator={false}
       />
     </View>
