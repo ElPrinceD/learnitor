@@ -11,9 +11,11 @@ This document lists all API endpoints needed for the game/leaderboard features. 
 Returns the authenticated user's current rank across all default leaderboard categories.
 
 **Headers:**
+
 - `Authorization: Token <user_token>`
 
 **Response (200 OK):**
+
 ```json
 {
   "world": "#12,842",
@@ -23,6 +25,7 @@ Returns the authenticated user's current rank across all default leaderboard cat
 ```
 
 **Notes:**
+
 - Ranks are formatted strings (e.g., `"#12,842"`)
 - Return `null` for any category where the user has no score yet
 - Rankings are based on accumulated single-player game scores
@@ -36,12 +39,15 @@ Returns the authenticated user's current rank across all default leaderboard cat
 Returns all custom leaderboard groups the authenticated user belongs to.
 
 **Headers:**
+
 - `Authorization: Token <user_token>`
 
 **Query Params:**
+
 - `timeframe` (optional): `"season"` | `"all_time"` — defaults to `"season"`
 
 **Response (200 OK):**
+
 ```json
 [
   {
@@ -62,17 +68,21 @@ Returns all custom leaderboard groups the authenticated user belongs to.
 Creates a new custom leaderboard group. The creator is automatically added as a member.
 
 **Headers:**
+
 - `Authorization: Token <user_token>`
 
 **Request Body:**
+
 ```json
 {
   "name": "My Study Squad"
 }
 ```
-*(name is optional — backend can auto-generate a name)*
+
+_(name is optional — backend can auto-generate a name)_
 
 **Response (201 Created):**
+
 ```json
 {
   "id": "abc123",
@@ -90,9 +100,11 @@ Creates a new custom leaderboard group. The creator is automatically added as a 
 Join an existing custom leaderboard using an invite code.
 
 **Headers:**
+
 - `Authorization: Token <user_token>`
 
 **Request Body:**
+
 ```json
 {
   "inviteCode": "SQ4X9K"
@@ -100,6 +112,7 @@ Join an existing custom leaderboard using an invite code.
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "id": "abc123",
@@ -108,6 +121,7 @@ Join an existing custom leaderboard using an invite code.
 ```
 
 **Error Responses:**
+
 - `404` — Invalid invite code
 - `409` — Already a member
 
@@ -120,15 +134,19 @@ Join an existing custom leaderboard using an invite code.
 Returns the ranked list of users for a specific leaderboard.
 
 **Headers:**
+
 - `Authorization: Token <user_token>`
 
 **Path Params:**
+
 - `id`: Leaderboard ID (`"world"`, `"country"`, `"school"`, `"program"`, or a custom leaderboard UUID)
 
 **Query Params:**
+
 - `timeframe`: `"season"` | `"all_time"`
 
 **Response (200 OK):**
+
 ```json
 {
   "rankings": [
@@ -158,6 +176,7 @@ Returns the ranked list of users for a specific leaderboard.
 ```
 
 **Notes:**
+
 - For `"world"`, rank across all users globally
 - For `"country"`, rank among users from the same country
 - For `"school"`, rank among users from the same school/institution
@@ -175,9 +194,11 @@ Returns the ranked list of users for a specific leaderboard.
 Submits the final score from a completed single-player game session.
 
 **Headers:**
+
 - `Authorization: Token <user_token>`
 
 **Request Body:**
+
 ```json
 {
   "gameId": "game-uuid-or-id",
@@ -187,6 +208,7 @@ Submits the final score from a completed single-player game session.
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -200,6 +222,7 @@ Submits the final score from a completed single-player game session.
 ```
 
 **Notes:**
+
 - `finalScore` is the total points earned in this game session
 - `highestStreak` is the longest consecutive correct answer streak
 - Backend should accumulate scores for ranking calculations
@@ -214,9 +237,11 @@ Submits the final score from a completed single-player game session.
 Returns the authenticated user's aggregated game statistics for the Profile page.
 
 **Headers:**
+
 - `Authorization: Token <user_token>`
 
 **Response (200 OK):**
+
 ```json
 {
   "accuracy": 74.2,
@@ -228,6 +253,7 @@ Returns the authenticated user's aggregated game statistics for the Profile page
 ```
 
 **Notes:**
+
 - `accuracy` — percentage of correct answers across all sessions
 - `sessions` — total number of game sessions completed
 - `streakAvg` — average consecutive correct answers per session
@@ -243,9 +269,11 @@ Returns the authenticated user's aggregated game statistics for the Profile page
 Returns the authenticated user's performance history across past seasons.
 
 **Headers:**
+
 - `Authorization: Token <user_token>`
 
 **Response (200 OK):**
+
 ```json
 [
   {
@@ -264,6 +292,7 @@ Returns the authenticated user's performance history across past seasons.
 ```
 
 **Notes:**
+
 - Ordered by most recent season first
 - `maxScore` is the theoretical maximum or highest score that season (used for progress bar calculation)
 - `rank` is the user's final rank for that season
@@ -278,6 +307,7 @@ The leaderboard uses a "season" system for time-based competition:
 - **All-Time**: Lifetime accumulated scores.
 
 The backend needs to:
+
 1. Define the 13-week season duration boundary.
 2. Reset season scores at the start of each new season.
 3. Archive previous season results.
@@ -292,9 +322,11 @@ The backend needs to:
 Returns the current exam window status and whether the user has already completed this week's exam.
 
 **Headers:**
+
 - `Authorization: Token <user_token>`
 
 **Response (200 OK):**
+
 ```json
 {
   "isActive": true,
@@ -308,6 +340,7 @@ Returns the current exam window status and whether the user has already complete
 ```
 
 **Notes:**
+
 - Exam window: Friday 7pm UTC → Sunday 11:59pm UTC
 - `hasCompleted` is per-user per-week
 - `currentWeek` is the current Study Week out of 13
@@ -323,9 +356,11 @@ Returns the current exam window status and whether the user has already complete
 Returns 30 randomized questions from the 300-question pool.
 
 **Headers:**
+
 - `Authorization: Token <user_token>`
 
 **Response (200 OK):**
+
 ```json
 {
   "questions": [
@@ -335,6 +370,7 @@ Returns 30 randomized questions from the 300-question pool.
 ```
 
 **Notes:**
+
 - Returns exactly 30 questions
 - Randomized per user, consistent within a session
 - Only callable during active exam window if user hasn't completed
@@ -346,16 +382,22 @@ Returns 30 randomized questions from the 300-question pool.
 **`POST /api/weekly-exam/submit`**
 
 **Request Body:**
+
 ```json
 { "finalScore": 1340, "highestStreak": 8 }
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "success": true,
   "weeklyRank": 12,
-  "h2hResult": { "opponentName": "Jordan Lee", "opponentScore": 60, "result": "won" }
+  "h2hResult": {
+    "opponentName": "Jordan Lee",
+    "opponentScore": 60,
+    "result": "won"
+  }
 }
 ```
 
@@ -368,6 +410,7 @@ Returns 30 randomized questions from the 300-question pool.
 Returns the user's current 1v1 Battles matchup in default leagues.
 
 **Response (200 OK):**
+
 ```json
 {
   "id": "h2h-1",
@@ -382,6 +425,7 @@ Returns the user's current 1v1 Battles matchup in default leagues.
 ```
 
 **Notes:**
+
 - `status`: `"pending"` | `"won"` | `"lost"` | `"draw"`
 - Pairings assigned at Friday 7pm UTC
 - Returns `null` if no active knockout
@@ -393,10 +437,22 @@ Returns the user's current 1v1 Battles matchup in default leagues.
 **`GET /api/knockout/bracket`**
 
 **Response (200 OK):**
+
 ```json
 {
   "rounds": [
-    { "round": 1, "matches": [{ "player1": "You", "player2": "Chen_L", "score1": 134, "score2": 40, "winner": "player1" }] }
+    {
+      "round": 1,
+      "matches": [
+        {
+          "player1": "You",
+          "player2": "Chen_L",
+          "score1": 134,
+          "score2": 40,
+          "winner": "player1"
+        }
+      ]
+    }
   ],
   "totalRounds": 4,
   "currentRound": 2
@@ -404,6 +460,7 @@ Returns the user's current 1v1 Battles matchup in default leagues.
 ```
 
 **Notes:**
+
 - Single elimination. Rounds are dynamically calculated by the backend based on the number of members in the squad (using `Math.ceil(Math.log2(memberCount))`).
 - The knockout starts at `Season End Week (13) - Total Rounds + 1`.
 - Odd squads: "Average" virtual participant (FPL-style, score = global average of all users that Study Week).
@@ -421,20 +478,21 @@ Returns the user's current 1v1 Battles matchup in default leagues.
 
 **Field Reference:**
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | `string` | Yes | User-defined squad name. Max 40 characters. Must not be empty. |
-| `scoringMode` | `string` (enum) | Yes | Determines how squad rankings are calculated. See below. |
+| Field         | Type            | Required | Description                                                    |
+| ------------- | --------------- | -------- | -------------------------------------------------------------- |
+| `name`        | `string`        | Yes      | User-defined squad name. Max 40 characters. Must not be empty. |
+| `scoringMode` | `string` (enum) | Yes      | Determines how squad rankings are calculated. See below.       |
 
 **`scoringMode` options:**
 
-| Value | Label (UI) | Description |
-|-------|-----------|-------------|
-| `"all_points"` | 📊 All Points | All score sources count: multiplayer games, solo games, and weekly exam scores. |
-| `"exam_only"` | 📝 Exam Only | Only weekly exam scores contribute to the leaderboard ranking. |
+| Value          | Label (UI)    | Description                                                                                                           |
+| -------------- | ------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `"all_points"` | 📊 All Points | All score sources count: multiplayer games, solo games, and weekly exam scores.                                       |
+| `"exam_only"`  | 📝 Exam Only  | Only weekly exam scores contribute to the leaderboard ranking.                                                        |
 | `"custom_1v1"` | ⚔️ H2H League | Members are paired weekly for head-to-head matches. Win = 3 pts, Draw = 1 pt, Loss = 0 pts. Separate standings table. |
 
 **Response (201 Created):**
+
 ```json
 {
   "id": "abc123",
@@ -444,6 +502,7 @@ Returns the user's current 1v1 Battles matchup in default leagues.
 ```
 
 **`invite_code` format:**
+
 - 6 alphanumeric uppercase characters (e.g. `"SQ4X9K"`)
 - Must be unique across all squads
 - Auto-generated by the backend on creation
@@ -457,29 +516,40 @@ Returns the user's current 1v1 Battles matchup in default leagues.
 Returns all H2H match results for a custom_1v1 squad.
 
 **Response (200 OK):**
+
 ```json
-[{ "id": "ch1", "player1": "You", "player2": "Jordan Lee", "score1": 134, "score2": 60, "result": "w", "round": 2 }]
+[
+  {
+    "id": "ch1",
+    "player1": "You",
+    "player2": "Jordan Lee",
+    "score1": 134,
+    "score2": 60,
+    "result": "w",
+    "round": 2
+  }
+]
 ```
 
 **Field Reference:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | `string` | Unique match ID |
-| `player1` | `string` | Display name of player 1 (use `"You"` for the requesting user) |
-| `player2` | `string` | Display name of player 2 |
-| `score1` | `number \| null` | Player 1's score. `null` if match not yet played. |
-| `score2` | `number \| null` | Player 2's score. `null` if match not yet played. |
-| `result` | `string` (enum) | Match result **from the requesting user's perspective**. See below. |
-| `round` | `number \| null` | Round number (1-indexed). Optional. |
+| Field     | Type             | Description                                                         |
+| --------- | ---------------- | ------------------------------------------------------------------- |
+| `id`      | `string`         | Unique match ID                                                     |
+| `player1` | `string`         | Display name of player 1 (use `"You"` for the requesting user)      |
+| `player2` | `string`         | Display name of player 2                                            |
+| `score1`  | `number \| null` | Player 1's score. `null` if match not yet played.                   |
+| `score2`  | `number \| null` | Player 2's score. `null` if match not yet played.                   |
+| `result`  | `string` (enum)  | Match result **from the requesting user's perspective**. See below. |
+| `round`   | `number \| null` | Round number (1-indexed). Optional.                                 |
 
 **`result` options:**
 
-| Value | Meaning |
-|-------|--------|
-| `"w"` | Win — the requesting user won this match |
-| `"d"` | Draw — both players had equal scores |
-| `"l"` | Loss — the requesting user lost this match |
+| Value       | Meaning                                                   |
+| ----------- | --------------------------------------------------------- |
+| `"w"`       | Win — the requesting user won this match                  |
+| `"d"`       | Draw — both players had equal scores                      |
+| `"l"`       | Loss — the requesting user lost this match                |
 | `"pending"` | Not yet played — match is scheduled but scores are not in |
 
 ---
@@ -489,32 +559,46 @@ Returns all H2H match results for a custom_1v1 squad.
 **`GET /api/h2h/custom/{squadId}/standings`**
 
 **Response (200 OK):**
+
 ```json
-[{ "rank": 1, "name": "You", "pts": 9, "w": 3, "d": 0, "l": 0, "totalScore": 412, "weekScore": 134, "tiebreaker": null }]
+[
+  {
+    "rank": 1,
+    "name": "You",
+    "pts": 9,
+    "w": 3,
+    "d": 0,
+    "l": 0,
+    "totalScore": 412,
+    "weekScore": 134,
+    "tiebreaker": null
+  }
+]
 ```
 
 **Field Reference:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `rank` | `number` | Position in the standings (1-indexed) |
-| `name` | `string` | Player display name (use `"You"` for requesting user) |
-| `pts` | `number` | Total league points (Win=3, Draw=1, Loss=0) |
-| `w` | `number` | Total wins |
-| `d` | `number` | Total draws |
-| `l` | `number` | Total losses |
-| `totalScore` | `number` | Cumulative game score across all rounds |
-| `weekScore` | `number` | Score for the current/latest study week |
-| `tiebreaker` | `string \| null` | How a tie was broken. See below. |
+| Field        | Type             | Description                                           |
+| ------------ | ---------------- | ----------------------------------------------------- |
+| `rank`       | `number`         | Position in the standings (1-indexed)                 |
+| `name`       | `string`         | Player display name (use `"You"` for requesting user) |
+| `pts`        | `number`         | Total league points (Win=3, Draw=1, Loss=0)           |
+| `w`          | `number`         | Total wins                                            |
+| `d`          | `number`         | Total draws                                           |
+| `l`          | `number`         | Total losses                                          |
+| `totalScore` | `number`         | Cumulative game score across all rounds               |
+| `weekScore`  | `number`         | Score for the current/latest study week               |
+| `tiebreaker` | `string \| null` | How a tie was broken. See below.                      |
 
 **`tiebreaker` options:**
 
-| Value | Meaning |
-|-------|--------|
-| `null` | No tiebreaker needed — player has a unique rank |
+| Value        | Meaning                                                  |
+| ------------ | -------------------------------------------------------- |
+| `null`       | No tiebreaker needed — player has a unique rank          |
 | `"standoff"` | Virtual coin toss — displayed as 🪙 COIN badge in the UI |
 
 **Tiebreaker Resolution Order:**
+
 1. Points (`pts`) — highest first
 2. Total Score (`totalScore`) — highest first
 3. Head-to-head record between tied players
@@ -540,9 +624,11 @@ These endpoints already exist and are used by the game system:
 Update name or code visibility settings for a custom leaderboard. Only the creator can perform this action. All fields in the request body are optional — include only the fields you want to update.
 
 **Headers:**
+
 - `Authorization: Token <user_token>`
 
 **Request Body:**
+
 ```json
 {
   "name": "New Squad Name",
@@ -552,19 +638,20 @@ Update name or code visibility settings for a custom leaderboard. Only the creat
 
 **Field Reference:**
 
-| Field | Type | Required | Constraints | Description |
-|-------|------|----------|------------|-------------|
-| `name` | `string` | No | 1-40 characters, non-empty | New display name for the squad |
-| `isCodePublic` | `boolean` | No | `true` or `false` | Controls who can see the invite code. See below. |
+| Field          | Type      | Required | Constraints                | Description                                      |
+| -------------- | --------- | -------- | -------------------------- | ------------------------------------------------ |
+| `name`         | `string`  | No       | 1-40 characters, non-empty | New display name for the squad                   |
+| `isCodePublic` | `boolean` | No       | `true` or `false`          | Controls who can see the invite code. See below. |
 
 **`isCodePublic` options:**
 
-| Value | Meaning |
-|-------|--------|
+| Value             | Meaning                                                   |
+| ----------------- | --------------------------------------------------------- |
 | `false` (default) | Only the squad creator can view and share the invite code |
-| `true` | All squad members can view and share the invite code |
+| `true`            | All squad members can view and share the invite code      |
 
 **Response (200 OK):**
+
 ```json
 {
   "id": "abc123",
@@ -574,6 +661,7 @@ Update name or code visibility settings for a custom leaderboard. Only the creat
 ```
 
 **Error Responses:**
+
 - `400` — Invalid data (empty name, name too long)
 - `403` — Not the squad creator
 - `404` — Squad not found
@@ -587,9 +675,11 @@ Update name or code visibility settings for a custom leaderboard. Only the creat
 Generates a new invite code, invalidating the old one. Only the creator can perform this action.
 
 **Headers:**
+
 - `Authorization: Token <user_token>`
 
 **Response (200 OK):**
+
 ```json
 {
   "invite_code": "NEW99X"
@@ -605,6 +695,7 @@ Generates a new invite code, invalidating the old one. Only the creator can perf
 Removes a member from the squad. Only the creator can perform this action. The creator cannot remove themselves.
 
 **Headers:**
+
 - `Authorization: Token <user_token>`
 
 **Response (204 No Content)**
@@ -618,6 +709,7 @@ Removes a member from the squad. Only the creator can perform this action. The c
 Permanently deletes a squad and removes all members. Only the creator can perform this action.
 
 **Headers:**
+
 - `Authorization: Token <user_token>`
 
 **Response (204 No Content)**
@@ -645,16 +737,16 @@ Each squad item should now include:
 
 **Field Reference:**
 
-| Field | Type | Always present | Description |
-|-------|------|---------------|-------------|
-| `id` | `string` | Yes | Unique squad identifier (UUID) |
-| `name` | `string` | Yes | Squad display name (1-40 chars) |
-| `memberCount` | `number` | Yes | Current number of members in the squad |
-| `icon` | `string` | Yes | Icon identifier. Always `"people"` for now. |
-| `scoringMode` | `string` (enum) | Yes | One of: `"all_points"`, `"exam_only"`, `"custom_1v1"`. See endpoint #14 for descriptions. |
-| `invite_code` | `string \| null` | Conditional | 6-char alphanumeric code. **Only include if** `isCodePublic` is `true` OR the requesting user is the creator. Otherwise omit or return `null`. |
-| `isCodePublic` | `boolean` | Yes | `false` = only creator sees code. `true` = all members see code. Default: `false`. |
-| `isCreator` | `boolean` | Yes | `true` if the requesting user created this squad, `false` otherwise. |
+| Field          | Type             | Always present | Description                                                                                                                                    |
+| -------------- | ---------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`           | `string`         | Yes            | Unique squad identifier (UUID)                                                                                                                 |
+| `name`         | `string`         | Yes            | Squad display name (1-40 chars)                                                                                                                |
+| `memberCount`  | `number`         | Yes            | Current number of members in the squad                                                                                                         |
+| `icon`         | `string`         | Yes            | Icon identifier. Always `"people"` for now.                                                                                                    |
+| `scoringMode`  | `string` (enum)  | Yes            | One of: `"all_points"`, `"exam_only"`, `"custom_1v1"`. See endpoint #14 for descriptions.                                                      |
+| `invite_code`  | `string \| null` | Conditional    | 6-char alphanumeric code. **Only include if** `isCodePublic` is `true` OR the requesting user is the creator. Otherwise omit or return `null`. |
+| `isCodePublic` | `boolean`        | Yes            | `false` = only creator sees code. `true` = all members see code. Default: `false`.                                                             |
+| `isCreator`    | `boolean`        | Yes            | `true` if the requesting user created this squad, `false` otherwise.                                                                           |
 
 ### GET `/api/leaderboards/details/{id}` — Updated Response
 
@@ -695,45 +787,46 @@ For custom squad IDs, include a `squadInfo` object:
 
 **`rankings[]` Field Reference:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | `number` | User ID |
-| `rank` | `number` | Position in the leaderboard (1-indexed) |
-| `username` | `string` | Display name |
-| `avatarUrl` | `string \| null` | Profile picture URL. `null` if no avatar. |
-| `score` | `number` | Total score based on the squad's `scoringMode` |
-| `badge` | `string \| null` | Optional display label. Options: `"Top Scholar"`, `"Rising Star"`, `"Academic Elite"`, or `null` |
-| `movement` | `string \| null` | Rank change indicator. Options: `"up"`, `"down"`, `"same"`, or `null` |
+| Field       | Type             | Description                                                                                      |
+| ----------- | ---------------- | ------------------------------------------------------------------------------------------------ |
+| `id`        | `number`         | User ID                                                                                          |
+| `rank`      | `number`         | Position in the leaderboard (1-indexed)                                                          |
+| `username`  | `string`         | Display name                                                                                     |
+| `avatarUrl` | `string \| null` | Profile picture URL. `null` if no avatar.                                                        |
+| `score`     | `number`         | Total score based on the squad's `scoringMode`                                                   |
+| `badge`     | `string \| null` | Optional display label. Options: `"Top Scholar"`, `"Rising Star"`, `"Academic Elite"`, or `null` |
+| `movement`  | `string \| null` | Rank change indicator. Options: `"up"`, `"down"`, `"same"`, or `null`                            |
 
 **`userStatus` Field Reference:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `rank` | `number \| null` | The requesting user's current rank. `null` if unranked. |
-| `percentile` | `string \| null` | Human-readable percentile (e.g. `"top 5%"`, `"top 15%"`). |
-| `message` | `string \| null` | Motivational message (e.g. `"Keep climbing!"`, `"You're on fire!"`) |
+| Field        | Type             | Description                                                         |
+| ------------ | ---------------- | ------------------------------------------------------------------- |
+| `rank`       | `number \| null` | The requesting user's current rank. `null` if unranked.             |
+| `percentile` | `string \| null` | Human-readable percentile (e.g. `"top 5%"`, `"top 15%"`).           |
+| `message`    | `string \| null` | Motivational message (e.g. `"Keep climbing!"`, `"You're on fire!"`) |
 
 **`squadInfo` Field Reference (only present for custom squad IDs, omit for global leaderboards):**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `knockoutStartWeek` | `number` | Study Week when knockout begins. Calculated as `13 - totalKnockoutRounds + 1`. |
-| `knockoutStarted` | `boolean` | `true` if `currentWeek >= knockoutStartWeek`, `false` otherwise. |
-| `totalKnockoutRounds` | `number` | Number of knockout rounds. Calculated as `Math.ceil(Math.log2(memberCount))`. |
-| `invite_code` | `string \| null` | Squad invite code. Only include if `isCodePublic` is `true` OR requesting user is creator. |
-| `isCodePublic` | `boolean` | Whether the invite code is visible to all members. |
-| `isCreator` | `boolean` | Whether the requesting user is the squad creator. |
-| `members` | `array` | Full list of squad members. See member fields below. |
+| Field                 | Type             | Description                                                                                |
+| --------------------- | ---------------- | ------------------------------------------------------------------------------------------ |
+| `knockoutStartWeek`   | `number`         | Study Week when knockout begins. Calculated as `13 - totalKnockoutRounds + 1`.             |
+| `knockoutStarted`     | `boolean`        | `true` if `currentWeek >= knockoutStartWeek`, `false` otherwise.                           |
+| `totalKnockoutRounds` | `number`         | Number of knockout rounds. Calculated as `Math.ceil(Math.log2(memberCount))`.              |
+| `invite_code`         | `string \| null` | Squad invite code. Only include if `isCodePublic` is `true` OR requesting user is creator. |
+| `isCodePublic`        | `boolean`        | Whether the invite code is visible to all members.                                         |
+| `isCreator`           | `boolean`        | Whether the requesting user is the squad creator.                                          |
+| `members`             | `array`          | Full list of squad members. See member fields below.                                       |
 
 **`members[]` Field Reference:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | `number` | User ID (used for the remove member endpoint) |
-| `username` | `string` | Display name |
-| `avatarUrl` | `string \| null` | Profile picture URL. `null` if no avatar. |
+| Field       | Type             | Description                                   |
+| ----------- | ---------------- | --------------------------------------------- |
+| `id`        | `number`         | User ID (used for the remove member endpoint) |
+| `username`  | `string`         | Display name                                  |
+| `avatarUrl` | `string \| null` | Profile picture URL. `null` if no avatar.     |
 
 **Important Rules:**
+
 - `knockoutStartWeek` = `13 - totalKnockoutRounds + 1`
 - `totalKnockoutRounds` = `Math.ceil(Math.log2(memberCount))`
 - `knockoutStarted` = `true` if `currentWeek >= knockoutStartWeek`
@@ -761,13 +854,42 @@ Add `seasonName` field:
 
 **Field Reference:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `isActive` | `boolean` | `true` if the exam window is currently open (between `startsAt` and `endsAt`) |
-| `hasCompleted` | `boolean` | `true` if the requesting user has already submitted this week's exam |
-| `startsAt` | `string` (ISO 8601) | UTC datetime when the exam window opens (typically Friday 7pm UTC) |
-| `endsAt` | `string` (ISO 8601) | UTC datetime when the exam window closes (typically Sunday 11:59pm UTC) |
-| `currentWeek` | `number` | Current study week number within the season (1-13) |
-| `seasonName` | `string` | Display label for the current season (e.g. `"Season 04"`, `"Season 05"`) |
-| `globalAverage` | `number \| null` | Average score of all users globally for the current week. `null` if no scores yet. |
-| `userScore` | `number \| null` | The requesting user's exam score this week. `null` if not taken yet. |
+| Field           | Type                | Description                                                                        |
+| --------------- | ------------------- | ---------------------------------------------------------------------------------- |
+| `isActive`      | `boolean`           | `true` if the exam window is currently open (between `startsAt` and `endsAt`)      |
+| `hasCompleted`  | `boolean`           | `true` if the requesting user has already submitted this week's exam               |
+| `startsAt`      | `string` (ISO 8601) | UTC datetime when the exam window opens (typically Friday 7pm UTC)                 |
+| `endsAt`        | `string` (ISO 8601) | UTC datetime when the exam window closes (typically Sunday 11:59pm UTC)            |
+| `currentWeek`   | `number`            | Current study week number within the season (1-13)                                 |
+| `seasonName`    | `string`            | Display label for the current season (e.g. `"Season 04"`, `"Season 05"`)           |
+| `globalAverage` | `number \| null`    | Average score of all users globally for the current week. `null` if no scores yet. |
+| `userScore`     | `number \| null`    | The requesting user's exam score this week. `null` if not taken yet.               |
+
+---
+
+---
+
+## 21. Delete Profile Picture (NEW - Profile Tab)
+
+**`DELETE /api/delete-profile-picture/`**
+
+Removes the authenticated user's custom profile picture, reverting to the default placeholder.
+
+**Headers:**
+
+- `Authorization: Token <user_token>`
+
+**Response (204 No Content)**
+
+---
+
+## Summary of Missing / To-Be-Implemented Backend Work
+
+Based on the Play and Profile tabs, here is the quick checklist for the backend developer:
+
+1. **User Profile Stats**: Ensure `GET /api/user/stats` calculates and returns `accuracy`, `sessions`, `streakAvg`, `streakAvgDelta`, and `tier`.
+2. **User Season History**: Ensure `GET /api/user/season-history` returns an array of past seasons with scores and ranks.
+3. **Custom Leaderboards (Squads)**: Ensure `POST /api/leaderboards/custom/create` accepts `name` and `scoringMode`, and that `GET /api/leaderboards/custom` returns them.
+4. **Knockout Brackets & H2H**: Implement the knockout logic for `custom_1v1` squads, including `GET /api/knockout/bracket`, `GET /api/h2h/current`, `GET /api/h2h/custom/{squadId}/matches`, and `GET /api/h2h/custom/{squadId}/standings`.
+5. **Squad Management**: Implement `PUT /api/leaderboards/custom/{id}`, `POST /api/leaderboards/custom/{id}/regenerate-code`, `DELETE /api/leaderboards/custom/{id}/members/{userId}`, and `DELETE /api/leaderboards/custom/{id}` for squad creators.
+6. **Weekly Exams**: Ensure `GET /api/weekly-exam/status` returns the `seasonName`, `currentWeek`, and `globalAverage`.

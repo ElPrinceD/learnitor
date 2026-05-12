@@ -10,40 +10,28 @@ import {
   StyleSheet,
   Text,
   useColorScheme,
-  ScrollView,
-  TouchableOpacity,
   Animated,
 } from "react-native";
-import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Flame, Music, Music2, Volume2, VolumeX, Lightbulb, RefreshCw } from "lucide-react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "../../components/AuthContext";
 import { useGameAudio } from "../../hooks/useGameAudio";
-import { getGameDetails } from "../../services/GamesApiCalls";
+import { getGameDetails, submitGameResult } from "../../services/GamesApiCalls";
 import { getPracticeAnswers } from "../../services/CoursesApiCalls";
 import Questions from "../../components/Questions";
 import { Question, Answer, GameDetailsResponse } from "../../components/types";
 import { StatusBar } from "expo-status-bar";
 import Colors from "../../constants/Colors";
 import { rMS, rV, rS, SIZES } from "../../constants/index.js";
-import GameButton from "../../components/GameButton";
 import WsUrl from "../../configWs";
 import ErrorMessage from "../../components/ErrorMessage";
-
-
-const PRINCE_WISDOM_PREFIXES = [
-  "I believe the answer is: ",
-  "My royal gut says: ",
-  "The scrolls suggest: ",
-  "I'd wager: ",
-  "Dare I say: ",
-  "The stars align on: ",
-  "My kingdom for: ",
-  "Verily, it must be: ",
-];
+import QuizGlassHeader from "../../components/game/QuizGlassHeader";
+import GameQuestionsScroll from "../../components/game/GameQuestionsScroll";
+import PowerUpStrip from "../../components/game/PowerUpStrip";
+import PrinceWisdomBanner from "../../components/game/PrinceWisdomBanner";
+import { PRINCE_WISDOM_PREFIXES } from "../../components/game/princeWisdom";
 
 export default function Game() {
   const { userToken, userInfo } = useAuth();
@@ -95,6 +83,18 @@ export default function Game() {
   const fastCueScale = useRef(new Animated.Value(0.8)).current;
 
   const handleDismissError = useCallback(() => setErrorMessage(null), []);
+
+  // Stable callbacks for the (memoized) QuizGlassHeader. Without these,
+  // every re-render of Game.tsx would hand new function identities to the
+  // header and defeat its memoization.
+  const onToggleMusic = useCallback(
+    () => setMusicMuted(!musicMuted),
+    [musicMuted, setMusicMuted]
+  );
+  const onToggleSound = useCallback(
+    () => setSoundMuted(!soundMuted),
+    [soundMuted, setSoundMuted]
+  );
 
   // Main game music: start when game screen is active, stop when game ends or unmount
   useEffect(() => {
@@ -416,7 +416,16 @@ export default function Game() {
     });
   };
 
-  // Submit player's score
+  // Submit player's score.
+  //
+  // Primary path is the WebSocket message — it's what unlocks the game's
+  // "all_scores_submitted" handshake and the navigation to Results.
+  //
+  // We ALSO POST to /api/games/results/submit so the score lands on the
+  // ranking side even if the WS dies before the server processes the
+  // submit_score frame. The backend is idempotent on
+  // (gameId, userId, gameMode) per Mock/BACKEND_RANKING_UPDATES.md Section 1,
+  // so this dual-write converges safely with the WS path.
   const submitScore = (scorePercentage: number) => {
     if (gameEnded) return;
     sendWebSocketMessage({
@@ -424,6 +433,14 @@ export default function Game() {
       score: scorePercentage,
       user_id: userInfo?.user.id,
       game_id: gameId,
+    });
+
+    submitGameResult(userToken?.token, {
+      gameId: String(gameId),
+      gameMode: "multiplayer",
+      finalScore: Math.round(scorePercentage),
+    }).catch((err) => {
+      console.log("Multiplayer REST submit fallback failed:", err);
     });
   };
 
@@ -461,7 +478,11 @@ export default function Game() {
           if (!updated[questionId]) updated[questionId] = [answerId];
           else updated[questionId].push(answerId);
           if (updated[questionId].length === 2) {
-            setDoubleDipActive(false);
+            // Defer sibling-state update — calling `setDoubleDipActive(false)`
+            // synchronously inside this updater triggers React's
+            // "Cannot update a component while rendering a different component"
+            // warning, because React may replay the updater during a render.
+            queueMicrotask(() => setDoubleDipActive(false));
             didSubmit = true;
             const sel = updated[questionId];
             isCorrect =
@@ -677,148 +698,10 @@ export default function Game() {
       borderRadius: rS(150),
       backgroundColor: "#6366F118",
     },
-    headerBlur: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      paddingTop: Math.max(rV(20), insets.top + rV(10)),
-      paddingBottom: rV(16),
-      borderBottomLeftRadius: rMS(32),
-      borderBottomRightRadius: rMS(32),
-      overflow: "hidden",
-      zIndex: 10,
-    },
-    powerUpContainer: {
-      flexDirection: "row",
-      justifyContent: "space-around",
-      paddingHorizontal: rS(16),
-      paddingVertical: rV(16),
-      paddingBottom: Math.max(rV(16), insets.bottom + rV(8)),
-      backgroundColor: colorScheme === "dark" ? themeColors.cardGlass : "transparent",
-      borderTopLeftRadius: rMS(32),
-      borderTopRightRadius: rMS(32),
-      borderTopWidth: 1,
-      borderTopColor: themeColors.border + "40",
-    },
-    powerUpCard: {
-      backgroundColor: "transparent",
-      borderRadius: rMS(28),
-      padding: rMS(10),
-      alignItems: "center",
-      justifyContent: "center",
-      minWidth: rS(100),
-      minHeight: rV(80),
-      borderWidth: 1.5,
-      borderColor: themeColors.border + "50",
-    },
-    powerUpButton: {
-      alignItems: "center",
-      justifyContent: "center",
-      flex: 1,
-    },
-    powerUpCardActive: {
-      borderColor: "#FFD700",
-      shadowColor: "#FFD700",
-      shadowOpacity: 0.6,
-    },
-    powerUpCardUsed: {
-      opacity: 0.5,
-      backgroundColor: themeColors.textSecondary + "15",
-    },
-    powerUpIcon: {
-      marginBottom: rV(4),
-    },
-    powerUpTitle: {
-      fontSize: rMS(11),
-      fontWeight: "600",
-      color: themeColors.text,
-      textAlign: "center",
-    },
-    powerUpDescription: {
-      fontSize: rMS(9),
-      color: themeColors.textSecondary,
-      textAlign: "center",
-      marginTop: rV(2),
-    },
-    powerUpBadge: {
-      position: "absolute",
-      top: -rV(4),
-      right: -rV(4),
-      backgroundColor: "#FF6B6B",
-      borderRadius: rMS(8),
-      width: rS(16),
-      height: rS(16),
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    powerUpBadgeText: {
-      color: "white",
-      fontSize: rMS(8),
-      fontWeight: "bold",
-    },
-    aiPrediction: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      zIndex: 200,
-      backgroundColor: colorScheme === "dark" ? "rgba(15,17,23,0.96)" : "rgba(245,246,250,0.96)",
-      borderBottomLeftRadius: rMS(24),
-      borderBottomRightRadius: rMS(24),
-      paddingTop: Math.max(rV(20), insets.top + rV(10)),
-      paddingBottom: rV(16),
-      paddingHorizontal: rS(20),
-      borderBottomWidth: 2,
-      borderBottomColor: themeColors.tint + "40",
-    },
-    aiPredictionTitleRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      marginBottom: rV(8),
-    },
-    aiPredictionTitle: {
-      fontSize: rMS(15),
-      fontWeight: "800",
-      color: themeColors.tint,
-    },
-    aiPredictionText: {
-      fontSize: rMS(14),
-      color: themeColors.text,
-      fontStyle: "italic",
-      lineHeight: rMS(14) * 1.5,
-    },
-    timerRowContainer: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      paddingHorizontal: rS(24),
-    },
-    questionCounterText: {
-      fontSize: rMS(16),
-      fontWeight: "900",
-      textAlign: "left",
-    },
-    progressBarContainer: {
-      alignItems: "center",
-      width: rS(120),
-      marginLeft: rS(16),
-    },
-    progressBarBackground: {
-      width: "100%",
-      height: rV(6),
-      backgroundColor: themeColors.background + "80",
-      borderRadius: rMS(3),
-      overflow: "hidden",
-    },
-    progressBarFill: {
-      height: "100%",
-      borderRadius: rMS(3),
-      alignSelf: "flex-start",
-    },
-    // Styles meant for Questions.tsx overrides
+    // Styles meant for Questions.tsx overrides (passed via the `styles` prop).
     questionContainer: {
-      backgroundColor: colorScheme === "dark" ? themeColors.cardGlass : "transparent",
+      backgroundColor:
+        colorScheme === "dark" ? themeColors.cardGlass : "transparent",
       borderRadius: rMS(36),
       padding: rMS(24),
       marginHorizontal: rS(16),
@@ -838,21 +721,6 @@ export default function Game() {
     answersContainer: {
       paddingHorizontal: rS(16),
     },
-    answerTouchable: {
-      paddingVertical: rV(16),
-      paddingHorizontal: rMS(20),
-      marginVertical: rV(6),
-      borderRadius: rMS(32),
-      borderWidth: 1.5,
-      borderColor: themeColors.border + "50",
-      backgroundColor: "transparent",
-    },
-    selectedAnswer: {
-      borderColor: themeColors.tint,
-      backgroundColor: themeColors.tint + "20",
-    },
-    correctAnswer: { backgroundColor: "#4CAF50" + "40", borderColor: "#4CAF50" },
-    wrongAnswer: { backgroundColor: "#F44336" + "40", borderColor: "#F44336" },
     errorMessage: {
       alignSelf: "center",
       fontSize: SIZES.medium,
@@ -861,31 +729,18 @@ export default function Game() {
       textAlign: "center",
       paddingHorizontal: rMS(20),
     },
-    muteButton: {
-      padding: rMS(4),
-    },
-    streakBadge: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: "#F97316" + "18",
-      paddingHorizontal: rMS(8),
-      paddingVertical: rV(4),
-      borderRadius: rMS(12),
-      marginLeft: rS(8),
-    },
-    streakText: {
-      fontSize: rMS(12),
-      fontWeight: "600",
-      color: "#F97316",
-      marginLeft: rS(4),
-    },
+    // Multiplayer-only fast-answer cue (banner that briefly flashes when
+    // the user answers correctly under 2× question duration).
     fastAnswerCue: {
       position: "absolute",
       top: 0,
       left: 0,
       right: 0,
       zIndex: 200,
-      backgroundColor: colorScheme === "dark" ? "rgba(15,17,23,0.96)" : "rgba(245,246,250,0.96)",
+      backgroundColor:
+        colorScheme === "dark"
+          ? "rgba(15,17,23,0.96)"
+          : "rgba(245,246,250,0.96)",
       borderBottomLeftRadius: rMS(24),
       borderBottomRightRadius: rMS(24),
       paddingTop: Math.max(rV(20), insets.top + rV(10)),
@@ -914,79 +769,23 @@ export default function Game() {
 
       {/* Timer and Question Counter Row as Glass Header */}
       {!gameEnded && gameQuestions.length > 0 && !error && (
-        <BlurView
-          intensity={80}
-          tint={colorScheme === "dark" ? "dark" : "light"}
-          style={styles.headerBlur}
-        >
-          <View style={styles.timerRowContainer}>
-          <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
-          <Animated.Text
-            style={[
-              styles.questionCounterText,
-              {
-                color:
-                  gameQuestions.length - currentQuestion <= 5
-                    ? "#FF0000"
-                    : themeColors.text,
-                transform: [{ scale: questionCounterPulse }],
-              },
-            ]}
-          >
-            {currentQuestion + 1}/{gameQuestions.length}
-          </Animated.Text>
-          {currentStreak >= 2 && (
-            <View style={styles.streakBadge}>
-              <Flame size={16} color="#FF6B35" />
-              <Text style={styles.streakText}>{currentStreak}</Text>
-            </View>
-          )}
-          <View style={styles.progressBarContainer}>
-            <View style={styles.progressBarBackground}>
-              <Animated.View
-                style={[
-                  styles.progressBarFill,
-                  {
-                    width: progressBarWidth.interpolate({
-                      inputRange: [0, 100],
-                      outputRange: ["0%", "100%"],
-                      extrapolate: "clamp",
-                    }),
-                    backgroundColor:
-                      timeLeft <= 5000 ? "#DC2626" : themeColors.tint,
-                    transform: [{ scale: progressBarPulse }],
-                  },
-                ]}
-              />
-            </View>
-          </View>
-          <TouchableOpacity
-            onPress={() => setMusicMuted(!musicMuted)}
-            style={[styles.muteButton, { marginLeft: rS(8) }]}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            {musicMuted ? (
-              <Music2 size={22} color={themeColors.textSecondary} />
-            ) : (
-              <Music size={22} color={themeColors.textSecondary} />
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setSoundMuted(!soundMuted)}
-            style={[styles.muteButton, { marginLeft: rS(4) }]}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            {soundMuted ? (
-              <VolumeX size={22} color={themeColors.textSecondary} />
-            ) : (
-              <Volume2 size={22} color={themeColors.textSecondary} />
-            )}
-          </TouchableOpacity>
-          </View>
-          </View>
-        </BlurView>
+        <QuizGlassHeader
+          currentQuestionIndex={currentQuestion}
+          totalQuestions={gameQuestions.length}
+          currentStreak={currentStreak}
+          timeLeft={timeLeft}
+          progressBarWidth={progressBarWidth}
+          progressBarPulse={progressBarPulse}
+          questionCounterPulse={questionCounterPulse}
+          musicMuted={musicMuted}
+          soundMuted={soundMuted}
+          onToggleMusic={onToggleMusic}
+          onToggleSound={onToggleSound}
+        />
       )}
 
+      {/* Multiplayer-only fast-answer cue — kept inline because it's not
+          shared with single-player or weekly exam. */}
       {showFastAnswerCue && (
         <Animated.View style={[styles.fastAnswerCue, {
           opacity: fastCueOpacity,
@@ -998,26 +797,17 @@ export default function Game() {
       )}
 
       {/* AI Prediction Display */}
-      {askTheAIActive && aiPrediction !== null && (
-        <View style={styles.aiPrediction}>
-          <View style={styles.aiPredictionTitleRow}>
-            <Lightbulb
-              size={22}
-              color={themeColors.tint}
-              style={{ marginRight: rS(6) }}
-            />
-            <Text style={styles.aiPredictionTitle}>The Prince's Wisdom</Text>
-          </View>
-          <Text style={styles.aiPredictionText}>
-            "{aiWisdomPrefix}
-            {gameAnswers.find((ans) => ans.id === aiPrediction)?.text}"
-          </Text>
-        </View>
-      )}
+      <PrinceWisdomBanner
+        visible={askTheAIActive && aiPrediction !== null}
+        wisdomPrefix={aiWisdomPrefix}
+        predictionText={
+          gameAnswers.find((ans) => ans.id === aiPrediction)?.text
+        }
+      />
 
       {/* Questions Section */}
       {!error && (
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1 }}>
+        <GameQuestionsScroll>
           {gameQuestions.length > 0 && (
             <Questions
               practiceQuestions={gameQuestions}
@@ -1031,123 +821,24 @@ export default function Game() {
               styles={styles}
             />
           )}
-        </ScrollView>
+        </GameQuestionsScroll>
       )}
 
       {/* Power-ups Section - Fixed at Bottom */}
-      <View style={styles.powerUpContainer}>
-        {/* Double Dip Power-up */}
-        <Animated.View
-          style={[
-            styles.powerUpCard,
-            doubleDipActive && styles.powerUpCardActive,
-            doubleDipUsed && styles.powerUpCardUsed,
-            {
-              transform: [{ scale: doubleDipScale }],
-              shadowOpacity: doubleDipGlow.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0.3, 0.8],
-              }),
-            },
-          ]}
-        >
-          <TouchableOpacity
-            onPress={activateDoubleDip}
-            disabled={
-              doubleDipUsed || doubleDipActive || askTheAIActive || gameEnded
-            }
-            style={styles.powerUpButton}
-          >
-            <RefreshCw
-              size={20}
-              color={
-                doubleDipActive
-                  ? "#FFD700"
-                  : doubleDipUsed
-                  ? themeColors.textSecondary
-                  : themeColors.tint
-              }
-              style={styles.powerUpIcon}
-            />
-            <Text
-              style={[
-                styles.powerUpTitle,
-                { color: doubleDipActive ? "#FFD700" : themeColors.text },
-              ]}
-            >
-              Double Dip
-            </Text>
-            <Text style={styles.powerUpDescription}>
-              {doubleDipActive
-                ? "Active!"
-                : doubleDipUsed
-                ? "Used"
-                : "2 attempts"}
-            </Text>
-            {doubleDipActive && (
-              <View style={styles.powerUpBadge}>
-                <Text style={styles.powerUpBadgeText}>!</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </Animated.View>
+      <PowerUpStrip
+        doubleDipActive={doubleDipActive}
+        doubleDipUsed={doubleDipUsed}
+        askTheAIActive={askTheAIActive}
+        askTheAIUsed={askTheAIUsed}
+        onDoubleDip={activateDoubleDip}
+        onAskPrince={activateAskTheAI}
+        doubleDipScale={doubleDipScale}
+        doubleDipGlow={doubleDipGlow}
+        askTheAIScale={askTheAIScale}
+        askTheAIGlow={askTheAIGlow}
+        disabled={gameEnded}
+      />
 
-        {/* Ask The AI Power-up */}
-        <Animated.View
-          style={[
-            styles.powerUpCard,
-            askTheAIActive && styles.powerUpCardActive,
-            askTheAIUsed && styles.powerUpCardUsed,
-            {
-              transform: [{ scale: askTheAIScale }],
-              shadowOpacity: askTheAIGlow.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0.3, 0.8],
-              }),
-            },
-          ]}
-        >
-          <TouchableOpacity
-            onPress={activateAskTheAI}
-            disabled={
-              askTheAIUsed || askTheAIActive || doubleDipActive || gameEnded
-            }
-            style={styles.powerUpButton}
-          >
-            <Lightbulb
-              size={20}
-              color={
-                askTheAIActive
-                  ? "#FFD700"
-                  : askTheAIUsed
-                  ? themeColors.textSecondary
-                  : themeColors.tint
-              }
-              style={styles.powerUpIcon}
-            />
-            <Text
-              style={[
-                styles.powerUpTitle,
-                { color: askTheAIActive ? "#FFD700" : themeColors.text },
-              ]}
-            >
-              Ask Prince
-            </Text>
-            <Text style={styles.powerUpDescription}>
-              {askTheAIActive
-                ? "Thinking..."
-                : askTheAIUsed
-                ? "Used"
-                : "Get hint"}
-            </Text>
-            {askTheAIActive && (
-              <View style={styles.powerUpBadge}>
-                <Text style={styles.powerUpBadgeText}>?</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </Animated.View>
-      </View>
       <ErrorMessage
         message={errorMessage}
         visible={!!errorMessage}

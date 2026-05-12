@@ -1,36 +1,52 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
-import { View, StyleSheet, Text, useColorScheme, TouchableOpacity, StatusBar } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Clock } from "lucide-react-native";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  View,
+  StyleSheet,
+  useColorScheme,
+  Animated as RNAnimated,
+} from "react-native";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
-import axios from "axios";
-import Animated, {
-  FadeIn,
-  FadeInDown,
-  FadeInUp,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from "react-native-reanimated";
-import { BlurView } from "expo-blur";
+import { StatusBar } from "expo-status-bar";
 
 import { useAuth } from "../../components/AuthContext";
 import { useGameAudio } from "../../hooks/useGameAudio";
 import { Question, Answer } from "../../components/types";
 import { useGameStore } from "../../store/gameStore";
 import Colors from "../../constants/Colors";
-import { rMS, rV, rS, SIZES, useShadows } from "../../constants/index.js";
-import ApiUrl from "../../config";
+import { rMS, rV, rS } from "../../constants/index.js";
 import ErrorMessage from "../../components/ErrorMessage";
+import Questions from "../../components/Questions";
 import { useQuery } from "@tanstack/react-query";
-import { getWeeklyExamStatus } from "../../services/WeeklyExamApiCalls";
+import {
+  getWeeklyExamStatus,
+  getWeeklyExamQuestions,
+} from "../../services/WeeklyExamApiCalls";
+import { getPracticeAnswers } from "../../services/CoursesApiCalls";
+import { submitGameResult } from "../../services/GamesApiCalls";
+import QuizGlassHeader from "../../components/game/QuizGlassHeader";
+import GameQuestionsScroll from "../../components/game/GameQuestionsScroll";
+import GameLoadingShell from "../../components/game/GameLoadingShell";
+import WeeklyExamWindowGuard from "../../components/game/WeeklyExamWindowGuard";
 
-const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+// ────────────────────────────────────────────────────────────────────────────
+// DEV / TESTING OVERRIDE
+//
+// When `true`, the exam window is forced open: the guard screen is bypassed
+// and the exam loads its questions regardless of whether the backend says the
+// window is active. Used together with the matching flag in
+// `Mock/app/(tabs)/(play)/play.tsx` so the Weekly Exam button is always
+// visible + pressable.
+//
+// Flip this back to `false` before shipping.
+// ────────────────────────────────────────────────────────────────────────────
+const DEV_FORCE_EXAM_OPEN = false;
 
 // --- UTC time window check (uses backend dates when available) ---
-function isExamWindowOpenFromBackend(startsAt?: string, endsAt?: string): boolean {
+function isExamWindowOpenFromBackend(
+  startsAt?: string,
+  endsAt?: string
+): boolean {
   if (!startsAt || !endsAt) return isExamWindowOpenFallback();
   const now = new Date();
   return now >= new Date(startsAt) && now <= new Date(endsAt);
@@ -47,53 +63,33 @@ function isExamWindowOpenFallback(): boolean {
   return false;
 }
 
-function getCountdownToDate(targetDateStr?: string): string {
-  const now = new Date();
-  let target: Date;
-  
-  if (targetDateStr) {
-    target = new Date(targetDateStr);
-  } else {
-    // Fallback: calculate next Friday 7pm UTC
-    const daysUntilFriday = (5 - now.getUTCDay() + 7) % 7 || 7;
-    target = new Date(now);
-    target.setUTCDate(now.getUTCDate() + daysUntilFriday);
-    target.setUTCHours(19, 0, 0, 0);
-    if (target <= now) target.setUTCDate(target.getUTCDate() + 7);
-  }
-
-  const diff = target.getTime() - now.getTime();
-  if (diff <= 0) return "Now!";
-  const d = Math.floor(diff / 86400000);
-  const h = Math.floor((diff % 86400000) / 3600000);
-  const m = Math.floor((diff % 3600000) / 60000);
-  return `${d}d ${h}h ${m}m`;
-}
-
-function formatLocalDateTime(dateStr?: string): string {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  return d.toLocaleString(undefined, {
-    weekday: "long",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-    timeZoneName: "short",
-  });
-}
-
 export default function WeeklyExam() {
   const { userToken, userInfo } = useAuth();
-  const { playCorrect, playWrong, startMusic, stopMusic, musicMuted } = useGameAudio();
-  const insets = useSafeAreaInsets();
-  const shadow = useShadows();
+  const {
+    playCorrect,
+    playWrong,
+    startMusic,
+    stopMusic,
+    musicMuted,
+    setMusicMuted,
+    soundMuted,
+    setSoundMuted,
+  } = useGameAudio();
 
-  const { startGame, endGame, answerQuestion, score, streak, timeLimit } = useGameStore();
+  const { startGame, endGame, answerQuestion, score, streak, timeLimit } =
+    useGameStore();
 
   const [gameAnswers, setGameAnswers] = useState<Answer[]>([]);
-  const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: number[] }>({});
-  const [gameQuestions] = useState<Question[]>([]);
+  const [selectedAnswers, setSelectedAnswers] = useState<{
+    [key: number]: number[];
+  }>({});
+  const [gameQuestions, setGameQuestions] = useState<Question[]>([]);
+  const [
+    questionsWithMultipleCorrectAnswers,
+    setQuestionsWithMultipleCorrectAnswers,
+  ] = useState<number[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [questionDuration, setQuestionDuration] = useState(20000);
   const [timeLeft, setTimeLeft] = useState(20000);
   const [gameEnded, setGameEnded] = useState(false);
   const [error, setError] = useState("");
@@ -101,24 +97,80 @@ export default function WeeklyExam() {
   const startTimeRef = useRef(0);
   const questionStartMsRef = useRef(0);
 
-  const progressBarWidth = useSharedValue(100);
-  const streakScale = useSharedValue(1);
+  // RN Animated values to mirror multiplayer's progress bar / counter pulse.
+  const progressBarWidth = useRef(new RNAnimated.Value(100)).current;
+  const progressBarPulse = useRef(new RNAnimated.Value(1)).current;
+  const questionCounterPulse = useRef(new RNAnimated.Value(1)).current;
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
-  // Fetch exam status from backend
+  // Stable callbacks for the memoized header / guard / loading shell.
+  const onToggleMusic = useCallback(
+    () => setMusicMuted(!musicMuted),
+    [musicMuted, setMusicMuted]
+  );
+  const onToggleSound = useCallback(
+    () => setSoundMuted(!soundMuted),
+    [soundMuted, setSoundMuted]
+  );
+  const dismissError = useCallback(() => setError(""), []);
+  const onGoBack = useCallback(() => router.back(), []);
+
+  // Fetch exam status (start/end times, currentWeek, etc.) from backend
   const { data: examStatus } = useQuery({
     queryKey: ["weeklyExamStatus"],
     queryFn: () => getWeeklyExamStatus(userToken?.token),
     enabled: !!userToken?.token,
   });
 
+  // Whether the exam window is currently open. The DEV override forces this
+  // to true so we can test even outside the Fri 7pm – Sun 11:59pm UTC window.
   const windowOpen = useMemo(
-    () => isExamWindowOpenFromBackend(examStatus?.startsAt, examStatus?.endsAt),
+    () =>
+      DEV_FORCE_EXAM_OPEN ||
+      isExamWindowOpenFromBackend(examStatus?.startsAt, examStatus?.endsAt),
     [examStatus]
   );
 
+  // Fetch the 30 randomized exam questions once the window is open. Gated by
+  // `windowOpen` so we don't spam the questions endpoint outside the window.
+  const { data: examQuestionsData, error: examQuestionsError } = useQuery({
+    queryKey: ["weeklyExamQuestions"],
+    queryFn: () => getWeeklyExamQuestions(userToken?.token),
+    enabled: !!userToken?.token && windowOpen,
+  });
+
+  useEffect(() => {
+    if (!examQuestionsData?.questions) return;
+    setGameQuestions(examQuestionsData.questions);
+    // Weekly-exam questions don't carry a `duration` field, so fall back to
+    // the gameStore's default (`timeLimit` is seconds).
+    setQuestionDuration(timeLimit * 1000);
+    setTimeLeft(timeLimit * 1000);
+
+    const fetchAllAnswers = async () => {
+      try {
+        const answersPromises = examQuestionsData.questions.map(
+          (q: Question) => getPracticeAnswers(q.id, userToken?.token)
+        );
+        const answers = await Promise.all(answersPromises);
+        setGameAnswers(answers.flat());
+      } catch (err: any) {
+        console.log("[WeeklyExam] fetchAllAnswers FAILED", err?.message);
+        setError("Failed to load exam questions. Please try again.");
+      }
+    };
+    fetchAllAnswers();
+  }, [examQuestionsData, userToken]);
+
+  useEffect(() => {
+    if (examQuestionsError) {
+      setError("Failed to load exam questions. Please try again.");
+    }
+  }, [examQuestionsError]);
+
+  // Start the music + a Zustand game session when the window opens.
   useEffect(() => {
     if (windowOpen) {
       startMusic();
@@ -131,41 +183,111 @@ export default function WeeklyExam() {
     if (!musicMuted && !gameEnded && windowOpen) startMusic();
   }, [musicMuted, gameEnded, windowOpen]);
 
+  // Identify questions with multiple correct answers (same as multiplayer)
+  useEffect(() => {
+    if (gameQuestions.length === 0 || gameAnswers.length === 0) return;
+    const multiCorrect = gameQuestions
+      .filter(
+        (q) =>
+          gameAnswers.filter((a) => a.question === q.id && a.isRight).length >
+          1
+      )
+      .map((q) => q.id);
+    setQuestionsWithMultipleCorrectAnswers(multiCorrect);
+  }, [gameQuestions, gameAnswers]);
+
+  // Timer with countdown display, mirroring multiplayer
   useEffect(() => {
     if (!windowOpen || gameQuestions.length === 0 || gameEnded) return;
 
     startTimeRef.current = Date.now();
     questionStartMsRef.current = Date.now();
-    const durationMs = timeLimit * 1000;
-    setTimeLeft(durationMs);
-    progressBarWidth.value = 100;
+    setTimeLeft(questionDuration);
+    progressBarWidth.setValue(100);
 
     const interval = setInterval(() => {
       const elapsed = Date.now() - startTimeRef.current;
-      const remaining = durationMs - elapsed;
+      const remaining = questionDuration - elapsed;
       if (remaining <= 0) {
         setTimeLeft(0);
-        progressBarWidth.value = withTiming(0, { duration: 1000 });
+        RNAnimated.timing(progressBarWidth, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: false,
+        }).start();
         clearInterval(interval);
       } else {
         setTimeLeft(remaining);
-        const newWidth = (remaining / durationMs) * 100;
-        progressBarWidth.value = withTiming(newWidth, { duration: 1000 });
+        const newWidth = (remaining / questionDuration) * 100;
+        RNAnimated.timing(progressBarWidth, {
+          toValue: newWidth,
+          duration: 1000,
+          useNativeDriver: false,
+        }).start();
       }
     }, 1000);
 
     const timer = setTimeout(() => {
       if (!gameEnded) {
-        answerQuestion(false, durationMs);
+        answerQuestion(false, questionDuration);
         moveToNextQuestionOrEnd();
       }
-    }, durationMs);
+    }, questionDuration);
 
     return () => {
       clearInterval(interval);
       clearTimeout(timer);
     };
-  }, [currentQuestion, timeLimit, gameQuestions, gameEnded, windowOpen]);
+  }, [currentQuestion, questionDuration, gameQuestions, gameEnded, windowOpen]);
+
+  // Animate question counter when 5 or fewer questions remain
+  useEffect(() => {
+    if (gameEnded || gameQuestions.length === 0) return;
+    const questionsRemaining = gameQuestions.length - currentQuestion;
+    if (questionsRemaining <= 5) {
+      RNAnimated.loop(
+        RNAnimated.sequence([
+          RNAnimated.timing(questionCounterPulse, {
+            toValue: 1.05,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          RNAnimated.timing(questionCounterPulse, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      questionCounterPulse.stopAnimation();
+      questionCounterPulse.setValue(1);
+    }
+  }, [currentQuestion, gameQuestions.length, gameEnded]);
+
+  // Animate progress bar when time is low
+  useEffect(() => {
+    if (gameEnded) return;
+    if (timeLeft <= 5000 && timeLeft > 0) {
+      RNAnimated.loop(
+        RNAnimated.sequence([
+          RNAnimated.timing(progressBarPulse, {
+            toValue: 1.05,
+            duration: 800,
+            useNativeDriver: false,
+          }),
+          RNAnimated.timing(progressBarPulse, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: false,
+          }),
+        ])
+      ).start();
+    } else {
+      progressBarPulse.stopAnimation();
+      progressBarPulse.setValue(1);
+    }
+  }, [timeLeft, gameEnded]);
 
   const moveToNextQuestionOrEnd = () => {
     if (currentQuestion < gameQuestions.length - 1) {
@@ -179,12 +301,22 @@ export default function WeeklyExam() {
     setGameEnded(true);
     endGame();
 
+    // Per-week id keeps (gameId, userId, gameMode) unique across weeks so a
+    // user can submit a new exam every Study Week without colliding with last
+    // week's idempotency key. Falls back to a date stamp if the backend has
+    // not yet returned currentWeek (offline-first safety).
+    const weekId =
+      examStatus?.currentWeek != null
+        ? `weekly-exam-${examStatus.currentWeek}`
+        : `weekly-exam-${new Date().toISOString().slice(0, 10)}`;
+
     try {
-      await axios.post(
-        `${ApiUrl}/api/weekly-exam/submit`,
-        { finalScore: Math.round(score), highestStreak: streak },
-        { headers: { Authorization: `Token ${userToken?.token}` } }
-      );
+      await submitGameResult(userToken?.token, {
+        gameId: weekId,
+        gameMode: "weekly_exam",
+        finalScore: Math.round(score),
+        highestStreak: streak,
+      });
     } catch (err) {
       console.log("Error submitting weekly exam score:", err);
     }
@@ -195,48 +327,95 @@ export default function WeeklyExam() {
 
     router.replace({
       pathname: "Results",
-      params: { scores: JSON.stringify(scoresObject), gameId: "weekly-exam" },
+      params: { scores: JSON.stringify(scoresObject), gameId: weekId },
     });
   };
 
+  // Multiplayer-style answer handler. Supports multi-correct questions.
+  // No power-ups in weekly exam — it's an assessment, not a casual game.
+  // Note: state writes from inside this updater go through `queueMicrotask`
+  // to avoid React's "setState during render" warning.
   const handleAnswerSelection = (answerId: number, questionId: number) => {
     if (gameEnded) return;
+
     const timeTakenMs = Date.now() - questionStartMsRef.current;
 
     setSelectedAnswers((prev) => {
       const updated = { ...prev };
-      updated[questionId] = [answerId];
-
+      const correctCount = gameAnswers.filter(
+        (a) => a.question === questionId && a.isRight
+      ).length;
       const correctIds = gameAnswers
         .filter((a) => a.question === questionId && a.isRight)
         .map((a) => a.id);
+      let didSubmit = false;
+      let isCorrect = false;
 
-      const isCorrect = correctIds.includes(answerId);
-      answerQuestion(isCorrect, timeTakenMs);
-
-      if (isCorrect) {
-        streakScale.value = withSpring(1.4, {}, () => {
-          streakScale.value = withSpring(1);
-        });
-        playCorrect();
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (questionsWithMultipleCorrectAnswers.includes(questionId)) {
+        if (updated[questionId]?.length === correctCount) return updated;
+        if (!updated[questionId]) updated[questionId] = [answerId];
+        else if (!updated[questionId].includes(answerId))
+          updated[questionId].push(answerId);
+        if (updated[questionId].length === correctCount) {
+          didSubmit = true;
+          const sel = updated[questionId];
+          isCorrect =
+            sel.length === correctIds.length &&
+            sel.every((id) => correctIds.includes(id));
+        }
       } else {
-        playWrong();
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        if (updated[questionId]?.length > 0) return updated;
+        updated[questionId] = [answerId];
+        didSubmit = true;
+        isCorrect = correctIds.includes(answerId);
       }
 
-      setTimeout(() => moveToNextQuestionOrEnd(), 500);
+      if (didSubmit) {
+        // Defer the Zustand store write so other subscribers don't get
+        // notified mid-React-render.
+        queueMicrotask(() => answerQuestion(isCorrect, timeTakenMs));
+        setTimeout(() => {
+          try {
+            Haptics.notificationAsync(
+              isCorrect
+                ? Haptics.NotificationFeedbackType.Success
+                : Haptics.NotificationFeedbackType.Error
+            );
+          } catch (_) {}
+          if (isCorrect) {
+            playCorrect();
+          } else {
+            playWrong();
+          }
+        }, 0);
+        setTimeout(() => moveToNextQuestionOrEnd(), 500);
+      }
+
       return updated;
     });
   };
 
-  const animatedProgressStyle = useAnimatedStyle(() => ({
-    width: `${progressBarWidth.value}%`,
-  }));
+  const isAnswerSelected = (questionId: number, answerId: number) =>
+    selectedAnswers[questionId]?.includes(answerId) ?? false;
 
-  const animatedStreakStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: streakScale.value }],
-  }));
+  // Streak: consecutive correct from last answered backward (parity with multiplayer)
+  const currentStreak = useMemo(() => {
+    let s = 0;
+    for (let i = currentQuestion - 1; i >= 0; i--) {
+      const q = gameQuestions[i];
+      if (!q) break;
+      const selectedIds = selectedAnswers[q.id] || [];
+      const correctIds = gameAnswers
+        .filter((a) => a.question === q.id && a.isRight)
+        .map((a) => a.id);
+      const isCorrect =
+        selectedIds.length === correctIds.length &&
+        selectedIds.every((id) => correctIds.includes(id));
+      if (isCorrect) s++;
+      else break;
+    }
+    return s;
+  }, [currentQuestion, gameQuestions, selectedAnswers, gameAnswers]);
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: themeColors.background },
@@ -258,67 +437,18 @@ export default function WeeklyExam() {
       borderRadius: rS(125),
       backgroundColor: "#6366F118",
     },
-    headerCard: {
-      overflow: "hidden",
-      borderBottomLeftRadius: rMS(32),
-      borderBottomRightRadius: rMS(32),
-      ...shadow.medium,
-      zIndex: 10,
-    },
-    headerBlur: {
-      paddingTop: Math.max(rV(20), insets.top + rV(10)),
-      paddingBottom: rV(20),
-      paddingHorizontal: rS(24),
-      backgroundColor: themeColors.tint + "10",
-    },
-    headerTopRow: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: rV(12),
-    },
-    timerBarContainer: {
-      height: rV(6),
-      backgroundColor: themeColors.background + "80",
-      borderRadius: rMS(3),
-      overflow: "hidden",
-      width: "100%",
-    },
-    timerBar: { height: "100%", backgroundColor: themeColors.tint, borderRadius: rMS(3) },
-    scoreStreakContainer: { alignItems: "flex-end" },
-    scoreText: { fontSize: SIZES.large, fontWeight: "900", color: themeColors.text },
-    streakText: { fontSize: SIZES.small, color: "#FF8C00", fontWeight: "900", marginTop: rV(2) },
-    questionCounter: { fontSize: rMS(14), fontWeight: "800", color: themeColors.textSecondary },
-    examBadge: {
-      backgroundColor: themeColors.tint,
-      paddingHorizontal: rMS(12),
-      paddingVertical: rV(4),
-      borderRadius: rMS(12),
-      marginTop: rV(4),
-    },
-    examBadgeText: {
-      fontSize: rMS(9),
-      fontWeight: "900",
-      color: "#fff",
-      letterSpacing: 1.5,
-    },
-    contentArea: {
-      flex: 1,
-      paddingHorizontal: rS(16),
-      paddingTop: rV(24),
-      paddingBottom: Math.max(rV(24), insets.bottom + rV(12)),
-    },
-    questionCardContainer: {
+    // Styles meant for Questions.tsx overrides (passed via the `styles` prop).
+    questionContainer: {
+      backgroundColor:
+        colorScheme === "dark" ? themeColors.cardGlass : "transparent",
       borderRadius: rMS(36),
-      overflow: "hidden",
-      ...shadow.large,
-      marginBottom: rV(32),
-    },
-    questionCardBlur: {
       padding: rMS(24),
-      minHeight: rV(160),
-      justifyContent: "center",
-      backgroundColor: themeColors.cardGlass,
+      marginHorizontal: rS(16),
+      marginTop: rV(100), // Below fixed header
+      marginBottom: rV(24),
+      borderWidth: colorScheme === "dark" ? 1 : 0,
+      borderColor: themeColors.border + "60",
+      minHeight: rV(140),
     },
     questionText: {
       fontSize: rMS(20),
@@ -327,184 +457,74 @@ export default function WeeklyExam() {
       textAlign: "center",
       lineHeight: rMS(28),
     },
-    answersContainer: { gap: rV(14) },
-    answerButton: {
-      paddingVertical: rV(16),
-      paddingHorizontal: rMS(20),
-      borderRadius: rMS(32),
-      borderWidth: 1.5,
-      borderColor: themeColors.border + "60",
-      backgroundColor: themeColors.cardGlass,
-      ...shadow.light,
-    },
-    answerButtonSelected: {
-      borderColor: themeColors.tint,
-      backgroundColor: themeColors.tint + "20",
-    },
-    answerText: { fontSize: SIZES.medium, fontWeight: "700", color: themeColors.text, textAlign: "center" },
-    answerTextSelected: { fontWeight: "900", color: themeColors.tint },
-    
-    // Guard screen
-    guardContainer: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      paddingHorizontal: rS(32),
-      backgroundColor: themeColors.background,
-    },
-    guardCard: {
-      borderRadius: rMS(40),
-      overflow: "hidden",
-      ...shadow.extraLarge,
-      width: "100%",
-    },
-    guardCardBlur: {
-      padding: rMS(32),
-      alignItems: "center",
-      backgroundColor: themeColors.cardGlass,
-    },
-    guardTitle: {
-      fontSize: rMS(28),
-      fontWeight: "900",
-      color: themeColors.text,
-      textAlign: "center",
-      marginBottom: rV(12),
-      marginTop: rV(16),
-      letterSpacing: -0.5,
-    },
-    guardSubtext: {
-      fontSize: rMS(14),
-      color: themeColors.textSecondary,
-      textAlign: "center",
-      lineHeight: rMS(22),
-      marginBottom: rV(32),
-      fontWeight: "600",
-    },
-    guardCountdown: {
-      fontSize: rMS(36),
-      fontWeight: "900",
-      color: themeColors.tint,
-      textAlign: "center",
-      marginBottom: rV(32),
-      letterSpacing: -1,
-    },
-    guardBackBtn: {
-      backgroundColor: themeColors.text,
-      paddingVertical: rV(16),
-      paddingHorizontal: rMS(32),
-      borderRadius: rMS(32),
-      width: "100%",
-    },
-    guardBackBtnText: {
-      fontSize: rMS(15),
-      fontWeight: "900",
-      color: themeColors.background,
-      textAlign: "center",
-      textTransform: "uppercase",
-      letterSpacing: 2,
+    answersContainer: {
+      paddingHorizontal: rS(16),
     },
   });
 
+  // Guard: window closed (only reachable when DEV_FORCE_EXAM_OPEN is false)
   if (!windowOpen) {
-    const examIsUpcoming = examStatus && new Date() < new Date(examStatus.startsAt);
-    const examIsOver = examStatus && new Date() > new Date(examStatus.endsAt);
-
     return (
-      <View style={styles.guardContainer}>
-        <StatusBar barStyle={colorScheme === "dark" ? "light-content" : "dark-content"} />
-        <View style={styles.blob1} />
-        <View style={styles.blob2} />
-        <Animated.View entering={FadeInUp.duration(600).springify()} style={styles.guardCard}>
-          <BlurView intensity={80} tint={colorScheme === "dark" ? "dark" : "light"} style={styles.guardCardBlur}>
-            <Clock size={64} color={themeColors.tint} />
-            <Text style={styles.guardTitle}>Weekly Exam</Text>
-            <Text style={styles.guardSubtext}>
-              {examIsUpcoming
-                ? `The exam starts ${formatLocalDateTime(examStatus?.startsAt)}.`
-                : examIsOver
-                ? `The exam has ended. It ended ${formatLocalDateTime(examStatus?.endsAt)}.`
-                : "The exam window opens every Friday at 7:00 PM UTC and closes Sunday at 11:59 PM UTC."}
-            </Text>
-            {examIsUpcoming && (
-              <Text style={styles.guardCountdown}>{getCountdownToDate(examStatus?.startsAt)}</Text>
-            )}
-            {!examIsUpcoming && !examIsOver && (
-              <Text style={styles.guardCountdown}>{getCountdownToDate()}</Text>
-            )}
-            <TouchableOpacity style={styles.guardBackBtn} onPress={() => router.back()} activeOpacity={0.8}>
-              <Text style={styles.guardBackBtnText}>Go Back</Text>
-            </TouchableOpacity>
-          </BlurView>
-        </Animated.View>
-      </View>
+      <WeeklyExamWindowGuard examStatus={examStatus} onGoBack={onGoBack} />
     );
   }
 
-  const question = gameQuestions[currentQuestion];
+  // Loading state (questions still in flight)
+  if (gameQuestions.length === 0) {
+    return (
+      <GameLoadingShell
+        loadingText="Loading Weekly Exam..."
+        error={error}
+        onDismissError={dismissError}
+      />
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle={colorScheme === "dark" ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
+      <StatusBar hidden={true} />
       <View style={styles.blob1} />
       <View style={styles.blob2} />
 
-      <Animated.View entering={FadeInDown.duration(400)} style={styles.headerCard}>
-        <BlurView intensity={70} tint={colorScheme === "dark" ? "dark" : "light"} style={styles.headerBlur}>
-          <View style={styles.headerTopRow}>
-            <View>
-              <Text style={styles.questionCounter}>
-                Q: {currentQuestion + 1} / {gameQuestions.length}
-              </Text>
-              <View style={styles.examBadge}>
-                <Text style={styles.examBadgeText}>WEEKLY EXAM</Text>
-              </View>
-            </View>
-            <View style={styles.scoreStreakContainer}>
-              <Text style={styles.scoreText}>{Math.round(score)} pts</Text>
-              {streak > 1 && (
-                <Animated.Text style={[styles.streakText, animatedStreakStyle]}>
-                  {streak} Streak! 🔥
-                </Animated.Text>
-              )}
-            </View>
-          </View>
-          <View style={styles.timerBarContainer}>
-            <Animated.View style={[styles.timerBar, animatedProgressStyle]} />
-          </View>
-        </BlurView>
-      </Animated.View>
-
-      {question && (
-        <View style={styles.contentArea}>
-          <Animated.View key={`q-${currentQuestion}`} entering={FadeIn.duration(400)} style={styles.questionCardContainer}>
-            <BlurView intensity={80} tint={colorScheme === "dark" ? "dark" : "light"} style={styles.questionCardBlur}>
-              <Text style={styles.questionText}>{question.content || question.text}</Text>
-            </BlurView>
-          </Animated.View>
-
-          <View style={styles.answersContainer}>
-            {gameAnswers
-              .filter((a) => a.question === question.id)
-              .map((ans, idx) => {
-                const isSelected = selectedAnswers[question.id]?.includes(ans.id);
-                return (
-                  <Animated.View key={ans.id} entering={FadeInUp.duration(400).delay(idx * 100).springify()}>
-                    <AnimatedTouchable
-                      style={[styles.answerButton, isSelected && styles.answerButtonSelected]}
-                      onPress={() => handleAnswerSelection(ans.id, question.id)}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={[styles.answerText, isSelected && styles.answerTextSelected]}>
-                        {ans.content || ans.text}
-                      </Text>
-                    </AnimatedTouchable>
-                  </Animated.View>
-                );
-              })}
-          </View>
-        </View>
+      {!gameEnded && gameQuestions.length > 0 && !error && (
+        <QuizGlassHeader
+          currentQuestionIndex={currentQuestion}
+          totalQuestions={gameQuestions.length}
+          currentStreak={currentStreak}
+          timeLeft={timeLeft}
+          progressBarWidth={progressBarWidth}
+          progressBarPulse={progressBarPulse}
+          questionCounterPulse={questionCounterPulse}
+          musicMuted={musicMuted}
+          soundMuted={soundMuted}
+          onToggleMusic={onToggleMusic}
+          onToggleSound={onToggleSound}
+        />
       )}
-      <ErrorMessage message={error} visible={!!error} onDismiss={() => setError("")} />
+
+      {!error && (
+        <GameQuestionsScroll>
+          {gameQuestions.length > 0 && (
+            <Questions
+              practiceQuestions={gameQuestions}
+              practiceAnswers={gameAnswers}
+              currentQuestion={currentQuestion}
+              questionsWithMultipleCorrectAnswers={
+                questionsWithMultipleCorrectAnswers
+              }
+              isAnswerSelected={isAnswerSelected}
+              handleAnswerSelection={handleAnswerSelection}
+              styles={styles}
+            />
+          )}
+        </GameQuestionsScroll>
+      )}
+
+      <ErrorMessage
+        message={error}
+        visible={!!error}
+        onDismiss={dismissError}
+      />
     </View>
   );
 }

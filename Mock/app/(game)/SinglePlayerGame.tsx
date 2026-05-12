@@ -1,60 +1,100 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { View, StyleSheet, Text, useColorScheme, TouchableOpacity, StatusBar } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-// Icons handled by Lucide
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  View,
+  StyleSheet,
+  useColorScheme,
+  Animated as RNAnimated,
+} from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, router } from "expo-router";
 import * as Haptics from "expo-haptics";
-import axios from "axios";
-import Animated, {
-  FadeIn,
-  FadeInDown,
-  FadeInUp,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from "react-native-reanimated";
-import { BlurView } from "expo-blur";
+import { StatusBar } from "expo-status-bar";
 
 import { useAuth } from "../../components/AuthContext";
 import { useGameAudio } from "../../hooks/useGameAudio";
-import { getGameDetails } from "../../services/GamesApiCalls";
+import { getGameDetails, submitGameResult } from "../../services/GamesApiCalls";
 import { getPracticeAnswers } from "../../services/CoursesApiCalls";
+import Questions from "../../components/Questions";
 import { Question, Answer, GameDetailsResponse } from "../../components/types";
 import { useGameStore } from "../../store/gameStore";
 import Colors from "../../constants/Colors";
-import { rMS, rV, rS, SIZES, useShadows } from "../../constants/index.js";
-import ApiUrl from "../../config";
+import { rMS, rV, rS, SIZES } from "../../constants/index.js";
 import ErrorMessage from "../../components/ErrorMessage";
-
-const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+import QuizGlassHeader from "../../components/game/QuizGlassHeader";
+import GameQuestionsScroll from "../../components/game/GameQuestionsScroll";
+import PowerUpStrip from "../../components/game/PowerUpStrip";
+import PrinceWisdomBanner from "../../components/game/PrinceWisdomBanner";
+import GameLoadingShell from "../../components/game/GameLoadingShell";
+import { PRINCE_WISDOM_PREFIXES } from "../../components/game/princeWisdom";
 
 export default function SinglePlayerGame() {
   const { userToken, userInfo } = useAuth();
-  const { playCorrect, playWrong, startMusic, stopMusic, musicMuted } = useGameAudio();
-  const { gameId, gameCode } = useLocalSearchParams();
-  const insets = useSafeAreaInsets();
-  const shadow = useShadows();
-  
-  const { startGame, endGame, answerQuestion, score, streak, multiplier, timeLimit } = useGameStore();
+  const {
+    playCorrect,
+    playWrong,
+    startMusic,
+    stopMusic,
+    musicMuted,
+    setMusicMuted,
+    soundMuted,
+    setSoundMuted,
+  } = useGameAudio();
+  const { gameId } = useLocalSearchParams();
+
+  const { startGame, endGame, answerQuestion, score, streak } = useGameStore();
 
   const [gameAnswers, setGameAnswers] = useState<Answer[]>([]);
-  const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: number[] }>({});
+  const [selectedAnswers, setSelectedAnswers] = useState<{
+    [key: number]: number[];
+  }>({});
+  const [
+    questionsWithMultipleCorrectAnswers,
+    setQuestionsWithMultipleCorrectAnswers,
+  ] = useState<number[]>([]);
   const [gameQuestions, setGameQuestions] = useState<Question[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState<number>(0);
+  const [questionDuration, setQuestionDuration] = useState<number>(20000);
   const [timeLeft, setTimeLeft] = useState<number>(20000);
   const [gameEnded, setGameEnded] = useState(false);
   const [error, setError] = useState<string>("");
 
+  // Power-ups (Double Dip + Ask Prince) — port from multiplayer.
+  const [doubleDipActive, setDoubleDipActive] = useState(false);
+  const [doubleDipUsed, setDoubleDipUsed] = useState(false);
+  const [askTheAIActive, setAskTheAIActive] = useState(false);
+  const [askTheAIUsed, setAskTheAIUsed] = useState(false);
+  const [aiPrediction, setAiPrediction] = useState<number | null>(null);
+  const [aiWisdomPrefix, setAiWisdomPrefix] = useState<string>(
+    PRINCE_WISDOM_PREFIXES[0]
+  );
+
   const startTimeRef = useRef<number>(0);
   const questionStartMsRef = useRef<number>(0);
 
-  const progressBarWidth = useSharedValue(100);
-  const streakScale = useSharedValue(1);
+  // RN Animated values to mirror multiplayer's progress bar / counter pulse.
+  const progressBarWidth = useRef(new RNAnimated.Value(100)).current;
+  const progressBarPulse = useRef(new RNAnimated.Value(1)).current;
+  const questionCounterPulse = useRef(new RNAnimated.Value(1)).current;
+
+  // Animation refs for power-up cards
+  const doubleDipScale = useRef(new RNAnimated.Value(1)).current;
+  const doubleDipGlow = useRef(new RNAnimated.Value(0)).current;
+  const askTheAIScale = useRef(new RNAnimated.Value(1)).current;
+  const askTheAIGlow = useRef(new RNAnimated.Value(0)).current;
 
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+
+  // Stable callbacks for the memoized header.
+  const onToggleMusic = useCallback(
+    () => setMusicMuted(!musicMuted),
+    [musicMuted, setMusicMuted]
+  );
+  const onToggleSound = useCallback(
+    () => setSoundMuted(!soundMuted),
+    [soundMuted, setSoundMuted]
+  );
+  const dismissError = useCallback(() => setError(""), []);
 
   useEffect(() => {
     startMusic();
@@ -66,71 +106,194 @@ export default function SinglePlayerGame() {
   }, [musicMuted, gameEnded, startMusic]);
 
   // Fetch game details from the backend (mocking single player fetch for now, similar to multiplayer)
-  const { data: gameDetails, error: gameDetailsError } = useQuery<GameDetailsResponse, Error>({
+  const { data: gameDetails, error: gameDetailsError } = useQuery<
+    GameDetailsResponse,
+    Error
+  >({
     queryKey: ["gameDetails", gameId, userToken?.token],
     queryFn: () => getGameDetails(gameId, userToken?.token),
     enabled: !!userToken,
   });
 
   useEffect(() => {
+    console.log("[SinglePlayerGame] useQuery state ->", {
+      gameId,
+      hasToken: !!userToken?.token,
+      gameDetails,
+      questionCount: gameDetails?.questions?.length,
+      duration: gameDetails?.duration,
+      gameDetailsError: gameDetailsError?.message,
+    });
+  }, [gameDetails, gameDetailsError, gameId, userToken?.token]);
+
+  useEffect(() => {
     if (gameDetails && gameDetails.questions) {
+      console.log(
+        "[SinglePlayerGame] questions received, fetching answers for ids:",
+        gameDetails.questions.map((q: Question) => q.id)
+      );
       setGameQuestions(gameDetails.questions);
       const duration = gameDetails.duration || 20;
       startGame(gameId as string, duration);
+      setQuestionDuration(duration * 1000);
       setTimeLeft(duration * 1000);
-      
+
       const fetchAllAnswers = async () => {
         try {
           const answersPromises = gameDetails.questions.map((q: Question) =>
             getPracticeAnswers(q.id, userToken?.token)
           );
           const answers = await Promise.all(answersPromises);
+          console.log(
+            "[SinglePlayerGame] flattened answers ->",
+            "total:",
+            answers.flat().length,
+            "perQuestion:",
+            answers.map((a) => a?.length ?? 0),
+            "sample:",
+            answers.flat().slice(0, 3)
+          );
           setGameAnswers(answers.flat());
-        } catch (error) {
+        } catch (error: any) {
+          console.log(
+            "[SinglePlayerGame] fetchAllAnswers FAILED",
+            "message:",
+            error?.message,
+            "status:",
+            error?.response?.status,
+            "data:",
+            error?.response?.data
+          );
           setError("Failed to load questions. Please try again.");
         }
       };
       fetchAllAnswers();
+    } else if (gameDetails && !gameDetails.questions) {
+      console.log(
+        "[SinglePlayerGame] gameDetails arrived but `questions` field is missing or falsy.",
+        "Keys present:",
+        Object.keys(gameDetails ?? {}),
+        "Full payload:",
+        gameDetails
+      );
     }
   }, [gameDetails, userToken]);
 
-  // Timer logic
+  // Identify questions with multiple correct answers (same as multiplayer)
+  useEffect(() => {
+    if (gameQuestions.length === 0 || gameAnswers.length === 0) return;
+    const multiCorrect = gameQuestions
+      .filter(
+        (q) =>
+          gameAnswers.filter((a) => a.question === q.id && a.isRight).length >
+          1
+      )
+      .map((q) => q.id);
+    setQuestionsWithMultipleCorrectAnswers(multiCorrect);
+  }, [gameQuestions, gameAnswers]);
+
+  // Timer with countdown display, mirroring multiplayer
   useEffect(() => {
     if (gameQuestions.length === 0 || gameEnded) return;
 
     startTimeRef.current = Date.now();
     questionStartMsRef.current = Date.now();
-    const durationMs = timeLimit * 1000;
-    setTimeLeft(durationMs);
-    progressBarWidth.value = 100;
+    setTimeLeft(questionDuration);
+    progressBarWidth.setValue(100);
 
     const interval = setInterval(() => {
       const elapsed = Date.now() - startTimeRef.current;
-      const remaining = durationMs - elapsed;
+      const remaining = questionDuration - elapsed;
       if (remaining <= 0) {
         setTimeLeft(0);
-        progressBarWidth.value = withTiming(0, { duration: 1000 });
+        RNAnimated.timing(progressBarWidth, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: false,
+        }).start();
         clearInterval(interval);
       } else {
         setTimeLeft(remaining);
-        const newWidth = (remaining / durationMs) * 100;
-        progressBarWidth.value = withTiming(newWidth, { duration: 1000 });
+        const newWidth = (remaining / questionDuration) * 100;
+        RNAnimated.timing(progressBarWidth, {
+          toValue: newWidth,
+          duration: 1000,
+          useNativeDriver: false,
+        }).start();
       }
     }, 1000);
 
     const timer = setTimeout(() => {
       if (!gameEnded) {
         // Did not answer in time -> counted as wrong
-        answerQuestion(false, durationMs);
+        answerQuestion(false, questionDuration);
         moveToNextQuestionOrEnd();
       }
-    }, durationMs);
+    }, questionDuration);
 
     return () => {
       clearInterval(interval);
       clearTimeout(timer);
     };
-  }, [currentQuestion, timeLimit, gameQuestions, gameEnded]);
+  }, [currentQuestion, questionDuration, gameQuestions, gameEnded]);
+
+  // Reset power-ups when question changes (mirrors multiplayer)
+  useEffect(() => {
+    if (gameEnded) return;
+    setAiPrediction(null);
+    setAskTheAIActive(false);
+    setDoubleDipActive(false);
+  }, [currentQuestion, gameEnded]);
+
+  // Animate question counter when 5 or fewer questions remain
+  useEffect(() => {
+    if (gameEnded || gameQuestions.length === 0) return;
+
+    const questionsRemaining = gameQuestions.length - currentQuestion;
+    if (questionsRemaining <= 5) {
+      RNAnimated.loop(
+        RNAnimated.sequence([
+          RNAnimated.timing(questionCounterPulse, {
+            toValue: 1.05,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          RNAnimated.timing(questionCounterPulse, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      questionCounterPulse.stopAnimation();
+      questionCounterPulse.setValue(1);
+    }
+  }, [currentQuestion, gameQuestions.length, gameEnded]);
+
+  // Animate progress bar when time is low
+  useEffect(() => {
+    if (gameEnded) return;
+    if (timeLeft <= 5000 && timeLeft > 0) {
+      RNAnimated.loop(
+        RNAnimated.sequence([
+          RNAnimated.timing(progressBarPulse, {
+            toValue: 1.05,
+            duration: 800,
+            useNativeDriver: false,
+          }),
+          RNAnimated.timing(progressBarPulse, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: false,
+          }),
+        ])
+      ).start();
+    } else {
+      progressBarPulse.stopAnimation();
+      progressBarPulse.setValue(1);
+    }
+  }, [timeLeft, gameEnded]);
 
   const moveToNextQuestionOrEnd = () => {
     if (currentQuestion < gameQuestions.length - 1) {
@@ -145,288 +308,359 @@ export default function SinglePlayerGame() {
     endGame();
 
     try {
-      // 1. Prepare score to submit (Zustand maintains final math score)
-      // Call custom backend endpoint
-      await axios.post(
-        `${ApiUrl}/api/games/single-player/submit`,
-        {
-          gameId: gameId,
-          finalScore: Math.round(score),
-          highestStreak: streak // Or track a max streak in Zustand
-        },
-        { headers: { Authorization: `Token ${userToken?.token}` } }
-      );
+      await submitGameResult(userToken?.token, {
+        gameId: String(gameId),
+        gameMode: "single_player",
+        finalScore: Math.round(score),
+        highestStreak: streak,
+      });
     } catch (err) {
-      console.log('Error submitting single player score:', err);
+      console.log("Error submitting single player score:", err);
     }
 
-    // Redirect to results mimicking multiplayer logic for seamlessness 
     const scoresObject = {
       [userInfo?.user.id as number]: Math.round(score),
     };
-    
+
     router.replace({
       pathname: "Results",
       params: { scores: JSON.stringify(scoresObject), gameId },
     });
   };
 
+  // Multiplayer-style answer handler. Supports multi-correct questions and
+  // the Double Dip power-up (2 attempts on a single-correct question). The
+  // WebSocket attemptQuestion call is dropped — solo advances locally.
   const handleAnswerSelection = (answerId: number, questionId: number) => {
     if (gameEnded) return;
 
     const timeTakenMs = Date.now() - questionStartMsRef.current;
-    
+
     setSelectedAnswers((prev) => {
       const updated = { ...prev };
-      updated[questionId] = [answerId];
-      
+      const correctCount = gameAnswers.filter(
+        (a) => a.question === questionId && a.isRight
+      ).length;
       const correctIds = gameAnswers
         .filter((a) => a.question === questionId && a.isRight)
         .map((a) => a.id);
-        
-      const isCorrect = correctIds.includes(answerId);
-      
-      // Zustand interaction
-      answerQuestion(isCorrect, timeTakenMs);
-      
-      if (isCorrect) {
-        // Animate streak
-        streakScale.value = withSpring(1.4, {}, () => {
-          streakScale.value = withSpring(1);
-        });
-        playCorrect();
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      let didSubmit = false;
+      let isCorrect = false;
+
+      if (questionsWithMultipleCorrectAnswers.includes(questionId)) {
+        if (updated[questionId]?.length === correctCount) return updated;
+        if (!updated[questionId]) updated[questionId] = [answerId];
+        else if (!updated[questionId].includes(answerId))
+          updated[questionId].push(answerId);
+        if (updated[questionId].length === correctCount) {
+          didSubmit = true;
+          const sel = updated[questionId];
+          isCorrect =
+            sel.length === correctIds.length &&
+            sel.every((id) => correctIds.includes(id));
+        }
       } else {
-        playWrong();
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        if (updated[questionId]?.length > 0 && !doubleDipActive) return updated;
+        if (doubleDipActive) {
+          if (updated[questionId]?.length >= 2) return updated;
+          if (!updated[questionId]) updated[questionId] = [answerId];
+          else if (!updated[questionId].includes(answerId))
+            updated[questionId].push(answerId);
+          if (updated[questionId].length === 2) {
+            // Defer sibling-state update — calling `setDoubleDipActive(false)`
+            // synchronously inside this updater triggers React's
+            // "Cannot update a component while rendering a different component"
+            // warning, because React may replay the updater during a render.
+            queueMicrotask(() => setDoubleDipActive(false));
+            didSubmit = true;
+            const sel = updated[questionId];
+            isCorrect =
+              sel.length === correctIds.length &&
+              sel.every((id) => correctIds.includes(id));
+          }
+        } else {
+          updated[questionId] = [answerId];
+          didSubmit = true;
+          isCorrect = correctIds.includes(answerId);
+        }
       }
 
-      // Next question
-      setTimeout(() => {
-        moveToNextQuestionOrEnd();
-      }, 500);
+      if (didSubmit) {
+        // `answerQuestion` writes to the Zustand store; deferring it avoids
+        // notifying any other subscribers mid-React-render.
+        queueMicrotask(() => answerQuestion(isCorrect, timeTakenMs));
+        setTimeout(() => {
+          try {
+            Haptics.notificationAsync(
+              isCorrect
+                ? Haptics.NotificationFeedbackType.Success
+                : Haptics.NotificationFeedbackType.Error
+            );
+          } catch (_) {}
+          if (isCorrect) {
+            playCorrect();
+          } else {
+            playWrong();
+          }
+        }, 0);
+        // Solo has no WebSocket coordinator to wait on — advance locally after
+        // a short delay so the immediate-feedback colours have time to play.
+        setTimeout(() => {
+          moveToNextQuestionOrEnd();
+        }, 500);
+      }
 
       return updated;
     });
   };
 
-  const animatedProgressStyle = useAnimatedStyle(() => ({
-    width: `${progressBarWidth.value}%`,
-  }));
+  const isAnswerSelected = (questionId: number, answerId: number) =>
+    selectedAnswers[questionId]?.includes(answerId) ?? false;
 
-  const animatedStreakStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: streakScale.value }],
-  }));
+  // Power-up: Double Dip — gives the user a second attempt on a
+  // single-correct question. Disabled mid-multi-correct or after use.
+  const activateDoubleDip = () => {
+    if (!doubleDipUsed && !askTheAIActive && !doubleDipActive && !gameEnded) {
+      RNAnimated.sequence([
+        RNAnimated.timing(doubleDipScale, {
+          toValue: 0.95,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        RNAnimated.timing(doubleDipScale, {
+          toValue: 1,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+      ]).start();
 
-  const question = gameQuestions[currentQuestion];
+      RNAnimated.loop(
+        RNAnimated.sequence([
+          RNAnimated.timing(doubleDipGlow, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          RNAnimated.timing(doubleDipGlow, {
+            toValue: 0,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+
+      setDoubleDipActive(true);
+      setDoubleDipUsed(true);
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      } catch (_) {}
+    }
+  };
+
+  // Power-up: Ask Prince — reveals one of the correct answer ids for the
+  // current question via a non-blocking overlay for ~20s.
+  const activateAskTheAI = () => {
+    if (!askTheAIUsed && !doubleDipActive && !askTheAIActive && !gameEnded) {
+      RNAnimated.sequence([
+        RNAnimated.timing(askTheAIScale, {
+          toValue: 0.95,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        RNAnimated.timing(askTheAIScale, {
+          toValue: 1,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      RNAnimated.loop(
+        RNAnimated.sequence([
+          RNAnimated.timing(askTheAIGlow, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          RNAnimated.timing(askTheAIGlow, {
+            toValue: 0,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+
+      setAskTheAIActive(true);
+      const currentQId = gameQuestions[currentQuestion]?.id;
+      const correctIds = gameAnswers
+        .filter((answer) => answer.question === currentQId && answer.isRight)
+        .map((answer) => answer.id);
+      const aiGuess = correctIds[Math.floor(Math.random() * correctIds.length)];
+      setAiPrediction(aiGuess);
+      setAiWisdomPrefix(
+        PRINCE_WISDOM_PREFIXES[
+          Math.floor(Math.random() * PRINCE_WISDOM_PREFIXES.length)
+        ]
+      );
+      setTimeout(() => {
+        setAskTheAIActive(false);
+        setAiPrediction(null);
+      }, 20000);
+      setAskTheAIUsed(true);
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      } catch (_) {}
+    }
+  };
+
+  // Streak: consecutive correct from last answered backward (parity with multiplayer)
+  const currentStreak = useMemo(() => {
+    let s = 0;
+    for (let i = currentQuestion - 1; i >= 0; i--) {
+      const q = gameQuestions[i];
+      if (!q) break;
+      const selectedIds = selectedAnswers[q.id] || [];
+      const correctIds = gameAnswers
+        .filter((a) => a.question === q.id && a.isRight)
+        .map((a) => a.id);
+      const isCorrect =
+        selectedIds.length === correctIds.length &&
+        selectedIds.every((id) => correctIds.includes(id));
+      if (isCorrect) s++;
+      else break;
+    }
+    return s;
+  }, [currentQuestion, gameQuestions, selectedAnswers, gameAnswers]);
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: themeColors.background },
     blob1: {
       position: "absolute",
       top: -rV(100),
-      right: -rS(60),
-      width: rS(260),
-      height: rS(260),
-      borderRadius: rS(130),
+      left: -rS(50),
+      width: rS(250),
+      height: rS(250),
+      borderRadius: rS(125),
       backgroundColor: themeColors.tint + "18",
     },
     blob2: {
       position: "absolute",
-      bottom: rV(60),
-      left: -rS(100),
-      width: rS(280),
-      height: rS(280),
-      borderRadius: rS(140),
-      backgroundColor: "#F9731618",
+      top: rV(300),
+      right: -rS(100),
+      width: rS(300),
+      height: rS(300),
+      borderRadius: rS(150),
+      backgroundColor: "#6366F118",
     },
-    headerCard: {
-      overflow: "hidden",
-      borderBottomLeftRadius: rMS(32),
-      borderBottomRightRadius: rMS(32),
-      ...shadow.medium,
-      zIndex: 10,
-    },
-    headerBlur: {
-      paddingTop: Math.max(rV(20), insets.top + rV(10)),
-      paddingBottom: rV(20),
-      paddingHorizontal: rS(24),
-      backgroundColor: themeColors.tint + "08",
-    },
-    headerTopRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: rV(12),
-    },
-    questionCounter: {
-      fontSize: rMS(14),
-      fontWeight: "800",
-      color: themeColors.textSecondary,
-    },
-    scoreStreakContainer: {
-      alignItems: 'flex-end',
-    },
-    scoreText: {
-      fontSize: SIZES.large,
-      fontWeight: '900',
-      color: themeColors.text,
-    },
-    streakText: {
-      fontSize: SIZES.small,
-      color: '#F97316',
-      fontWeight: '900',
-      marginTop: rV(2),
-    },
-    timerBarContainer: {
-      height: rV(6),
-      backgroundColor: themeColors.background + "80",
-      borderRadius: rMS(3),
-      overflow: 'hidden',
-      width: '100%',
-    },
-    timerBar: {
-      height: '100%',
-      backgroundColor: themeColors.tint,
-      borderRadius: rMS(3),
-    },
-    contentArea: {
-      flex: 1,
-      paddingHorizontal: rS(16),
-      paddingTop: rV(24),
-      paddingBottom: Math.max(rV(24), insets.bottom + rV(12)),
-    },
-    questionCardContainer: {
+    // Styles meant for Questions.tsx overrides (passed via the `styles` prop).
+    questionContainer: {
+      backgroundColor:
+        colorScheme === "dark" ? themeColors.cardGlass : "transparent",
       borderRadius: rMS(36),
-      overflow: "hidden",
-      ...shadow.large,
-      marginBottom: rV(32),
-    },
-    questionCardBlur: {
       padding: rMS(24),
+      marginHorizontal: rS(16),
+      marginTop: rV(100), // Below fixed header
+      marginBottom: rV(24),
+      borderWidth: colorScheme === "dark" ? 1 : 0,
+      borderColor: themeColors.border + "60",
       minHeight: rV(140),
-      justifyContent: 'center',
-      backgroundColor: themeColors.cardGlass,
     },
     questionText: {
       fontSize: rMS(20),
-      fontWeight: '900',
+      fontWeight: "900",
       color: themeColors.text,
-      textAlign: 'center',
+      textAlign: "center",
       lineHeight: rMS(28),
     },
     answersContainer: {
-      gap: rV(14),
+      paddingHorizontal: rS(16),
     },
-    answerButton: {
-      paddingVertical: rV(16),
-      paddingHorizontal: rMS(20),
-      borderRadius: rMS(32),
-      borderWidth: 1.5,
-      borderColor: themeColors.border + "60",
-      backgroundColor: themeColors.cardGlass,
-      ...shadow.light,
-    },
-    answerButtonSelected: {
-      borderColor: themeColors.tint,
-      backgroundColor: themeColors.tint + '20',
-    },
-    answerText: {
+    errorMessage: {
+      alignSelf: "center",
       fontSize: SIZES.medium,
-      fontWeight: '700',
-      color: themeColors.text,
-      textAlign: 'center',
-    },
-    answerTextSelected: {
-      fontWeight: '900',
-      color: themeColors.tint,
-    },
-    // Loading state
-    loadingContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    loadingText: {
-      color: themeColors.textSecondary,
-      fontSize: SIZES.small,
-      marginTop: rV(12),
-      fontWeight: '700',
+      color: "#D22B2B",
+      marginVertical: rV(16),
+      textAlign: "center",
+      paddingHorizontal: rMS(20),
     },
   });
 
   if (gameQuestions.length === 0) {
     return (
-      <View style={[styles.container, styles.loadingContainer]}>
-        <StatusBar barStyle={colorScheme === "dark" ? "light-content" : "dark-content"} />
-        <View style={styles.blob1} />
-        <View style={styles.blob2} />
-        <Text style={styles.loadingText}>Loading single player game...</Text>
-        <ErrorMessage message={error} visible={!!error} onDismiss={() => setError("")} />
-      </View>
+      <GameLoadingShell
+        loadingText="Loading single player game..."
+        error={error}
+        onDismissError={dismissError}
+      />
     );
   }
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle={colorScheme === "dark" ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
+      <StatusBar hidden={true} />
       <View style={styles.blob1} />
       <View style={styles.blob2} />
 
-      {/* Frosted glass header */}
-      <Animated.View entering={FadeInDown.duration(400)} style={styles.headerCard}>
-        <BlurView intensity={70} tint={colorScheme === "dark" ? "dark" : "light"} style={styles.headerBlur}>
-          <View style={styles.headerTopRow}>
-            <Text style={styles.questionCounter}>
-              Q: {currentQuestion + 1} / {gameQuestions.length}
-            </Text>
-            <View style={styles.scoreStreakContainer}>
-              <Text style={styles.scoreText}>{Math.round(score)} pts</Text>
-              {streak > 1 && (
-                <Animated.Text style={[styles.streakText, animatedStreakStyle]}>
-                  {streak} Streak! 🔥
-                </Animated.Text>
-              )}
-            </View>
-          </View>
-          <View style={styles.timerBarContainer}>
-            <Animated.View style={[styles.timerBar, animatedProgressStyle]} />
-          </View>
-        </BlurView>
-      </Animated.View>
-
-      {/* Question & Answers */}
-      {question && (
-        <View style={styles.contentArea}>
-          <Animated.View key={`q-${currentQuestion}`} entering={FadeIn.duration(400)} style={styles.questionCardContainer}>
-            <BlurView intensity={80} tint={colorScheme === "dark" ? "dark" : "light"} style={styles.questionCardBlur}>
-              <Text style={styles.questionText}>{question.content}</Text>
-            </BlurView>
-          </Animated.View>
-
-          <View style={styles.answersContainer}>
-            {gameAnswers
-              .filter((a) => a.question === question.id)
-              .map((ans, idx) => {
-                const isSelected = selectedAnswers[question.id]?.includes(ans.id);
-                return (
-                  <Animated.View key={ans.id} entering={FadeInUp.duration(400).delay(idx * 100).springify()}>
-                    <AnimatedTouchable
-                      style={[styles.answerButton, isSelected && styles.answerButtonSelected]}
-                      onPress={() => handleAnswerSelection(ans.id, question.id)}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={[styles.answerText, isSelected && styles.answerTextSelected]}>
-                        {ans.content}
-                      </Text>
-                    </AnimatedTouchable>
-                  </Animated.View>
-                );
-              })}
-          </View>
-        </View>
+      {!gameEnded && gameQuestions.length > 0 && !error && (
+        <QuizGlassHeader
+          currentQuestionIndex={currentQuestion}
+          totalQuestions={gameQuestions.length}
+          currentStreak={currentStreak}
+          timeLeft={timeLeft}
+          progressBarWidth={progressBarWidth}
+          progressBarPulse={progressBarPulse}
+          questionCounterPulse={questionCounterPulse}
+          musicMuted={musicMuted}
+          soundMuted={soundMuted}
+          onToggleMusic={onToggleMusic}
+          onToggleSound={onToggleSound}
+        />
       )}
-      <ErrorMessage message={error} visible={!!error} onDismiss={() => setError("")} />
+
+      <PrinceWisdomBanner
+        visible={askTheAIActive && aiPrediction !== null}
+        wisdomPrefix={aiWisdomPrefix}
+        predictionText={
+          gameAnswers.find((ans) => ans.id === aiPrediction)?.text
+        }
+      />
+
+      {!error && (
+        <GameQuestionsScroll>
+          {gameQuestions.length > 0 && (
+            <Questions
+              practiceQuestions={gameQuestions}
+              practiceAnswers={gameAnswers}
+              currentQuestion={currentQuestion}
+              questionsWithMultipleCorrectAnswers={
+                questionsWithMultipleCorrectAnswers
+              }
+              isAnswerSelected={isAnswerSelected}
+              handleAnswerSelection={handleAnswerSelection}
+              styles={styles}
+            />
+          )}
+        </GameQuestionsScroll>
+      )}
+
+      <PowerUpStrip
+        doubleDipActive={doubleDipActive}
+        doubleDipUsed={doubleDipUsed}
+        askTheAIActive={askTheAIActive}
+        askTheAIUsed={askTheAIUsed}
+        onDoubleDip={activateDoubleDip}
+        onAskPrince={activateAskTheAI}
+        doubleDipScale={doubleDipScale}
+        doubleDipGlow={doubleDipGlow}
+        askTheAIScale={askTheAIScale}
+        askTheAIGlow={askTheAIGlow}
+        disabled={gameEnded}
+      />
+
+      <ErrorMessage
+        message={error}
+        visible={!!error}
+        onDismiss={dismissError}
+      />
     </View>
   );
 }

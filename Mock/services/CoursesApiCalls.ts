@@ -198,8 +198,19 @@ export const getPracticeAnswers = async (questionId: number, token: string | nul
                 },
             }
         );
+        console.log(
+            `[getPracticeAnswers] GET /api/answers/?question_id=${questionId} -> count:`,
+            Array.isArray(data) ? data.length : "(non-array)",
+            "data:", data
+        );
         return data;
-    } catch (error) {
+    } catch (error: any) {
+        console.log(
+            `[getPracticeAnswers] FAILED GET /api/answers/?question_id=${questionId}`,
+            "status:", error?.response?.status,
+            "data:", error?.response?.data,
+            "message:", error?.message
+        );
         throw error;
     }
 };

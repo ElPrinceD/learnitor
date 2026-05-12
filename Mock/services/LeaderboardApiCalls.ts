@@ -23,6 +23,14 @@ export interface CustomLeaderboard {
   invite_code?: string;
   isCodePublic?: boolean;
   isCreator?: boolean;
+  // The requesting user's rank within this squad.
+  //   number -> the user's current rank in the squad's ladder
+  //              (score ladder for `all_points`/`exam_only`, pts ladder for
+  //              `custom_1v1`)
+  //   null   -> unranked (e.g. brand-new squad, season hasn't started, or
+  //              the first H2H week hasn't resolved yet)
+  // See Mock/BACKEND_RANKING_UPDATES.md Section "User rank on squad list".
+  userRank?: number | null;
 }
 
 export interface RankingItem {
@@ -33,6 +41,13 @@ export interface RankingItem {
   score: number;
   badge?: string;
   movement?: "up" | "down" | "same";
+  // Per Mock/BACKEND_RANKING_UPDATES.md Section 3:
+  //   null   -> current week's exam has not yet started
+  //   0      -> exam is open/closed but the user did not participate
+  //   number -> the score this user achieved on the current week's exam
+  // Only present for custom-squad leaderboard responses; absent on
+  // world/country/school.
+  weeklyExamScore?: number | null;
 }
 
 export interface UserStatus {

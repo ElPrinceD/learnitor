@@ -106,8 +106,16 @@ export default function ResultsScreen() {
   // Handle errors and set user-friendly messages
   useEffect(() => {
     if (gameDetailsError) {
+      // Weekly-exam (and any future solo game whose gameId is synthetic)
+      // intentionally has no /games/{id}/ record on the backend, so a 404
+      // here is the normal happy path for solo, not an error.
+      const isLikelySolo = Object.keys(scores).length <= 1;
       if (gameDetailsError.message.includes("404")) {
-        setError("Game results not found. Please try again.");
+        if (!isLikelySolo) {
+          setError("Game results not found. Please try again.");
+        } else {
+          setError("");
+        }
       } else if (gameDetailsError.message.includes("403")) {
         setError("You don't have permission to view these results.");
       } else if (gameDetailsError.message.includes("network")) {
@@ -118,7 +126,7 @@ export default function ResultsScreen() {
     } else {
       setError(""); // Clear error when successful
     }
-  }, [gameDetailsError]);
+  }, [gameDetailsError, scores]);
 
   const creator = gameDetails?.creator.first_name;
   const creatorId = gameDetails?.creator.id;
@@ -153,6 +161,15 @@ export default function ResultsScreen() {
     return playersList;
   }, [gameDetails, scores, userInfo]);
 
+  // Auto-detect solo mode. Covers three cases:
+  //   1. Single-player game (gameDetails.players has 1 entry, the user).
+  //   2. Weekly exam (gameDetails 404s because gameId is "weekly-exam-${n}",
+  //      so players is empty; scores has exactly one entry).
+  //   3. Any future game where the user is the only participant.
+  const isSolo =
+    (gameDetails?.players?.length ?? 0) <= 1 ||
+    Object.keys(scores).length <= 1;
+
   // Count winners to show tie message
   const winnerCount = useMemo(() => {
     return players.filter((player) => player.isWinner).length;
@@ -163,10 +180,20 @@ export default function ResultsScreen() {
     () => players.find((p) => p.id === userInfo?.user.id),
     [players, userInfo]
   );
-  const userScore = userPlayer ? parseFloat(userPlayer.score) : 0;
+  // Fall back to `scores[userId]` so weekly-exam Results (where gameDetails
+  // 404s and `players` ends up empty) still shows the score.
+  const userScore = userPlayer
+    ? parseFloat(userPlayer.score)
+    : Number(scores[userInfo?.user.id as number]) || 0;
   const userIsWinner = !!userPlayer?.isWinner;
 
   const scoreBasedMessage = useMemo(() => {
+    if (isSolo) {
+      if (userScore >= 90) return "Crushed it! 🔥";
+      if (userScore >= 70) return "Great work! 👏";
+      if (userScore >= 50) return "Solid effort! 💪";
+      return "Keep practicing! 📚";
+    }
     if (userIsWinner) {
       if (userScore >= 90) return "Crushed it! 🔥";
       if (userScore >= 70) return "Nice work! 🎉";
@@ -176,7 +203,7 @@ export default function ResultsScreen() {
     if (userScore >= 70) return "Nice work! 👏";
     if (userScore >= 50) return "Close one! 💪";
     return "Room to improve! 📚";
-  }, [userIsWinner, userScore]);
+  }, [isSolo, userIsWinner, userScore]);
 
   // Podium: top 3 as [2nd, 1st, 3rd] for display, rest as list.
   const podiumPlayers = useMemo(() => {
@@ -388,6 +415,39 @@ export default function ResultsScreen() {
     winnerBadge: {
       marginLeft: rS(8),
     },
+    // Solo (single-player / weekly exam) score card
+    soloScoreCard: {
+      alignSelf: "center",
+      alignItems: "center",
+      backgroundColor: themeColors.cardGlass,
+      borderRadius: rMS(32),
+      paddingVertical: rV(28),
+      paddingHorizontal: rMS(36),
+      marginBottom: rV(32),
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
+      ...shadow.medium,
+    },
+    soloAvatar: {
+      width: rMS(88),
+      height: rMS(88),
+      borderRadius: rMS(44),
+      borderWidth: 3,
+      borderColor: themeColors.tint + "60",
+      marginBottom: rV(12),
+    },
+    soloPlayerName: {
+      fontSize: rMS(18),
+      fontWeight: "800",
+      color: themeColors.text,
+      marginBottom: rV(8),
+    },
+    soloScoreNumber: {
+      fontSize: rMS(40),
+      fontWeight: "900",
+      color: themeColors.tint,
+      letterSpacing: -1,
+    },
     // Buttons
     buttonContainer: {
       position: "absolute",
@@ -507,8 +567,10 @@ export default function ResultsScreen() {
             style={styles.heroSection}
           >
             <Text style={styles.heroLabel}>Game Complete</Text>
-            <Text style={styles.heroTitle}>{creator}'s Arena</Text>
-            {winnerCount > 1 && (
+            <Text style={styles.heroTitle}>
+              {isSolo ? "Solo Practice" : `${creator}'s Arena`}
+            </Text>
+            {!isSolo && winnerCount > 1 && (
               <Text style={styles.tieTitle}>
                 Tie! {winnerCount} Winners
               </Text>
@@ -522,58 +584,85 @@ export default function ResultsScreen() {
             </View>
           </Animated.View>
 
-          {/* Podium */}
-          {podiumPlayers.top3 && podiumPlayers.top3.length > 0 && (
-            <View style={styles.podiumContainer}>
-              {podiumPlayers.top3.length >= 2 &&
-                renderPodiumSlot(podiumPlayers.top3[0], 2, "2nd")}
-              {podiumPlayers.top3.length >= 1 &&
-                renderPodiumSlot(
-                  podiumPlayers.top3[podiumPlayers.top3.length === 1 ? 0 : 1],
-                  1,
-                  "1st"
-                )}
-              {podiumPlayers.top3.length >= 3 &&
-                renderPodiumSlot(podiumPlayers.top3[2], 3, "3rd")}
-            </View>
-          )}
-
-          {/* Other Players */}
-          {podiumPlayers.rest && podiumPlayers.rest.length > 0 && (
-            <View style={styles.othersSection}>
-              <Text style={styles.othersSectionLabel}>Other Players</Text>
-              {podiumPlayers.rest.map((item, idx) => (
-                <Animated.View
-                  key={item.id}
-                  entering={FadeInDown.duration(400).delay(400 + idx * 80)}
-                >
-                  <View
-                    style={[
-                      styles.playerCard,
-                      item.isWinner && styles.playerCardWinner,
-                    ]}
-                  >
-                    <Image
-                      source={
-                        item.profile_picture
-                          ? { uri: item.profile_picture }
-                          : require("../../assets/images/profile-placeholder.png")
-                      }
-                      style={styles.playerImage}
-                    />
-                    <View style={styles.playerInfo}>
-                      <Text style={styles.playerName}>{item.profileName}</Text>
-                    </View>
-                    <Text style={styles.playerScore}>{item.score}%</Text>
-                    {item.isWinner && (
-                      <View style={styles.winnerBadge}>
-                        <Trophy size={18} color="#FFD700" />
-                      </View>
+          {isSolo ? (
+            /* Solo: single centered score card, no podium / no opponents */
+            <Animated.View
+              entering={FadeInUp.duration(500).delay(200).springify()}
+              style={styles.soloScoreCard}
+            >
+              <Image
+                source={
+                  userInfo.user.profile_picture
+                    ? { uri: userInfo.user.profile_picture }
+                    : require("../../assets/images/profile-placeholder.png")
+                }
+                style={styles.soloAvatar}
+              />
+              <Text style={styles.soloPlayerName}>
+                {userInfo.user.first_name}
+              </Text>
+              <Text style={styles.soloScoreNumber}>{userScore} pts</Text>
+            </Animated.View>
+          ) : (
+            <>
+              {/* Podium */}
+              {podiumPlayers.top3 && podiumPlayers.top3.length > 0 && (
+                <View style={styles.podiumContainer}>
+                  {podiumPlayers.top3.length >= 2 &&
+                    renderPodiumSlot(podiumPlayers.top3[0], 2, "2nd")}
+                  {podiumPlayers.top3.length >= 1 &&
+                    renderPodiumSlot(
+                      podiumPlayers.top3[
+                        podiumPlayers.top3.length === 1 ? 0 : 1
+                      ],
+                      1,
+                      "1st"
                     )}
-                  </View>
-                </Animated.View>
-              ))}
-            </View>
+                  {podiumPlayers.top3.length >= 3 &&
+                    renderPodiumSlot(podiumPlayers.top3[2], 3, "3rd")}
+                </View>
+              )}
+
+              {/* Other Players */}
+              {podiumPlayers.rest && podiumPlayers.rest.length > 0 && (
+                <View style={styles.othersSection}>
+                  <Text style={styles.othersSectionLabel}>Other Players</Text>
+                  {podiumPlayers.rest.map((item, idx) => (
+                    <Animated.View
+                      key={item.id}
+                      entering={FadeInDown.duration(400).delay(400 + idx * 80)}
+                    >
+                      <View
+                        style={[
+                          styles.playerCard,
+                          item.isWinner && styles.playerCardWinner,
+                        ]}
+                      >
+                        <Image
+                          source={
+                            item.profile_picture
+                              ? { uri: item.profile_picture }
+                              : require("../../assets/images/profile-placeholder.png")
+                          }
+                          style={styles.playerImage}
+                        />
+                        <View style={styles.playerInfo}>
+                          <Text style={styles.playerName}>
+                            {item.profileName}
+                          </Text>
+                        </View>
+                        <Text style={styles.playerScore}>{item.score}%</Text>
+                        {item.isWinner && (
+                          <View style={styles.winnerBadge}>
+                            <Trophy size={18} color="#FFD700" />
+                          </View>
+                        )}
+                      </View>
+                    </Animated.View>
+                  ))}
+                </View>
+              )}
+            </>
           )}
         </ScrollView>
       )}
