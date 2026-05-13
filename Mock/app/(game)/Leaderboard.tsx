@@ -47,8 +47,17 @@ export default function Leaderboard() {
 
   // We can derive loading/error from react-query
 
-  const leaderboardId = id || "world";
+  const leaderboardId = (id || "world").toLowerCase();
   const leaderboardName = name || "World Rankings";
+
+  const showWeeklyExamColumn = ["world", "country", "school"].includes(
+    leaderboardId
+  );
+
+  const formatWeeklyExamSW = (sw: number | null | undefined): string => {
+    if (sw === undefined || sw === null) return "—";
+    return sw.toLocaleString();
+  };
 
   // Back button scale
   const backScale = useSharedValue(1);
@@ -166,10 +175,13 @@ export default function Leaderboard() {
     // Column headers
     columnHeaders: {
       flexDirection: "row",
-      justifyContent: "space-between",
+      alignItems: "center",
       paddingHorizontal: rS(24),
       marginBottom: rV(12),
     },
+    columnLabelStudent: { flex: 1, textAlign: "left" },
+    columnLabelSW: { width: rS(48), textAlign: "right" },
+    columnLabelPoints: { width: rS(72), textAlign: "right" },
     columnLabel: {
       fontSize: rMS(10),
       fontWeight: "800",
@@ -228,6 +240,15 @@ export default function Leaderboard() {
       fontSize: rMS(12),
       fontWeight: "900",
       color: themeColors.tint,
+      width: rS(72),
+      textAlign: "right",
+    },
+    rankSW: {
+      fontSize: rMS(12),
+      fontWeight: "800",
+      color: themeColors.textSecondary,
+      width: rS(48),
+      textAlign: "right",
     },
     // User Status Card - heavily rounded
     userStatusCardContainer: {
@@ -370,8 +391,15 @@ export default function Leaderboard() {
           entering={enterAnim(100)}
           style={styles.columnHeaders}
         >
-          <Text style={styles.columnLabel}>Rank / Student</Text>
-          <Text style={styles.columnLabel}>Academic Points</Text>
+          <Text style={[styles.columnLabel, styles.columnLabelStudent]}>
+            Rank / Student
+          </Text>
+          {showWeeklyExamColumn && (
+            <Text style={[styles.columnLabel, styles.columnLabelSW]}>SW</Text>
+          )}
+          <Text style={[styles.columnLabel, styles.columnLabelPoints]}>
+            Points
+          </Text>
         </Animated.View>
 
         {/* Rankings List */}
@@ -380,33 +408,38 @@ export default function Leaderboard() {
             key={item.id}
             entering={enterAnim(150 + index * 50)}
           >
-            <View style={styles.rankCard}>
-              <View style={styles.rankCardLeft}>
-                <Text
-                  style={[
-                    styles.rankNumber,
-                    { color: getRankColor(item.rank) },
-                  ]}
-                >
-                  {formatRank(item.rank)}
-                </Text>
-                <Image
-                  source={
-                    item.avatarUrl
-                      ? { uri: item.avatarUrl }
-                      : require("../../assets/images/profile-placeholder.png")
-                  }
-                  style={styles.rankAvatar}
-                />
-                <View style={styles.rankInfo}>
-                  <Text style={styles.rankName}>{item.username}</Text>
-                  {item.badge && (
-                    <Text style={styles.rankBadge}>{item.badge}</Text>
-                  )}
+              <View style={styles.rankCard}>
+                <View style={styles.rankCardLeft}>
+                  <Text
+                    style={[
+                      styles.rankNumber,
+                      { color: getRankColor(item.rank) },
+                    ]}
+                  >
+                    {formatRank(item.rank)}
+                  </Text>
+                  <Image
+                    source={
+                      item.avatarUrl
+                        ? { uri: item.avatarUrl }
+                        : require("../../assets/images/profile-placeholder.png")
+                    }
+                    style={styles.rankAvatar}
+                  />
+                  <View style={styles.rankInfo}>
+                    <Text style={styles.rankName}>{item.username}</Text>
+                    {item.badge && (
+                      <Text style={styles.rankBadge}>{item.badge}</Text>
+                    )}
+                  </View>
                 </View>
+                {showWeeklyExamColumn && (
+                  <Text style={styles.rankSW}>
+                    {formatWeeklyExamSW(item.weeklyExamScore)}
+                  </Text>
+                )}
+                <Text style={styles.rankScore}>{formatScore(item.score)}</Text>
               </View>
-              <Text style={styles.rankScore}>{formatScore(item.score)}</Text>
-            </View>
           </Animated.View>
         ))}
 

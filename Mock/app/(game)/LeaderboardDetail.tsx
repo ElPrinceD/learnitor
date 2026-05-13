@@ -110,12 +110,21 @@ export default function LeaderboardDetail() {
   );
   const squadInfo = leaderboardData?.squadInfo;
 
-  // SW column is only meaningful on custom-squad responses where the backend
-  // includes `weeklyExamScore`. Global / country / school leaderboards omit
-  // the field entirely.
+  const resolvedLeaderboardId = Array.isArray(id) ? id[0] : id;
+  const isGlobalLeaderboard =
+    typeof resolvedLeaderboardId === "string" &&
+    ["world", "country", "school"].includes(
+      resolvedLeaderboardId.toLowerCase()
+    );
+
+  // SW column: custom squads when the API sends `weeklyExamScore`, and
+  // always for world / country / school (same table shape as squads; values
+  // show once the backend includes the field on those endpoints too).
   const showWeeklyExamColumn = useMemo(
-    () => rankings.some((r) => r.weeklyExamScore !== undefined),
-    [rankings]
+    () =>
+      isGlobalLeaderboard ||
+      rankings.some((r) => r.weeklyExamScore !== undefined),
+    [isGlobalLeaderboard, rankings]
   );
 
   const matches = useMemo(() => h2hMatchesData ?? [], [h2hMatchesData]);

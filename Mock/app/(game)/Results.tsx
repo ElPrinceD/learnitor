@@ -33,9 +33,12 @@ const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 export default function ResultsScreen() {
   const { userInfo, userToken } = useAuth();
-  const { gameId, scores: scoresParam } = useLocalSearchParams<{
+  const { gameId, scores: scoresParam, isWeeklyExam: weeklyParam, currentWeek } =
+    useLocalSearchParams<{
     gameId: string;
     scores: string;
+    isWeeklyExam?: string;
+    currentWeek?: string | string[];
   }>();
   const { showGameCompletionAd } = useAdManager();
   const [adShown, setAdShown] = useState(false);
@@ -161,6 +164,25 @@ export default function ResultsScreen() {
     return playersList;
   }, [gameDetails, scores, userInfo]);
 
+  const isWeeklyExam =
+    weeklyParam === "1" ||
+    (typeof gameId === "string" && gameId.startsWith("weekly-exam-"));
+
+  /** Study week number for SW(x) copy; from route param or `weekly-exam-{n}` id. */
+  const weeklyExamWeek = useMemo(() => {
+    const raw = Array.isArray(currentWeek)
+      ? currentWeek[0]
+      : currentWeek;
+    if (raw != null && String(raw).trim() !== "" && /^\d+$/.test(String(raw))) {
+      return String(raw);
+    }
+    if (typeof gameId === "string") {
+      const m = gameId.match(/^weekly-exam-(\d+)$/);
+      if (m) return m[1];
+    }
+    return "";
+  }, [currentWeek, gameId]);
+
   // Auto-detect solo mode. Covers three cases:
   //   1. Single-player game (gameDetails.players has 1 entry, the user).
   //   2. Weekly exam (gameDetails 404s because gameId is "weekly-exam-${n}",
@@ -188,6 +210,12 @@ export default function ResultsScreen() {
   const userIsWinner = !!userPlayer?.isWinner;
 
   const scoreBasedMessage = useMemo(() => {
+    if (isWeeklyExam) {
+      if (userScore >= 90) return "Elite weekly performance";
+      if (userScore >= 70) return "Strong weekly submission";
+      if (userScore >= 50) return "Weekly exam completed";
+      return "Weekly exam submitted";
+    }
     if (isSolo) {
       if (userScore >= 90) return "Crushed it! 🔥";
       if (userScore >= 70) return "Great work! 👏";
@@ -203,7 +231,7 @@ export default function ResultsScreen() {
     if (userScore >= 70) return "Nice work! 👏";
     if (userScore >= 50) return "Close one! 💪";
     return "Room to improve! 📚";
-  }, [isSolo, userIsWinner, userScore]);
+  }, [isSolo, isWeeklyExam, userIsWinner, userScore]);
 
   // Podium: top 3 as [2nd, 1st, 3rd] for display, rest as list.
   const podiumPlayers = useMemo(() => {
@@ -448,6 +476,28 @@ export default function ResultsScreen() {
       color: themeColors.tint,
       letterSpacing: -1,
     },
+    weeklyScoreCard: {
+      borderColor: "#8B5CF6" + "55",
+      backgroundColor: "#8B5CF6" + "10",
+    },
+    weeklyAvatar: {
+      borderColor: "#8B5CF6" + "90",
+    },
+    weeklyMetaLabel: {
+      marginTop: rV(6),
+      fontSize: rMS(11),
+      fontWeight: "800",
+      textTransform: "uppercase",
+      letterSpacing: 1.2,
+      color: "#8B5CF6",
+    },
+    weeklySubText: {
+      marginTop: rV(6),
+      fontSize: rMS(12),
+      fontWeight: "700",
+      color: themeColors.textSecondary,
+      textAlign: "center",
+    },
     // Buttons
     buttonContainer: {
       position: "absolute",
@@ -566,9 +616,17 @@ export default function ResultsScreen() {
             entering={FadeInDown.duration(500).delay(100)}
             style={styles.heroSection}
           >
-            <Text style={styles.heroLabel}>Game Complete</Text>
+            <Text style={styles.heroLabel}>
+              {isWeeklyExam ? "Weekly Exam Complete" : "Game Complete"}
+            </Text>
             <Text style={styles.heroTitle}>
-              {isSolo ? "Solo Practice" : `${creator}'s Arena`}
+              {isWeeklyExam
+                ? weeklyExamWeek
+                  ? `SW${weeklyExamWeek} Exam Results`
+                  : "SW Exam Results"
+                : isSolo
+                ? "Solo Practice"
+                : `${creator}'s Arena`}
             </Text>
             {!isSolo && winnerCount > 1 && (
               <Text style={styles.tieTitle}>
@@ -588,7 +646,10 @@ export default function ResultsScreen() {
             /* Solo: single centered score card, no podium / no opponents */
             <Animated.View
               entering={FadeInUp.duration(500).delay(200).springify()}
-              style={styles.soloScoreCard}
+              style={[
+                styles.soloScoreCard,
+                isWeeklyExam && styles.weeklyScoreCard,
+              ]}
             >
               <Image
                 source={
@@ -596,12 +657,22 @@ export default function ResultsScreen() {
                     ? { uri: userInfo.user.profile_picture }
                     : require("../../assets/images/profile-placeholder.png")
                 }
-                style={styles.soloAvatar}
+                style={[styles.soloAvatar, isWeeklyExam && styles.weeklyAvatar]}
               />
+              {isWeeklyExam && (
+                <Text style={styles.weeklyMetaLabel}>
+                  {weeklyExamWeek ? `Study Week ${weeklyExamWeek}` : "Weekly Exam"}
+                </Text>
+              )}
               <Text style={styles.soloPlayerName}>
                 {userInfo.user.first_name}
               </Text>
               <Text style={styles.soloScoreNumber}>{userScore} pts</Text>
+              {isWeeklyExam && (
+                <Text style={styles.weeklySubText}>
+                  Your score is saved for this study week.
+                </Text>
+              )}
             </Animated.View>
           ) : (
             <>
@@ -680,16 +751,18 @@ export default function ResultsScreen() {
           <Text style={styles.homeButtonText}>Home</Text>
         </AnimatedTouchable>
 
-        <AnimatedTouchable
-          style={[styles.newGameButton, newGameAnimStyle]}
-          onPress={handleCreateNewGame}
-          onPressIn={() => onPressIn(newGameScale)}
-          onPressOut={() => onPressOut(newGameScale)}
-          activeOpacity={1}
-        >
-          <Gamepad2 size={20} color="#fff" />
-          <Text style={styles.newGameButtonText}>New Game</Text>
-        </AnimatedTouchable>
+        {!isWeeklyExam && (
+          <AnimatedTouchable
+            style={[styles.newGameButton, newGameAnimStyle]}
+            onPress={handleCreateNewGame}
+            onPressIn={() => onPressIn(newGameScale)}
+            onPressOut={() => onPressOut(newGameScale)}
+            activeOpacity={1}
+          >
+            <Gamepad2 size={20} color="#fff" />
+            <Text style={styles.newGameButtonText}>New Game</Text>
+          </AnimatedTouchable>
+        )}
       </View>
     </View>
   );

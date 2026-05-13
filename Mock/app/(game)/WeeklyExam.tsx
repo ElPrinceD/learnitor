@@ -40,7 +40,7 @@ import WeeklyExamWindowGuard from "../../components/game/WeeklyExamWindowGuard";
 //
 // Flip this back to `false` before shipping.
 // ────────────────────────────────────────────────────────────────────────────
-const DEV_FORCE_EXAM_OPEN = false;
+const DEV_FORCE_EXAM_OPEN = true;
 
 // --- UTC time window check (uses backend dates when available) ---
 function isExamWindowOpenFromBackend(
@@ -143,7 +143,12 @@ export default function WeeklyExam() {
 
   useEffect(() => {
     if (!examQuestionsData?.questions) return;
-    setGameQuestions(examQuestionsData.questions);
+    const normalizedQuestions = examQuestionsData.questions.map((q: any) => ({
+      ...q,
+      // Weekly-exam API returns `content`; shared Questions UI reads `text`.
+      text: q?.text ?? q?.content ?? "",
+    }));
+    setGameQuestions(normalizedQuestions);
     // Weekly-exam questions don't carry a `duration` field, so fall back to
     // the gameStore's default (`timeLimit` is seconds).
     setQuestionDuration(timeLimit * 1000);
@@ -151,7 +156,7 @@ export default function WeeklyExam() {
 
     const fetchAllAnswers = async () => {
       try {
-        const answersPromises = examQuestionsData.questions.map(
+        const answersPromises = normalizedQuestions.map(
           (q: Question) => getPracticeAnswers(q.id, userToken?.token)
         );
         const answers = await Promise.all(answersPromises);
@@ -327,7 +332,13 @@ export default function WeeklyExam() {
 
     router.replace({
       pathname: "Results",
-      params: { scores: JSON.stringify(scoresObject), gameId: weekId },
+      params: {
+        scores: JSON.stringify(scoresObject),
+        gameId: weekId,
+        isWeeklyExam: "1",
+        currentWeek:
+          examStatus?.currentWeek != null ? String(examStatus.currentWeek) : "",
+      },
     });
   };
 

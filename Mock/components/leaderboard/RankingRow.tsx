@@ -22,7 +22,7 @@ const formatScore = (score: number) => `${score.toLocaleString()} PTS`;
 
 // Per Mock/BACKEND_RANKING_UPDATES.md Section 3:
 //   null      -> current week's exam has not yet started, render em-dash
-//   undefined -> field not present (global/country/school leaderboard)
+//   undefined -> not provided yet (show em-dash when SW column is shown)
 //   0         -> user did not participate this week, render "0"
 //   number    -> render the score (no "PTS" suffix — column header is "SW")
 const formatWeeklyExamSW = (sw: number | null | undefined): string => {

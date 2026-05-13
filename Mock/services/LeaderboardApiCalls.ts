@@ -45,8 +45,9 @@ export interface RankingItem {
   //   null   -> current week's exam has not yet started
   //   0      -> exam is open/closed but the user did not participate
   //   number -> the score this user achieved on the current week's exam
-  // Only present for custom-squad leaderboard responses; absent on
-  // world/country/school.
+  // Custom squads: always when the ladder is exam-weighted. Global lists
+  // (world / country / school): optional until the API adds it; the app
+  // still shows the SW column for those boards for layout parity.
   weeklyExamScore?: number | null;
 }
 
