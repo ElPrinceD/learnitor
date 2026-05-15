@@ -5,7 +5,7 @@ import {
   useColorScheme,
   Animated as RNAnimated,
 } from "react-native";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { StatusBar } from "expo-status-bar";
@@ -42,6 +42,7 @@ export default function SinglePlayerGame() {
   const { gameId } = useLocalSearchParams();
 
   const { startGame, endGame, answerQuestion, score, streak } = useGameStore();
+  const queryClient = useQueryClient();
 
   const [gameAnswers, setGameAnswers] = useState<Answer[]>([]);
   const [selectedAnswers, setSelectedAnswers] = useState<{
@@ -111,27 +112,15 @@ export default function SinglePlayerGame() {
     Error
   >({
     queryKey: ["gameDetails", gameId, userToken?.token],
-    queryFn: () => getGameDetails(gameId, userToken?.token),
+    queryFn: () => getGameDetails(gameId as string, userToken?.token),
     enabled: !!userToken,
   });
 
-  useEffect(() => {
-    console.log("[SinglePlayerGame] useQuery state ->", {
-      gameId,
-      hasToken: !!userToken?.token,
-      gameDetails,
-      questionCount: gameDetails?.questions?.length,
-      duration: gameDetails?.duration,
-      gameDetailsError: gameDetailsError?.message,
-    });
-  }, [gameDetails, gameDetailsError, gameId, userToken?.token]);
+
 
   useEffect(() => {
     if (gameDetails && gameDetails.questions) {
-      console.log(
-        "[SinglePlayerGame] questions received, fetching answers for ids:",
-        gameDetails.questions.map((q: Question) => q.id)
-      );
+
       setGameQuestions(gameDetails.questions);
       const duration = gameDetails.duration || 20;
       startGame(gameId as string, duration);
@@ -144,38 +133,16 @@ export default function SinglePlayerGame() {
             getPracticeAnswers(q.id, userToken?.token)
           );
           const answers = await Promise.all(answersPromises);
-          console.log(
-            "[SinglePlayerGame] flattened answers ->",
-            "total:",
-            answers.flat().length,
-            "perQuestion:",
-            answers.map((a) => a?.length ?? 0),
-            "sample:",
-            answers.flat().slice(0, 3)
-          );
+
           setGameAnswers(answers.flat());
         } catch (error: any) {
-          console.log(
-            "[SinglePlayerGame] fetchAllAnswers FAILED",
-            "message:",
-            error?.message,
-            "status:",
-            error?.response?.status,
-            "data:",
-            error?.response?.data
-          );
+
           setError("Failed to load questions. Please try again.");
         }
       };
       fetchAllAnswers();
     } else if (gameDetails && !gameDetails.questions) {
-      console.log(
-        "[SinglePlayerGame] gameDetails arrived but `questions` field is missing or falsy.",
-        "Keys present:",
-        Object.keys(gameDetails ?? {}),
-        "Full payload:",
-        gameDetails
-      );
+
     }
   }, [gameDetails, userToken]);
 
@@ -314,6 +281,12 @@ export default function SinglePlayerGame() {
         finalScore: Math.round(score),
         highestStreak: streak,
       });
+
+      // Invalidate all leaderboard caches so the Play tab and leaderboard
+      // pages immediately reflect the new score.
+      queryClient.invalidateQueries({ queryKey: ["rankingsSummary"] });
+      queryClient.invalidateQueries({ queryKey: ["leaderboardDetails"] });
+      queryClient.invalidateQueries({ queryKey: ["customLeaderboards"] });
     } catch (err) {
       console.log("Error submitting single player score:", err);
     }

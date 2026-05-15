@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -82,11 +82,13 @@ export default function LeaderboardDetail() {
   });
 
   // Global knockout bracket — same endpoint the pre-refactor code imported.
-  // Only fetched for non-knockout squads (and only while the user is on the
-  // Knockout sub-tab) since `custom_1v1` squads render their own H2H panel.
+  // For non-knockout squads: fetches per-squad bracket.
+  // For global leaderboards (world/country/school): fetches the global bracket.
+  // Only fetched when the user is on the Knockout sub-tab since `custom_1v1`
+  // squads render their own H2H panel.
   const { data: knockoutBracketData, error: knockoutBracketError } = useQuery({
-    queryKey: ["knockoutBracket"],
-    queryFn: () => getKnockoutBracket(userToken?.token),
+    queryKey: ["knockoutBracket", id],
+    queryFn: () => getKnockoutBracket(userToken?.token, id),
     enabled:
       !!userToken?.token && !isKnockout && activeTab === "knockout",
   });
@@ -135,21 +137,33 @@ export default function LeaderboardDetail() {
   );
 
   // ── Error state ─────────────────────────────────────────────────────────
-  // Was a `const error = queryError ? "..." : ""` so `setError("")` (the
-  // dismiss handler) failed silently. Now wired through useState properly.
+  // Tracks which error string the user has already dismissed so the
+  // useEffect doesn't immediately re-set the same message.
   const [error, setError] = useState<string>("");
+  const dismissedErrorRef = useRef<string | null>(null);
 
   useEffect(() => {
+    let nextError = "";
     if (isKnockout) {
       if (h2hMatchesError || h2hStandingsError) {
-        setError("Failed to load battles");
+        nextError = "Failed to load battles";
       }
     } else if (activeTab === "knockout") {
       if (knockoutBracketError) {
-        setError("Failed to load knockout bracket");
+        nextError = "Failed to load knockout bracket";
       }
     } else if (rankingsError) {
-      setError("Failed to load rankings");
+      nextError = "Failed to load rankings";
+    }
+
+    // If the derived error is identical to what the user just dismissed,
+    // keep the banner hidden. If it's a NEW error, reset the ref and show it.
+    if (nextError && nextError === dismissedErrorRef.current) {
+      return;
+    }
+    if (nextError !== error) {
+      dismissedErrorRef.current = null;
+      setError(nextError);
     }
   }, [
     isKnockout,
@@ -158,9 +172,13 @@ export default function LeaderboardDetail() {
     h2hStandingsError,
     knockoutBracketError,
     rankingsError,
+    error,
   ]);
 
-  const dismissError = useCallback(() => setError(""), []);
+  const dismissError = useCallback(() => {
+    dismissedErrorRef.current = error;
+    setError("");
+  }, [error]);
 
   // ── Handlers ────────────────────────────────────────────────────────────
   const onBack = useCallback(() => router.back(), []);
@@ -173,6 +191,16 @@ export default function LeaderboardDetail() {
   }, [id, name]);
 
   const isMe = useCallback(
+    (id: number, username: string) =>
+      id === userInfo?.user.id ||
+      username === userInfo?.user.first_name ||
+      username === "You",
+    [userInfo?.user.id, userInfo?.user.first_name]
+  );
+
+  // Knockout bracket matches only carry player name strings (no IDs),
+  // so we need a name-only variant for that component.
+  const isMeByName = useCallback(
     (username: string) =>
       username === userInfo?.user.first_name || username === "You",
     [userInfo?.user.first_name]
@@ -242,12 +270,10 @@ export default function LeaderboardDetail() {
         },
         errorWrap: {
           position: "absolute",
-          top: 0,
+          bottom: 0,
           left: 0,
           right: 0,
           zIndex: 50,
-          paddingHorizontal: rS(16),
-          paddingTop: rV(110),
         },
         knockoutScroll: {
           flex: 1,
@@ -352,7 +378,7 @@ export default function LeaderboardDetail() {
               <KnockoutBracket
                 rounds={knockoutRounds}
                 squadInfo={squadInfo}
-                isMe={isMe}
+                isMe={isMeByName}
               />
             </ScrollView>
           )}

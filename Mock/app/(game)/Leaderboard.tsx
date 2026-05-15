@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -79,7 +79,24 @@ export default function Leaderboard() {
 
   const rankings = leaderboardData?.rankings || [];
   const userStatus = leaderboardData?.userStatus || { rank: null, percentile: null, message: null };
-  const error = queryError ? "Failed to load rankings" : "";
+
+  // Proper error state with dismiss support
+  const [error, setError] = useState<string>("");
+  const dismissedErrorRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const nextError = queryError ? "Failed to load rankings" : "";
+    if (nextError && nextError === dismissedErrorRef.current) return;
+    if (nextError !== error) {
+      dismissedErrorRef.current = null;
+      setError(nextError);
+    }
+  }, [queryError, error]);
+
+  const dismissError = useCallback(() => {
+    dismissedErrorRef.current = error;
+    setError("");
+  }, [error]);
 
   const formatRank = (rank: number) => {
     return rank.toString().padStart(2, "0");
@@ -482,13 +499,13 @@ export default function Leaderboard() {
             </BlurView>
           </Animated.View>
         )}
-
-        <ErrorMessage
-          message={error}
-          visible={!!error}
-          onDismiss={() => setError("")}
-        />
       </ScrollView>
+
+      <ErrorMessage
+        message={error}
+        visible={!!error}
+        onDismiss={dismissError}
+      />
     </View>
   );
 }

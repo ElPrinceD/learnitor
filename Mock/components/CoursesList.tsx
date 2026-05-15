@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import Colors from "../constants/Colors";
-import { SIZES, rMS, rS, rV, useShadows } from "../constants";
+import { rMS, rS, rV, useShadows } from "../constants";
 import AppImage from "./AppImage";
 import { Course } from "./types";
 import { Skeleton } from "moti/skeleton";

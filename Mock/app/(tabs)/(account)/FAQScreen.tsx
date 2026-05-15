@@ -196,7 +196,7 @@ const FAQScreen: React.FC = () => {
     setSearchQuery("");
   };
 
-  const renderFAQItem = ({ item }) => (
+  const renderFAQItem = ({ item }: { item: any }) => (
     <View style={styles.faqItem}>
       <TouchableOpacity
         onPress={() => toggleFAQ(item.id)}

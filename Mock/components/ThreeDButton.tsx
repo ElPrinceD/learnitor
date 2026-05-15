@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { Play } from "lucide-react-native";
 import Colors from "../constants/Colors";
-import { rMS, rS, rV, SIZES } from "../constants";
+import { rMS, rS, rV } from "../constants";
 
 interface ThreeDButtonProps {
   isQuestion: boolean;

@@ -9,10 +9,8 @@ import {
   ScrollView,
 } from "react-native";
 import { Select } from "@tamagui/select";
-import { Adapt } from "@tamagui/adapt";
-import { Sheet } from "@tamagui/sheet";
 import type { SelectProps } from "@tamagui/select";
-import { CheckCircle2, ChevronDown, X } from "lucide-react-native";
+import { CheckCircle2, X } from "lucide-react-native";
 import { useColorScheme } from "../components/useColorScheme";
 import Colors from "../constants/Colors";
 import { rV, rS, rMS, SIZES } from "../constants";

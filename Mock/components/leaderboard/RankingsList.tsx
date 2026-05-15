@@ -21,7 +21,7 @@ const ESTIMATED_ROW_HEIGHT = 78;
 
 interface Props {
   rankings: RankingItem[];
-  isMe: (username: string) => boolean;
+  isMe: (id: number, username: string) => boolean;
   showWeeklyExamColumn: boolean;
   // Rendered above the column headers as the FlashList's list header so it
   // scrolls with the list (true virtualization, no nested-scroll trap).
@@ -84,7 +84,7 @@ const RankingsList: React.FC<Props> = ({
     ({ item }: ListRenderItemInfo<RankingItem>) => (
       <RankingRow
         item={item}
-        isMe={isMe(item.username)}
+        isMe={isMe(item.id, item.username)}
         showWeeklyExamColumn={showWeeklyExamColumn}
       />
     ),

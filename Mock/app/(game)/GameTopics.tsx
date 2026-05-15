@@ -178,7 +178,6 @@ const GameTopics: React.FC = () => {
       }
     } catch (error) {
       // Let ErrorMessage component handle the user-friendly conversion
-      console.log(error.response.data);
       if (axios.isAxiosError(error)) {
         setErrorMessage(error.message);
       } else if (error instanceof Error) {

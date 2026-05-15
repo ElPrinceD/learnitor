@@ -7,7 +7,7 @@ import {
   useColorScheme,
 } from "react-native";
 import { Flame, Briefcase, Users, BookOpen, HelpCircle } from "lucide-react-native";
-import { rMS, rV, rS, useShadows } from "../constants";
+import { rMS, rV, useShadows } from "../constants";
 import Colors from "../constants/Colors";
 
 // Map of Lucide icon components

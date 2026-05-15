@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { CheckCircle, ChevronRight } from "lucide-react-native";
-import { SIZES, rMS, rS, rV, useShadows } from "../constants";
+import { rMS, rS, rV, useShadows } from "../constants";
 import Colors from "../constants/Colors";
 
 interface Task {

@@ -195,8 +195,18 @@ export const getH2HCurrent = async (token: string | null | undefined): Promise<H
   return response.data;
 };
 
-export const getKnockoutBracket = async (token: string | null | undefined): Promise<KnockoutBracketResponse> => {
-  const response = await apiClient.get<KnockoutBracketResponse>('/api/knockout/bracket', {
+export const getKnockoutBracket = async (
+  token: string | null | undefined,
+  squadId?: string
+): Promise<KnockoutBracketResponse> => {
+  // Per-squad bracket endpoint (see BACKEND_KNOCKOUT_BRACKET.md).
+  // Global leaderboard IDs (world/country/school) don't have a per-squad
+  // bracket, so fall back to the legacy global endpoint for those.
+  const isGlobal = !squadId || ['world', 'country', 'school'].includes(squadId.toLowerCase());
+  const url = isGlobal
+    ? '/api/knockout/bracket'
+    : `/api/leaderboards/custom/${squadId}/knockout-bracket`;
+  const response = await apiClient.get<KnockoutBracketResponse>(url, {
     headers: { Authorization: `Token ${token}` },
   });
   return response.data;

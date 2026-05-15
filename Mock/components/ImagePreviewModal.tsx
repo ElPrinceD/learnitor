@@ -76,7 +76,7 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
     <Sheet
       modal
       open={visible}
-      onOpenChange={(isOpen) => {
+      onOpenChange={(isOpen: boolean) => {
         if (!isOpen) {
           handleClose();
         }

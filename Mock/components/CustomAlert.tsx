@@ -9,20 +9,13 @@ import {
   Dimensions,
 } from "react-native";
 import Animated, {
-  FadeIn,
-  FadeOut,
-  SlideInDown,
-  SlideOutDown,
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
   withTiming,
   Easing,
 } from "react-native-reanimated";
 import Colors from "../constants/Colors";
-import { SIZES } from "../constants/theme";
 import { rMS, rS, rV } from "../constants/responsive";
-import GameButton from "./GameButton";
 
 const { width: screenWidth } = Dimensions.get("window");
 

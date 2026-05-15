@@ -2,7 +2,16 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, FlatList, useColorScheme } from "react-native";
 
 
-export const Typewriter = ({ text, delay = 100, onComplete, style }) => {
+import { StyleProp, TextStyle } from "react-native";
+
+interface TypewriterProps {
+  text: string;
+  delay?: number;
+  onComplete?: () => void;
+  style?: StyleProp<TextStyle>;
+}
+
+export const Typewriter = ({ text, delay = 100, onComplete, style }: TypewriterProps) => {
     const [displayText, setDisplayText] = useState("");
     const [index, setIndex] = useState(0);
   

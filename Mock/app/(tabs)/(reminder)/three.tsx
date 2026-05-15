@@ -50,7 +50,7 @@ const Timeline = () => {
   const BottomSheetRef = useRef<BottomSheet>(null);
   const snapPoints = useMemo(() => ["50%", "80%"], []);
 
-  const getCategoryColor = (type) => {
+  const getCategoryColor = (type: any) => {
     switch (type) {
       case "Assignments & Projects":
         return themeColors.text;
@@ -177,7 +177,7 @@ const Timeline = () => {
     }
   }, [plansStatus, categoriesStatus]);
 
-  const handleEditPlan = (plan) => {
+  const handleEditPlan = (plan: any) => {
     // Handle different possible time field names
     const startTime = plan.due_time_start || plan.due_time || "12:00";
     const endTime = plan.due_time_end || plan.due_time || "13:00";
@@ -334,7 +334,7 @@ const Timeline = () => {
             </View>
           ) : (
             memoizedPlans.map(
-              (plan, index) =>
+              (plan: any, index: number) =>
                 plan && (
                   <View key={index} style={styles.planItemWrapper}>
                     {typedCategoryNames && (
@@ -417,7 +417,7 @@ const Timeline = () => {
                 </View>
               ) : (
                 memoizedPlans.map(
-                  (plan, index) =>
+                  (plan: any, index: number) =>
                     plan && (
                       <View key={index} style={styles.planItemWrapper}>
                         {typedCategoryNames && (

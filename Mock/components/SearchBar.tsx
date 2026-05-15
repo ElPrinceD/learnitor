@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { Search, X } from "lucide-react-native";
 import Colors from "../constants/Colors";
-import { SIZES, rMS, rS, rV, useShadows } from "../constants";
+import { rMS, rS, rV, useShadows } from "../constants";
 import debounce from "lodash.debounce";
 
 interface Props {

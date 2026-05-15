@@ -4,14 +4,11 @@ import {
   Image,
   Dimensions,
   View,
-  Text,
-  TouchableOpacity,
   useColorScheme,
 } from "react-native";
 import Carousel from "react-native-reanimated-carousel";
-// Icons handled by Lucide
 import Colors from "../constants/Colors";
-import { SIZES, rMS } from "../constants";
+import { SIZES } from "../constants";
 
 interface CarouselItem {
   title: string;

@@ -12,7 +12,7 @@ const apiClient = axios.create({
 
 
 export const getGameDetails = async (
-  gameId,
+  gameId: string | number,
   token: string | null | undefined
 ): Promise<GameDetailsResponse> => {
     try {
@@ -24,25 +24,14 @@ export const getGameDetails = async (
             }
         );
 
-        console.log(
-            `[getGameDetails] GET /games/${gameId}/ ->`,
-            JSON.stringify(response.data, null, 2)
-        );
-
         return response.data;
-           } catch (error: any) {
-        console.log(
-            `[getGameDetails] FAILED GET /games/${gameId}/`,
-            "status:", error?.response?.status,
-            "data:", error?.response?.data,
-            "message:", error?.message
-        );
+    } catch (error: any) {
         throw error;
     }
 };
 
 
-export const startGame = async (gameId, token: string | null | undefined): Promise<void> => {
+export const startGame = async (gameId: string | number, token: string | null | undefined): Promise<void> => {
   await apiClient.post(
     `/games/${gameId}/start_game/`,
     {},

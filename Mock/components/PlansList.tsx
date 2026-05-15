@@ -8,7 +8,9 @@ interface Plan {
   title: string;
   description: string;
   due_date: string;
-  due_time: string;
+  due_time?: string;
+  due_time_start: string;
+  due_time_end: string;
   category: number;
 }
 
@@ -66,7 +68,7 @@ const PlansList: React.FC<PlansListProps> = ({
           const categoryColor = getCategoryColor(categoryNames[plan.category]);
           return (
             <View key={index} style={styles.planItemWrapper}>
-              <Text style={styles.planTime}>{plan.due_time.slice(0, -3)}</Text>
+              <Text style={styles.planTime}>{(plan.due_time || plan.due_time_start || "").slice(0, -3)}</Text>
               <View style={styles.planItemLine} />
               <PlanItem
                 plan={plan}

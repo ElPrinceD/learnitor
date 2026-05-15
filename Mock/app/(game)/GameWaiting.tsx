@@ -22,6 +22,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  SharedValue,
 } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
 import Toast from "react-native-root-toast";
@@ -84,10 +85,10 @@ export default function GameWaitingScreen() {
     transform: [{ scale: shareScale.value }],
   }));
 
-  const onPressIn = (sv: Animated.SharedValue<number>) => {
+  const onPressIn = (sv: SharedValue<number>) => {
     sv.value = withSpring(0.9, { damping: 15, stiffness: 300 });
   };
-  const onPressOut = (sv: Animated.SharedValue<number>) => {
+  const onPressOut = (sv: SharedValue<number>) => {
     sv.value = withSpring(1, { damping: 15, stiffness: 300 });
   };
 
@@ -97,7 +98,7 @@ export default function GameWaitingScreen() {
     refetch: refetchGameDetails,
   } = useQuery<GameDetailsResponse, Error>({
     queryKey: ["gameDetails", id || gameId, userToken?.token],
-    queryFn: () => getGameDetails(id || gameId, userToken?.token),
+    queryFn: () => getGameDetails((id || gameId) as string, userToken?.token),
     enabled: !!userToken,
   });
 
@@ -226,7 +227,7 @@ export default function GameWaitingScreen() {
           const payload = data.data || data;
 
           if (payload.players) {
-            const newPlayers = payload.players.map((player) => ({
+            const newPlayers = payload.players.map((player: any) => ({
               id: player.id,
               score: "0",
               profileName: player.first_name,
@@ -247,7 +248,7 @@ export default function GameWaitingScreen() {
           // Handle game state updates
           const payload = data.data || data;
           if (payload.players) {
-            const newPlayers = payload.players.map((player) => ({
+            const newPlayers = payload.players.map((player: any) => ({
               id: player.id,
               score: "0",
               profileName: player.first_name,

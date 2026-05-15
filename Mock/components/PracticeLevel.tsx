@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { Level } from "./types";
 import Colors from "../constants/Colors";
-import { SIZES, rMS, rS, rV, useShadows } from "../constants";
+import { rMS, rS, rV, useShadows } from "../constants";
 
 interface Props {
   onPress: (level: Level) => void;

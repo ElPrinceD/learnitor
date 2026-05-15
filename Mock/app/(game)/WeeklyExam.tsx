@@ -17,7 +17,7 @@ import Colors from "../../constants/Colors";
 import { rMS, rV, rS } from "../../constants/index.js";
 import ErrorMessage from "../../components/ErrorMessage";
 import Questions from "../../components/Questions";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getWeeklyExamStatus,
   getWeeklyExamQuestions,
@@ -78,6 +78,7 @@ export default function WeeklyExam() {
 
   const { startGame, endGame, answerQuestion, score, streak, timeLimit } =
     useGameStore();
+  const queryClient = useQueryClient();
 
   const [gameAnswers, setGameAnswers] = useState<Answer[]>([]);
   const [selectedAnswers, setSelectedAnswers] = useState<{
@@ -162,7 +163,6 @@ export default function WeeklyExam() {
         const answers = await Promise.all(answersPromises);
         setGameAnswers(answers.flat());
       } catch (err: any) {
-        console.log("[WeeklyExam] fetchAllAnswers FAILED", err?.message);
         setError("Failed to load exam questions. Please try again.");
       }
     };
@@ -322,6 +322,16 @@ export default function WeeklyExam() {
         finalScore: Math.round(score),
         highestStreak: streak,
       });
+
+      // Invalidate all leaderboard and exam caches so the Play tab and
+      // leaderboard pages immediately reflect the new weekly exam score.
+      queryClient.invalidateQueries({ queryKey: ["rankingsSummary"] });
+      queryClient.invalidateQueries({ queryKey: ["leaderboardDetails"] });
+      queryClient.invalidateQueries({ queryKey: ["customLeaderboards"] });
+      queryClient.invalidateQueries({ queryKey: ["weeklyExamStatus"] });
+      queryClient.invalidateQueries({ queryKey: ["knockoutBracket"] });
+      queryClient.invalidateQueries({ queryKey: ["customH2HMatches"] });
+      queryClient.invalidateQueries({ queryKey: ["customH2HStandings"] });
     } catch (err) {
       console.log("Error submitting weekly exam score:", err);
     }

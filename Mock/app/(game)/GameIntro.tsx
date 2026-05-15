@@ -23,6 +23,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  SharedValue,
 } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
 import ApiUrl from "../../config";
@@ -73,10 +74,10 @@ export default function GameIntro() {
     transform: [{ scale: rankingsScale.value }],
   }));
 
-  const onPressIn = (sv: Animated.SharedValue<number>) => {
+  const onPressIn = (sv: SharedValue<number>) => {
     sv.value = withSpring(0.95, { damping: 15, stiffness: 300 });
   };
-  const onPressOut = (sv: Animated.SharedValue<number>) => {
+  const onPressOut = (sv: SharedValue<number>) => {
     sv.value = withSpring(1, { damping: 15, stiffness: 300 });
   };
 

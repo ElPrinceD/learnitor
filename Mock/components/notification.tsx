@@ -1,11 +1,15 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons'; // Assuming Ionicons is being used
+import { Bell } from 'lucide-react-native';
 
-const Notification = ({ message }) => {
+interface NotificationProps {
+  message: string;
+}
+ 
+const Notification = ({ message }: NotificationProps) => {
   return (
     <View style={[styles.container, styles.notificationContainer]}>
-      <Icon name="notifications-outline" size={24} color="#333" style={styles.icon} />
+      <Bell size={24} color="#333" style={styles.icon as any} />
       <View style={styles.content}>
         <Text style={styles.message}>{message}</Text>
       </View>

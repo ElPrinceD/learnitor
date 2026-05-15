@@ -9,7 +9,7 @@ import {
 import { FlashList } from "@shopify/flash-list";
 import Colors from "../constants/Colors";
 import { Category } from "./types";
-import { SIZES, rMS, rS, rV } from "../constants";
+import { rMS, rS, rV } from "../constants";
 import { Skeleton } from "moti/skeleton";
 
 interface Props {

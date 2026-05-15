@@ -23,17 +23,17 @@ const GlobalCommunityList: React.FC<GlobalCommunityListProps> = ({
 
   const handleJoinCommunity = useCallback(
     (community: Community) => {
-      showAlert(
-        `Join ${community.name}?`,
-        `Do you want to join this community and start chatting?`,
-        [
+      showAlert({
+        title: `Join ${community.name}?`,
+        message: `Do you want to join this community and start chatting?`,
+        buttons: [
           { text: "Cancel", onPress: () => {} },
           {
             text: "Join",
             onPress: () => onCommunityPress(community),
           },
         ]
-      );
+      });
     },
     [onCommunityPress, showAlert]
   );

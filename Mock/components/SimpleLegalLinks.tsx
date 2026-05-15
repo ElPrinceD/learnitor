@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, useColorScheme } from "react-native";
 import { FileText, ShieldCheck, ChevronRight } from "lucide-react-native";
 import Colors from "../constants/Colors";
-import { SIZES, rMS, rS, rV } from "../constants";
+import { SIZES, rS, rV } from "../constants";
 import InAppBrowserLink from "./InAppBrowserLink";
 
 interface SimpleLegalLinksProps {

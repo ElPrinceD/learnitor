@@ -16,7 +16,7 @@ import { Player, GameDetailsResponse } from "../../components/types";
 import { useAuth } from "../../components/AuthContext";
 import Colors from "../../constants/Colors";
 import { SIZES, rMS, rS, rV, useShadows } from "../../constants";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getGameDetails } from "../../services/GamesApiCalls";
 import { useAdManager } from "../../components/ads/AdManager";
 import { Trophy, Home, Gamepad2 } from "lucide-react-native";
@@ -26,6 +26,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  SharedValue,
 } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
 
@@ -44,6 +45,7 @@ export default function ResultsScreen() {
   const [adShown, setAdShown] = useState(false);
   const insets = useSafeAreaInsets();
   const [error, setError] = useState<string>("");
+  const queryClient = useQueryClient();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const shadow = useShadows();
@@ -57,10 +59,10 @@ export default function ResultsScreen() {
   const newGameAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: newGameScale.value }],
   }));
-  const onPressIn = (sv: Animated.SharedValue<number>) => {
+  const onPressIn = (sv: SharedValue<number>) => {
     sv.value = withSpring(0.95, { damping: 15, stiffness: 300 });
   };
-  const onPressOut = (sv: Animated.SharedValue<number>) => {
+  const onPressOut = (sv: SharedValue<number>) => {
     sv.value = withSpring(1, { damping: 15, stiffness: 300 });
   };
 
@@ -70,7 +72,14 @@ export default function ResultsScreen() {
       showGameCompletionAd();
       setAdShown(true);
     }
-  }, [showGameCompletionAd, adShown]);
+
+    // Invalidate leaderboard caches so navigating back to Play tab
+    // will fetch fresh data that includes the just-submitted score.
+    queryClient.invalidateQueries({ queryKey: ["rankingsSummary"] });
+    queryClient.invalidateQueries({ queryKey: ["leaderboardDetails"] });
+    queryClient.invalidateQueries({ queryKey: ["customLeaderboards"] });
+    queryClient.invalidateQueries({ queryKey: ["weeklyExamStatus"] });
+  }, [showGameCompletionAd, adShown, queryClient]);
 
   // Allow back navigation to GameIntro
   useEffect(() => {

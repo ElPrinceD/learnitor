@@ -3,7 +3,7 @@ import React from "react";
 import { View, Text, StyleSheet, Image } from "react-native";
 import { SIZES } from "../constants";
 
-const CarouselCard = ({ item }) => {
+const CarouselCard = ({ item }: { item: any }) => {
   return (
     <View style={styles.card}>
       <Image source={{ uri: item.image }} style={styles.image} />

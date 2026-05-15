@@ -51,7 +51,7 @@ const CourseContent: React.FC<CourseContentProps> = ({
         onSelectedTopicsChange={onSelectedTopicsChange}
       />
     </View>
-  );
+  ); 
 };
 
 const styles = StyleSheet.create({

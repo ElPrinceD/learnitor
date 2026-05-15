@@ -10,7 +10,7 @@ import {
 import { Topic } from "./types";
 import { PlayCircle, X } from "lucide-react-native";
 import Colors from "../constants/Colors";
-import { SIZES, rMS, rS, rV, useShadows } from "../constants";
+import { rMS, rS, rV, useShadows } from "../constants";
 
 interface CourseTopicsProps {
   topics: Topic[];

@@ -197,14 +197,14 @@ const ErrorMessage: React.FC<ErrorMessageProps> = ({
       duration: 300,
       useNativeDriver: true,
     }).start(() => {
-      if (onDismiss && !visible) {
+      if (onDismiss) {
         onDismiss();
       }
     });
-  }, [onDismiss, slideAnim, visible]);
+  }, [onDismiss, slideAnim]);
 
   useEffect(() => {
-    let timer: NodeJS.Timeout | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
 
     if (visible) {
       // Slide in

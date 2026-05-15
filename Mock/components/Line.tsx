@@ -2,7 +2,14 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 
-const Line = ({ width, height, backgroundColor, rotate }) => {
+interface LineProps {
+    width: number;
+    height: number;
+    backgroundColor: string;
+    rotate: number;
+}
+
+const Line = ({ width, height, backgroundColor, rotate }: LineProps) => {
   const styles = StyleSheet.create({
     line: {
       position: 'absolute',

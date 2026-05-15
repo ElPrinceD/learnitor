@@ -10,8 +10,7 @@ import { BookX } from "lucide-react-native";
 import ThreeDButton from "./ThreeDButton";
 import Colors from "../constants/Colors";
 import { Topic } from "./types";
-import { PathA, PathB } from "./SvgComponent";
-import { SIZES, rMS, rS, rV } from "../constants";
+import { rMS, rS, rV } from "../constants";
 
 interface CourseRoadmapProps {
   enrolledTopics: Topic[];

@@ -27,6 +27,7 @@ import Colors from "../../constants/Colors";
 import { rMS, rV, rS, SIZES } from "../../constants/index.js";
 import WsUrl from "../../configWs";
 import ErrorMessage from "../../components/ErrorMessage";
+import { useQueryClient } from "@tanstack/react-query";
 import QuizGlassHeader from "../../components/game/QuizGlassHeader";
 import GameQuestionsScroll from "../../components/game/GameQuestionsScroll";
 import PowerUpStrip from "../../components/game/PowerUpStrip";
@@ -47,6 +48,7 @@ export default function Game() {
   } = useGameAudio();
   const { gameId, gameCode } = useLocalSearchParams();
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
 
   const [gameAnswers, setGameAnswers] = useState<Answer[]>([]);
   const [selectedAnswers, setSelectedAnswers] = useState<{
@@ -138,7 +140,7 @@ export default function Game() {
     Error
   >({
     queryKey: ["gameDetails", gameId, userToken?.token],
-    queryFn: () => getGameDetails(gameId, userToken?.token),
+    queryFn: () => getGameDetails(gameId as string, userToken?.token),
     enabled: !!userToken,
   });
 
@@ -312,7 +314,7 @@ export default function Game() {
 
       try {
         const message = JSON.parse(event.data);
-        console.log(`Player ${userInfo?.user.id} received:`, message);
+
 
         if (
           message.type === "question.attempted" &&
@@ -332,7 +334,7 @@ export default function Game() {
           setGameEnded(true);
           if (webSocket.current) {
             webSocket.current.close();
-            console.log("WebSocket closed due to game end.");
+
           }
           if (!redirected) {
             setRedirected(true);
@@ -373,7 +375,7 @@ export default function Game() {
     webSocket.current = ws;
 
     ws.onopen = () => {
-      console.log(`WebSocket opened for Player ${userInfo?.user.id}`);
+      // console.log(`WebSocket opened for Player ${userInfo?.user.id}`);
       setWsConnected(true);
       setWsError("");
     };
@@ -386,7 +388,7 @@ export default function Game() {
     ws.onmessage = (event) => handleMessageRef.current(event);
 
     ws.onclose = () => {
-      console.log(`WebSocket closed for Player ${userInfo?.user.id}`);
+      // console.log(`WebSocket closed for Player ${userInfo?.user.id}`);
       setWsConnected(false);
       webSocket.current = null;
     };
@@ -439,6 +441,11 @@ export default function Game() {
       gameId: String(gameId),
       gameMode: "multiplayer",
       finalScore: Math.round(scorePercentage),
+    }).then(() => {
+      // Invalidate leaderboard caches so scores appear immediately.
+      queryClient.invalidateQueries({ queryKey: ["rankingsSummary"] });
+      queryClient.invalidateQueries({ queryKey: ["leaderboardDetails"] });
+      queryClient.invalidateQueries({ queryKey: ["customLeaderboards"] });
     }).catch((err) => {
       console.log("Multiplayer REST submit fallback failed:", err);
     });

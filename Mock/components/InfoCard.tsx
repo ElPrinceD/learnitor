@@ -4,7 +4,12 @@ import { Sparkles, ArrowRightCircle } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SIZES, rMS, rS, rV } from "../constants";
 
-const GradientCard = ({ card, handleCardPress }) => {
+interface GradientCardProps {
+  card: any;
+  handleCardPress: () => void;
+}
+
+const GradientCard = ({ card, handleCardPress }: GradientCardProps) => {
   return (
     <LinearGradient
       colors={card.colors}

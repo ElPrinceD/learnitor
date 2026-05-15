@@ -199,9 +199,6 @@ const ReanimatedCarouselWithAds: React.FC<ReanimatedCarouselWithAdsProps> = ({
         autoPlay={true}
         autoPlayInterval={6000}
         loop={true}
-        panGestureHandlerProps={{
-          activeOffsetX: [-10, 10],
-        }}
       />
       {dataWithAds.length > 1 && (
         <View style={styles.paginationContainer}>
