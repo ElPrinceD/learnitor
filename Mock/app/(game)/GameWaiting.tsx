@@ -135,7 +135,10 @@ export default function GameWaitingScreen() {
         const newPlayers = gameDetails.players.map((player) => ({
           id: player.id,
           score: "0",
-          profileName: player.username || player.first_name,
+          profileName:
+            player.id === userInfo?.user.id
+              ? (userInfo.user.username || player.username || player.first_name)
+              : (player.username || player.first_name),
           profile_picture:
             player.id === userInfo?.user.id
               ? userInfo.user.profile_picture
@@ -230,7 +233,10 @@ export default function GameWaitingScreen() {
             const newPlayers = payload.players.map((player: any) => ({
               id: player.id,
               score: "0",
-              profileName: player.username || player.first_name,
+              profileName:
+                player.id === userInfo?.user.id
+                  ? (userInfo.user.username || player.username || player.first_name)
+                  : (player.username || player.first_name),
               profile_picture:
                 player.id === userInfo?.user.id
                   ? userInfo.user.profile_picture
@@ -251,7 +257,10 @@ export default function GameWaitingScreen() {
             const newPlayers = payload.players.map((player: any) => ({
               id: player.id,
               score: "0",
-              profileName: player.username || player.first_name,
+              profileName:
+                player.id === userInfo?.user.id
+                  ? (userInfo.user.username || player.username || player.first_name)
+                  : (player.username || player.first_name),
               profile_picture:
                 player.id === userInfo?.user.id
                   ? userInfo.user.profile_picture
