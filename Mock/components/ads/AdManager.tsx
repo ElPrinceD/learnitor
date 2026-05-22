@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useCallback, useState } from "react";
-import { Alert } from "react-native";
 import useInterstitialAd from "./InterstitialAd";
 import useRewardedAd from "./RewardedAd";
 import { AdPlacement } from "../../config/AdConfig";
+import { useAlert } from "../../contexts/AlertContext";
 
 interface AdManagerContextType {
   showGameCompletionAd: () => void;
@@ -29,6 +29,7 @@ interface AdManagerProviderProps {
 export const AdManagerProvider: React.FC<AdManagerProviderProps> = ({
   children,
 }) => {
+  const { showErrorAlert } = useAlert();
   const [gameCompletionAdReady, setGameCompletionAdReady] = useState(false);
   const [answerViewingAdReady, setAnswerViewingAdReady] = useState(false);
 
@@ -55,8 +56,15 @@ export const AdManagerProvider: React.FC<AdManagerProviderProps> = ({
     onAdOpened: () => {
       setAnswerViewingAdReady(false);
     },
-    onAdFailedToLoad: (error) => {
+    onAdFailedToLoad: () => {
       setAnswerViewingAdReady(false);
+    },
+    onAdNotReady: () => {
+      showErrorAlert(
+        "Ad Not Ready",
+        "The ad is still loading. Please try again in a moment.",
+        () => setAnswerViewingAdReady(false)
+      );
     },
     autoLoad: true,
   });

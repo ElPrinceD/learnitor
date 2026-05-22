@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Alert } from "react-native";
 import {
   RewardedAd,
   AdEventType,
@@ -13,6 +12,7 @@ interface RewardedAdComponentProps {
   onAdClosed?: () => void;
   onAdOpened?: () => void;
   onAdFailedToLoad?: (error: string) => void;
+  onAdNotReady?: () => void;
   autoLoad?: boolean;
 }
 
@@ -21,6 +21,7 @@ const useRewardedAd = ({
   onAdClosed,
   onAdOpened,
   onAdFailedToLoad,
+  onAdNotReady,
   autoLoad = true,
 }: RewardedAdComponentProps) => {
   const [adState, setAdState] = useState<AdLoadingState>(
@@ -135,13 +136,10 @@ const useRewardedAd = ({
       } catch (error) {
         onAdFailedToLoad?.("Failed to show rewarded ad");
       }
+    } else if (onAdNotReady) {
+      onAdNotReady();
     } else {
-      // If ad is not ready, show alert and proceed
-      Alert.alert(
-        "Ad Not Ready",
-        "The ad is still loading. Please try again in a moment.",
-        [{ text: "OK", onPress: () => onAdClosed?.() }]
-      );
+      onAdClosed?.();
     }
   };
 

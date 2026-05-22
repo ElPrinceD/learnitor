@@ -58,16 +58,16 @@ const EnrolledCoursesList: React.FC<Props> = ({
     },
     cardContainer: {
       width: rS(150),
-      borderRadius: rMS(16),
+      borderRadius: rMS(28),
       overflow: "hidden",
       backgroundColor: themeColors.cardGlass,
       borderWidth: 1,
-      borderColor: themeColors.border + "40",
-      ...shadow.small,
+      borderColor: themeColors.border + "60",
+      ...shadow.medium,
     },
     imageContainer: {
-      borderTopLeftRadius: rMS(16),
-      borderTopRightRadius: rMS(16),
+      borderTopLeftRadius: rMS(28),
+      borderTopRightRadius: rMS(28),
       overflow: "hidden",
     },
     image: {
@@ -75,7 +75,7 @@ const EnrolledCoursesList: React.FC<Props> = ({
       height: rV(120),
     },
     textContainer: {
-      padding: rMS(10),
+      padding: rMS(12),
       backgroundColor: "transparent",
     },
     name: {
@@ -121,7 +121,7 @@ const EnrolledCoursesList: React.FC<Props> = ({
       justifyContent: "space-between",
     },
     skeletonItem: {
-      borderRadius: rMS(16),
+      borderRadius: rMS(28),
       margin: rMS(5),
       overflow: "hidden",
       backgroundColor: themeColors.cardGlass,

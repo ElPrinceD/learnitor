@@ -67,9 +67,25 @@ export const CacheProvider: React.FC<{ children: React.ReactNode }> = ({
     [db]
   );
 
-  const clear = useCallback(async () => {
-    await db.runAsync("DELETE FROM storage");
+  const ensureStorageTable = useCallback(async () => {
+    await db.execAsync(
+      `
+      CREATE TABLE IF NOT EXISTS storage (
+        key TEXT PRIMARY KEY NOT NULL,
+        value TEXT
+      );
+    `
+    );
   }, [db]);
+
+  const clear = useCallback(async () => {
+    try {
+      await ensureStorageTable();
+      await db.runAsync("DELETE FROM storage");
+    } catch {
+      // Best-effort on logout: Android can NPE if native DB is tearing down
+    }
+  }, [db, ensureStorageTable]);
 
   const getAllKeys = useCallback(async () => {
     const rows = await db.getAllAsync<{ key: string }>(

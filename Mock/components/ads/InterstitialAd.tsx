@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Alert } from "react-native";
 import {
   InterstitialAd,
   AdEventType,

@@ -11,15 +11,23 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { ShieldCheck } from "lucide-react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  SharedValue,
+} from "react-native-reanimated";
 import Colors from "../../constants/Colors";
-import { SIZES, rMS, rS, rV } from "../../constants";
-import VerificationButton from "../../components/VerificationButton";
+import { SIZES, rMS, rS, rV, useShadows } from "../../constants";
 import { useConsent } from "../../contexts/ConsentContext";
 import InAppBrowserLink from "../../components/InAppBrowserLink";
 import ApiUrl from "../../config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { StatusBar } from "expo-status-bar";
+
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 interface ConsentItem {
   id: string;
@@ -35,6 +43,18 @@ const ConsentScreen = () => {
   const { updateMultipleConsents } = useConsent();
   const { email } = useLocalSearchParams();
   const insets = useSafeAreaInsets();
+  const shadow = useShadows();
+
+  const btnScale = useSharedValue(1);
+  const btnAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: btnScale.value }],
+  }));
+  const onPressIn = (sv: SharedValue<number>) => {
+    sv.value = withSpring(0.95, { damping: 15, stiffness: 300 });
+  };
+  const onPressOut = (sv: SharedValue<number>) => {
+    sv.value = withSpring(1, { damping: 15, stiffness: 300 });
+  };
 
   const [consents, setConsents] = useState<ConsentItem[]>([
     {
@@ -113,44 +133,66 @@ const ConsentScreen = () => {
       flex: 1,
       backgroundColor: themeColors.background,
     },
+    // Glassmorphism background blobs
     blob1: {
       position: "absolute",
       top: -rV(70),
       left: -rS(60),
-      width: rS(220),
-      height: rS(220),
-      borderRadius: rS(110),
-      backgroundColor: themeColors.tint + "12",
+      width: rS(260),
+      height: rS(260),
+      borderRadius: rS(130),
+      backgroundColor: themeColors.tint + "18",
     },
     blob2: {
       position: "absolute",
       bottom: rV(80),
       right: -rS(80),
-      width: rS(260),
-      height: rS(260),
-      borderRadius: rS(130),
-      backgroundColor: "#10B98112",
+      width: rS(300),
+      height: rS(300),
+      borderRadius: rS(150),
+      backgroundColor: "#10B98118",
+    },
+    blob3: {
+      position: "absolute",
+      top: rV(400),
+      left: -rS(50),
+      width: rS(160),
+      height: rS(160),
+      borderRadius: rS(80),
+      backgroundColor: "#6366F115",
     },
     scrollContainer: {
       flex: 1,
-      paddingHorizontal: rMS(20),
+      paddingHorizontal: rMS(16),
       paddingTop: rV(40),
     },
+    scrollContent: {
+      paddingBottom: rV(30),
+    },
+    // Hero
     header: {
       alignItems: "center",
       marginBottom: rV(20),
     },
+    heroLabel: {
+      fontSize: rMS(10),
+      fontWeight: "800",
+      textTransform: "uppercase",
+      letterSpacing: 3,
+      color: themeColors.tint,
+      marginBottom: rV(10),
+    },
     iconCircle: {
-      width: rMS(72),
-      height: rMS(72),
-      borderRadius: rMS(36),
-      backgroundColor: themeColors.tint + "18",
+      width: rMS(64),
+      height: rMS(64),
+      borderRadius: rMS(32),
+      backgroundColor: themeColors.tint + "15",
       alignItems: "center",
       justifyContent: "center",
       marginBottom: rV(16),
     },
     title: {
-      fontSize: rMS(24),
+      fontSize: rMS(28),
       fontWeight: "900",
       color: themeColors.text,
       textAlign: "center",
@@ -164,13 +206,15 @@ const ConsentScreen = () => {
       lineHeight: rMS(20),
       paddingHorizontal: rS(10),
     },
+    // Consent items — glassmorphic cards
     consentItem: {
-      backgroundColor: themeColors.cardGlass || themeColors.background,
-      borderRadius: rMS(20),
-      padding: rMS(16),
+      backgroundColor: themeColors.cardGlass,
+      borderRadius: rMS(24),
+      padding: rMS(18),
       marginBottom: rV(12),
       borderWidth: 1,
-      borderColor: themeColors.border + "40",
+      borderColor: themeColors.border + "50",
+      ...shadow.small,
     },
     consentHeader: {
       flexDirection: "row",
@@ -208,8 +252,9 @@ const ConsentScreen = () => {
       flex: 1,
       marginRight: rS(12),
     },
+    // Footer
     footer: {
-      paddingHorizontal: rMS(20),
+      paddingHorizontal: rMS(16),
       paddingBottom: Math.max(rV(20), insets.bottom + rV(10)),
       paddingTop: rV(10),
       alignItems: "center",
@@ -227,6 +272,20 @@ const ConsentScreen = () => {
       fontSize: rMS(11),
       lineHeight: rMS(17),
     },
+    continueButton: {
+      backgroundColor: themeColors.tint,
+      borderRadius: rMS(22),
+      paddingVertical: rV(14),
+      width: rS(260),
+      alignItems: "center",
+      justifyContent: "center",
+      ...shadow.small,
+    },
+    continueButtonText: {
+      color: "#fff",
+      fontSize: rMS(15),
+      fontWeight: "800",
+    },
   });
 
   return (
@@ -234,15 +293,18 @@ const ConsentScreen = () => {
       <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
       <View style={styles.blob1} />
       <View style={styles.blob2} />
+      <View style={styles.blob3} />
 
       <ScrollView
         style={styles.scrollContainer}
-        contentContainerStyle={{ paddingBottom: rV(50) }}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Hero */}
         <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.header}>
+          <Text style={styles.heroLabel}>Privacy</Text>
           <View style={styles.iconCircle}>
-            <ShieldCheck size={rMS(32)} color={themeColors.tint} />
+            <ShieldCheck size={rMS(28)} color={themeColors.tint} />
           </View>
           <Text style={styles.title}>Your Privacy Matters</Text>
           <Text style={styles.subtitle}>
@@ -300,10 +362,15 @@ const ConsentScreen = () => {
           settings.
         </Text>
 
-        <VerificationButton
+        <AnimatedTouchable
+          style={[styles.continueButton, btnAnimStyle]}
           onPress={handleContinue}
-          title="Continue to Login"
-        />
+          onPressIn={() => onPressIn(btnScale)}
+          onPressOut={() => onPressOut(btnScale)}
+          activeOpacity={1}
+        >
+          <Text style={styles.continueButtonText}>Continue to Login</Text>
+        </AnimatedTouchable>
       </View>
     </View>
   );

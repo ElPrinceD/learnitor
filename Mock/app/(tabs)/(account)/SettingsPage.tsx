@@ -25,6 +25,7 @@ import ApiUrl from "../../../config";
 import Colors from "../../../constants/Colors";
 import { rMS, rS, rV } from "../../../constants";
 import { useCache } from "../../../contexts/CacheContext";
+import { clearSignupDraft } from "../../../hooks/useSignupDraft";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import InAppBrowserLink from "../../../components/InAppBrowserLink";
 
@@ -38,30 +39,27 @@ export default function SettingsPage() {
   const highlightColor =
     colorScheme === "dark" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
 
-  const clearUserDataCache = async () => {
-    try {
-      await clear();
-    } catch (e) {
-      console.error("Error clearing cache:", e);
-    }
-  };
-
-  const clearUserTokenDataCache = async () => {
+  const handleLogout = async () => {
+    // Auth + navigation first so logout never blocks on SQLite (Android NPE risk)
     try {
       await AsyncStorage.multiRemove(["token", "user"]);
     } catch (e) {
       console.error("Error clearing AsyncStorage:", e);
     }
-  };
 
-  const handleLogout = async () => {
     try {
-      await clearUserDataCache();
-      await clearUserTokenDataCache();
-      logout();
-      router.replace("Intro");
-    } catch (error) {
-      console.error("Error logging out:", error);
+      await clearSignupDraft();
+    } catch {
+      // best-effort
+    }
+
+    await logout();
+    router.replace("Intro");
+
+    try {
+      await clear();
+    } catch {
+      // Cache clear is best-effort after navigation
     }
   };
 

@@ -241,6 +241,7 @@ const PracticeQuestions: React.FC = () => {
           practiceAnswers: JSON.stringify(practiceAnswers),
           topic: topic,
           course: course,
+          level: typeof level === "string" ? level : "",
         },
       });
     }, 0);

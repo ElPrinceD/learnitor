@@ -21,8 +21,10 @@ interface UserInfo {
     token: string;
     address: Address;
     email: string;
-    dob: string;
-    program_of_study: number;
+    dob?: string;
+    username?: string;
+    institution_id?: number;
+    program_of_study?: number;
     profile_picture: string;
   };
 }

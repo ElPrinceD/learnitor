@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { useNavigation } from "@react-navigation/native";
 import { SIZES, rMS, rS, rV, useShadows } from "../../../constants";
 import { useMutation } from "@tanstack/react-query";
 import { markTopicAsComplete } from "../../../services/CoursesApiCalls";
+import { submitPracticeSession } from "../../../services/UserStatsApiCalls";
 import ErrorMessage from "../../../components/ErrorMessage";
 import { useAdManager } from "../../../components/ads/AdManager";
 
@@ -30,6 +31,7 @@ const ScorePage: React.FC = () => {
     course,
     score: scoreParam,
     results: resultsParam,
+    level: levelParam,
   } = useLocalSearchParams();
   const { showAnswerViewingAd } = useAdManager();
 
@@ -193,6 +195,48 @@ const ScorePage: React.FC = () => {
     typeof topic === "string" ? JSON.parse(topic) : topic;
   const parsedCourse: Course =
     typeof course === "string" ? JSON.parse(course) : course;
+
+  const practiceLevel =
+    typeof levelParam === "string" && levelParam.trim() !== ""
+      ? levelParam
+      : "Beginner";
+
+  const practiceStats = useMemo(() => {
+    const questionsCount = results.length;
+    const correctCount = results.filter((r) => r.isCorrect).length;
+    return { questionsCount, correctCount };
+  }, [results]);
+
+  const practiceSessionSubmitted = useRef(false);
+
+  useEffect(() => {
+    if (practiceSessionSubmitted.current) return;
+    if (!userToken?.token || !parsedTopic?.id || !parsedCourse?.id) return;
+    if (practiceStats.questionsCount < 1) return;
+
+    practiceSessionSubmitted.current = true;
+
+    const courseId = Number(parsedCourse.id);
+    if (Number.isNaN(courseId)) return;
+
+    submitPracticeSession(userToken.token, {
+      topic_id: parsedTopic.id,
+      course_id: courseId,
+      level: practiceLevel,
+      questions_count: practiceStats.questionsCount,
+      correct_count: practiceStats.correctCount,
+    }).catch(() => {
+      // Stats are non-critical; allow retry on remount if needed
+      practiceSessionSubmitted.current = false;
+    });
+  }, [
+    userToken?.token,
+    parsedTopic?.id,
+    parsedCourse?.id,
+    practiceLevel,
+    practiceStats.questionsCount,
+    practiceStats.correctCount,
+  ]);
 
   const handleToggleAnswers = () => {
     if (!showAnswers) {

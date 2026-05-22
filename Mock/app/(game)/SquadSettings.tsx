@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
   StatusBar,
   Image,
-  Alert,
   Switch,
   ActivityIndicator,
 } from "react-native";
@@ -26,6 +25,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
 import { useAuth } from "../../components/AuthContext";
+import { useAlert } from "../../contexts/AlertContext";
 import Colors from "../../constants/Colors";
 import { rMS, rV, rS, SIZES, useShadows } from "../../constants/index.js";
 import Toast from "react-native-root-toast";
@@ -46,6 +46,7 @@ export default function SquadSettings() {
     name?: string;
   }>();
   const { userToken } = useAuth();
+  const { showConfirmAlert, showDeleteAlert } = useAlert();
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
@@ -157,35 +158,32 @@ export default function SquadSettings() {
   };
 
   const handleRegenCode = () => {
-    Alert.alert(
+    showConfirmAlert(
       "Regenerate Code",
       "This will invalidate the current invite code. Anyone with the old code won't be able to join. Continue?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Regenerate", style: "destructive", onPress: () => regenCodeMutation.mutate() },
-      ]
+      () => regenCodeMutation.mutate(),
+      undefined,
+      "Regenerate",
+      "Cancel",
+      "warning"
     );
   };
 
   const handleRemoveMember = (member: SquadMember) => {
-    Alert.alert(
+    showDeleteAlert(
       "Remove Member",
       `Are you sure you want to remove ${member.username} from the squad?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Remove", style: "destructive", onPress: () => removeMemberMutation.mutate(member.id) },
-      ]
+      () => removeMemberMutation.mutate(member.id),
+      undefined,
+      "Remove"
     );
   };
 
   const handleDeleteSquad = () => {
-    Alert.alert(
+    showDeleteAlert(
       "Delete Squad",
       "This action is permanent and cannot be undone. All members will be removed. Are you sure?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: () => deleteSquadMutation.mutate() },
-      ]
+      () => deleteSquadMutation.mutate()
     );
   };
 

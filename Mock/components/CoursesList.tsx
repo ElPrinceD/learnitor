@@ -44,8 +44,8 @@ const CourseItem: React.FC<{
             staticStyles.cardContainer,
             {
               backgroundColor: themeColors.cardGlass,
-              borderColor: themeColors.border + "40",
-              ...shadow.small,
+              borderColor: themeColors.border + "60",
+              ...shadow.medium,
             },
           ]}
         >
@@ -90,13 +90,13 @@ const staticStyles = StyleSheet.create({
     margin: rMS(6),
   },
   cardContainer: {
-    borderRadius: rMS(20),
+    borderRadius: rMS(28),
     overflow: "hidden",
     borderWidth: 1,
   },
   imageContainer: {
-    borderTopLeftRadius: rMS(20),
-    borderTopRightRadius: rMS(20),
+    borderTopLeftRadius: rMS(28),
+    borderTopRightRadius: rMS(28),
     overflow: "hidden",
   },
   image: {
@@ -104,7 +104,7 @@ const staticStyles = StyleSheet.create({
     height: rV(120),
   },
   textContainer: {
-    padding: rMS(12),
+    padding: rMS(14),
     backgroundColor: "transparent",
   },
   name: {
@@ -124,7 +124,7 @@ const staticStyles = StyleSheet.create({
   skeletonItem: {
     width: "48%",
     marginVertical: rS(6),
-    borderRadius: rMS(20),
+    borderRadius: rMS(28),
     overflow: "hidden",
   },
 });

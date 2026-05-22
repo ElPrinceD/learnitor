@@ -15,13 +15,13 @@ import {
   Camera,
   X,
   BadgeCheck,
-  TrendingUp,
   Globe,
   Flag,
   School,
 } from "lucide-react-native";
 import { router } from "expo-router";
 import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
 import Animated, {
   FadeInDown,
   useAnimatedStyle,
@@ -34,22 +34,15 @@ import ApiUrl from "../../../config";
 import Colors from "../../../constants/Colors";
 import { SIZES, rMS, rS, rV, useShadows } from "../../../constants";
 import { useErrorHandler } from "../../../hooks/useErrorHandler";
+import {
+  getProfileInsights,
+  MOCK_PROFILE_INSIGHTS,
+} from "../../../services/UserStatsApiCalls";
+import { getRankingsSummary } from "../../../services/LeaderboardApiCalls";
+import ProfileInsightsBody from "../../../components/profile/ProfileInsightsBody";
+import { formatMemberSince } from "../../../components/profile/profileCopy";
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
-
-interface UserStats {
-  accuracy: number;
-  sessions: number;
-  streakAvg: number;
-  streakAvgDelta: number;
-  tier: string;
-}
-
-interface RankingSummary {
-  world: string | null;
-  country: string | null;
-  school: string | null;
-}
 
 interface SeasonEntry {
   season_name: string;
@@ -73,21 +66,52 @@ const Profile = () => {
     userInfo?.user.profile_picture
   );
 
-  const [stats, setStats] = useState<UserStats>({
-    accuracy: 0,
-    sessions: 0,
-    streakAvg: 0,
-    streakAvgDelta: 0,
-    tier: "Learner",
+  const token = userToken?.token;
+
+  const { data: insights = MOCK_PROFILE_INSIGHTS, isLoading: insightsLoading } =
+    useQuery({
+      queryKey: ["profileInsights", token],
+      queryFn: () => getProfileInsights(token),
+      enabled: !!token,
+    });
+
+  const { data: rankings = { world: "#142", country: "#12", school: "#01" } } =
+    useQuery({
+      queryKey: ["rankingsSummary", token],
+      queryFn: async () => {
+        try {
+          return await getRankingsSummary(token);
+        } catch {
+          return { world: "#142", country: "#12", school: "#01" };
+        }
+      },
+      enabled: !!token,
+    });
+
+  const MOCK_SEASON_HISTORY: SeasonEntry[] = [
+    { season_name: "Season 03", final_score: 14290, rank: 112, maxScore: 17000 },
+    { season_name: "Season 02", final_score: 12105, rank: 304, maxScore: 17000 },
+    { season_name: "Season 01", final_score: 9842, rank: 540, maxScore: 17000 },
+  ];
+
+  const { data: seasonHistory = MOCK_SEASON_HISTORY } = useQuery({
+    queryKey: ["seasonHistory", token],
+    queryFn: async () => {
+      try {
+        const res = await axios.get<SeasonEntry[]>(
+          `${ApiUrl}/api/user/season-history`,
+          { headers: { Authorization: `Token ${token}` } }
+        );
+        return res.data;
+      } catch {
+        return MOCK_SEASON_HISTORY;
+      }
+    },
+    enabled: !!token,
   });
 
-  const [rankings, setRankings] = useState<RankingSummary>({
-    world: null,
-    country: null,
-    school: null,
-  });
-
-  const [seasonHistory, setSeasonHistory] = useState<SeasonEntry[]>([]);
+  const memberSinceLine = formatMemberSince(insights.member_since);
+  const tier = insights.legacy.tier;
 
   // Settings icon press scale
   const settingsScale = useSharedValue(1);
@@ -105,65 +129,6 @@ const Profile = () => {
       setCurrentImageUri(undefined);
     }
   }, [userInfo?.user.profile_picture]);
-
-  // Fetch user stats
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await axios.get(`${ApiUrl}/api/user/stats`, {
-          headers: { Authorization: `Token ${userToken?.token}` },
-        });
-        setStats(res.data);
-      } catch (e) {
-        // Mock data
-        setStats({
-          accuracy: 74.2,
-          sessions: 1204,
-          streakAvg: 4.82,
-          streakAvgDelta: 0.12,
-          tier: "Pro Tier",
-        });
-      }
-    };
-    fetchStats();
-  }, [userToken?.token]);
-
-  // Fetch rankings
-  useEffect(() => {
-    const fetchRankings = async () => {
-      try {
-        const res = await axios.get(
-          `${ApiUrl}/api/leaderboards/rankings/summary`,
-          {
-            headers: { Authorization: `Token ${userToken?.token}` },
-          }
-        );
-        setRankings(res.data);
-      } catch (e) {
-        setRankings({ world: "#142", country: "#12", school: "#01" });
-      }
-    };
-    fetchRankings();
-  }, [userToken?.token]);
-
-  // Fetch season history
-  useEffect(() => {
-    const fetchSeasonHistory = async () => {
-      try {
-        const res = await axios.get(`${ApiUrl}/api/user/season-history`, {
-          headers: { Authorization: `Token ${userToken?.token}` },
-        });
-        setSeasonHistory(res.data);
-      } catch (e) {
-        setSeasonHistory([
-          { season_name: "Season 03", final_score: 14290, rank: 112, maxScore: 17000 },
-          { season_name: "Season 02", final_score: 12105, rank: 304, maxScore: 17000 },
-          { season_name: "Season 01", final_score: 9842, rank: 540, maxScore: 17000 },
-        ]);
-      }
-    };
-    fetchSeasonHistory();
-  }, [userToken?.token]);
 
   const handleProfilePictureUpdate = async () => {
     try {
@@ -397,99 +362,19 @@ const Profile = () => {
       letterSpacing: 0.5,
       marginTop: rV(4),
     },
-    // Bento stats
-    bentoGrid: {
-      gap: rV(12),
-      marginBottom: rV(24),
-    },
-    heroStatCard: {
-      backgroundColor: themeColors.tint,
-      borderRadius: rMS(24),
-      padding: rMS(20),
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      overflow: "hidden",
-      position: "relative",
-    },
-    heroStatLabel: {
-      fontSize: rMS(9),
-      fontWeight: "700",
-      textTransform: "uppercase",
-      letterSpacing: 1.5,
-      color: "#fff",
-      opacity: 0.8,
-      marginBottom: rV(4),
-    },
-    heroStatValue: {
-      fontSize: rMS(36),
-      fontWeight: "800",
-      color: "#fff",
-      letterSpacing: -1.5,
-    },
-    heroStatRight: {
-      alignItems: "flex-end",
-    },
-    statusLabel: {
-      fontSize: rMS(9),
-      fontWeight: "700",
-      textTransform: "uppercase",
-      letterSpacing: 1.5,
-      color: "#fff",
-      opacity: 0.8,
-      marginBottom: rV(4),
-    },
-    statusBadge: {
-      backgroundColor: "rgba(255,255,255,0.2)",
-      paddingVertical: rV(4),
-      paddingHorizontal: rMS(10),
-      borderRadius: rMS(8),
-    },
-    statusBadgeText: {
-      fontSize: rMS(11),
-      fontWeight: "700",
-      color: "#fff",
-    },
-    heroIconOverlay: {
-      position: "absolute",
-      right: -rS(8),
-      bottom: -rV(8),
-      opacity: 0.08,
-    },
-    smallStatsRow: {
-      flexDirection: "row",
-      gap: rS(12),
-    },
-    smallStatCard: {
-      flex: 1,
-      backgroundColor: themeColors.card,
-      borderRadius: rMS(24),
-      padding: rMS(18),
-      height: rV(120),
-      justifyContent: "space-between",
-    },
-    smallStatLabel: {
-      fontSize: rMS(9),
-      fontWeight: "700",
-      textTransform: "uppercase",
-      letterSpacing: 1.5,
-      color: themeColors.textSecondary,
-    },
-    smallStatValue: {
-      fontSize: rMS(26),
-      fontWeight: "800",
-      color: themeColors.text,
-      letterSpacing: -0.5,
-    },
-    smallStatDelta: {
+    memberSince: {
       fontSize: rMS(10),
-      fontWeight: "700",
-      color: themeColors.tint,
-      marginLeft: rS(4),
+      color: themeColors.textSecondary,
+      fontWeight: "600",
+      marginTop: rV(6),
     },
-    smallStatValueRow: {
-      flexDirection: "row",
-      alignItems: "baseline",
+    insightsBlock: {
+      gap: rV(12),
+      marginBottom: rV(8),
+    },
+    insightsLoading: {
+      paddingVertical: rV(40),
+      alignItems: "center",
     },
     // Standings section
     sectionHeader: {
@@ -698,7 +583,7 @@ const Profile = () => {
                   size={12}
                   color={themeColors.tint}
                 />
-              <Text style={styles.levelBadgeText}>{stats.tier}</Text>
+              <Text style={styles.levelBadgeText}>{tier}</Text>
             </View>
             <Text style={styles.profileName} numberOfLines={1}>
               {userInfo?.user.first_name} {userInfo?.user.last_name}
@@ -706,51 +591,26 @@ const Profile = () => {
             <Text style={styles.profileId}>
               ID: #{userInfo?.user.id}-LEARN
             </Text>
+            {memberSinceLine ? (
+              <Text style={styles.memberSince} numberOfLines={2}>
+                {memberSinceLine}
+              </Text>
+            ) : null}
           </View>
         </Animated.View>
 
-        {/* Bento Stats Grid */}
+        {/* Profile insights */}
         <Animated.View
           entering={FadeInDown.duration(500).delay(200)}
-          style={styles.bentoGrid}
+          style={styles.insightsBlock}
         >
-          {/* Hero Stat — Accuracy */}
-          <View style={styles.heroStatCard}>
-            <View>
-              <Text style={styles.heroStatLabel}>Accuracy</Text>
-              <Text style={styles.heroStatValue}>{stats.accuracy}%</Text>
+          {insightsLoading ? (
+            <View style={styles.insightsLoading}>
+              <ActivityIndicator size="small" color={themeColors.tint} />
             </View>
-            <View style={styles.heroStatRight}>
-              <Text style={styles.statusLabel}>Status</Text>
-              <View style={styles.statusBadge}>
-                <Text style={styles.statusBadgeText}>{stats.tier}</Text>
-              </View>
-            </View>
-            <View style={styles.heroIconOverlay}>
-              <TrendingUp size={100} color="#fff" />
-            </View>
-          </View>
-
-          {/* Small Stats Row */}
-          <View style={styles.smallStatsRow}>
-            <View style={styles.smallStatCard}>
-              <Text style={styles.smallStatLabel}>Sessions</Text>
-              <Text style={styles.smallStatValue}>
-                {stats.sessions.toLocaleString()}
-              </Text>
-            </View>
-            <View style={styles.smallStatCard}>
-              <Text style={styles.smallStatLabel}>Streak Avg</Text>
-              <View style={styles.smallStatValueRow}>
-                <Text style={styles.smallStatValue}>{stats.streakAvg}</Text>
-                {stats.streakAvgDelta > 0 && (
-                  <Text style={styles.smallStatDelta}>
-                    +{stats.streakAvgDelta}
-                  </Text>
-                )}
-              </View>
-            </View>
-          </View>
+          ) : (
+            <ProfileInsightsBody insights={insights} />
+          )}
         </Animated.View>
 
         {/* Global Standings */}
