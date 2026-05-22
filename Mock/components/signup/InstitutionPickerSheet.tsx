@@ -16,12 +16,13 @@ import {
 } from "react-native";
 import {
   BottomSheetBackdrop,
+  BottomSheetFlatList,
   BottomSheetModal,
   BottomSheetTextInput,
-  BottomSheetView,
 } from "@gorhom/bottom-sheet";
-import { FlashList, ListRenderItemInfo } from "@shopify/flash-list";
+import type { ListRenderItemInfo } from "react-native";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import debounce from "lodash.debounce";
 import Colors from "../../constants/Colors";
 import { rMS, rS, rV } from "../../constants";
@@ -103,8 +104,14 @@ const rowStyles = StyleSheet.create({
 const InstitutionPickerSheet = forwardRef<InstitutionPickerSheetRef, Props>(
   ({ onSelect }, ref) => {
     const sheetRef = React.useRef<BottomSheetModal>(null);
+    const insets = useSafeAreaInsets();
     const colorScheme = useColorScheme();
     const themeColors = Colors[colorScheme ?? "light"];
+
+    const listBottomInset = useMemo(
+      () => Math.max(insets.bottom, rV(16)) + rV(56),
+      [insets.bottom]
+    );
 
     const [searchText, setSearchText] = useState("");
     const [debouncedQ, setDebouncedQ] = useState("");
@@ -184,6 +191,11 @@ const InstitutionPickerSheet = forwardRef<InstitutionPickerSheetRef, Props>(
     const keyExtractor = useCallback(
       (item: Institution) => String(item.id),
       []
+    );
+
+    const listFooter = useMemo(
+      () => <View style={{ height: listBottomInset }} />,
+      [listBottomInset]
     );
 
     const styles = StyleSheet.create({
@@ -287,6 +299,7 @@ const InstitutionPickerSheet = forwardRef<InstitutionPickerSheetRef, Props>(
         snapPoints={snapPoints}
         enablePanDownToClose
         enableDynamicSizing={false}
+        bottomInset={insets.bottom}
         backdropComponent={renderBackdrop}
         backgroundStyle={{
           backgroundColor: themeColors.background,
@@ -300,33 +313,33 @@ const InstitutionPickerSheet = forwardRef<InstitutionPickerSheetRef, Props>(
         keyboardBlurBehavior="restore"
         android_keyboardInputMode="adjustResize"
       >
-        <BottomSheetView style={{ flex: 1 }}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Select your school</Text>
-            <BottomSheetTextInput
-              style={styles.search}
-              value={searchText}
-              onChangeText={setSearchText}
-              placeholder="Search schools..."
-              placeholderTextColor={themeColors.textSecondary}
-              autoCapitalize="words"
-              autoCorrect={false}
-            />
-            {showHint ? (
-              <Text style={styles.hint}>Type at least 2 characters to search</Text>
-            ) : null}
-          </View>
-          <View style={styles.listContainer}>
-            <FlashList
-              data={queryEnabled ? results : []}
-              renderItem={renderItem}
-              keyExtractor={keyExtractor}
-              estimatedItemSize={ROW_HEIGHT}
-              keyboardShouldPersistTaps="handled"
-              ListEmptyComponent={listEmpty}
-            />
-          </View>
-        </BottomSheetView>
+        <BottomSheetFlatList
+          data={queryEnabled ? results : []}
+          renderItem={renderItem}
+          keyExtractor={keyExtractor}
+          keyboardShouldPersistTaps="handled"
+          ListHeaderComponent={
+            <View style={styles.header}>
+              <Text style={styles.title}>Select your school</Text>
+              <BottomSheetTextInput
+                style={styles.search}
+                value={searchText}
+                onChangeText={setSearchText}
+                placeholder="Search schools..."
+                placeholderTextColor={themeColors.textSecondary}
+                autoCapitalize="words"
+                autoCorrect={false}
+              />
+              {showHint ? (
+                <Text style={styles.hint}>Type at least 2 characters to search</Text>
+              ) : null}
+            </View>
+          }
+          ListFooterComponent={listFooter}
+          ListEmptyComponent={listEmpty}
+          showsVerticalScrollIndicator
+          contentContainerStyle={{ paddingBottom: listBottomInset }}
+        />
       </BottomSheetModal>
     );
   }

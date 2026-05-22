@@ -302,7 +302,6 @@ const ConsentScreen = () => {
       >
         {/* Hero */}
         <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.header}>
-          <Text style={styles.heroLabel}>Privacy</Text>
           <View style={styles.iconCircle}>
             <ShieldCheck size={rMS(28)} color={themeColors.tint} />
           </View>

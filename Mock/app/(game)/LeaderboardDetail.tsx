@@ -111,7 +111,6 @@ export default function LeaderboardDetail() {
     [leaderboardData?.rankings]
   );
   const squadInfo = leaderboardData?.squadInfo;
-
   const resolvedLeaderboardId = Array.isArray(id) ? id[0] : id;
   const isGlobalLeaderboard =
     typeof resolvedLeaderboardId === "string" &&
@@ -193,17 +192,16 @@ export default function LeaderboardDetail() {
   const isMe = useCallback(
     (id: number, username: string) =>
       id === userInfo?.user.id ||
-      username === userInfo?.user.first_name ||
+      username === userInfo?.user.username ||
       username === "You",
-    [userInfo?.user.id, userInfo?.user.first_name]
+    [userInfo?.user.id, userInfo?.user.username]
   );
-
   // Knockout bracket matches only carry player name strings (no IDs),
   // so we need a name-only variant for that component.
   const isMeByName = useCallback(
     (username: string) =>
-      username === userInfo?.user.first_name || username === "You",
-    [userInfo?.user.first_name]
+      username === userInfo?.user.username || username === "You",
+    [userInfo?.user.username]
   );
 
   // ── Styles ──────────────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useMemo } from "react";
+import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Dimensions,
   StyleSheet,
@@ -21,6 +21,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { CheckCircle2, Copy, LogIn } from "lucide-react-native";
 import Colors from "../../constants/Colors";
+import VerificationButton from "../VerificationButton";
 import { SIZES, rMS, rS, rV, useShadows } from "../../constants";
 import type { ScoringMode, SheetTab } from "./types";
 
@@ -38,6 +39,7 @@ interface Props {
   onJoinSquad: () => void;
   onClose: () => void;
   joinPending: boolean;
+  createPending?: boolean;
 }
 
 const SquadBottomSheet: React.FC<Props> = ({
@@ -54,10 +56,13 @@ const SquadBottomSheet: React.FC<Props> = ({
   onJoinSquad,
   onClose,
   joinPending,
+  createPending = false,
 }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const shadow = useShadows();
+  const [selectedScoringMode, setSelectedScoringMode] =
+    useState<ScoringMode | null>(null);
 
   const snapPoints = useMemo(() => ["65%", "85%"], []);
 
@@ -96,17 +101,49 @@ const SquadBottomSheet: React.FC<Props> = ({
     onSheetTabChange("join");
   }, [onSheetTabChange]);
 
-  const handleCreateAllPoints = useCallback(
-    () => onCreateSquad("all_points"),
-    [onCreateSquad]
-  );
-  const handleCreateExamOnly = useCallback(
-    () => onCreateSquad("exam_only"),
-    [onCreateSquad]
-  );
-  const handleCreate1v1 = useCallback(
-    () => onCreateSquad("custom_1v1"),
-    [onCreateSquad]
+  useEffect(() => {
+    if (sheetTab !== "create" || createdSquadCode) {
+      setSelectedScoringMode(null);
+    }
+  }, [sheetTab, createdSquadCode]);
+
+  useEffect(() => {
+    if (!squadName.trim()) {
+      setSelectedScoringMode(null);
+    }
+  }, [squadName]);
+
+  const canCreateSquad =
+    squadName.trim().length > 0 && selectedScoringMode != null && !createPending;
+
+  const handlePressCreate = useCallback(() => {
+    if (!selectedScoringMode || !canCreateSquad) return;
+    onCreateSquad(selectedScoringMode);
+  }, [selectedScoringMode, canCreateSquad, onCreateSquad]);
+
+  const modeOptions: {
+    mode: ScoringMode;
+    label: string;
+    desc: string;
+  }[] = useMemo(
+    () => [
+      {
+        mode: "all_points",
+        label: "📊 All Points",
+        desc: "Points from multiplayer, solo games, and weekly exam all count.",
+      },
+      {
+        mode: "exam_only",
+        label: "📝 Exam Only",
+        desc: "Only weekly exam scores count towards the leaderboard.",
+      },
+      {
+        mode: "custom_1v1",
+        label: "⚔️ H2H League",
+        desc: "Members are matched weekly. Win=3 pts, Draw=1, Loss=0.",
+      },
+    ],
+    []
   );
 
   const styles = StyleSheet.create({
@@ -152,18 +189,10 @@ const SquadBottomSheet: React.FC<Props> = ({
       borderWidth: 1,
       borderColor: themeColors.border,
     },
-    squadJoinBtn: {
-      backgroundColor: themeColors.tint,
-      borderRadius: rMS(20),
-      paddingVertical: rV(10),
-      paddingHorizontal: rMS(16),
-      justifyContent: "center",
+    primaryBtnWrap: {
+      width: "100%",
       alignItems: "center",
-    },
-    squadJoinBtnText: {
-      color: "#fff",
-      fontWeight: "bold",
-      fontSize: SIZES.small,
+      marginTop: rV(12),
     },
     successWrapper: {
       alignItems: "center",
@@ -316,15 +345,13 @@ const SquadBottomSheet: React.FC<Props> = ({
               <Copy size={16} color={themeColors.tint} />
               <Text style={styles.copyText}>Copy Code</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.squadJoinBtn,
-                { width: "100%", marginTop: rV(20) },
-              ]}
-              onPress={onClose}
-            >
-              <Text style={styles.squadJoinBtnText}>Done</Text>
-            </TouchableOpacity>
+            <View style={[styles.primaryBtnWrap, { marginTop: rV(20) }]}>
+              <VerificationButton
+                onPress={onClose}
+                title="Done"
+                style={{ width: "100%" }}
+              />
+            </View>
           </View>
         ) : (
           <>
@@ -391,39 +418,35 @@ const SquadBottomSheet: React.FC<Props> = ({
                   Choose Scoring Mode
                 </Text>
 
-                <TouchableOpacity
-                  style={[styles.modeOption, { borderColor: themeColors.tint }]}
-                  activeOpacity={0.8}
-                  onPress={handleCreateAllPoints}
-                >
-                  <Text style={styles.modeOptionLabel}>📊 All Points</Text>
-                  <Text style={styles.modeOptionDesc}>
-                    Points from multiplayer, solo games, and weekly exam all
-                    count.
-                  </Text>
-                </TouchableOpacity>
+                {modeOptions.map((option) => {
+                  const isSelected = selectedScoringMode === option.mode;
+                  return (
+                    <TouchableOpacity
+                      key={option.mode}
+                      style={[
+                        styles.modeOption,
+                        isSelected && {
+                          borderColor: themeColors.tint,
+                          backgroundColor: themeColors.tint + "10",
+                        },
+                      ]}
+                      activeOpacity={0.8}
+                      onPress={() => setSelectedScoringMode(option.mode)}
+                    >
+                      <Text style={styles.modeOptionLabel}>{option.label}</Text>
+                      <Text style={styles.modeOptionDesc}>{option.desc}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
 
-                <TouchableOpacity
-                  style={styles.modeOption}
-                  activeOpacity={0.8}
-                  onPress={handleCreateExamOnly}
-                >
-                  <Text style={styles.modeOptionLabel}>📝 Exam Only</Text>
-                  <Text style={styles.modeOptionDesc}>
-                    Only weekly exam scores count towards the leaderboard.
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.modeOption}
-                  activeOpacity={0.8}
-                  onPress={handleCreate1v1}
-                >
-                  <Text style={styles.modeOptionLabel}>⚔️ H2H League</Text>
-                  <Text style={styles.modeOptionDesc}>
-                    Members are matched weekly. Win=3 pts, Draw=1, Loss=0.
-                  </Text>
-                </TouchableOpacity>
+                <View style={styles.primaryBtnWrap}>
+                  <VerificationButton
+                    onPress={handlePressCreate}
+                    title={createPending ? "Creating..." : "Create Squad"}
+                    disabled={!canCreateSquad}
+                    style={{ width: "100%" }}
+                  />
+                </View>
               </>
             ) : (
               <>
@@ -453,20 +476,14 @@ const SquadBottomSheet: React.FC<Props> = ({
                   maxLength={10}
                 />
 
-                <TouchableOpacity
-                  style={[
-                    styles.squadJoinBtn,
-                    { width: "100%" },
-                    !squadJoinCode.trim() && { opacity: 0.5 },
-                  ]}
-                  onPress={onJoinSquad}
-                  disabled={!squadJoinCode.trim()}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.squadJoinBtnText}>
-                    {joinPending ? "Joining..." : "Join Squad"}
-                  </Text>
-                </TouchableOpacity>
+                <View style={styles.primaryBtnWrap}>
+                  <VerificationButton
+                    onPress={onJoinSquad}
+                    title={joinPending ? "Joining..." : "Join Squad"}
+                    disabled={!squadJoinCode.trim() || joinPending}
+                    style={{ width: "100%" }}
+                  />
+                </View>
               </>
             )}
           </>

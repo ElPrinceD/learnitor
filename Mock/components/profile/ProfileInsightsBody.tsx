@@ -116,7 +116,7 @@ const ProfileInsightsBody: React.FC<Props> = ({ insights }) => {
       {/* Hero — questions all time */}
       <ProfileHeroStat
         label="Questions crushed"
-        value={volume.questions_answered_all_time.toLocaleString()}
+        value={volume.questions_answered_all_time?.toLocaleString() ?? '0'}
         subtext="Practice, games, exams — all of it"
         rightLabel="Status"
         rightBadge={legacy.tier}
@@ -135,7 +135,7 @@ const ProfileInsightsBody: React.FC<Props> = ({ insights }) => {
           </View>
           <ProfileStatCard
             label="Sessions"
-            value={legacy.sessions.toLocaleString()}
+            value={legacy.sessions?.toLocaleString() ?? '0'}
           />
         </Row>
         <ProfileStatCard
@@ -200,12 +200,20 @@ const ProfileInsightsBody: React.FC<Props> = ({ insights }) => {
         <Row>
           <ProfileStatCard
             label="Best game"
-            value={personal_bests.best_single_game_score.toLocaleString()}
+            value={
+              personal_bests.best_single_game_score != null
+                ? personal_bests.best_single_game_score.toLocaleString()
+                : '—'
+            }
             subtext="Single round high score"
           />
           <ProfileStatCard
             label="Best streak"
-            value={String(personal_bests.best_session_streak)}
+            value={
+              personal_bests.best_session_streak != null
+                ? String(personal_bests.best_session_streak)
+                : '—'
+            }
             subtext="Correct answers in a row"
           />
         </Row>

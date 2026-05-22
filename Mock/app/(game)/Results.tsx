@@ -140,7 +140,7 @@ export default function ResultsScreen() {
     }
   }, [gameDetailsError, scores]);
 
-  const creator = gameDetails?.creator.first_name;
+  const creator = gameDetails?.creator.username || gameDetails?.creator.first_name;
   const creatorId = gameDetails?.creator.id;
   const gameCode = gameDetails?.code;
 
@@ -149,7 +149,7 @@ export default function ResultsScreen() {
     const playersList = gameDetails.players.map((player) => ({
       id: player.id,
       score: scores[player.id] || "0.0",
-      profileName: player.first_name,
+      profileName: player.username || player.first_name,
       profile_picture:
         player.id === userInfo?.user.id
           ? userInfo.user.profile_picture
@@ -674,7 +674,7 @@ export default function ResultsScreen() {
                 </Text>
               )}
               <Text style={styles.soloPlayerName}>
-                {userInfo.user.first_name}
+                {userInfo.user.username || userInfo.user.first_name}
               </Text>
               <Text style={styles.soloScoreNumber}>{userScore} pts</Text>
               {isWeeklyExam && (

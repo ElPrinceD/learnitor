@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   ScrollView,
   View,
@@ -11,48 +11,94 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { User, Calendar, Mail, GraduationCap } from "lucide-react-native";
+import { User, Mail, AtSign, GraduationCap } from "lucide-react-native";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { useAuth } from "../../../components/AuthContext";
 import ApiUrl from "../../../config";
 import axios from "axios";
 import Colors from "../../../constants/Colors";
 import { SIZES, rMS, rS, rV } from "../../../constants";
-import DateSelector from "../../../components/DateSelector"; // DateSelector component import
-import { router } from "expo-router"; // Import the router from Expo Router
+import { router } from "expo-router";
 import { useAlert } from "../../../contexts/AlertContext";
 import { useErrorHandler } from "../../../hooks/useErrorHandler";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import InstitutionSelectField from "../../../components/signup/InstitutionSelectField";
+import InstitutionPickerSheet, {
+  InstitutionPickerSheetRef,
+} from "../../../components/signup/InstitutionPickerSheet";
+import { useUsernameAvailability } from "../../../hooks/useUsernameAvailability";
+import type { Institution } from "../../../services/SignupApiCalls";
 
 const AccountSettings = () => {
-  const { userInfo, userToken, setUserInformation, setUserInfo, logout } = useAuth();
+  const { userInfo, userToken, setUserInformation, setUserInfo, logout } =
+    useAuth();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const { showSuccessAlert, showDeleteAlert } = useAlert();
   const { handleError } = useErrorHandler();
 
-  const [formData, setFormData] = useState({
-    firstName: userInfo?.user.first_name || "",
-    lastName: userInfo?.user.last_name || "",
-    dob: userInfo?.user.dob || "",
-    email: userInfo?.user.email || "",
-    street1: userInfo?.user?.address?.street_1 || "",
-    street2: userInfo?.user?.address?.street_2 || "",
-    city: userInfo?.user?.address?.city || "",
-    region: userInfo?.user?.address?.region || "",
-    country: userInfo?.user?.address?.country || "",
-    instituteName: "",
+  // ── Form state ───────────────────────────────────────────────────────
+  const [firstName, setFirstName] = useState(
+    userInfo?.user.first_name || ""
+  );
+  const [lastName, setLastName] = useState(userInfo?.user.last_name || "");
+  const [email, setEmail] = useState(userInfo?.user.email || "");
+
+  // Institution
+  const [selectedInstitution, setSelectedInstitution] =
+    useState<Institution | null>(
+      userInfo?.user.institution_id
+        ? { id: userInfo.user.institution_id, name: "" }
+        : null
+    );
+  const [schoolError, setSchoolError] = useState(false);
+
+  // Username (re-uses the same availability hook as signup)
+  const {
+    username,
+    onChangeUsername,
+    setUsernameValue,
+    errorText: usernameErrorText,
+    isAvailable: usernameAvailable,
+    isChecking: usernameChecking,
+    status: usernameStatus,
+  } = useUsernameAvailability();
+
+  // Pre-populate username
+  const [didHydrate] = useState(() => {
+    if (userInfo?.user.username) {
+      setUsernameValue(userInfo.user.username);
+    }
+    return true;
   });
 
   const [loading, setLoading] = useState(false);
+  const [generalError, setGeneralError] = useState("");
 
-  const handleChange = (name: string, value: string) => {
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
+  const institutionSheetRef = useRef<InstitutionPickerSheetRef>(null);
+
+  // ── Helpers ──────────────────────────────────────────────────────────
+  const usernameChanged =
+    username.trim() !== (userInfo?.user.username || "");
+
+  const openSchoolPicker = () => {
+    institutionSheetRef.current?.present();
   };
 
+  const handleInstitutionSelect = (institution: Institution) => {
+    setSelectedInstitution(institution);
+    setSchoolError(false);
+  };
+
+  // ── Submit ───────────────────────────────────────────────────────────
   const handleUpdateInfo = async () => {
+    setGeneralError("");
+
+    if (usernameChanged && !usernameAvailable) {
+      setGeneralError("Please choose a valid, available username.");
+      return;
+    }
+
     setLoading(true);
 
     const config = {
@@ -61,16 +107,30 @@ const AccountSettings = () => {
       },
     };
 
-    // Build only fields that were provided
-    const updatedFields = {
-      ...(formData.firstName && { first_name: formData.firstName }),
-      ...(formData.lastName && { last_name: formData.lastName }),
-      ...(formData.email && { email: formData.email }),
-      ...(formData.dob && { dob: formData.dob }),
-    };
+    // Only send fields that changed
+    const updatedFields: Record<string, unknown> = {};
+    if (firstName.trim() && firstName !== userInfo?.user.first_name)
+      updatedFields.first_name = firstName.trim();
+    if (lastName.trim() && lastName !== userInfo?.user.last_name)
+      updatedFields.last_name = lastName.trim();
+    if (email.trim() && email !== userInfo?.user.email)
+      updatedFields.email = email.trim();
+    if (usernameChanged && usernameAvailable)
+      updatedFields.username = username.trim();
+    if (
+      selectedInstitution &&
+      selectedInstitution.id !== userInfo?.user.institution_id
+    )
+      updatedFields.institution_id = selectedInstitution.id;
+
+    if (Object.keys(updatedFields).length === 0) {
+      setLoading(false);
+      showSuccessAlert("No Changes", "Nothing to update.", () => {});
+      return;
+    }
 
     try {
-      await axios.put(
+      await axios.patch(
         `${ApiUrl}/api/update/user/${userInfo?.user.id}/`,
         updatedFields,
         config
@@ -79,47 +139,45 @@ const AccountSettings = () => {
       if (userInfo) {
         const updatedUser = {
           ...userInfo.user,
-          ...(formData.firstName && { first_name: formData.firstName }),
-          ...(formData.lastName && { last_name: formData.lastName }),
-          ...(formData.email && { email: formData.email }),
-          ...(formData.dob && { dob: formData.dob }),
-          address: {
-            ...userInfo.user.address,
-            ...(formData.street1 && { street_1: formData.street1 }),
-            ...(formData.street2 && { street_2: formData.street2 }),
-            ...(formData.city && { city: formData.city }),
-            ...(formData.region && { region: formData.region }),
-            ...(formData.country && { country: formData.country }),
-          },
+          ...updatedFields,
         };
 
-        setUserInformation({
-          ...userInfo,
-          user: updatedUser,
-        });
-        setUserInfo({
-          ...userInfo,
-          user: updatedUser,
-        });
+        const updated = { ...userInfo, user: updatedUser };
+        setUserInformation(updated);
+        setUserInfo(updated);
       }
 
       showSuccessAlert("Success", "Your information has been updated.", () => {
         router.back();
       });
-    } catch (error) {
-      handleError(error, "Update Failed");
+    } catch (error: unknown) {
+      const err = error as {
+        response?: { status?: number; data?: Record<string, unknown> };
+      };
+      if (err.response?.status === 409) {
+        if (err.response?.data?.username) {
+          setGeneralError("Username is already in use.");
+        } else if (err.response?.data?.email) {
+          setGeneralError("An account with this email already exists.");
+        } else {
+          setGeneralError("A conflict occurred. Please check your info.");
+        }
+      } else {
+        handleError(error, "Update Failed");
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  // ── Delete ───────────────────────────────────────────────────────────
   const handleDeleteAccount = async () => {
     showDeleteAlert(
       "Delete Account",
       "Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.",
       async () => {
         setLoading(true);
-        
+
         const config = {
           headers: {
             Authorization: `Token ${userToken?.token}`,
@@ -128,11 +186,7 @@ const AccountSettings = () => {
 
         try {
           await axios.delete(`${ApiUrl}/api/delete-account/`, config);
-          
-          // Clear user data
           await AsyncStorage.multiRemove(["token", "user"]);
-          
-          // Logout and redirect
           logout();
           router.replace("/(verification)/Intro");
         } catch (error) {
@@ -140,14 +194,13 @@ const AccountSettings = () => {
           setLoading(false);
         }
       },
-      () => {
-        // onCancel - do nothing, alert will close automatically
-      },
-      "Delete", // deleteText
-      "Cancel"  // cancelText
+      () => {},
+      "Delete",
+      "Cancel"
     );
   };
 
+  // ── Styles ───────────────────────────────────────────────────────────
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -188,6 +241,9 @@ const AccountSettings = () => {
       width: "100%",
       minHeight: rV(48),
     },
+    inputContainerError: {
+      borderColor: "#D22B2B" + "60",
+    },
     icon: {
       marginRight: rS(10),
       color: themeColors.textSecondary,
@@ -199,18 +255,37 @@ const AccountSettings = () => {
       fontSize: rMS(14),
       fontWeight: "500",
     },
-    dateSelectorWrapper: {
-      flex: 1,
-      marginLeft: rS(0),
-    },
     subTitle: {
       fontSize: rMS(14),
       fontWeight: "800",
       color: themeColors.text,
       marginTop: rV(20),
-      marginBottom: rV(10),
+      marginBottom: rV(6),
       alignSelf: "flex-start",
       letterSpacing: -0.1,
+    },
+    subTitleHint: {
+      fontSize: rMS(12),
+      fontWeight: "500",
+      color: themeColors.textSecondary,
+      marginBottom: rV(10),
+      alignSelf: "flex-start",
+      lineHeight: rMS(18),
+    },
+    helperText: {
+      fontSize: rMS(12),
+      fontWeight: "600",
+      marginTop: -rV(6),
+      marginBottom: rV(10),
+      paddingHorizontal: rS(4),
+    },
+    generalError: {
+      fontSize: rMS(13),
+      color: "#D22B2B",
+      fontWeight: "600",
+      textAlign: "center",
+      marginTop: rV(4),
+      marginBottom: rV(8),
     },
     footer: {
       paddingHorizontal: rS(16),
@@ -231,118 +306,183 @@ const AccountSettings = () => {
     },
     deleteButton: {
       marginTop: rV(10),
-      backgroundColor: themeColors.errorBackground || "#DC2626",
+      backgroundColor: "transparent",
+      borderWidth: 1.5,
+      borderColor: "#DC2626" + "40",
+    },
+    deleteButtonText: {
+      color: "#DC2626",
+      fontSize: rMS(14),
+      fontWeight: "700",
     },
   });
 
-  return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      {/* Form fields scroll area */}
-      <ScrollView
-        contentContainerStyle={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Text style={styles.title}>Personal Info</Text>
-        <View style={styles.row}>
-          <View style={styles.halfWidth}>
-            <View style={styles.inputContainer}>
-              <User
-                size={rMS(18)}
-                color={themeColors.textSecondary}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="First Name"
-                value={formData.firstName}
-                onChangeText={(value) => handleChange("firstName", value)}
-                placeholderTextColor={themeColors.textSecondary}
-              />
-            </View>
-          </View>
-          <View style={styles.halfWidth}>
-            <View style={styles.inputContainer}>
-              <User
-                size={rMS(18)}
-                color={themeColors.textSecondary}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Last Name"
-                value={formData.lastName}
-                onChangeText={(value) => handleChange("lastName", value)}
-                placeholderTextColor={themeColors.textSecondary}
-              />
-            </View>
-          </View>
-        </View>
+  const usernameHelperColor =
+    usernameErrorText
+      ? "#D22B2B"
+      : usernameStatus === "available" && usernameChanged
+        ? themeColors.tint
+        : themeColors.textSecondary;
 
-        {/* Replace DOB TextInput with DateSelector */}
-        <View style={styles.inputContainer}>
-          <Calendar
-            size={rMS(18)}
-            color={themeColors.textSecondary}
-          />
-          <View style={styles.dateSelectorWrapper}>
-            <DateSelector
-              label="Date of Birth"
-              initialDate={formData.dob}
-              onDateChange={(selectedDate) => handleChange("dob", selectedDate)}
-              minDate={false}
+  const usernameHelperMessage = usernameErrorText
+    ? usernameErrorText
+    : !usernameChanged
+      ? "Current username"
+      : usernameStatus === "available"
+        ? "That's available — you're good."
+        : usernameStatus === "checking"
+          ? "Checking if that's free..."
+          : null;
+
+  const usernameBorderError =
+    !!usernameErrorText || usernameStatus === "invalid";
+
+  return (
+    <BottomSheetModalProvider>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        {/* Form fields scroll area */}
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={styles.title}>Personal Info</Text>
+
+          {/* First / Last Name */}
+          <View style={styles.row}>
+            <View style={styles.halfWidth}>
+              <View style={styles.inputContainer}>
+                <User
+                  size={rMS(18)}
+                  color={themeColors.textSecondary}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="First Name"
+                  value={firstName}
+                  onChangeText={setFirstName}
+                  placeholderTextColor={themeColors.textSecondary}
+                />
+              </View>
+            </View>
+            <View style={styles.halfWidth}>
+              <View style={styles.inputContainer}>
+                <User
+                  size={rMS(18)}
+                  color={themeColors.textSecondary}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Last Name"
+                  value={lastName}
+                  onChangeText={setLastName}
+                  placeholderTextColor={themeColors.textSecondary}
+                />
+              </View>
+            </View>
+          </View>
+
+          {/* Email */}
+          <View style={styles.inputContainer}>
+            <Mail size={rMS(18)} color={themeColors.textSecondary} />
+            <TextInput
+              style={styles.input}
+              placeholder="Email Address"
+              value={email}
+              onChangeText={setEmail}
+              placeholderTextColor={themeColors.textSecondary}
+              keyboardType="email-address"
+              autoCapitalize="none"
             />
           </View>
-        </View>
 
-        <View style={styles.inputContainer}>
-          <Mail size={rMS(18)} color={themeColors.textSecondary} />
-          <TextInput
-            style={styles.input}
-            placeholder="Email Address"
-            value={formData.email}
-            onChangeText={(value) => handleChange("email", value)}
-            placeholderTextColor={themeColors.textSecondary}
+          {/* Username */}
+          <Text style={styles.subTitle}>Username</Text>
+          <Text style={styles.subTitleHint}>
+            This is how you show up on leaderboards and squads.
+          </Text>
+          <View
+            style={[
+              styles.inputContainer,
+              usernameBorderError && styles.inputContainerError,
+            ]}
+          >
+            <AtSign
+              size={rMS(18)}
+              color={
+                usernameBorderError
+                  ? "#D22B2B"
+                  : themeColors.textSecondary
+              }
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Username"
+              value={username}
+              onChangeText={onChangeUsername}
+              placeholderTextColor={themeColors.textSecondary}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+          {usernameHelperMessage ? (
+            <Text
+              style={[styles.helperText, { color: usernameHelperColor }]}
+            >
+              {usernameHelperMessage}
+            </Text>
+          ) : null}
+
+          {/* School */}
+          <Text style={styles.subTitle}>School</Text>
+          <Text style={styles.subTitleHint}>
+            Your school determines your regional ranking.
+          </Text>
+          <InstitutionSelectField
+            selected={selectedInstitution}
+            onPress={openSchoolPicker}
+            hasError={schoolError}
+            errorMessage="Please select your school."
+            hint="Tap to find your campus"
           />
-        </View>
 
-        <Text style={styles.subTitle}>Institution Info</Text>
-        <View style={styles.inputContainer}>
-          <GraduationCap size={rMS(18)} color={themeColors.textSecondary} />
-          <TextInput
-            style={styles.input}
-            placeholder="School Name"
-            value={formData.instituteName}
-            onChangeText={(value) => handleChange("instituteName", value)}
-            placeholderTextColor={themeColors.textSecondary}
-          />
-        </View>
-      </ScrollView>
+          {generalError ? (
+            <Text style={styles.generalError}>{generalError}</Text>
+          ) : null}
+        </ScrollView>
 
-      {/* Sticky footer containing the update button */}
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleUpdateInfo}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Update</Text>
-          )}
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.button, styles.deleteButton]}
-          onPress={handleDeleteAccount}
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>Delete Account</Text>
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+        {/* Sticky footer */}
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleUpdateInfo}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Save Changes</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.deleteButton]}
+            onPress={handleDeleteAccount}
+            disabled={loading}
+          >
+            <Text style={styles.deleteButtonText}>Delete Account</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+
+      <InstitutionPickerSheet
+        ref={institutionSheetRef}
+        onSelect={handleInstitutionSelect}
+      />
+    </BottomSheetModalProvider>
   );
 };
 

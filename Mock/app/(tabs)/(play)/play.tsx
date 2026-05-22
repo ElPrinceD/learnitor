@@ -428,6 +428,7 @@ export default function PlayScreen() {
         onJoinSquad={handleJoinSquad}
         onClose={closeSquadSheet}
         joinPending={joinSquadMutation.isPending}
+        createPending={createSquadMutation.isPending}
       />
     </View>
   );

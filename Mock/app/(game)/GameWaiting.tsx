@@ -128,14 +128,14 @@ export default function GameWaitingScreen() {
   useEffect(() => {
     if (gameDetails) {
       setGameQuestions(gameDetails.questions);
-      setCreator(gameDetails.creator.first_name);
+      setCreator(gameDetails.creator.username || gameDetails.creator.first_name);
       setCreatorId(gameDetails.creator.id);
       setGameCode(gameDetails.code);
       if (gameDetails.players) {
         const newPlayers = gameDetails.players.map((player) => ({
           id: player.id,
           score: "0",
-          profileName: player.first_name,
+          profileName: player.username || player.first_name,
           profile_picture:
             player.id === userInfo?.user.id
               ? userInfo.user.profile_picture
@@ -230,7 +230,7 @@ export default function GameWaitingScreen() {
             const newPlayers = payload.players.map((player: any) => ({
               id: player.id,
               score: "0",
-              profileName: player.first_name,
+              profileName: player.username || player.first_name,
               profile_picture:
                 player.id === userInfo?.user.id
                   ? userInfo.user.profile_picture
@@ -251,7 +251,7 @@ export default function GameWaitingScreen() {
             const newPlayers = payload.players.map((player: any) => ({
               id: player.id,
               score: "0",
-              profileName: player.first_name,
+              profileName: player.username || player.first_name,
               profile_picture:
                 player.id === userInfo?.user.id
                   ? userInfo.user.profile_picture
@@ -658,7 +658,7 @@ export default function GameWaitingScreen() {
             >
               <Text style={styles.heroLabel}>Lobby</Text>
               <Text style={styles.heroTitle}>
-                {isCreator ? userInfo?.user.first_name : creator}'s Arena
+                {isCreator ? (userInfo?.user.username || userInfo?.user.first_name) : creator}'s Arena
               </Text>
             </Animated.View>
 

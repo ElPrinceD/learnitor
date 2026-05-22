@@ -28,8 +28,8 @@ export interface ProfileInsightsVolume {
 }
 
 export interface ProfileInsightsPersonalBests {
-  best_single_game_score: number;
-  best_session_streak: number;
+  best_single_game_score: number | null;
+  best_session_streak: number | null;
   best_weekly_exam_score: number | null;
   best_weekly_exam_global_average: number | null;
   world_rank_jump_this_season: number | null;
@@ -150,7 +150,8 @@ export const getProfileInsights = async (
       { headers: { Authorization: `Token ${token}` } }
     );
     return response.data;
-  } catch {
+  } catch (err) {
+    console.warn('profile-insights fetch failed, using mock:', err);
     return MOCK_PROFILE_INSIGHTS;
   }
 };

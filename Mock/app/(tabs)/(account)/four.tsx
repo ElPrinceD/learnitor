@@ -39,7 +39,7 @@ import {
   MOCK_PROFILE_INSIGHTS,
 } from "../../../services/UserStatsApiCalls";
 import { getRankingsSummary } from "../../../services/LeaderboardApiCalls";
-import ProfileInsightsBody from "../../../components/profile/ProfileInsightsBody";
+import ProfileInsightsSummary from "../../../components/profile/ProfileInsightsSummary";
 import { formatMemberSince } from "../../../components/profile/profileCopy";
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
@@ -362,11 +362,16 @@ const Profile = () => {
       letterSpacing: 0.5,
       marginTop: rV(4),
     },
-    memberSince: {
-      fontSize: rMS(10),
+    memberSinceFooter: {
+      alignItems: "center",
+      paddingVertical: rV(20),
+      marginTop: rV(8),
+    },
+    memberSinceText: {
+      fontSize: rMS(11),
       color: themeColors.textSecondary,
       fontWeight: "600",
-      marginTop: rV(6),
+      letterSpacing: 0.3,
     },
     insightsBlock: {
       gap: rV(12),
@@ -588,18 +593,15 @@ const Profile = () => {
             <Text style={styles.profileName} numberOfLines={1}>
               {userInfo?.user.first_name} {userInfo?.user.last_name}
             </Text>
-            <Text style={styles.profileId}>
-              ID: #{userInfo?.user.id}-LEARN
-            </Text>
-            {memberSinceLine ? (
-              <Text style={styles.memberSince} numberOfLines={2}>
-                {memberSinceLine}
+            {userInfo?.user.username ? (
+              <Text style={styles.profileId}>
+                @{userInfo.user.username}
               </Text>
             ) : null}
           </View>
         </Animated.View>
 
-        {/* Profile insights */}
+        {/* Profile insights summary */}
         <Animated.View
           entering={FadeInDown.duration(500).delay(200)}
           style={styles.insightsBlock}
@@ -609,7 +611,10 @@ const Profile = () => {
               <ActivityIndicator size="small" color={themeColors.tint} />
             </View>
           ) : (
-            <ProfileInsightsBody insights={insights} />
+            <ProfileInsightsSummary
+              insights={insights}
+              onViewAll={() => router.navigate("ProfileInsights")}
+            />
           )}
         </Animated.View>
 
@@ -736,6 +741,16 @@ const Profile = () => {
             </ScrollView>
           </Animated.View>
         )}
+
+        {/* Member since — bottom of page */}
+        {memberSinceLine ? (
+          <Animated.View
+            entering={FadeInDown.duration(500).delay(600)}
+            style={styles.memberSinceFooter}
+          >
+            <Text style={styles.memberSinceText}>{memberSinceLine}</Text>
+          </Animated.View>
+        ) : null}
       </ScrollView>
     </View>
   );

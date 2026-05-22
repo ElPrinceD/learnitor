@@ -14,7 +14,7 @@ export const formatMemberSince = (iso: string | null): string | null => {
   if (Number.isNaN(d.getTime())) return null;
   const month = d.toLocaleString(undefined, { month: 'long' });
   const year = d.getFullYear();
-  return `With Learnitor since ${month} ${year}`;
+  return `with Elevay since ${month} ${year}`;
 };
 
 export const formatActiveDays = (

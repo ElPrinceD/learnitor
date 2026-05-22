@@ -91,6 +91,20 @@ export default function AccountLayout() {
           animation: "slide_from_right",
         }}
       />
+      <Stack.Screen
+        name="ProfileInsights"
+        options={{
+          headerShown: true,
+          headerTitle: "Your Insights",
+          headerTitleAlign: "center",
+          headerTitleStyle,
+          headerStyle,
+          headerBackTitle: "Back",
+          headerShadowVisible: false,
+          presentation: "card",
+          animation: "slide_from_right",
+        }}
+      />
     </Stack>
   );
 }

@@ -125,11 +125,12 @@ export interface Player {
 }
 
 export interface GameDetailsResponse {
-  creator: { first_name: string; id: number };
+  creator: { first_name: string; username?: string; id: number };
   players: {
     id: number;
     first_name: string;
     last_name: string;
+    username?: string;
     profile_picture: string;
   }[];
   questions: Question[];
