@@ -1,120 +1,109 @@
-import React, { createContext, useContext, useCallback, useState } from "react";
+/**
+ * Ad Manager — Zustand-backed.
+ *
+ * State and public API live in `store/adStore.ts`.
+ * This file provides:
+ *   1. `useAdManager` — re-exported from the store (backward-compatible).
+ *   2. `AdInitializer` — a React component that bridges the ad SDK hooks
+ *      to the Zustand store. Must be mounted inside the React tree.
+ *   3. `AdManagerProvider` — no-op wrapper kept temporarily.
+ */
+import React, { useEffect, useCallback, useRef } from "react";
 import useInterstitialAd from "./InterstitialAd";
 import useRewardedAd from "./RewardedAd";
-import { AdPlacement } from "../../config/AdConfig";
-import { useAlert } from "../../contexts/AlertContext";
+import { useAdStore } from "../../store/adStore";
+import { useAlertStore } from "../../store/alertStore";
 
-interface AdManagerContextType {
-  showGameCompletionAd: () => void;
-  showAnswerViewingAd: (onRewardEarned: () => void) => void;
-  isAdReady: (placement: AdPlacement) => boolean;
-}
+// Re-export
+export { useAdManager } from "../../store/adStore";
 
-const AdManagerContext = createContext<AdManagerContextType | undefined>(
-  undefined
-);
+/**
+ * Bridges the React ad hooks (which rely on useEffect/useState) to the
+ * Zustand ad store. Mount once in the React tree.
+ */
+export const AdInitializer: React.FC = () => {
+  const showErrorAlert = useAlertStore((s) => s.showErrorAlert);
 
-export const useAdManager = () => {
-  const context = useContext(AdManagerContext);
-  if (!context) {
-    throw new Error("useAdManager must be used within an AdManagerProvider");
-  }
-  return context;
-};
+  const markGameCompletionNotReady = useCallback(() => {
+    useAdStore.getState()._setGameCompletionReady(false);
+  }, []);
 
-interface AdManagerProviderProps {
-  children: React.ReactNode;
-}
+  const markAnswerViewingNotReady = useCallback(() => {
+    useAdStore.getState()._setAnswerViewingReady(false);
+  }, []);
 
-export const AdManagerProvider: React.FC<AdManagerProviderProps> = ({
-  children,
-}) => {
-  const { showErrorAlert } = useAlert();
-  const [gameCompletionAdReady, setGameCompletionAdReady] = useState(false);
-  const [answerViewingAdReady, setAnswerViewingAdReady] = useState(false);
+  const onAnswerAdNotReady = useCallback(() => {
+    showErrorAlert(
+      "Ad Not Ready",
+      "The ad is still loading. Please try again in a moment.",
+      () => useAdStore.getState()._setAnswerViewingReady(false)
+    );
+  }, [showErrorAlert]);
 
   const gameCompletionAd = useInterstitialAd({
-    onAdClosed: () => {
-      setGameCompletionAdReady(false);
-    },
-    onAdOpened: () => {
-      setGameCompletionAdReady(false);
-    },
-    onAdFailedToLoad: (error) => {
-      setGameCompletionAdReady(false);
-    },
+    onAdClosed: markGameCompletionNotReady,
+    onAdOpened: markGameCompletionNotReady,
+    onAdFailedToLoad: markGameCompletionNotReady,
     autoLoad: true,
   });
 
   const answerViewingAd = useRewardedAd({
-    onRewardEarned: () => {
-      setAnswerViewingAdReady(false);
-    },
-    onAdClosed: () => {
-      setAnswerViewingAdReady(false);
-    },
-    onAdOpened: () => {
-      setAnswerViewingAdReady(false);
-    },
-    onAdFailedToLoad: () => {
-      setAnswerViewingAdReady(false);
-    },
-    onAdNotReady: () => {
-      showErrorAlert(
-        "Ad Not Ready",
-        "The ad is still loading. Please try again in a moment.",
-        () => setAnswerViewingAdReady(false)
-      );
-    },
+    onRewardEarned: markAnswerViewingNotReady,
+    onAdClosed: markAnswerViewingNotReady,
+    onAdOpened: markAnswerViewingNotReady,
+    onAdFailedToLoad: markAnswerViewingNotReady,
+    onAdNotReady: onAnswerAdNotReady,
     autoLoad: true,
   });
 
-  const showGameCompletionAd = useCallback(() => {
-    if (gameCompletionAd.isAdReady) {
-      gameCompletionAd.showAd();
-    } else {
-      // If ad is not ready, proceed without showing ad
-      console.log("Game completion ad not ready, proceeding without ad");
-    }
-  }, [gameCompletionAd]);
+  const gameCompletionAdRef = useRef(gameCompletionAd);
+  gameCompletionAdRef.current = gameCompletionAd;
 
-  const showAnswerViewingAd = useCallback(
-    (onRewardEarned: () => void) => {
-      if (answerViewingAd.isAdReady) {
-        answerViewingAd.showAd();
-        // Call the reward callback immediately after showing ad
+  const answerViewingAdRef = useRef(answerViewingAd);
+  answerViewingAdRef.current = answerViewingAd;
+
+  useEffect(() => {
+    useAdStore
+      .getState()
+      ._setGameCompletionReady(gameCompletionAd.isAdReady);
+  }, [gameCompletionAd.isAdReady]);
+
+  useEffect(() => {
+    useAdStore
+      .getState()
+      ._setAnswerViewingReady(answerViewingAd.isAdReady);
+  }, [answerViewingAd.isAdReady]);
+
+  useEffect(() => {
+    useAdStore.getState()._registerGameCompletionAd(() => {
+      gameCompletionAdRef.current.showAd();
+    });
+  }, []);
+
+  useEffect(() => {
+    useAdStore.getState()._registerAnswerViewingAd((onRewardEarned) => {
+      const ad = answerViewingAdRef.current;
+      if (ad.isAdReady) {
+        ad.showAd();
         onRewardEarned();
       } else {
-        // If ad is not ready, proceed without showing ad (graceful fallback)
         onRewardEarned();
       }
-    },
-    [answerViewingAd]
-  );
+    });
+  }, []);
 
-  const isAdReady = useCallback(
-    (placement: AdPlacement) => {
-      switch (placement) {
-        case AdPlacement.GAME_COMPLETION:
-          return gameCompletionAd.isAdReady;
-        case AdPlacement.ANSWER_VIEWING:
-          return answerViewingAd.isAdReady;
-        default:
-          return false;
-      }
-    },
-    [gameCompletionAd.isAdReady, answerViewingAd.isAdReady]
-  );
-
-  const value: AdManagerContextType = {
-    showGameCompletionAd,
-    showAnswerViewingAd,
-    isAdReady,
-  };
-
-  return (
-    <AdManagerContext.Provider value={value}>
-      {children}
-    </AdManagerContext.Provider>
-  );
+  return null;
 };
+
+/**
+ * No-op provider kept temporarily so `_layout.tsx` compiles during
+ * incremental migration.
+ */
+export const AdManagerProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => (
+  <>
+    <AdInitializer />
+    {children}
+  </>
+);

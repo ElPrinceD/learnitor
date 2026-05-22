@@ -1,3 +1,4 @@
-import { useGameAudio as useGameAudioContext } from "../contexts/GameAudioContext";
-
-export const useGameAudio = useGameAudioContext;
+/**
+ * Re-export from Zustand store for backward compatibility.
+ */
+export { useGameAudio } from "../store/gameAudioStore";

@@ -11,21 +11,22 @@ import {
   Stack,
   router,
   useSegments,
+  useRootNavigationState,
   useNavigationContainerRef,
 } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { AuthProvider, useAuth } from "../components/AuthContext"; // Update the path as needed
+import { useAuth } from "../store/authStore";
 import { useColorScheme } from "../components/useColorScheme";
 import { RootSiblingParent } from "react-native-root-siblings";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "../QueryClient";
 import { SQLiteProvider } from "expo-sqlite";
-import { CacheProvider } from "../contexts/CacheContext"; // Update the path
-import { AlertProvider } from "../contexts/AlertContext"; // Update the path
-import { TimelineProvider } from "../contexts/TimelineContext"; // Update the path
-import { AdManagerProvider } from "../components/ads/AdManager"; // Add AdManager
-import { ConsentProvider } from "../contexts/ConsentContext";
+import { CacheInitializer } from "../contexts/CacheContext";
+import { AlertPortal } from "../contexts/AlertContext";
+import { AdInitializer } from "../components/ads/AdManager";
+import { useConsentStore } from "../store/consentStore";
+import { useAuthStore } from "../store/authStore";
 import mobileAds from "react-native-google-mobile-ads";
 import {
   configureReanimatedLogger,
@@ -37,7 +38,7 @@ import config from "../tamagui.config";
 import { vexo } from "vexo-analytics";
 import * as Sentry from "@sentry/react-native";
 import { isRunningInExpoGo } from "expo";
-import { StatusBar, LogBox } from "react-native";
+import { StatusBar, LogBox, InteractionManager } from "react-native";
 
 LogBox.ignoreLogs(["SafeAreaView has been deprecated"]);
 import Colors from "../constants/Colors";
@@ -47,19 +48,17 @@ import * as Linking from "expo-linking";
 import axios from "axios";
 import ApiUrl from "../config";
 
-// Component to handle push notifications inside ConsentProvider
+// Component to handle push notifications
 const PushNotificationHandler = () => {
   const { expoPushToken, notification } = usePushNotifications();
   const [loggedToken, setLoggedToken] = useState<string | null>(null);
 
-  // Debug notification setup - only log once per token
   useEffect(() => {
     if (expoPushToken && expoPushToken.data !== loggedToken) {
       setLoggedToken(expoPushToken.data);
     }
   }, [expoPushToken, loggedToken]);
 
-  // Debug notification received - only log unique notifications
   useEffect(() => {
     if (notification) {
       const notificationId = notification.request.identifier;
@@ -67,14 +66,36 @@ const PushNotificationHandler = () => {
     }
   }, [notification]);
 
-  return null; // This component doesn't render anything
+  return null;
+};
+
+// Component to reload consents when the auth token changes
+const ConsentHydrator = () => {
+  const token = useAuthStore((s) => s.userToken?.token);
+
+  useEffect(() => {
+    if (token) {
+      useConsentStore.getState().loadConsents();
+    }
+  }, [token]);
+
+  return null;
 };
 
 // Component to handle deep links
 const DeepLinkHandler = () => {
-  const { userToken } = useAuth();
+  const { userToken, isLoading } = useAuth();
+  const segments = useSegments();
+  const rootNavigationState = useRootNavigationState();
+
+  const navigationReady =
+    !isLoading &&
+    !!rootNavigationState?.key &&
+    segments.length > 0;
 
   useEffect(() => {
+    if (!navigationReady) return;
+
     const handleDeepLink = async (url: string) => {
       try {
         // Parse the URL to extract game code
@@ -103,18 +124,20 @@ const DeepLinkHandler = () => {
 
               if (response.status === 200) {
                 const id = response.data.id;
-                // Navigate to GameWaiting screen
-                router.replace({
-                  pathname: "/(game)/GameWaiting",
-                  params: { code: gameCode, id: id },
+                InteractionManager.runAfterInteractions(() => {
+                  router.replace({
+                    pathname: "/(game)/GameWaiting",
+                    params: { code: gameCode, id: id },
+                  });
                 });
               }
             } catch (error) {
               console.error("Error joining game via deep link:", error);
-              // Navigate to GameIntro with the code pre-filled
-              router.replace({
-                pathname: "/(game)/GameIntro",
-                params: { code: gameCode },
+              InteractionManager.runAfterInteractions(() => {
+                router.replace({
+                  pathname: "/(game)/GameIntro",
+                  params: { code: gameCode },
+                });
               });
             }
           }
@@ -142,25 +165,28 @@ const DeepLinkHandler = () => {
 
               if (response.status === 200) {
                 const id = response.data.id;
-                // Navigate to GameWaiting screen
-                router.replace({
-                  pathname: "/(game)/GameWaiting",
-                  params: { code: gameCode, id: id },
+                InteractionManager.runAfterInteractions(() => {
+                  router.replace({
+                    pathname: "/(game)/GameWaiting",
+                    params: { code: gameCode, id: id },
+                  });
                 });
               }
             } catch (error) {
               console.error("Error joining game via deep link:", error);
-              // Navigate to GameIntro with the code pre-filled
+              InteractionManager.runAfterInteractions(() => {
+                router.replace({
+                  pathname: "/(game)/GameIntro",
+                  params: { code: gameCode },
+                });
+              });
+            }
+          } else if (gameCode && !userToken?.token) {
+            InteractionManager.runAfterInteractions(() => {
               router.replace({
                 pathname: "/(game)/GameIntro",
                 params: { code: gameCode },
               });
-            }
-          } else if (gameCode && !userToken?.token) {
-            // User not authenticated - navigate to GameIntro with code pre-filled
-            router.replace({
-              pathname: "/(game)/GameIntro",
-              params: { code: gameCode },
             });
           }
         }
@@ -187,7 +213,7 @@ const DeepLinkHandler = () => {
     return () => {
       subscription?.remove();
     };
-  }, [userToken]);
+  }, [userToken, navigationReady]);
 
   return null; // This component doesn't render anything
 };
@@ -237,30 +263,7 @@ mobileAds()
 
 const RootLayoutNav = () => {
   const colorScheme = useColorScheme();
-  const segments = useSegments();
-  const { userToken, isLoading } = useAuth();
   const themeColors = Colors[colorScheme ?? "light"];
-
-  const [navigationCompleted, setNavigationCompleted] = useState(false);
-  const token = userToken?.token || null;
-
-  useEffect(() => {
-    if (isLoading) return;
-    const inTabsGroup = segments[0] === "(tabs)";
-
-    if (userToken && !inTabsGroup) {
-      router.replace({ pathname: "/home" });
-    } else if (!userToken) {
-      router.replace("/Intro");
-    }
-    setNavigationCompleted(true);
-  }, [isLoading, userToken]);
-
-  useEffect(() => {
-    if (navigationCompleted) {
-      SplashScreen.hideAsync();
-    }
-  }, [navigationCompleted]);
 
   // Add StatusBar and SystemUI configuration
   useEffect(() => {
@@ -281,45 +284,43 @@ const RootLayoutNav = () => {
           <SafeAreaProvider>
             <QueryClientProvider client={queryClient}>
               <SQLiteProvider databaseName="slate.db">
-                <CacheProvider>
-                  <ConsentProvider>
-                    <PushNotificationHandler />
-                    <DeepLinkHandler />
-                    <TimelineProvider token={token}>
-                      <AlertProvider>
-                        <AdManagerProvider>
-                          <ThemeProvider
-                            value={
-                              colorScheme === "dark" ? DarkTheme : DefaultTheme
-                            }
-                          >
-                            <Stack>
-                              <Stack.Screen
-                                name="index"
-                                options={{ headerShown: false }}
-                              />
-                              <Stack.Screen
-                                name="(verification)"
-                                options={{ headerShown: false }}
-                              />
-                              <Stack.Screen
-                                name="(tabs)"
-                                options={{
-                                  headerShown: false,
-                                  headerShadowVisible: false,
-                                }}
-                              />
-                              <Stack.Screen
-                                name="(game)"
-                                options={{ headerShown: false }}
-                              />
-                            </Stack>
-                          </ThemeProvider>
-                        </AdManagerProvider>
-                      </AlertProvider>
-                    </TimelineProvider>
-                  </ConsentProvider>
-                </CacheProvider>
+                {/* Zustand bridge initializers (renderless) */}
+                <CacheInitializer />
+                <ConsentHydrator />
+                <PushNotificationHandler />
+                <DeepLinkHandler />
+                <AdInitializer />
+
+                <ThemeProvider
+                  value={
+                    colorScheme === "dark" ? DarkTheme : DefaultTheme
+                  }
+                >
+                  <Stack>
+                    <Stack.Screen
+                      name="index"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="(verification)"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="(tabs)"
+                      options={{
+                        headerShown: false,
+                        headerShadowVisible: false,
+                      }}
+                    />
+                    <Stack.Screen
+                      name="(game)"
+                      options={{ headerShown: false }}
+                    />
+                  </Stack>
+                </ThemeProvider>
+
+                {/* Alert modal portal (renders above everything) */}
+                <AlertPortal />
               </SQLiteProvider>
             </QueryClientProvider>
           </SafeAreaProvider>
@@ -338,11 +339,9 @@ const RootLayout = () => {
     }
   }, [ref]);
   return (
-    <AuthProvider>
-      <RootSiblingParent>
-        <RootLayoutNav />
-      </RootSiblingParent>
-    </AuthProvider>
+    <RootSiblingParent>
+      <RootLayoutNav />
+    </RootSiblingParent>
   );
 };
 

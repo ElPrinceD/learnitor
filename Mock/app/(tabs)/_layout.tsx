@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Tabs } from "expo-router";
+import { Redirect, Tabs } from "expo-router";
 import { StyleSheet, View, Animated } from "react-native";
 import {
   Home,
@@ -12,6 +12,7 @@ import Colors from "../../constants/Colors";
 import { useColorScheme } from "../../components/useColorScheme";
 import { useClientOnlyValue } from "../../components/useClientOnlyValue";
 import { rMS } from "../../constants";
+import { useAuth } from "../../store/authStore";
 
 // Lucide icon map — Lucide doesn't have outline variants, so we use
 // the same icon but vary strokeWidth (1.5 for inactive, 2.5 for active)
@@ -77,6 +78,11 @@ function TabBarIcon(props: { name: string; color: string; focused: boolean }) {
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const { userToken, isLoading } = useAuth();
+
+  if (!isLoading && !userToken) {
+    return <Redirect href="/(verification)/Intro" />;
+  }
 
   return (
     <Tabs

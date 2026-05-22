@@ -1,8 +1,15 @@
-import { Stack } from "expo-router";
+import { Redirect, Stack } from "expo-router";
 import React from "react";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { useAuth } from "../../store/authStore";
 
 const VerificationLayout = () => {
+  const { userToken, isLoading } = useAuth();
+
+  if (!isLoading && userToken) {
+    return <Redirect href="/(tabs)/home" />;
+  }
+
   return (
     <BottomSheetModalProvider>
     <Stack>
