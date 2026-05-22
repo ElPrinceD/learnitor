@@ -49,12 +49,23 @@ export interface RankingItem {
   // (world / country / school): optional until the API adds it; the app
   // still shows the SW column for those boards for layout parity.
   weeklyExamScore?: number | null;
+  institutionId?: number;
+  schoolName?: string;
+}
+
+export interface SchoolInstitution {
+  id: number;
+  name: string;
+  city?: string;
+  country?: string;
 }
 
 export interface UserStatus {
   rank: number | null;
   percentile: string | null;
   message: string | null;
+  institutionId?: number;
+  schoolName?: string;
 }
 
 export interface SquadMember {
@@ -77,6 +88,8 @@ export interface LeaderboardDetailsResponse {
   rankings: RankingItem[];
   userStatus: UserStatus;
   squadInfo?: SquadInfo;
+  schoolName?: string;
+  schoolInstitution?: SchoolInstitution;
 }
 
 export interface H2HMatchup {

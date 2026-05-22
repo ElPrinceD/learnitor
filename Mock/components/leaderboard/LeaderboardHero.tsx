@@ -7,9 +7,10 @@ import { rMS, rS, rV } from "../../constants";
 interface Props {
   timeframe: string | undefined;
   name: string | undefined;
+  subtitle?: string;
 }
 
-const LeaderboardHero: React.FC<Props> = ({ timeframe, name }) => {
+const LeaderboardHero: React.FC<Props> = ({ timeframe, name, subtitle }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
@@ -33,6 +34,13 @@ const LeaderboardHero: React.FC<Props> = ({ timeframe, name }) => {
       letterSpacing: -1,
       lineHeight: rMS(38),
     },
+    heroSubtitle: {
+      fontSize: rMS(14),
+      fontWeight: "600",
+      color: themeColors.textSecondary,
+      marginTop: rV(8),
+      lineHeight: rMS(20),
+    },
   });
 
   return (
@@ -43,11 +51,19 @@ const LeaderboardHero: React.FC<Props> = ({ timeframe, name }) => {
       <Text style={styles.heroTitle}>
         {(name || "Rankings").toUpperCase()}
       </Text>
+      {subtitle ? (
+        <Text style={styles.heroSubtitle} numberOfLines={2}>
+          {subtitle}
+        </Text>
+      ) : null}
     </View>
   );
 };
 
 export default memo(
   LeaderboardHero,
-  (prev, next) => prev.timeframe === next.timeframe && prev.name === next.name
+  (prev, next) =>
+    prev.timeframe === next.timeframe &&
+    prev.name === next.name &&
+    prev.subtitle === next.subtitle
 );

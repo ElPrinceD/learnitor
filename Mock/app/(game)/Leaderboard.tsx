@@ -48,7 +48,10 @@ export default function Leaderboard() {
   // We can derive loading/error from react-query
 
   const leaderboardId = (id || "world").toLowerCase();
-  const leaderboardName = name || "World Rankings";
+  const isSchoolLeaderboard = leaderboardId === "school";
+  const leaderboardName = isSchoolLeaderboard
+    ? "School Ranking"
+    : name || "World Rankings";
 
   const showWeeklyExamColumn = ["world", "country", "school"].includes(
     leaderboardId
@@ -73,12 +76,19 @@ export default function Leaderboard() {
   // React Query Hook
   const { data: leaderboardData, isLoading: loading, error: queryError } = useQuery({
     queryKey: ["leaderboardDetails", leaderboardId, tfParam],
-    queryFn: () => getLeaderboardDetails(leaderboardId, userToken?.token, tfParam || "season"),
+    queryFn: () =>
+      getLeaderboardDetails(leaderboardId, userToken?.token, tfParam || "season"),
     enabled: !!userToken?.token,
   });
 
   const rankings = leaderboardData?.rankings || [];
   const userStatus = leaderboardData?.userStatus || { rank: null, percentile: null, message: null };
+
+  const schoolSubtitle = isSchoolLeaderboard
+    ? leaderboardData?.schoolName ??
+      leaderboardData?.schoolInstitution?.name ??
+      leaderboardData?.userStatus?.schoolName
+    : undefined;
 
   // Proper error state with dismiss support
   const [error, setError] = useState<string>("");
@@ -181,6 +191,13 @@ export default function Leaderboard() {
       color: themeColors.text,
       letterSpacing: -1.5,
       lineHeight: rMS(44),
+    },
+    heroSubtitle: {
+      fontSize: rMS(14),
+      fontWeight: "600",
+      color: themeColors.textSecondary,
+      marginTop: rV(8),
+      lineHeight: rMS(20),
     },
     heroSubtext: {
       fontSize: rMS(12),
@@ -397,10 +414,17 @@ export default function Leaderboard() {
           <Text style={styles.heroTitle}>
             {leaderboardName.toUpperCase().replace(" ", "\n")}
           </Text>
-          <Text style={styles.heroSubtext}>
-            The elite echelon of learners. Every point represents a boundary
-            pushed and a concept mastered.
-          </Text>
+          {schoolSubtitle ? (
+            <Text style={styles.heroSubtitle} numberOfLines={2}>
+              {schoolSubtitle}
+            </Text>
+          ) : null}
+          {!isSchoolLeaderboard ? (
+            <Text style={styles.heroSubtext}>
+              The elite echelon of learners. Every point represents a boundary
+              pushed and a concept mastered.
+            </Text>
+          ) : null}
         </Animated.View>
 
         {/* Column Headers */}

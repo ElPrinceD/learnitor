@@ -647,7 +647,10 @@ const Profile = () => {
                     pathname: "/(game)/LeaderboardDetail",
                     params: {
                       id: item.label.toLowerCase(),
-                      name: item.label,
+                      name:
+                        item.label.toLowerCase() === "school"
+                          ? "School Ranking"
+                          : item.label,
                       timeframe: "season",
                     },
                   })

@@ -13,6 +13,7 @@ import { useColorScheme } from "../../components/useColorScheme";
 import { useClientOnlyValue } from "../../components/useClientOnlyValue";
 import { rMS } from "../../constants";
 import { useAuth } from "../../store/authStore";
+import { horizontalTabTransition } from "../../navigation/tabSlideTransition";
 
 // Lucide icon map — Lucide doesn't have outline variants, so we use
 // the same icon but vary strokeWidth (1.5 for inactive, 2.5 for active)
@@ -87,6 +88,7 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
+        ...horizontalTabTransition,
         tabBarHideOnKeyboard: true,
         tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
         tabBarLabelStyle: { fontSize: 13 },

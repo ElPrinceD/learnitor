@@ -131,6 +131,26 @@ export default function LeaderboardDetail() {
       resolvedLeaderboardId.toLowerCase()
     );
 
+  const isSchoolLeaderboard =
+    typeof resolvedLeaderboardId === "string" &&
+    resolvedLeaderboardId.toLowerCase() === "school";
+
+  const heroTitle = isSchoolLeaderboard ? "School Ranking" : name;
+
+  const schoolSubtitle = useMemo(() => {
+    if (!isSchoolLeaderboard) return undefined;
+    return (
+      leaderboardData?.schoolName ??
+      leaderboardData?.schoolInstitution?.name ??
+      leaderboardData?.userStatus?.schoolName
+    );
+  }, [
+    isSchoolLeaderboard,
+    leaderboardData?.schoolName,
+    leaderboardData?.schoolInstitution?.name,
+    leaderboardData?.userStatus?.schoolName,
+  ]);
+
   // SW column: custom squads when the API sends `weeklyExamScore`, and
   // always for world / country / school (same table shape as squads; values
   // show once the backend includes the field on those endpoints too).
@@ -377,7 +397,11 @@ export default function LeaderboardDetail() {
           contentContainerStyle={styles.h2hScrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <LeaderboardHero timeframe={timeframe} name={name} />
+          <LeaderboardHero
+            timeframe={timeframe}
+            name={heroTitle}
+            subtitle={schoolSubtitle}
+          />
           <H2HBattlesPanel matches={matches} standings={standings} />
         </ScrollView>
       ) : (
@@ -390,7 +414,11 @@ export default function LeaderboardDetail() {
         // remount instead of animating to it).
         <View style={styles.nonKnockoutBody}>
           <View style={styles.fixedHeader}>
-            <LeaderboardHero timeframe={timeframe} name={name} />
+            <LeaderboardHero
+              timeframe={timeframe}
+              name={heroTitle}
+              subtitle={schoolSubtitle}
+            />
             <LeaderboardTabs
               activeTab={activeTab}
               onTabChange={setActiveTab}
