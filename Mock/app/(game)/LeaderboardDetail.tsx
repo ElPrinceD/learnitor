@@ -106,10 +106,23 @@ export default function LeaderboardDetail() {
   });
 
   // ── Derived data ────────────────────────────────────────────────────────
-  const rankings = useMemo(
-    () => leaderboardData?.rankings ?? [],
-    [leaderboardData?.rankings]
-  );
+  const rankings = useMemo(() => {
+    const list = leaderboardData?.rankings ?? [];
+    return list.map((item) => {
+      const isCurrentUser =
+        item.id === userInfo?.user.id ||
+        item.username === userInfo?.user.username ||
+        item.username === "You";
+
+      if (isCurrentUser) {
+        return {
+          ...item,
+          username: userInfo?.user.username || item.username,
+        };
+      }
+      return item;
+    });
+  }, [leaderboardData?.rankings, userInfo?.user.id, userInfo?.user.username]);
   const squadInfo = leaderboardData?.squadInfo;
   const resolvedLeaderboardId = Array.isArray(id) ? id[0] : id;
   const isGlobalLeaderboard =
@@ -128,12 +141,48 @@ export default function LeaderboardDetail() {
     [isGlobalLeaderboard, rankings]
   );
 
-  const matches = useMemo(() => h2hMatchesData ?? [], [h2hMatchesData]);
-  const standings = useMemo(() => h2hStandingsData ?? [], [h2hStandingsData]);
-  const knockoutRounds = useMemo(
-    () => knockoutBracketData?.rounds ?? [],
-    [knockoutBracketData?.rounds]
-  );
+  const matches = useMemo(() => {
+    const list = h2hMatchesData ?? [];
+    return list.map((m) => {
+      let p1 = m.player1;
+      let p2 = m.player2;
+      if (p1 === "You" || p1 === userInfo?.user.username) {
+        p1 = userInfo?.user.username || p1;
+      }
+      if (p2 === "You" || p2 === userInfo?.user.username) {
+        p2 = userInfo?.user.username || p2;
+      }
+      return { ...m, player1: p1, player2: p2 };
+    });
+  }, [h2hMatchesData, userInfo?.user.username]);
+
+  const standings = useMemo(() => {
+    const list = h2hStandingsData ?? [];
+    return list.map((s) => {
+      if (s.name === "You" || s.name === userInfo?.user.username) {
+        return { ...s, name: userInfo?.user.username || s.name };
+      }
+      return s;
+    });
+  }, [h2hStandingsData, userInfo?.user.username]);
+
+  const knockoutRounds = useMemo(() => {
+    const rounds = knockoutBracketData?.rounds ?? [];
+    return rounds.map((r) => ({
+      ...r,
+      matches: r.matches.map((m) => {
+        let p1 = m.player1;
+        let p2 = m.player2;
+        if (p1 === "You" || p1 === userInfo?.user.username) {
+          p1 = userInfo?.user.username || p1;
+        }
+        if (p2 === "You" || p2 === userInfo?.user.username) {
+          p2 = userInfo?.user.username || p2;
+        }
+        return { ...m, player1: p1, player2: p2 };
+      }),
+    }));
+  }, [knockoutBracketData?.rounds, userInfo?.user.username]);
 
   // ── Error state ─────────────────────────────────────────────────────────
   // Tracks which error string the user has already dismissed so the
