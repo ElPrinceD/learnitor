@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -8,6 +7,7 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import ScreenLoadingSpinner from "../../components/ScreenLoadingSpinner";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -89,8 +89,8 @@ export default function LeaderboardDetail() {
   const { data: knockoutBracketData, error: knockoutBracketError } = useQuery({
     queryKey: ["knockoutBracket", id],
     queryFn: () => getKnockoutBracket(userToken?.token, id),
-    enabled:
-      !!userToken?.token && !isKnockout && activeTab === "knockout",
+    // Prefetch eagerly so data is ready when the user switches tabs.
+    enabled: !!userToken?.token && !isKnockout,
   });
 
   const { data: h2hMatchesData, error: h2hMatchesError } = useQuery({
@@ -356,19 +356,7 @@ export default function LeaderboardDetail() {
     [themeColors, insets.top]
   );
 
-  // ── Loading (non-knockout) ──────────────────────────────────────────────
-  if (!isKnockout && rankingsLoading) {
-    return (
-      <View style={[styles.container, styles.loadingContainer]}>
-        <StatusBar
-          barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
-          backgroundColor={themeColors.background}
-        />
-        <ActivityIndicator size="large" color={themeColors.tint} />
-        <Text style={styles.loadingText}>Loading Rankings...</Text>
-      </View>
-    );
-  }
+  // No full-screen loading gate — page shell renders instantly.
 
   const showSettings = !!squadInfo?.isCreator;
 
@@ -429,11 +417,15 @@ export default function LeaderboardDetail() {
               switch) — RankingRow has no entering animations, so a fresh
               mount is silent and react-query keeps the data cached. */}
           {activeTab === "rankings" && (
-            <RankingsList
-              rankings={rankings}
-              isMe={isMe}
-              showWeeklyExamColumn={showWeeklyExamColumn}
-            />
+            rankingsLoading ? (
+              <ScreenLoadingSpinner />
+            ) : (
+              <RankingsList
+                rankings={rankings}
+                isMe={isMe}
+                showWeeklyExamColumn={showWeeklyExamColumn}
+              />
+            )
           )}
 
           {/* Knockout sub-tab. LAZY-MOUNTED on first visit, then kept

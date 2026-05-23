@@ -36,63 +36,6 @@ const SquadRow: React.FC<SquadRowProps> = memo(
       onPress(item.id, item.name);
     }, [onPress, item.id, item.name]);
 
-    const styles = StyleSheet.create({
-      squadItem: {
-        backgroundColor: themeColors.cardGlass,
-        padding: rMS(12),
-        borderRadius: rMS(24),
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        marginBottom: rV(6),
-        borderWidth: 1,
-        borderColor: themeColors.border + "40",
-      },
-      squadItemLeft: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: rS(12),
-      },
-      squadIcon: {
-        width: rMS(32),
-        height: rMS(32),
-        borderRadius: rMS(16),
-        backgroundColor: themeColors.tint + "20",
-        alignItems: "center",
-        justifyContent: "center",
-      },
-      squadName: {
-        fontSize: SIZES.small,
-        fontWeight: "700",
-        color: themeColors.text,
-      },
-      squadMembers: {
-        fontSize: SIZES.small,
-        color: themeColors.textSecondary,
-      },
-      squadItemRight: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: rS(6),
-      },
-      indicatorBox: {
-        width: rMS(18),
-        height: rMS(18),
-        alignItems: "center",
-        justifyContent: "center",
-      },
-      rankNumber: {
-        fontSize: rMS(12),
-        fontWeight: "bold",
-        color: themeColors.tint,
-      },
-      rankPlaceholder: {
-        fontSize: rMS(12),
-        fontWeight: "bold",
-        color: themeColors.textSecondary,
-      },
-    });
-
     const memberCount = item.memberCount;
     const memberLabel =
       memberCount != null
@@ -102,18 +45,38 @@ const SquadRow: React.FC<SquadRowProps> = memo(
 
     return (
       <TouchableOpacity
-        style={styles.squadItem}
+        style={[
+          styles.squadItem,
+          {
+            backgroundColor: themeColors.cardGlass,
+            borderColor: themeColors.border + "40",
+          },
+        ]}
         onPress={handlePress}
         activeOpacity={0.7}
       >
         <View style={styles.squadItemLeft}>
-          <View style={styles.squadIcon}>
+          <View
+            style={[
+              styles.squadIcon,
+              { backgroundColor: themeColors.tint + "20" },
+            ]}
+          >
             <Users size={18} color={themeColors.tint} />
           </View>
           <View>
-            <Text style={styles.squadName}>{item.name}</Text>
+            <Text style={[styles.squadName, { color: themeColors.text }]}>
+              {item.name}
+            </Text>
             {memberLabel && (
-              <Text style={styles.squadMembers}>{memberLabel}</Text>
+              <Text
+                style={[
+                  styles.squadMembers,
+                  { color: themeColors.textSecondary },
+                ]}
+              >
+                {memberLabel}
+              </Text>
             )}
           </View>
         </View>
@@ -122,9 +85,18 @@ const SquadRow: React.FC<SquadRowProps> = memo(
             <Minus size={12} color={themeColors.textSecondary} />
           </View>
           {hasRank ? (
-            <Text style={styles.rankNumber}>#{item.userRank}</Text>
+            <Text style={[styles.rankNumber, { color: themeColors.tint }]}>
+              #{item.userRank}
+            </Text>
           ) : (
-            <Text style={styles.rankPlaceholder}>—</Text>
+            <Text
+              style={[
+                styles.rankPlaceholder,
+                { color: themeColors.textSecondary },
+              ]}
+            >
+              —
+            </Text>
           )}
           <ChevronRight size={16} color={themeColors.textSecondary} />
         </View>
@@ -171,76 +143,30 @@ const StudySquadsSection: React.FC<Props> = ({
     []
   );
 
-  const styles = StyleSheet.create({
-    squadSection: {
-      marginBottom: rV(28),
-    },
-    sectionHeader: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: rV(14),
-    },
-    sectionTitle: {
-      fontSize: rMS(16),
-      fontWeight: "800",
-      color: themeColors.text,
-      letterSpacing: -0.2,
-    },
-    sectionSeeAll: {
-      fontSize: SIZES.small,
-      color: themeColors.tint,
-      fontWeight: "700",
-    },
-    sectionRightActions: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: rS(12),
-    },
-    squadAddBtn: {
-      width: rMS(32),
-      height: rMS(32),
-      borderRadius: rMS(16),
-      backgroundColor: themeColors.tint + "15",
-      alignItems: "center",
-      justifyContent: "center",
-      borderWidth: 1,
-      borderColor: themeColors.tint + "30",
-    },
-    squadEmpty: {
-      backgroundColor: themeColors.cardGlass,
-      borderRadius: rMS(28),
-      padding: rMS(16),
-      alignItems: "center",
-      borderWidth: 1,
-      borderColor: themeColors.border + "40",
-    },
-    squadEmptyText: {
-      color: themeColors.textSecondary,
-      fontSize: SIZES.small,
-      textAlign: "center",
-      marginTop: rV(6),
-      marginBottom: rV(12),
-    },
-    listWrapper: {
-      // FlashList v2 inside a ScrollView with scrollEnabled=false; this
-      // wrapper lets FlashList measure and recycle cells.
-      minHeight: SQUAD_ROW_HEIGHT,
-    },
-  });
-
   return (
     <Animated.View entering={enterAnim(200)} style={styles.squadSection}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Study Squads</Text>
+        <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+          Study Squads
+        </Text>
         <View style={styles.sectionRightActions}>
           {showSeeAll && (
             <TouchableOpacity onPress={onOpenAllSquads}>
-              <Text style={styles.sectionSeeAll}>See All</Text>
+              <Text
+                style={[styles.sectionSeeAll, { color: themeColors.tint }]}
+              >
+                See All
+              </Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
-            style={styles.squadAddBtn}
+            style={[
+              styles.squadAddBtn,
+              {
+                backgroundColor: themeColors.tint + "15",
+                borderColor: themeColors.tint + "30",
+              },
+            ]}
             onPress={onAddSquad}
             activeOpacity={0.7}
           >
@@ -250,13 +176,26 @@ const StudySquadsSection: React.FC<Props> = ({
       </View>
 
       {showEmptyState ? (
-        <View style={styles.squadEmpty}>
+        <View
+          style={[
+            styles.squadEmpty,
+            {
+              backgroundColor: themeColors.cardGlass,
+              borderColor: themeColors.border + "40",
+            },
+          ]}
+        >
           <Users
             size={28}
             color={themeColors.textSecondary}
             strokeWidth={1.5}
           />
-          <Text style={styles.squadEmptyText}>
+          <Text
+            style={[
+              styles.squadEmptyText,
+              { color: themeColors.textSecondary },
+            ]}
+          >
             Join or create a study squad to compete with friends
           </Text>
         </View>
@@ -275,5 +214,103 @@ const StudySquadsSection: React.FC<Props> = ({
     </Animated.View>
   );
 };
+
+const styles = StyleSheet.create({
+  squadSection: {
+    marginBottom: rV(28),
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: rV(14),
+  },
+  sectionTitle: {
+    fontSize: rMS(16),
+    fontWeight: "800",
+    letterSpacing: -0.2,
+  },
+  sectionSeeAll: {
+    fontSize: SIZES.small,
+    fontWeight: "700",
+  },
+  sectionRightActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: rS(12),
+  },
+  squadAddBtn: {
+    width: rMS(32),
+    height: rMS(32),
+    borderRadius: rMS(16),
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+  },
+  squadEmpty: {
+    borderRadius: rMS(28),
+    padding: rMS(16),
+    alignItems: "center",
+    borderWidth: 1,
+  },
+  squadEmptyText: {
+    fontSize: SIZES.small,
+    textAlign: "center",
+    marginTop: rV(6),
+    marginBottom: rV(12),
+  },
+  listWrapper: {
+    // FlashList v2 inside a ScrollView with scrollEnabled=false; this
+    // wrapper lets FlashList measure and recycle cells.
+    minHeight: SQUAD_ROW_HEIGHT,
+  },
+  squadItem: {
+    padding: rMS(12),
+    borderRadius: rMS(24),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: rV(6),
+    borderWidth: 1,
+  },
+  squadItemLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: rS(12),
+  },
+  squadIcon: {
+    width: rMS(32),
+    height: rMS(32),
+    borderRadius: rMS(16),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  squadName: {
+    fontSize: SIZES.small,
+    fontWeight: "700",
+  },
+  squadMembers: {
+    fontSize: SIZES.small,
+  },
+  squadItemRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: rS(6),
+  },
+  indicatorBox: {
+    width: rMS(18),
+    height: rMS(18),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rankNumber: {
+    fontSize: rMS(12),
+    fontWeight: "bold",
+  },
+  rankPlaceholder: {
+    fontSize: rMS(12),
+    fontWeight: "bold",
+  },
+});
 
 export default memo(StudySquadsSection);

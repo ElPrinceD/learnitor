@@ -22,6 +22,7 @@ import { FadeInDown } from "react-native-reanimated";
 import Toast from "react-native-root-toast";
 
 import { useAuth } from "../../../components/AuthContext";
+import ScreenLoadingSpinner from "../../../components/ScreenLoadingSpinner";
 import Colors from "../../../constants/Colors";
 import { rS, rV } from "../../../constants";
 import {
@@ -125,7 +126,7 @@ export default function PlayScreen() {
   const squadSheetRef = useRef<BottomSheetModal | null>(null);
 
   // ── Queries ─────────────────────────────────────────────────────────────
-  const { data: rankingsQuery } = useQuery({
+  const { data: rankingsQuery, isLoading: rankingsLoading } = useQuery({
     queryKey: ["rankingsSummary"],
     queryFn: () => getRankingsSummary(userToken?.token),
     enabled: !!userToken?.token,
@@ -135,7 +136,7 @@ export default function PlayScreen() {
     [rankingsQuery]
   );
 
-  const { data: customLeaderboardsQuery } = useQuery({
+  const { data: customLeaderboardsQuery, isLoading: leaderboardsLoading } = useQuery({
     queryKey: ["customLeaderboards"],
     queryFn: () => getCustomLeaderboards(userToken?.token),
     enabled: !!userToken?.token,
@@ -344,6 +345,9 @@ export default function PlayScreen() {
         keyboardAvoiding: {
           flex: 1,
         },
+        hidden: {
+          display: "none" as const,
+        },
       }),
     [themeColors.background, insets.top, insets.bottom]
   );
@@ -387,30 +391,41 @@ export default function PlayScreen() {
             enterAnim={enterAnim}
           />
 
-          {activeMode === "rankings" ? (
-            <>
-              <StudySquadsSection
-                squads={rankingsSquads}
-                totalCustomCount={customLeaderboards.length}
-                onOpenSquad={openLeaderboard}
-                onOpenAllSquads={openFullLeaderboard}
-                onAddSquad={openSquadSheet}
-                enterAnim={enterAnim}
-              />
+          {/* Both tabs stay mounted; only the active one is visible.
+              This prevents unmount/remount jank on tab toggle. */}
+          <View style={activeMode !== "rankings" ? containerStyles.hidden : undefined}>
+            {rankingsLoading || leaderboardsLoading ? (
+              <ScreenLoadingSpinner />
+            ) : (
+              <>
+                <StudySquadsSection
+                  squads={rankingsSquads}
+                  totalCustomCount={customLeaderboards.length}
+                  onOpenSquad={openLeaderboard}
+                  onOpenAllSquads={openFullLeaderboard}
+                  onAddSquad={openSquadSheet}
+                  enterAnim={enterAnim}
+                />
 
-              <YourRankCards
-                rankings={rankings}
-                onOpenLeaderboard={openLeaderboard}
+                <YourRankCards
+                  rankings={rankings}
+                  onOpenLeaderboard={openLeaderboard}
+                  enterAnim={enterAnim}
+                />
+              </>
+            )}
+          </View>
+          <View style={activeMode !== "knockout" ? containerStyles.hidden : undefined}>
+            {leaderboardsLoading ? (
+              <ScreenLoadingSpinner />
+            ) : (
+              <KnockoutSquadsList
+                squads={knockoutSquads}
+                onOpenSquad={openKnockoutLeaderboard}
                 enterAnim={enterAnim}
               />
-            </>
-          ) : (
-            <KnockoutSquadsList
-              squads={knockoutSquads}
-              onOpenSquad={openKnockoutLeaderboard}
-              enterAnim={enterAnim}
-            />
-          )}
+            )}
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
 

@@ -103,69 +103,12 @@ const YourRankCards: React.FC<Props> = ({
     [themeColors.textSecondary]
   );
 
-  const styles = StyleSheet.create({
-    sectionHeader: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: rV(14),
-    },
-    sectionTitle: {
-      fontSize: rMS(16),
-      fontWeight: "800",
-      color: themeColors.text,
-      letterSpacing: -0.2,
-    },
-    standingCard: {
-      backgroundColor: themeColors.cardGlass,
-      padding: rMS(10),
-      borderRadius: rMS(20),
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: rV(6),
-      borderWidth: 1,
-      borderColor: themeColors.border + "40",
-    },
-    standingCardLeft: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: rS(10),
-    },
-    standingIconBox: {
-      width: rMS(32),
-      height: rMS(32),
-      borderRadius: rMS(16),
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    standingName: {
-      fontSize: rMS(12),
-      fontWeight: "800",
-      color: themeColors.text,
-    },
-    standingCardRight: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: rS(6),
-    },
-    standingRank: {
-      fontSize: rMS(12),
-      fontWeight: "bold",
-      color: themeColors.tint,
-    },
-    indicatorBox: {
-      width: rMS(18),
-      height: rMS(18),
-      alignItems: "center",
-      justifyContent: "center",
-    },
-  });
-
   return (
     <Animated.View entering={enterAnim(300)}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Your Rank</Text>
+        <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+          Your Rank
+        </Text>
       </View>
 
       {items.map((item, index) => (
@@ -174,7 +117,13 @@ const YourRankCards: React.FC<Props> = ({
           entering={enterAnim(350 + index * 50)}
         >
           <TouchableOpacity
-            style={styles.standingCard}
+            style={[
+              styles.standingCard,
+              {
+                backgroundColor: themeColors.cardGlass,
+                borderColor: themeColors.border + "40",
+              },
+            ]}
             onPress={() => onOpenLeaderboard(item.id, item.name)}
             activeOpacity={0.7}
           >
@@ -187,12 +136,18 @@ const YourRankCards: React.FC<Props> = ({
               >
                 <item.IconComponent size={18} color="#fff" />
               </View>
-              <Text style={styles.standingName}>{item.name}</Text>
+              <Text style={[styles.standingName, { color: themeColors.text }]}>
+                {item.name}
+              </Text>
             </View>
             <View style={styles.standingCardRight}>
               {renderRankIndicator(item.movement)}
               {item.rank && (
-                <Text style={styles.standingRank}>{item.rank}</Text>
+                <Text
+                  style={[styles.standingRank, { color: themeColors.tint }]}
+                >
+                  {item.rank}
+                </Text>
               )}
               <ChevronRight size={16} color={themeColors.textSecondary} />
             </View>
@@ -202,5 +157,59 @@ const YourRankCards: React.FC<Props> = ({
     </Animated.View>
   );
 };
+
+const styles = StyleSheet.create({
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: rV(14),
+  },
+  sectionTitle: {
+    fontSize: rMS(16),
+    fontWeight: "800",
+    letterSpacing: -0.2,
+  },
+  standingCard: {
+    padding: rMS(10),
+    borderRadius: rMS(20),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: rV(6),
+    borderWidth: 1,
+  },
+  standingCardLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: rS(10),
+  },
+  standingIconBox: {
+    width: rMS(32),
+    height: rMS(32),
+    borderRadius: rMS(16),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  standingName: {
+    fontSize: rMS(12),
+    fontWeight: "800",
+  },
+  standingCardRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: rS(6),
+  },
+  standingRank: {
+    fontSize: rMS(12),
+    fontWeight: "bold",
+  },
+  indicatorBox: {
+    width: rMS(18),
+    height: rMS(18),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});
 
 export default memo(YourRankCards);

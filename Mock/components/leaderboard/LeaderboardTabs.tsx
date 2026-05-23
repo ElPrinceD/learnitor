@@ -59,46 +59,23 @@ const LeaderboardTabs: React.FC<Props> = ({ activeTab, onTabChange }) => {
     [onTabChange, tabIndicatorX]
   );
 
-  const styles = StyleSheet.create({
-    subTabRow: {
-      flexDirection: "row",
-      backgroundColor: themeColors.cardGlass,
-      borderRadius: rMS(24),
-      padding: rMS(4),
-      marginBottom: rV(20),
-      borderWidth: 1,
-      borderColor: themeColors.border + "40",
-      position: "relative",
-    },
-    subTabIndicator: {
-      position: "absolute",
-      top: rMS(4),
-      bottom: rMS(4),
-      left: rMS(4),
-      width: "50%",
-      backgroundColor: themeColors.tint,
-      borderRadius: rMS(22),
-    },
-    subTab: {
-      flex: 1,
-      paddingVertical: rV(10),
-      borderRadius: rMS(22),
-      alignItems: "center",
-      zIndex: 1,
-    },
-    subTabText: {
-      fontSize: rMS(13),
-      fontWeight: "800",
-      color: themeColors.textSecondary,
-    },
-    subTabTextActive: {
-      color: "#fff",
-    },
-  });
-
   return (
-    <View style={styles.subTabRow}>
-      <Animated.View style={[styles.subTabIndicator, tabAnimStyle]} />
+    <View
+      style={[
+        styles.subTabRow,
+        {
+          backgroundColor: themeColors.cardGlass,
+          borderColor: themeColors.border + "40",
+        },
+      ]}
+    >
+      <Animated.View
+        style={[
+          styles.subTabIndicator,
+          { backgroundColor: themeColors.tint },
+          tabAnimStyle,
+        ]}
+      />
       {TABS.map((tab, idx) => (
         <TouchableOpacity
           key={tab.key}
@@ -109,6 +86,7 @@ const LeaderboardTabs: React.FC<Props> = ({ activeTab, onTabChange }) => {
           <Text
             style={[
               styles.subTabText,
+              { color: themeColors.textSecondary },
               activeTab === tab.key && styles.subTabTextActive,
             ]}
           >
@@ -119,5 +97,38 @@ const LeaderboardTabs: React.FC<Props> = ({ activeTab, onTabChange }) => {
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  subTabRow: {
+    flexDirection: "row",
+    borderRadius: rMS(24),
+    padding: rMS(4),
+    marginBottom: rV(20),
+    borderWidth: 1,
+    position: "relative",
+  },
+  subTabIndicator: {
+    position: "absolute",
+    top: rMS(4),
+    bottom: rMS(4),
+    left: rMS(4),
+    width: "50%",
+    borderRadius: rMS(22),
+  },
+  subTab: {
+    flex: 1,
+    paddingVertical: rV(10),
+    borderRadius: rMS(22),
+    alignItems: "center",
+    zIndex: 1,
+  },
+  subTabText: {
+    fontSize: rMS(13),
+    fontWeight: "800",
+  },
+  subTabTextActive: {
+    color: "#fff",
+  },
+});
 
 export default memo(LeaderboardTabs);

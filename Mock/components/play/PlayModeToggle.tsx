@@ -53,47 +53,24 @@ const PlayModeToggle: React.FC<Props> = ({
     onChange("knockout");
   }, [onChange]);
 
-  const styles = StyleSheet.create({
-    toggleContainer: {
-      flexDirection: "row",
-      backgroundColor: themeColors.cardGlass,
-      borderRadius: rMS(24),
-      padding: rMS(3),
-      marginBottom: rV(20),
-      borderWidth: 1,
-      borderColor: themeColors.border + "40",
-      position: "relative",
-    },
-    toggleIndicator: {
-      position: "absolute",
-      top: rMS(3),
-      bottom: rMS(3),
-      left: rMS(3),
-      width: "50%",
-      backgroundColor: themeColors.tint,
-      borderRadius: rMS(22),
-    },
-    toggleButton: {
-      flex: 1,
-      paddingVertical: rV(10),
-      borderRadius: rMS(22),
-      alignItems: "center",
-      justifyContent: "center",
-      zIndex: 1,
-    },
-    toggleText: {
-      fontSize: rMS(13),
-      fontWeight: "700",
-      color: themeColors.textSecondary,
-    },
-    toggleTextActive: {
-      color: "#fff",
-    },
-  });
-
   return (
-    <Animated.View entering={enterAnim(150)} style={styles.toggleContainer}>
-      <Animated.View style={[styles.toggleIndicator, toggleAnimatedStyle]} />
+    <Animated.View
+      entering={enterAnim(150)}
+      style={[
+        styles.toggleContainer,
+        {
+          backgroundColor: themeColors.cardGlass,
+          borderColor: themeColors.border + "40",
+        },
+      ]}
+    >
+      <Animated.View
+        style={[
+          styles.toggleIndicator,
+          { backgroundColor: themeColors.tint },
+          toggleAnimatedStyle,
+        ]}
+      />
       <TouchableOpacity
         style={styles.toggleButton}
         onPress={handlePressRankings}
@@ -102,6 +79,7 @@ const PlayModeToggle: React.FC<Props> = ({
         <Text
           style={[
             styles.toggleText,
+            { color: themeColors.textSecondary },
             activeMode === "rankings" && styles.toggleTextActive,
           ]}
         >
@@ -116,6 +94,7 @@ const PlayModeToggle: React.FC<Props> = ({
         <Text
           style={[
             styles.toggleText,
+            { color: themeColors.textSecondary },
             activeMode === "knockout" && styles.toggleTextActive,
           ]}
         >
@@ -125,5 +104,39 @@ const PlayModeToggle: React.FC<Props> = ({
     </Animated.View>
   );
 };
+
+const styles = StyleSheet.create({
+  toggleContainer: {
+    flexDirection: "row",
+    borderRadius: rMS(24),
+    padding: rMS(3),
+    marginBottom: rV(20),
+    borderWidth: 1,
+    position: "relative",
+  },
+  toggleIndicator: {
+    position: "absolute",
+    top: rMS(3),
+    bottom: rMS(3),
+    left: rMS(3),
+    width: "50%",
+    borderRadius: rMS(22),
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: rV(10),
+    borderRadius: rMS(22),
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1,
+  },
+  toggleText: {
+    fontSize: rMS(13),
+    fontWeight: "700",
+  },
+  toggleTextActive: {
+    color: "#fff",
+  },
+});
 
 export default memo(PlayModeToggle);

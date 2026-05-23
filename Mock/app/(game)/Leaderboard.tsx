@@ -8,8 +8,8 @@ import {
   useColorScheme,
   TouchableOpacity,
   StatusBar,
-  ActivityIndicator,
 } from "react-native";
+import ScreenLoadingSpinner from "../../components/ScreenLoadingSpinner";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowLeft } from "lucide-react-native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -354,18 +354,7 @@ export default function Leaderboard() {
     },
   });
 
-  if (loading) {
-    return (
-      <View style={[styles.container, styles.loadingContainer]}>
-        <StatusBar
-          barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
-          backgroundColor={themeColors.background}
-        />
-        <ActivityIndicator size="large" color={themeColors.tint} />
-        <Text style={styles.loadingText}>Loading Rankings...</Text>
-      </View>
-    );
-  }
+  // No full-screen loading gate — page shell renders instantly.
 
   return (
     <View style={styles.container}>
@@ -444,45 +433,49 @@ export default function Leaderboard() {
         </Animated.View>
 
         {/* Rankings List */}
-        {rankings.map((item, index) => (
-          <Animated.View
-            key={item.id}
-            entering={enterAnim(150 + index * 50)}
-          >
-              <View style={styles.rankCard}>
-                <View style={styles.rankCardLeft}>
-                  <Text
-                    style={[
-                      styles.rankNumber,
-                      { color: getRankColor(item.rank) },
-                    ]}
-                  >
-                    {formatRank(item.rank)}
-                  </Text>
-                  <Image
-                    source={
-                      item.avatarUrl
-                        ? { uri: item.avatarUrl }
-                        : require("../../assets/images/profile-placeholder.png")
-                    }
-                    style={styles.rankAvatar}
-                  />
-                  <View style={styles.rankInfo}>
-                    <Text style={styles.rankName}>{item.username}</Text>
-                    {item.badge && (
-                      <Text style={styles.rankBadge}>{item.badge}</Text>
-                    )}
+        {loading ? (
+          <ScreenLoadingSpinner />
+        ) : (
+          rankings.map((item, index) => (
+            <Animated.View
+              key={item.id}
+              entering={enterAnim(150 + index * 50)}
+            >
+                <View style={styles.rankCard}>
+                  <View style={styles.rankCardLeft}>
+                    <Text
+                      style={[
+                        styles.rankNumber,
+                        { color: getRankColor(item.rank) },
+                      ]}
+                    >
+                      {formatRank(item.rank)}
+                    </Text>
+                    <Image
+                      source={
+                        item.avatarUrl
+                          ? { uri: item.avatarUrl }
+                          : require("../../assets/images/profile-placeholder.png")
+                      }
+                      style={styles.rankAvatar}
+                    />
+                    <View style={styles.rankInfo}>
+                      <Text style={styles.rankName}>{item.username}</Text>
+                      {item.badge && (
+                        <Text style={styles.rankBadge}>{item.badge}</Text>
+                      )}
+                    </View>
                   </View>
+                  {showWeeklyExamColumn && (
+                    <Text style={styles.rankSW}>
+                      {formatWeeklyExamSW(item.weeklyExamScore)}
+                    </Text>
+                  )}
+                  <Text style={styles.rankScore}>{formatScore(item.score)}</Text>
                 </View>
-                {showWeeklyExamColumn && (
-                  <Text style={styles.rankSW}>
-                    {formatWeeklyExamSW(item.weeklyExamScore)}
-                  </Text>
-                )}
-                <Text style={styles.rankScore}>{formatScore(item.score)}</Text>
-              </View>
-          </Animated.View>
-        ))}
+            </Animated.View>
+          ))
+        )}
 
         {/* User Status Card with Glassmorphism */}
         {userStatus.rank && (

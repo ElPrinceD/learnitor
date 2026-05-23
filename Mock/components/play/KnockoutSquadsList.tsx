@@ -33,66 +33,6 @@ const KnockoutCupCard: React.FC<KnockoutCupCardProps> = memo(
       onPress(item.id, item.name, "knockout");
     }, [onPress, item.id, item.name]);
 
-    const styles = StyleSheet.create({
-      cupCard: {
-        backgroundColor: themeColors.cardGlass,
-        borderRadius: rMS(20),
-        padding: rMS(12),
-        marginBottom: rV(8),
-        borderWidth: 1,
-        borderColor: themeColors.border + "40",
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-      },
-      cupCardLeft: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: rS(10),
-        flex: 1,
-      },
-      cupIcon: {
-        width: rMS(32),
-        height: rMS(32),
-        borderRadius: rMS(16),
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: themeColors.tint + "15",
-      },
-      cupName: {
-        fontSize: rMS(13),
-        fontWeight: "800",
-        color: themeColors.text,
-      },
-      cupWeek: {
-        fontSize: rMS(10),
-        color: themeColors.textSecondary,
-        fontWeight: "600",
-        marginTop: rV(2),
-      },
-      cupCardRight: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: rS(6),
-      },
-      indicatorBox: {
-        width: rMS(18),
-        height: rMS(18),
-        alignItems: "center",
-        justifyContent: "center",
-      },
-      rankNumber: {
-        fontSize: rMS(12),
-        fontWeight: "bold",
-        color: themeColors.tint,
-      },
-      rankPlaceholder: {
-        fontSize: rMS(12),
-        fontWeight: "bold",
-        color: themeColors.textSecondary,
-      },
-    });
-
     const memberCount = item.memberCount;
     const memberLabel =
       memberCount != null
@@ -102,17 +42,36 @@ const KnockoutCupCard: React.FC<KnockoutCupCardProps> = memo(
 
     return (
       <TouchableOpacity
-        style={styles.cupCard}
+        style={[
+          styles.cupCard,
+          {
+            backgroundColor: themeColors.cardGlass,
+            borderColor: themeColors.border + "40",
+          },
+        ]}
         onPress={handlePress}
         activeOpacity={0.7}
       >
         <View style={styles.cupCardLeft}>
-          <View style={styles.cupIcon}>
+          <View
+            style={[
+              styles.cupIcon,
+              { backgroundColor: themeColors.tint + "15" },
+            ]}
+          >
             <Zap size={18} color={themeColors.tint} />
           </View>
           <View>
-            <Text style={styles.cupName}>{item.name}</Text>
-            {memberLabel && <Text style={styles.cupWeek}>{memberLabel}</Text>}
+            <Text style={[styles.cupName, { color: themeColors.text }]}>
+              {item.name}
+            </Text>
+            {memberLabel && (
+              <Text
+                style={[styles.cupWeek, { color: themeColors.textSecondary }]}
+              >
+                {memberLabel}
+              </Text>
+            )}
           </View>
         </View>
         <View style={styles.cupCardRight}>
@@ -120,9 +79,18 @@ const KnockoutCupCard: React.FC<KnockoutCupCardProps> = memo(
             <Minus size={12} color={themeColors.textSecondary} />
           </View>
           {hasRank ? (
-            <Text style={styles.rankNumber}>#{item.userRank}</Text>
+            <Text style={[styles.rankNumber, { color: themeColors.tint }]}>
+              #{item.userRank}
+            </Text>
           ) : (
-            <Text style={styles.rankPlaceholder}>—</Text>
+            <Text
+              style={[
+                styles.rankPlaceholder,
+                { color: themeColors.textSecondary },
+              ]}
+            >
+              —
+            </Text>
           )}
           <ChevronRight size={18} color={themeColors.textSecondary} />
         </View>
@@ -163,53 +131,35 @@ const KnockoutSquadsList: React.FC<Props> = ({
     []
   );
 
-  const styles = StyleSheet.create({
-    sectionHeader: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: rV(14),
-    },
-    sectionTitle: {
-      fontSize: rMS(16),
-      fontWeight: "800",
-      color: themeColors.text,
-      letterSpacing: -0.2,
-    },
-    squadEmpty: {
-      backgroundColor: themeColors.cardGlass,
-      borderRadius: rMS(28),
-      padding: rMS(16),
-      alignItems: "center",
-      borderWidth: 1,
-      borderColor: themeColors.border + "40",
-    },
-    squadEmptyText: {
-      color: themeColors.textSecondary,
-      fontSize: SIZES.small,
-      textAlign: "center",
-      marginTop: rV(6),
-      marginBottom: rV(12),
-    },
-    listWrapper: {
-      minHeight: CUP_CARD_HEIGHT,
-    },
-  });
-
   return (
     <Animated.View entering={enterAnim(200)}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Squad Knockouts</Text>
+        <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+          Squad Knockouts
+        </Text>
       </View>
 
       {squads.length === 0 ? (
-        <View style={styles.squadEmpty}>
+        <View
+          style={[
+            styles.squadEmpty,
+            {
+              backgroundColor: themeColors.cardGlass,
+              borderColor: themeColors.border + "40",
+            },
+          ]}
+        >
           <Trophy
             size={28}
             color={themeColors.textSecondary}
             strokeWidth={1.5}
           />
-          <Text style={styles.squadEmptyText}>
+          <Text
+            style={[
+              styles.squadEmptyText,
+              { color: themeColors.textSecondary },
+            ]}
+          >
             Create an H2H League squad to compete in knockouts!
           </Text>
         </View>
@@ -219,7 +169,6 @@ const KnockoutSquadsList: React.FC<Props> = ({
             data={squads}
             renderItem={renderItem}
             keyExtractor={keyExtractor}
-            estimatedItemSize={CUP_CARD_HEIGHT}
             scrollEnabled={false}
             showsVerticalScrollIndicator={false}
           />
@@ -228,5 +177,84 @@ const KnockoutSquadsList: React.FC<Props> = ({
     </Animated.View>
   );
 };
+
+const styles = StyleSheet.create({
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: rV(14),
+  },
+  sectionTitle: {
+    fontSize: rMS(16),
+    fontWeight: "800",
+    letterSpacing: -0.2,
+  },
+  squadEmpty: {
+    borderRadius: rMS(28),
+    padding: rMS(16),
+    alignItems: "center",
+    borderWidth: 1,
+  },
+  squadEmptyText: {
+    fontSize: SIZES.small,
+    textAlign: "center",
+    marginTop: rV(6),
+    marginBottom: rV(12),
+  },
+  listWrapper: {
+    minHeight: CUP_CARD_HEIGHT,
+  },
+  cupCard: {
+    borderRadius: rMS(20),
+    padding: rMS(12),
+    marginBottom: rV(8),
+    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  cupCardLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: rS(10),
+    flex: 1,
+  },
+  cupIcon: {
+    width: rMS(32),
+    height: rMS(32),
+    borderRadius: rMS(16),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cupName: {
+    fontSize: rMS(13),
+    fontWeight: "800",
+  },
+  cupWeek: {
+    fontSize: rMS(10),
+    fontWeight: "600",
+    marginTop: rV(2),
+  },
+  cupCardRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: rS(6),
+  },
+  indicatorBox: {
+    width: rMS(18),
+    height: rMS(18),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rankNumber: {
+    fontSize: rMS(12),
+    fontWeight: "bold",
+  },
+  rankPlaceholder: {
+    fontSize: rMS(12),
+    fontWeight: "bold",
+  },
+});
 
 export default memo(KnockoutSquadsList);

@@ -34,6 +34,7 @@ import { queryClient } from "../../QueryClient";
 import ErrorMessage from "../../components/ErrorMessage";
 import EnrolledCoursesList from "../../components/EnrolledCoursesList";
 import ReanimatedCarouselWithAds from "../../components/ReanimatedCarouselWithAds";
+import ScreenLoadingSpinner from "../../components/ScreenLoadingSpinner";
 
 const Home: React.FC = () => {
   const { userToken, userInfo } = useAuth();
