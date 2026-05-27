@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useState } from "react";
+import React, { memo, useCallback, useState, useMemo, useEffect } from "react";
 import {
   Dimensions,
   StyleSheet,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   useColorScheme,
   View,
+  ScrollView,
 } from "react-native";
 import Animated, {
   Easing,
@@ -15,6 +16,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { Swords } from "lucide-react-native";
+import { useQuery } from "@tanstack/react-query";
 import Colors from "../../constants/Colors";
 import { rMS, rS, rV, useShadows } from "../../constants";
 import type {
@@ -22,6 +24,8 @@ import type {
   CustomH2HStanding,
 } from "../../services/LeaderboardApiCalls";
 import type { H2HTab } from "../play/types";
+import { useAuth } from "../../store/authStore";
+import { getWeeklyExamStatus } from "../../services/WeeklyExamApiCalls";
 
 // Translation distance for the sliding pill. Same math as LeaderboardTabs,
 // but the H2H toggle uses padding rMS(3) (rMS(6) combined) where the outer
@@ -73,8 +77,45 @@ const H2HBattlesPanel: React.FC<Props> = ({
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const shadow = useShadows();
+  const { userInfo, userToken } = useAuth();
+
+  const { data: examStatus } = useQuery({
+    queryKey: ["weeklyExamStatus"],
+    queryFn: () => getWeeklyExamStatus(userToken?.token),
+    enabled: !!userToken?.token,
+  });
 
   const [tab, setTab] = useState<H2HTab>(initialTab);
+
+  const uniqueWeeks = useMemo(() => {
+    const weeks = new Set<number>();
+    matches.forEach((m) => {
+      if (m.round != null) {
+        weeks.add(m.round);
+      }
+    });
+    return Array.from(weeks).sort((a, b) => a - b);
+  }, [matches]);
+
+  const [selectedWeek, setSelectedWeek] = useState<number | "all">("all");
+
+  useEffect(() => {
+    if (uniqueWeeks.length > 0) {
+      const currentWeekNum = examStatus?.currentWeek;
+      if (currentWeekNum != null && uniqueWeeks.includes(currentWeekNum)) {
+        setSelectedWeek(currentWeekNum);
+      } else {
+        setSelectedWeek(uniqueWeeks[uniqueWeeks.length - 1]);
+      }
+    } else {
+      setSelectedWeek("all");
+    }
+  }, [uniqueWeeks, examStatus?.currentWeek]);
+
+  const filteredMatches = useMemo(() => {
+    if (selectedWeek === "all") return matches;
+    return matches.filter((m) => m.round === selectedWeek);
+  }, [matches, selectedWeek]);
 
   // Sliding pill indicator: 0 = Matches (left), PILL_TRANSLATE_X = Standings
   // (right). Driven via Reanimated so the slide runs on the UI thread.
@@ -160,78 +201,101 @@ const H2HBattlesPanel: React.FC<Props> = ({
       overflow: "hidden",
       ...shadow.light,
     },
+    myMatchCard: {
+      backgroundColor: themeColors.tint + "1c",
+      borderColor: themeColors.tint + "60",
+      borderWidth: 1.5,
+    },
+  
     matchCardInner: {
+      paddingVertical: rV(16),
+      paddingHorizontal: rMS(16),
+    },
+    matchTopRow: {
       flexDirection: "row",
       alignItems: "center",
-      paddingVertical: rV(14),
-      paddingHorizontal: rMS(14),
+      justifyContent: "space-between",
     },
-    matchSwBadge: {
-      backgroundColor: themeColors.tint + "14",
-      borderRadius: rMS(10),
-      paddingHorizontal: rMS(10),
-      paddingVertical: rV(6),
-      alignItems: "center",
-      justifyContent: "center",
-      marginRight: rS(12),
-      minWidth: rMS(44),
-    },
-    matchSwText: {
-      fontSize: rMS(9),
-      fontWeight: "800",
-      color: themeColors.tint,
-      letterSpacing: 0.8,
-    },
-    matchSwNumber: {
-      fontSize: rMS(16),
-      fontWeight: "900",
-      color: themeColors.tint,
-      lineHeight: rMS(20),
-    },
-    matchBody: {
+    player1Block: {
       flex: 1,
+      alignItems: "flex-end",
+      marginRight: rS(10),
     },
-    matchPlayers: {
+    player2Block: {
+      flex: 1,
+      alignItems: "flex-start",
+      marginLeft: rS(10),
+    },
+    playerNameText: {
       fontSize: rMS(13),
       fontWeight: "800",
-      color: themeColors.text,
-      marginBottom: rV(3),
+      letterSpacing: -0.2,
     },
-    matchResultChip: {
-      alignSelf: "flex-start",
-      paddingHorizontal: rMS(8),
-      paddingVertical: rV(2),
-      borderRadius: rMS(6),
+    playerUserText: {
+      fontSize: rMS(10.5),
+      fontWeight: "500",
+      marginTop: rV(2),
     },
-    matchResultText: {
-      fontSize: rMS(9),
-      fontWeight: "800",
-      letterSpacing: 0.8,
-    },
-    matchScorePill: {
-      backgroundColor: themeColors.background,
-      borderRadius: rMS(14),
-      paddingHorizontal: rMS(14),
-      paddingVertical: rV(8),
+    matchScoreBox: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
-      marginLeft: rS(10),
-      ...shadow.light,
+      backgroundColor: themeColors.background,
+      borderColor: themeColors.border + "30",
+      borderWidth: 1,
+      borderRadius: rMS(8),
+      paddingHorizontal: rMS(12),
+      paddingVertical: rV(6),
+      minWidth: rS(68),
     },
-    matchScoreText: {
+    matchScoreVal: {
       fontSize: rMS(16),
       fontWeight: "900",
       color: themeColors.text,
     },
-    matchScoreDivider: {
+    matchScoreBoxDivider: {
       width: 1,
       height: rV(14),
       backgroundColor: themeColors.border,
       marginHorizontal: rS(8),
     },
-    matchScorePending: {
-      color: themeColors.textSecondary + "80",
+    gameweekText: {
+      fontSize: rMS(10.5),
+      fontWeight: "500",
+      textAlign: "center",
+      marginTop: rV(12),
+      letterSpacing: 0.5,
+    },
+
+    // ── Week selector styles ────────────────────────────────────────────────
+    weekSelectorContainer: {
+      flexDirection: "row",
+      paddingBottom: rV(14),
+      paddingHorizontal: rS(2),
+      gap: rS(8),
+    },
+    weekTab: {
+      paddingHorizontal: rMS(14),
+      paddingVertical: rV(8),
+      borderRadius: rMS(16),
+      backgroundColor: themeColors.cardGlass,
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    weekTabActive: {
+      backgroundColor: themeColors.tint,
+      borderColor: themeColors.tint,
+    },
+    weekTabText: {
+      fontSize: rMS(12),
+      fontWeight: "600",
+      color: themeColors.textSecondary,
+    },
+    weekTabTextActive: {
+      color: "#FFFFFF",
+      fontWeight: "700",
     },
 
     // ── Empty state ────────────────────────────────────────────────────────
@@ -334,64 +398,101 @@ const H2HBattlesPanel: React.FC<Props> = ({
 
   // ── Match card renderer ────────────────────────────────────────────────
   const renderMatchCard = (m: CustomH2HMatchItem, idx: number) => {
-    const isPending = m.result === "pending";
-    const color = resultColor(m.result) ?? themeColors.tint;
     const score1Display = m.score1 != null ? String(m.score1) : "—";
     const score2Display = m.score2 != null ? String(m.score2) : "—";
-    const bothPending = m.score1 == null && m.score2 == null;
+
+    const p1Parts = m.player1.split("\n");
+    const p1Name = p1Parts[0];
+    const p1User = p1Parts[1] || "";
+
+    const p2Parts = m.player2.split("\n");
+    const p2Name = p2Parts[0];
+    const p2User = p2Parts[1] || "";
+
+    const checkIsMe = (parts: string[]) => {
+      const myUsername = userInfo?.user.username?.toLowerCase();
+      const myFirstName = userInfo?.user.first_name?.toLowerCase();
+      const myLastName = userInfo?.user.last_name?.toLowerCase();
+      const myFullName = myFirstName && myLastName ? `${myFirstName} ${myLastName}` : null;
+
+      return parts.some(part => {
+        const p = part.toLowerCase().trim();
+        if (p === "you") return true;
+        if (myUsername && p === myUsername) return true;
+        if (myFirstName && p === myFirstName) return true;
+        if (myFullName && p === myFullName) return true;
+        return false;
+      });
+    };
+
+    const isPlayer1Me = checkIsMe(p1Parts);
+    const isPlayer2Me = checkIsMe(p2Parts);
+    const isMeInMatch = isPlayer1Me || isPlayer2Me;
+
+    const p1NameColor = isPlayer1Me ? themeColors.tint : themeColors.text;
+    const p2NameColor = isPlayer2Me ? themeColors.tint : themeColors.text;
+
+    const cardContent = (
+      <View style={styles.matchCardInner}>
+        {isMeInMatch}
+        <View style={styles.matchTopRow}>
+          {/* Player 1 (Left Block, Right Aligned) */}
+          <View style={styles.player1Block}>
+            <Text
+              style={[styles.playerNameText, { color: p1NameColor, textAlign: "right" }]}
+              numberOfLines={1}
+            >
+              {p1Name}
+            </Text>
+            {p1User ? (
+              <Text
+                style={[styles.playerUserText, { color: themeColors.textSecondary, textAlign: "right" }]}
+                numberOfLines={1}
+              >
+                {p1User}
+              </Text>
+            ) : null}
+          </View>
+
+          {/* Score Box */}
+          <View style={styles.matchScoreBox}>
+            <Text style={styles.matchScoreVal}>{score1Display}</Text>
+            <View style={styles.matchScoreBoxDivider} />
+            <Text style={styles.matchScoreVal}>{score2Display}</Text>
+          </View>
+
+          {/* Player 2 (Right Block, Left Aligned) */}
+          <View style={styles.player2Block}>
+            <Text
+              style={[styles.playerNameText, { color: p2NameColor, textAlign: "left" }]}
+              numberOfLines={1}
+            >
+              {p2Name}
+            </Text>
+            {p2User ? (
+              <Text
+                style={[styles.playerUserText, { color: themeColors.textSecondary, textAlign: "left" }]}
+                numberOfLines={1}
+              >
+                {p2User}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+
+        {/* Study Week / Round */}
+        <Text style={[styles.gameweekText, { color: themeColors.textSecondary }]}>
+          Study Week {m.round || 1}
+        </Text>
+      </View>
+    );
 
     return (
       <Animated.View
         key={m.id}
         entering={FadeInDown.duration(250).delay(50 + idx * 40)}
       >
-        <View style={styles.matchCard}>
-          <View style={styles.matchCardInner}>
-            {/* SW badge */}
-            <View style={styles.matchSwBadge}>
-              <Text style={styles.matchSwText}>SW</Text>
-              <Text style={styles.matchSwNumber}>{m.round}</Text>
-            </View>
-
-            {/* Player names + result chip */}
-            <View style={styles.matchBody}>
-              <Text style={styles.matchPlayers} numberOfLines={1}>
-                {m.player1} vs {m.player2}
-              </Text>
-              <View
-                style={[
-                  styles.matchResultChip,
-                  { backgroundColor: color + "18" },
-                ]}
-              >
-                <Text style={[styles.matchResultText, { color }]}>
-                  {resultLabel(m.result)}
-                </Text>
-              </View>
-            </View>
-
-            {/* Score pill */}
-            <View style={styles.matchScorePill}>
-              <Text
-                style={[
-                  styles.matchScoreText,
-                  bothPending && styles.matchScorePending,
-                ]}
-              >
-                {score1Display}
-              </Text>
-              <View style={styles.matchScoreDivider} />
-              <Text
-                style={[
-                  styles.matchScoreText,
-                  bothPending && styles.matchScorePending,
-                ]}
-              >
-                {score2Display}
-              </Text>
-            </View>
-          </View>
-        </View>
+        <View style={[styles.matchCard, isMeInMatch && styles.myMatchCard]}>{cardContent}</View>
       </Animated.View>
     );
   };
@@ -434,9 +535,54 @@ const H2HBattlesPanel: React.FC<Props> = ({
         </TouchableOpacity>
       </View>
 
+      {tab === "matches" && uniqueWeeks.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.weekSelectorContainer}
+        >
+          <TouchableOpacity
+            style={[
+              styles.weekTab,
+              selectedWeek === "all" && styles.weekTabActive,
+            ]}
+            onPress={() => setSelectedWeek("all")}
+          >
+            <Text
+              style={[
+                styles.weekTabText,
+                selectedWeek === "all" && styles.weekTabTextActive,
+              ]}
+            >
+              All Weeks
+            </Text>
+          </TouchableOpacity>
+
+          {uniqueWeeks.map((week) => (
+            <TouchableOpacity
+              key={week}
+              style={[
+                styles.weekTab,
+                selectedWeek === week && styles.weekTabActive,
+              ]}
+              onPress={() => setSelectedWeek(week)}
+            >
+              <Text
+                style={[
+                  styles.weekTabText,
+                  selectedWeek === week && styles.weekTabTextActive,
+                ]}
+              >
+                Week {week}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+
       {tab === "matches" ? (
-        matches.length > 0 ? (
-          matches.map((m, idx) => renderMatchCard(m, idx))
+        filteredMatches.length > 0 ? (
+          filteredMatches.map((m, idx) => renderMatchCard(m, idx))
         ) : (
           <View style={styles.emptyWrap}>
             <Swords
@@ -444,7 +590,7 @@ const H2HBattlesPanel: React.FC<Props> = ({
               color={themeColors.textSecondary}
               strokeWidth={1.5}
             />
-            <Text style={styles.emptyText}>No matches yet</Text>
+            <Text style={styles.emptyText}>No matches for this week</Text>
           </View>
         )
       ) : (

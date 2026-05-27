@@ -40,55 +40,80 @@ const KnockoutBracket: React.FC<Props> = ({ rounds, squadInfo, isMe }) => {
       paddingTop: rV(10),
     },
     matchCardOuter: {
-      marginBottom: rV(28),
+      marginBottom: rV(10),
     },
     matchCard: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      marginBottom: rV(12),
       backgroundColor: themeColors.cardGlass,
-      padding: rMS(16),
-      borderRadius: rMS(32),
-      ...shadow.large,
+      borderRadius: rMS(20),
       borderWidth: 1,
       borderColor: themeColors.border + "40",
+      overflow: "hidden",
+      ...shadow.light,
     },
-    matchPlayerLeft: {
+    myMatchCard: {
+      backgroundColor: themeColors.tint + "1c",
+      borderColor: themeColors.tint + "60",
+      borderWidth: 1.5,
+    },
+    myMatchHighlightBar: {
+      position: "absolute",
+      left: 0,
+      top: 0,
+      bottom: 0,
+      width: rS(5),
+      backgroundColor: themeColors.tint,
+    },
+    matchCardInner: {
+      paddingVertical: rV(16),
+      paddingHorizontal: rMS(16),
+    },
+    matchTopRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    player1Block: {
       flex: 1,
       alignItems: "flex-end",
+      marginRight: rS(10),
     },
-    matchPlayerRight: {
+    player2Block: {
       flex: 1,
       alignItems: "flex-start",
+      marginLeft: rS(10),
     },
-    matchPlayerText: {
-      fontSize: rMS(14),
+    playerNameText: {
+      fontSize: rMS(13),
       fontWeight: "800",
-      color: themeColors.text,
+      letterSpacing: -0.2,
     },
-    scoreBlock: {
-      backgroundColor: themeColors.background,
-      borderRadius: rMS(16),
-      paddingHorizontal: rMS(16),
-      paddingVertical: rV(8),
-      marginHorizontal: rS(16),
+    playerUserText: {
+      fontSize: rMS(10.5),
+      fontWeight: "500",
+      marginTop: rV(2),
+    },
+    matchScoreBox: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
-      minWidth: rMS(80),
-      ...shadow.light,
+      backgroundColor: themeColors.background,
+      borderColor: themeColors.border + "30",
+      borderWidth: 1,
+      borderRadius: rMS(8),
+      paddingHorizontal: rMS(12),
+      paddingVertical: rV(6),
+      minWidth: rS(68),
     },
-    scoreText: {
-      fontSize: rMS(18),
+    matchScoreVal: {
+      fontSize: rMS(16),
       fontWeight: "900",
       color: themeColors.text,
     },
-    scoreDivider: {
+    matchScoreBoxDivider: {
       width: 1,
-      height: rV(16),
+      height: rV(14),
       backgroundColor: themeColors.border,
-      marginHorizontal: rS(10),
+      marginHorizontal: rS(8),
     },
     roundText: {
       textAlign: "center",
@@ -149,54 +174,88 @@ const KnockoutBracket: React.FC<Props> = ({ rounds, squadInfo, isMe }) => {
             >
               ROUND {round.round}
             </Text>
-            {round.matches.map((match, mIdx) => (
-              <View
-                key={`match-${rIdx}-${mIdx}`}
-                style={styles.matchCardOuter}
-              >
-                <View style={styles.matchCard}>
-                  <View style={styles.matchPlayerLeft}>
-                    <Text
-                      style={[
-                        styles.matchPlayerText,
-                        isMe(match.player1) && { color: themeColors.tint },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {match.player1}
-                    </Text>
-                  </View>
+            {round.matches.map((match, mIdx) => {
+              const score1Display = match.score1 != null ? String(match.score1) : "—";
+              const score2Display = match.score2 != null ? String(match.score2) : "—";
 
-                  <View style={styles.scoreBlock}>
-                    {match.score1 != null && match.score2 != null ? (
-                      <>
-                        <Text style={styles.scoreText}>{match.score1}</Text>
-                        <View style={styles.scoreDivider} />
-                        <Text style={styles.scoreText}>{match.score2}</Text>
-                      </>
-                    ) : (
-                      <>
-                        <Text style={styles.scoreText}>—</Text>
-                        <View style={styles.scoreDivider} />
-                        <Text style={styles.scoreText}>—</Text>
-                      </>
-                    )}
-                  </View>
+              const p1Parts = match.player1.split("\n");
+              const p1Name = p1Parts[0];
+              const p1User = p1Parts[1] || "";
 
-                  <View style={styles.matchPlayerRight}>
-                    <Text
-                      style={[
-                        styles.matchPlayerText,
-                        isMe(match.player2) && { color: themeColors.tint },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {match.player2}
-                    </Text>
+              const p2Parts = match.player2.split("\n");
+              const p2Name = p2Parts[0];
+              const p2User = p2Parts[1] || "";
+
+              const checkIsMe = (parts: string[]) => {
+                return parts.some(part => {
+                  return isMe(part);
+                });
+              };
+
+              const isPlayer1Me = checkIsMe(p1Parts);
+              const isPlayer2Me = checkIsMe(p2Parts);
+              const isMeInMatch = isPlayer1Me || isPlayer2Me;
+
+              const p1NameColor = isPlayer1Me ? themeColors.tint : themeColors.text;
+              const p2NameColor = isPlayer2Me ? themeColors.tint : themeColors.text;
+
+              return (
+                <View
+                  key={`match-${rIdx}-${mIdx}`}
+                  style={styles.matchCardOuter}
+                >
+                  <View style={[styles.matchCard, isMeInMatch && styles.myMatchCard]}>
+                    <View style={styles.matchCardInner}>
+                      {isMeInMatch && <View style={styles.myMatchHighlightBar} />}
+                      <View style={styles.matchTopRow}>
+                        {/* Player 1 (Left Block, Right Aligned) */}
+                        <View style={styles.player1Block}>
+                          <Text
+                            style={[styles.playerNameText, { color: p1NameColor, textAlign: "right" }]}
+                            numberOfLines={1}
+                          >
+                            {p1Name}
+                          </Text>
+                          {p1User ? (
+                            <Text
+                              style={[styles.playerUserText, { color: themeColors.textSecondary, textAlign: "right" }]}
+                              numberOfLines={1}
+                            >
+                              {p1User}
+                            </Text>
+                          ) : null}
+                        </View>
+
+                        {/* Score Box */}
+                        <View style={styles.matchScoreBox}>
+                          <Text style={styles.matchScoreVal}>{score1Display}</Text>
+                          <View style={styles.matchScoreBoxDivider} />
+                          <Text style={styles.matchScoreVal}>{score2Display}</Text>
+                        </View>
+
+                        {/* Player 2 (Right Block, Left Aligned) */}
+                        <View style={styles.player2Block}>
+                          <Text
+                            style={[styles.playerNameText, { color: p2NameColor, textAlign: "left" }]}
+                            numberOfLines={1}
+                          >
+                            {p2Name}
+                          </Text>
+                          {p2User ? (
+                            <Text
+                              style={[styles.playerUserText, { color: themeColors.textSecondary, textAlign: "left" }]}
+                              numberOfLines={1}
+                            >
+                              {p2User}
+                            </Text>
+                          ) : null}
+                        </View>
+                      </View>
+                    </View>
                   </View>
                 </View>
-              </View>
-            ))}
+              );
+            })}
           </Animated.View>
         ))
       ) : (
