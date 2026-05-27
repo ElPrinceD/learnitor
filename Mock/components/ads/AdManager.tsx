@@ -9,7 +9,6 @@
  *   3. `AdManagerProvider` — no-op wrapper kept temporarily.
  */
 import React, { useEffect, useCallback, useRef } from "react";
-import useInterstitialAd from "./InterstitialAd";
 import useRewardedAd from "./RewardedAd";
 import { useAdStore } from "../../store/adStore";
 import { useAlertStore } from "../../store/alertStore";
@@ -40,7 +39,7 @@ export const AdInitializer: React.FC = () => {
     );
   }, [showErrorAlert]);
 
-  const gameCompletionAd = useInterstitialAd({
+  const gameCompletionAd = useRewardedAd({
     onAdClosed: markGameCompletionNotReady,
     onAdOpened: markGameCompletionNotReady,
     onAdFailedToLoad: markGameCompletionNotReady,
