@@ -37,8 +37,7 @@ import {
 } from "../../../hooks/useInstitutionProfileSave";
 
 const AccountSettings = () => {
-  const { userInfo, userToken, setUserInformation, setUserInfo, logout } =
-    useAuth();
+  const { userInfo, userToken, setUserInformation, logout } = useAuth();
   const queryClient = useQueryClient();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -156,8 +155,7 @@ const AccountSettings = () => {
           updatedFields,
           selectedInstitution
         );
-        setUserInformation(updated);
-        setUserInfo(updated);
+        await setUserInformation(updated);
 
         if (selectedInstitution) {
           await invalidateLeaderboardProfileQueries(queryClient);

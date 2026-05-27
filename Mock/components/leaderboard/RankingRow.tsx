@@ -19,7 +19,7 @@ interface Props {
 }
 
 const formatRank = (rank: number) => rank.toString().padStart(2, "0");
-const formatScore = (score: number) => `${score.toLocaleString()} PTS`;
+const formatScore = (score: number) => score.toLocaleString();
 
 // Per Mock/BACKEND_RANKING_UPDATES.md Section 3:
 //   null      -> current week's exam has not yet started, render em-dash

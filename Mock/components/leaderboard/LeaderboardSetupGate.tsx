@@ -9,8 +9,9 @@ import {
 import { Flag, School } from "lucide-react-native";
 import Colors from "../../constants/Colors";
 import { rMS, rS, rV } from "../../constants";
+import { useAuth } from "../../store/authStore";
 import {
-  LEADERBOARD_SETUP_COPY,
+  getLeaderboardSetupCopy,
   type LeaderboardSetupVariant,
 } from "../../utils/leaderboardProfile";
 
@@ -27,7 +28,8 @@ const LeaderboardSetupGate: React.FC<Props> = ({
 }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
-  const copy = LEADERBOARD_SETUP_COPY[variant];
+  const { userInfo } = useAuth();
+  const copy = getLeaderboardSetupCopy(variant, userInfo?.user);
   const IconComponent = variant === "country" ? Flag : School;
   const iconBg =
     variant === "country"

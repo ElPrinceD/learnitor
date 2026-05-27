@@ -33,6 +33,7 @@ import LeaderboardSetupGate from "../../components/leaderboard/LeaderboardSetupG
 import LeaderboardProfileSetupSheet, {
   LeaderboardProfileSetupSheetRef,
 } from "../../components/leaderboard/LeaderboardProfileSetupSheet";
+import { attemptCountryBackfillFromSchool } from "../../hooks/useInstitutionProfileSave";
 import { getLeaderboardSetupBlock } from "../../utils/leaderboardProfile";
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
@@ -129,8 +130,28 @@ export default function Leaderboard() {
   }, [canFetchLeaderboard, refetch]);
 
   const handleSetupSuccess = useCallback(() => {
-    void refetch();
+    requestAnimationFrame(() => {
+      void refetch();
+    });
   }, [refetch]);
+
+  useEffect(() => {
+    if (leaderboardId !== "country" || setupBlock !== "country") {
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      const ok = await attemptCountryBackfillFromSchool();
+      if (!cancelled && ok) {
+        handleSetupSuccess();
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [leaderboardId, setupBlock, handleSetupSuccess]);
 
   const rankings = leaderboardData?.rankings || [];
   const userStatus = leaderboardData?.userStatus || { rank: null, percentile: null, message: null };
@@ -167,9 +188,7 @@ export default function Leaderboard() {
     return rank.toString().padStart(2, "0");
   };
 
-  const formatScore = (score: number) => {
-    return score.toLocaleString() + " PTS";
-  };
+  const formatScore = (score: number) => score.toLocaleString();
 
   const getRankColor = (rank: number) => {
     if (rank === 1) return themeColors.tint;

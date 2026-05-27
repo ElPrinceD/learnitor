@@ -71,6 +71,27 @@ export const searchInstitutions = async (
   return response.data;
 };
 
+/** Resolve a school record (including country) for profile backfill. */
+export const getInstitutionById = async (
+  id: number,
+  signal?: AbortSignal
+): Promise<Institution | null> => {
+  try {
+    const response = await apiClient.get<Institution>(
+      `/api/institutions/${id}/`,
+      { signal }
+    );
+    if (response.data?.id) {
+      return response.data;
+    }
+  } catch {
+    // Fall through to list scan.
+  }
+
+  const list = await searchInstitutions("", 100, 0, signal);
+  return list.results.find((row) => row.id === id) ?? null;
+};
+
 export const checkUsernameAvailable = async (
   username: string,
   signal?: AbortSignal

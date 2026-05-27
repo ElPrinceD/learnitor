@@ -2,10 +2,17 @@ import { useCallback, useState } from "react";
 import axios from "axios";
 import { useQueryClient } from "@tanstack/react-query";
 import ApiUrl from "../config";
-import { useAuth } from "../components/AuthContext";
+import { queryClient } from "../QueryClient";
+import { useAuth, useAuthStore } from "../store/authStore";
 import type { Address, UserInfo } from "../store/authStore";
-import type { Institution } from "../services/SignupApiCalls";
-import { getCurrentInstitutionId } from "../utils/leaderboardProfile";
+import {
+  getInstitutionById,
+  type Institution,
+} from "../services/SignupApiCalls";
+import {
+  getCurrentInstitutionId,
+  hasCountryProfile,
+} from "../utils/leaderboardProfile";
 
 export const buildAddressPayload = (
   existing: Partial<Address> | undefined,
@@ -24,20 +31,20 @@ export const buildInstitutionUpdateFields = (
 ): Record<string, unknown> => {
   const fields: Record<string, unknown> = {};
   const currentInstitutionId = getCurrentInstitutionId(user);
+  const institutionChanged = institution.id !== currentInstitutionId;
+  const countryCode = institution.country?.trim() ?? "";
+  const currentCountry = user?.address?.country?.trim() ?? "";
+  const needsCountryBackfill =
+    !!countryCode && countryCode !== currentCountry;
 
-  if (institution.id !== currentInstitutionId) {
-    if (typeof user?.institution === "number") {
-      fields.institution = institution.id;
-    } else {
-      fields.institution_id = institution.id;
-    }
+  if (institutionChanged) {
+    // Send both keys so backend + local auth never drift (institution vs institution_id).
+    fields.institution = institution.id;
+    fields.institution_id = institution.id;
   }
 
-  if (institution.country) {
-    const currentCountry = user?.address?.country?.trim() ?? "";
-    if (institution.country !== currentCountry) {
-      fields.address = buildAddressPayload(user?.address, institution.country);
-    }
+  if (needsCountryBackfill) {
+    fields.address = buildAddressPayload(user?.address, countryCode);
   }
 
   return fields;
@@ -57,6 +64,8 @@ export const mergeUserFromPatchResponse = (
   const institutionId =
     (serverUserPayload.institution as number | undefined) ??
     (serverUserPayload.institution_id as number | undefined) ??
+    (updatedFields.institution as number | undefined) ??
+    (updatedFields.institution_id as number | undefined) ??
     selectedInstitution?.id;
 
   const mergedAddress =
@@ -91,8 +100,66 @@ export type SaveInstitutionResult =
   | { ok: true }
   | { ok: false; reason: "no_changes" | "unauthorized" | "error"; message?: string };
 
+/**
+ * Legacy users may have institution set but no address.country.
+ * Looks up their current school and PATCHes country when available.
+ */
+export const attemptCountryBackfillFromSchool = async (): Promise<boolean> => {
+  const liveUserInfo = useAuthStore.getState().userInfo;
+  const liveToken = useAuthStore.getState().userToken?.token;
+
+  if (!liveUserInfo?.user.id || !liveToken) {
+    return false;
+  }
+
+  if (hasCountryProfile(liveUserInfo.user)) {
+    return true;
+  }
+
+  const institutionId = getCurrentInstitutionId(liveUserInfo.user);
+  if (!institutionId) {
+    return false;
+  }
+
+  const institution = await getInstitutionById(institutionId);
+  if (!institution?.country?.trim()) {
+    return false;
+  }
+
+  const updatedFields = buildInstitutionUpdateFields(
+    liveUserInfo.user,
+    institution
+  );
+
+  if (Object.keys(updatedFields).length === 0) {
+    return false;
+  }
+
+  try {
+    const response = await axios.patch(
+      `${ApiUrl}/api/update/user/${liveUserInfo.user.id}/`,
+      updatedFields,
+      {
+        headers: { Authorization: `Token ${liveToken}` },
+      }
+    );
+
+    const updated = mergeUserFromPatchResponse(
+      liveUserInfo,
+      response.data,
+      updatedFields,
+      institution
+    );
+    await useAuthStore.getState().setUserInformation(updated);
+    await invalidateLeaderboardProfileQueries(queryClient);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export function useInstitutionProfileSave() {
-  const { userInfo, userToken, setUserInformation, setUserInfo } = useAuth();
+  const { setUserInformation } = useAuth();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -101,12 +168,15 @@ export function useInstitutionProfileSave() {
     async (institution: Institution): Promise<SaveInstitutionResult> => {
       setError(null);
 
-      if (!userInfo?.user.id || !userToken?.token) {
+      const liveUserInfo = useAuthStore.getState().userInfo;
+      const liveToken = useAuthStore.getState().userToken?.token;
+
+      if (!liveUserInfo?.user.id || !liveToken) {
         return { ok: false, reason: "unauthorized" };
       }
 
       const updatedFields = buildInstitutionUpdateFields(
-        userInfo.user,
+        liveUserInfo.user,
         institution
       );
 
@@ -117,41 +187,37 @@ export function useInstitutionProfileSave() {
       setLoading(true);
       try {
         const response = await axios.patch(
-          `${ApiUrl}/api/update/user/${userInfo.user.id}/`,
+          `${ApiUrl}/api/update/user/${liveUserInfo.user.id}/`,
           updatedFields,
           {
-            headers: { Authorization: `Token ${userToken.token}` },
+            headers: { Authorization: `Token ${liveToken}` },
           }
         );
 
         const updated = mergeUserFromPatchResponse(
-          userInfo,
+          liveUserInfo,
           response.data,
           updatedFields,
           institution
         );
-        setUserInformation(updated);
-        setUserInfo(updated);
+        await setUserInformation(updated);
         await invalidateLeaderboardProfileQueries(queryClient);
 
         return { ok: true };
       } catch (err: unknown) {
+        const data = (err as { response?: { data?: Record<string, unknown> } })
+          ?.response?.data;
         const message =
-          (err as { response?: { data?: { detail?: string } } })?.response?.data
-            ?.detail ?? "Could not save your school. Please try again.";
+          (typeof data?.detail === "string" ? data.detail : null) ??
+          (typeof data?.message === "string" ? data.message : null) ??
+          "Could not save your school. Please try again.";
         setError(message);
         return { ok: false, reason: "error", message };
       } finally {
         setLoading(false);
       }
     },
-    [
-      queryClient,
-      setUserInfo,
-      setUserInformation,
-      userInfo,
-      userToken?.token,
-    ]
+    [queryClient, setUserInformation]
   );
 
   return { saveInstitution, loading, error, clearError: () => setError(null) };

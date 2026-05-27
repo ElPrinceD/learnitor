@@ -30,12 +30,11 @@ import InstitutionPickerSheet, {
 } from "../signup/InstitutionPickerSheet";
 import type { Institution } from "../../services/SignupApiCalls";
 import { useInstitutionProfileSave } from "../../hooks/useInstitutionProfileSave";
+import { useAuth } from "../../store/authStore";
 import {
-  getCurrentInstitutionId,
-  LEADERBOARD_SETUP_COPY,
+  getLeaderboardSetupCopy,
   type LeaderboardSetupVariant,
 } from "../../utils/leaderboardProfile";
-import { useAuth } from "../../store/authStore";
 
 export interface LeaderboardProfileSetupSheetRef {
   present: () => void;
@@ -61,20 +60,16 @@ const LeaderboardProfileSetupSheet = forwardRef<
   const { saveInstitution, loading, error, clearError } =
     useInstitutionProfileSave();
 
-  const copy = LEADERBOARD_SETUP_COPY[variant];
+  const copy = getLeaderboardSetupCopy(variant, userInfo?.user);
   const IconComponent = variant === "country" ? Flag : School;
   const iconBg =
     variant === "country"
       ? (themeColors.tintSecond ?? themeColors.tint)
       : "#8b3b8f";
 
-  const initialInstitutionId = getCurrentInstitutionId(userInfo?.user);
   const [selectedInstitution, setSelectedInstitution] =
-    useState<Institution | null>(
-      initialInstitutionId
-        ? { id: initialInstitutionId, name: "School selected" }
-        : null
-    );
+    useState<Institution | null>(null);
+  const [pickedFromSearch, setPickedFromSearch] = useState(false);
   const [schoolError, setSchoolError] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
@@ -85,6 +80,8 @@ const LeaderboardProfileSetupSheet = forwardRef<
       clearError();
       setLocalError(null);
       setSchoolError(false);
+      setSelectedInstitution(null);
+      setPickedFromSearch(false);
       sheetRef.current?.present();
     },
     dismiss: () => sheetRef.current?.dismiss(),
@@ -108,14 +105,23 @@ const LeaderboardProfileSetupSheet = forwardRef<
 
   const handleInstitutionSelect = useCallback((institution: Institution) => {
     setSelectedInstitution(institution);
+    setPickedFromSearch(true);
     setSchoolError(false);
     setLocalError(null);
     clearError();
   }, [clearError]);
 
   const handleSave = useCallback(async () => {
-    if (!selectedInstitution) {
+    if (!selectedInstitution || !pickedFromSearch) {
       setSchoolError(true);
+      setLocalError("Search and select your school from the list.");
+      return;
+    }
+
+    if (!selectedInstitution.country?.trim()) {
+      setLocalError(
+        "This school is missing country data. Try another school or contact support."
+      );
       return;
     }
 
@@ -127,14 +133,16 @@ const LeaderboardProfileSetupSheet = forwardRef<
     }
 
     if (result.reason === "no_changes") {
-      setLocalError("Select a school to continue.");
+      setLocalError(
+        "Nothing to update. Search and select your school again, then save."
+      );
       return;
     }
 
     if (result.message) {
       setLocalError(result.message);
     }
-  }, [onSuccess, saveInstitution, selectedInstitution]);
+  }, [onSuccess, pickedFromSearch, saveInstitution, selectedInstitution]);
 
   const displayError = localError ?? error;
 
@@ -246,7 +254,7 @@ const LeaderboardProfileSetupSheet = forwardRef<
               selected={selectedInstitution}
               onPress={openSchoolPicker}
               hasError={schoolError}
-              hint="Required for this leaderboard"
+              hint="Search and tap your school in the list"
             />
           </View>
 
@@ -265,7 +273,7 @@ const LeaderboardProfileSetupSheet = forwardRef<
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.saveButtonText}>Save school</Text>
+              <Text style={styles.saveButtonText}>{copy.cta}</Text>
             )}
           </TouchableOpacity>
         </BottomSheetScrollView>

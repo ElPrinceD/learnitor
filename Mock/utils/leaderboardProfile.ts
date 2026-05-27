@@ -72,3 +72,32 @@ export const LEADERBOARD_SETUP_COPY: Record<
     cta: "Set up school",
   },
 };
+
+/** Country board when school exists but address.country was never saved (legacy users). */
+export const COUNTRY_ONLY_SETUP_COPY = {
+  title: "Set your country",
+  body: "Your school is already on your profile. Select it once from the list so we can apply your school’s country to regional rankings.",
+  cta: "Confirm school",
+};
+
+export const getLeaderboardSetupCopy = (
+  variant: LeaderboardSetupVariant,
+  user: ProfileUser
+) => {
+  if (
+    variant === "country" &&
+    hasSchoolProfile(user) &&
+    !hasCountryProfile(user)
+  ) {
+    return COUNTRY_ONLY_SETUP_COPY;
+  }
+  return LEADERBOARD_SETUP_COPY[variant];
+};
+
+export const isCountryOnlySetup = (
+  variant: LeaderboardSetupVariant,
+  user: ProfileUser
+): boolean =>
+  variant === "country" &&
+  hasSchoolProfile(user) &&
+  !hasCountryProfile(user);
