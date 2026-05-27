@@ -240,7 +240,7 @@ Sentry.init({
     Sentry.mobileReplayIntegration(),
     Sentry.feedbackIntegration(),
   ],
-  tracesSampleRate: 1.0,
+  tracesSampleRate: __DEV__ ? 1.0 : 0.05,
 
   // uncomment the line below to enable Spotlight (https://spotlightjs.com)
   // spotlight: __DEV__,

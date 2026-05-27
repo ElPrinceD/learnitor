@@ -1,9 +1,10 @@
-import React, { memo, useCallback } from "react";
+import React, { memo, useCallback, useState, useMemo } from "react";
 import {
   StyleSheet,
   Text,
   useColorScheme,
   View,
+  TouchableOpacity,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FlashList, ListRenderItemInfo } from "@shopify/flash-list";
@@ -80,6 +81,18 @@ const RankingsList: React.FC<Props> = ({
   const themeColors = Colors[colorScheme ?? "light"];
   const insets = useSafeAreaInsets();
 
+  const [visibleCount, setVisibleCount] = useState(15);
+
+  const visibleRankings = useMemo(() => {
+    return rankings.slice(0, visibleCount);
+  }, [rankings, visibleCount]);
+
+  const hasMore = rankings.length > visibleCount;
+
+  const handleSeeMore = useCallback(() => {
+    setVisibleCount((prev) => prev + 15);
+  }, []);
+
   const renderItem = useCallback(
     ({ item }: ListRenderItemInfo<RankingItem>) => (
       <RankingRow
@@ -112,6 +125,34 @@ const RankingsList: React.FC<Props> = ({
     [heroSlot, themeColors, showWeeklyExamColumn]
   );
 
+  const renderFooterContent = useCallback(() => {
+    if (!ListFooterComponent) return null;
+    if (React.isValidElement(ListFooterComponent)) {
+      return ListFooterComponent;
+    }
+    const Component = ListFooterComponent as React.ComponentType<any>;
+    return <Component />;
+  }, [ListFooterComponent]);
+
+  const renderFooter = useCallback(() => {
+    if (!hasMore) {
+      return renderFooterContent();
+    }
+
+    return (
+      <View style={styles.footerContainer}>
+        <TouchableOpacity
+          style={styles.seeMoreButton}
+          onPress={handleSeeMore}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.seeMoreText}>See More</Text>
+        </TouchableOpacity>
+        {renderFooterContent()}
+      </View>
+    );
+  }, [hasMore, renderFooterContent, handleSeeMore, themeColors]);
+
   // When `heroSlot` is provided the list is the only thing onscreen, so we
   // need topbar-clearing padding ourselves. When it's omitted (the parent
   // page now renders the hero + tabs as a static header above us), the
@@ -122,27 +163,47 @@ const RankingsList: React.FC<Props> = ({
     paddingBottom: Math.max(rV(40), insets.bottom + rV(40)),
   };
 
+  const styles = StyleSheet.create({
+    flex: { flex: 1 },
+    footerContainer: {
+      paddingVertical: rV(16),
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    seeMoreButton: {
+      backgroundColor: themeColors.tint + "12",
+      borderColor: themeColors.tint + "30",
+      borderWidth: 1,
+      borderRadius: rMS(20),
+      paddingVertical: rV(10),
+      paddingHorizontal: rS(24),
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    seeMoreText: {
+      color: themeColors.tint,
+      fontSize: rMS(13),
+      fontWeight: "800",
+    },
+  });
+
   return (
     // FlashList needs a bounded parent height to render. Wrap it in a
     // flex:1 view so it fills the remaining viewport below the fixed
     // header in LeaderboardDetail.
     <View style={styles.flex}>
       <FlashList
-        data={rankings}
+        data={visibleRankings}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         ListHeaderComponent={renderListHeader}
         ListEmptyComponent={ListEmptyComponent}
-        ListFooterComponent={ListFooterComponent}
+        ListFooterComponent={renderFooter}
         contentContainerStyle={contentContainerStyle}
         showsVerticalScrollIndicator={false}
       />
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-});
 
 export default memo(RankingsList);

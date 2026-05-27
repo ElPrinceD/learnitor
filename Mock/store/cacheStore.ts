@@ -38,16 +38,32 @@ export const useCacheStore = create<CacheState>()((set, get) => ({
     db.execAsync(
       `CREATE TABLE IF NOT EXISTS storage (
          key TEXT PRIMARY KEY NOT NULL,
-         value TEXT
+         value TEXT,
+         timestamp INTEGER
        );`
-    ).catch(() => {});
+    )
+      .then(() => {
+        // Safely add timestamp column if migrating from an older DB build where it did not exist
+        return db.execAsync('ALTER TABLE storage ADD COLUMN timestamp INTEGER;').catch(() => {});
+      })
+      .then(() => {
+        // Run eviction on init - delete cached API responses older than 7 days, excluding session tokens
+        const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        return db.runAsync(
+          "DELETE FROM storage WHERE timestamp < ? AND key NOT LIKE '%token%' AND key NOT LIKE '%auth%';",
+          [sevenDaysAgo]
+        );
+      })
+      .catch((err) => {
+        console.warn("DB cache pruning error or warning:", err);
+      });
   },
 
   setItem: async (key, value) => {
     const db = getDb(get());
     await db.runAsync(
-      'INSERT OR REPLACE INTO storage (key, value) VALUES (?, ?);',
-      [key, value]
+      'INSERT OR REPLACE INTO storage (key, value, timestamp) VALUES (?, ?, ?);',
+      [key, value, Date.now()]
     );
   },
 
@@ -71,7 +87,8 @@ export const useCacheStore = create<CacheState>()((set, get) => ({
       await db.execAsync(
         `CREATE TABLE IF NOT EXISTS storage (
            key TEXT PRIMARY KEY NOT NULL,
-           value TEXT
+           value TEXT,
+           timestamp INTEGER
          );`
       );
       await db.runAsync('DELETE FROM storage');
