@@ -165,9 +165,6 @@ const ScoreCardHero: React.FC<Props> = ({
             <Text style={styles.scoreCardDeadline}>
               {examIsActive
                 ? `Ends ${examEndLocal}`
-                : examButtonState === "completed" ||
-                  examButtonState === "expired"
-                ? "Exam completed"
                 : `Starts ${examStartLocal}`}
             </Text>
           </View>

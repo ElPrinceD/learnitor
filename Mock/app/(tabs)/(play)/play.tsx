@@ -74,7 +74,7 @@ const formatToLocalTime = (utcDateStr: string): string => {
 //
 // Flip this back to `false` before shipping.
 // ────────────────────────────────────────────────────────────────────────────
-const DEV_FORCE_EXAM_OPEN = true;
+const DEV_FORCE_EXAM_OPEN = false;
 
 // Derive the exam button state from the backend window + the current minute.
 const getExamButtonState = (
