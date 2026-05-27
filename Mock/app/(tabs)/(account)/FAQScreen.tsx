@@ -68,9 +68,9 @@ const faqData = [
   // Games
   {
     id: "8",
-    question: "How do I play learning games?",
+    question: "How do I open leaderboards and study squads?",
     answer:
-      'Tap the game controller icon in the top right of the "Relax" tab to access games. You can create a new game or join an existing one using a game code.',
+      'Go to the "Play" tab to access your world, country, and school leaderboards. You can also create or join study squads there using a squad code.',
   },
   {
     id: "9",
@@ -83,6 +83,66 @@ const faqData = [
     question: "What are the game power-ups?",
     answer:
       "Games include special power-ups: 'Ask Prince' gives you AI assistance on a question, and 'Double Dip' allows you to select two answers instead of one.",
+  },
+  {
+    id: "25",
+    question: "What can I do in the Play section?",
+    answer:
+      'The Play section is your competition hub. You can start regular game sessions, take the Weekly Exam when it is open, view world/country/school leaderboards, and create or join Study Squads. It is the best place to track how you rank against others.',
+  },
+  {
+    id: "26",
+    question: "When is the Weekly Exam available?",
+    answer:
+      "The Weekly Exam appears based on its live window. Before it opens, you will see an upcoming state; during the live window, the exam button becomes active; after you finish, it shows completed; and after the window closes, it is no longer available for that week.",
+  },
+  {
+    id: "27",
+    question: "How do exam start and end times appear?",
+    answer:
+      'In Play, the exam timing is shown in your local timezone so it is easier to follow. You will see messages like "Starts ..." before the exam opens and "Ends ..." while it is active.',
+  },
+  {
+    id: "28",
+    question: "What are the key Weekly Exam rules?",
+    answer:
+      "Each question is timed, and you are expected to complete the exam in one attempt once you begin. The exam is designed to run continuously, so do not plan to pause and return later. Submit your best effort in one session for the week.",
+  },
+  {
+    id: "29",
+    question: "What leaderboards are available in Play?",
+    answer:
+      "You can follow your rank on World, Country, and School leaderboards. If you join squads, you also get squad-specific competition views. Together, these boards help you compare global performance and your local community progress.",
+  },
+  {
+    id: "30",
+    question: "What does SW mean on leaderboards?",
+    answer:
+      "SW refers to your Study Week score, which reflects your Weekly Exam performance for the current week. It appears alongside points on leaderboard rows so you can compare exam outcomes as well as total ranking strength.",
+  },
+  {
+    id: "31",
+    question: "What is the difference between Rankings and Knockout views?",
+    answer:
+      "Rankings show leaderboard positions based on points and exam performance. Knockout views focus on head-to-head style competition formats in supported squad modes. The tab you see depends on the type of competition you are viewing.",
+  },
+  {
+    id: "32",
+    question: "What are squad scoring modes?",
+    answer:
+      "When creating a squad, you can choose All Points, Exam Only, or H2H League. All Points combines broader gameplay performance, Exam Only focuses on Weekly Exam results, and H2H League is built for battle-style matchups and standings.",
+  },
+  {
+    id: "33",
+    question: "How do seasons affect my ranking?",
+    answer:
+      "Some leaderboard views emphasize current-season performance, while others can show all-time context. In general, season views help you measure recent momentum, and all-time views show your longer-term progress.",
+  },
+  {
+    id: "34",
+    question: "How do I create or join a Study Squad?",
+    answer:
+      "Open Play and use the Study Squad actions to either create a new squad or join with an invite code. Creating a squad gives you a code you can share, and joining only requires a valid code from an existing squad.",
   },
 
   // Tasks and Reminders
@@ -108,7 +168,7 @@ const faqData = [
     id: "14",
     question: "Why am I not receiving notifications for my tasks?",
     answer:
-      "Make sure notifications are enabled in your device settings and that you've granted permission to the app. You can also check your notification preferences in the consent settings.",
+      "Make sure notifications are enabled in your device settings and that you've granted app permission. You can also review your learning reminder preference in Privacy Settings.",
   },
 
   // Settings and Privacy
@@ -116,31 +176,31 @@ const faqData = [
     id: "15",
     question: "How do I manage my consent settings?",
     answer:
-      'Go to the "Settings" tab and tap "Consent Settings". From there, you can control essential functionality, learning reminders, app improvement data, and marketing communications.',
+      'Go to the "Profile" tab, open Settings, and tap "Privacy Settings". From there, you can review and manage your consent preferences.',
   },
   {
     id: "16",
     question: "What are the different consent types?",
     answer:
-      "Essential functionality (always enabled), learning reminders, app improvement data, and marketing communications. You can toggle each type on or off based on your preferences.",
+      "Privacy Settings includes Essential App Functionality (always on), Learning Reminders, App Improvement, Updates and Tips, and Personalized Ads.",
   },
   {
     id: "17",
     question: "How do I update my profile information?",
     answer:
-      'Go to the "Settings" tab and tap on your profile section. You can update your name, email, and profile picture from there.',
+      'Go to the "Profile" tab and open Settings > Account Settings to update your name, email, username, and school. Profile picture updates are handled on the main Profile screen.',
   },
   {
     id: "18",
     question: "How do I report a problem with the app?",
     answer:
-      'Go to the "Settings" tab and tap "Report Problem". Fill out the form with details about the issue, and our team will look into it.',
+      'Go to the "Profile" tab, open Settings, and tap "Report a Problem". Fill out the form with details about the issue, and our team will look into it.',
   },
   {
     id: "19",
     question: "What if I forget my password?",
     answer:
-      'On the login screen, tap "Forgot Password?" and enter your email address. You\'ll receive instructions to reset your password via email.',
+      'On the login screen, tap "Forgot Password?", enter your email, verify the reset code you receive, then set a new password.',
   },
   {
     id: "20",
@@ -158,7 +218,19 @@ const faqData = [
     id: "22",
     question: "What should I do if the app crashes or freezes?",
     answer:
-      'Try closing and reopening the app. If the problem persists, restart your device. You can also report the issue through the "Report Problem" feature in the Settings tab.',
+      'Try closing and reopening the app. If the problem persists, restart your device. You can also report the issue through "Report a Problem" under Profile > Settings.',
+  },
+  {
+    id: "23",
+    question: "Why is my new username not saving?",
+    answer:
+      "Your username must be 3 to 30 characters, use only letters, numbers, or underscores, and have no spaces. It also has to be available before you can save.",
+  },
+  {
+    id: "24",
+    question: "What happens if I delete my account?",
+    answer:
+      "Account deletion is permanent. Your account data is removed, you are signed out, and you will be returned to the intro screen.",
   },
 ];
 

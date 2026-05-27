@@ -79,6 +79,9 @@ export default function ResultsScreen() {
     queryClient.invalidateQueries({ queryKey: ["leaderboardDetails"] });
     queryClient.invalidateQueries({ queryKey: ["customLeaderboards"] });
     queryClient.invalidateQueries({ queryKey: ["weeklyExamStatus"] });
+    queryClient.invalidateQueries({ queryKey: ["customH2HMatches"] });
+    queryClient.invalidateQueries({ queryKey: ["customH2HStandings"] });
+    queryClient.invalidateQueries({ queryKey: ["h2hCurrent"] });
   }, [showGameCompletionAd, adShown, queryClient]);
 
   // Allow back navigation to GameIntro

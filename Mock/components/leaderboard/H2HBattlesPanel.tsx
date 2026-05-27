@@ -23,6 +23,11 @@ import type {
   CustomH2HMatchItem,
   CustomH2HStanding,
 } from "../../services/LeaderboardApiCalls";
+import {
+  getH2HCurrent,
+  H2H_QUERY_OPTIONS,
+} from "../../services/LeaderboardApiCalls";
+import { AVERAGE_LABEL, isAverageOpponent } from "../../utils/h2hStandings";
 import type { H2HTab } from "../play/types";
 import { useAuth } from "../../store/authStore";
 import { getWeeklyExamStatus } from "../../services/WeeklyExamApiCalls";
@@ -35,12 +40,18 @@ const PILL_TRANSLATE_X =
   (Dimensions.get("window").width - rS(32) - rMS(6)) / 2;
 
 interface Props {
+  squadId: string;
   matches: CustomH2HMatchItem[];
   standings: CustomH2HStanding[];
   // Initial sub-tab. Defaults to "matches". Kept as a prop so deep links can
   // open the panel directly on Standings if needed.
   initialTab?: H2HTab;
 }
+
+const parsePlayerParts = (player: string) => {
+  const parts = player.split("\n");
+  return { name: parts[0], user: parts[1] || "" };
+};
 
 // Colour for the result indicator chip.
 const resultColor = (result: string) => {
@@ -70,6 +81,7 @@ const resultLabel = (result: string) => {
 };
 
 const H2HBattlesPanel: React.FC<Props> = ({
+  squadId,
   matches,
   standings,
   initialTab = "matches",
@@ -83,6 +95,13 @@ const H2HBattlesPanel: React.FC<Props> = ({
     queryKey: ["weeklyExamStatus"],
     queryFn: () => getWeeklyExamStatus(userToken?.token),
     enabled: !!userToken?.token,
+  });
+
+  const { data: currentMatchup } = useQuery({
+    queryKey: ["h2hCurrent", squadId],
+    queryFn: () => getH2HCurrent(userToken?.token, squadId),
+    enabled: !!userToken?.token && !!squadId,
+    ...H2H_QUERY_OPTIONS,
   });
 
   const [tab, setTab] = useState<H2HTab>(initialTab);
@@ -394,6 +413,32 @@ const H2HBattlesPanel: React.FC<Props> = ({
       textAlign: "center",
       fontWeight: "700",
     },
+    currentOpponentBanner: {
+      marginBottom: rV(14),
+      paddingHorizontal: rMS(14),
+      paddingVertical: rV(10),
+      borderRadius: rMS(16),
+      backgroundColor: themeColors.tint + "12",
+      borderWidth: 1,
+      borderColor: themeColors.tint + "30",
+    },
+    currentOpponentText: {
+      fontSize: rMS(12),
+      fontWeight: "700",
+      color: themeColors.textSecondary,
+      textAlign: "center",
+    },
+    currentOpponentName: {
+      color: themeColors.tint,
+      fontWeight: "800",
+    },
+    averageStandingRow: {
+      opacity: 0.92,
+    },
+    averageStandingName: {
+      fontStyle: "italic",
+      color: themeColors.textSecondary,
+    },
   });
 
   // ── Match card renderer ────────────────────────────────────────────────
@@ -401,13 +446,10 @@ const H2HBattlesPanel: React.FC<Props> = ({
     const score1Display = m.score1 != null ? String(m.score1) : "—";
     const score2Display = m.score2 != null ? String(m.score2) : "—";
 
-    const p1Parts = m.player1.split("\n");
-    const p1Name = p1Parts[0];
-    const p1User = p1Parts[1] || "";
-
-    const p2Parts = m.player2.split("\n");
-    const p2Name = p2Parts[0];
-    const p2User = p2Parts[1] || "";
+    const { name: p1Name, user: p1User } = parsePlayerParts(m.player1);
+    const { name: p2Name, user: p2User } = parsePlayerParts(m.player2);
+    const p1Parts = [p1Name, p1User].filter(Boolean);
+    const p2Parts = [p2Name, p2User].filter(Boolean);
 
     const checkIsMe = (parts: string[]) => {
       const myUsername = userInfo?.user.username?.toLowerCase();
@@ -502,6 +544,17 @@ const H2HBattlesPanel: React.FC<Props> = ({
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>1v1 Battles</Text>
       </View>
+
+      {currentMatchup?.opponentName ? (
+        <View style={styles.currentOpponentBanner}>
+          <Text style={styles.currentOpponentText}>
+            This week vs{" "}
+            <Text style={styles.currentOpponentName}>
+              {currentMatchup.opponentName}
+            </Text>
+          </Text>
+        </View>
+      ) : null}
 
       <View style={styles.toggleContainer}>
         <Animated.View style={[styles.togglePill, pillAnimStyle]} />
@@ -634,18 +687,30 @@ const H2HBattlesPanel: React.FC<Props> = ({
             </Text>
           </View>
           {standings.map((s) => {
-            const isUser = (s as any).isUser as boolean | undefined;
+            const isUser = s.isUser === true;
+            const isAverage =
+              s.isAverage === true || isAverageOpponent(s.name);
+            const displayName =
+              isAverage && !s.name.trim() ? AVERAGE_LABEL : s.name;
             return (
               <View
-                key={s.rank}
+                key={`${s.rank}-${displayName}`}
                 style={[
                   styles.standingCard,
                   isUser && styles.standingsUserRow,
+                  isAverage && styles.averageStandingRow,
                 ]}
               >
                 <Text style={styles.standingsRankCell}>{s.rank}</Text>
                 <View style={styles.standingsNameWrap}>
-                  <Text style={styles.standingsNameText}>{s.name}</Text>
+                  <Text
+                    style={[
+                      styles.standingsNameText,
+                      isAverage && styles.averageStandingName,
+                    ]}
+                  >
+                    {displayName}
+                  </Text>
                   {s.tiebreaker && (
                     <View style={styles.coinBadge}>
                       <Text style={styles.coinBadgeText}>🪙 COIN</Text>

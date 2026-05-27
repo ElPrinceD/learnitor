@@ -28,10 +28,18 @@ import InstitutionPickerSheet, {
 } from "../../../components/signup/InstitutionPickerSheet";
 import { useUsernameAvailability } from "../../../hooks/useUsernameAvailability";
 import type { Institution } from "../../../services/SignupApiCalls";
+import { useQueryClient } from "@tanstack/react-query";
+import { getCurrentInstitutionId } from "../../../utils/leaderboardProfile";
+import {
+  buildInstitutionUpdateFields,
+  invalidateLeaderboardProfileQueries,
+  mergeUserFromPatchResponse,
+} from "../../../hooks/useInstitutionProfileSave";
 
 const AccountSettings = () => {
   const { userInfo, userToken, setUserInformation, setUserInfo, logout } =
     useAuth();
+  const queryClient = useQueryClient();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const { showSuccessAlert, showDeleteAlert } = useAlert();
@@ -45,10 +53,14 @@ const AccountSettings = () => {
   const [email, setEmail] = useState(userInfo?.user.email || "");
 
   // Institution
+  const initialInstitutionId = getCurrentInstitutionId(userInfo?.user);
   const [selectedInstitution, setSelectedInstitution] =
     useState<Institution | null>(
-      userInfo?.user.institution_id
-        ? { id: userInfo.user.institution_id, name: "" }
+      initialInstitutionId
+        ? {
+            id: initialInstitutionId,
+            name: "School selected",
+          }
         : null
     );
   const [schoolError, setSchoolError] = useState(false);
@@ -117,11 +129,12 @@ const AccountSettings = () => {
       updatedFields.email = email.trim();
     if (usernameChanged && usernameAvailable)
       updatedFields.username = username.trim();
-    if (
-      selectedInstitution &&
-      selectedInstitution.id !== userInfo?.user.institution_id
-    )
-      updatedFields.institution_id = selectedInstitution.id;
+    if (selectedInstitution) {
+      Object.assign(
+        updatedFields,
+        buildInstitutionUpdateFields(userInfo?.user, selectedInstitution)
+      );
+    }
 
     if (Object.keys(updatedFields).length === 0) {
       setLoading(false);
@@ -130,21 +143,25 @@ const AccountSettings = () => {
     }
 
     try {
-      await axios.patch(
+      const response = await axios.patch(
         `${ApiUrl}/api/update/user/${userInfo?.user.id}/`,
         updatedFields,
         config
       );
 
       if (userInfo) {
-        const updatedUser = {
-          ...userInfo.user,
-          ...updatedFields,
-        };
-
-        const updated = { ...userInfo, user: updatedUser };
+        const updated = mergeUserFromPatchResponse(
+          userInfo,
+          response.data,
+          updatedFields,
+          selectedInstitution
+        );
         setUserInformation(updated);
         setUserInfo(updated);
+
+        if (selectedInstitution) {
+          await invalidateLeaderboardProfileQueries(queryClient);
+        }
       }
 
       showSuccessAlert("Success", "Your information has been updated.", () => {

@@ -150,15 +150,7 @@ const StudySquadsSection: React.FC<Props> = ({
           Study Squads
         </Text>
         <View style={styles.sectionRightActions}>
-          {showSeeAll && (
-            <TouchableOpacity onPress={onOpenAllSquads}>
-              <Text
-                style={[styles.sectionSeeAll, { color: themeColors.tint }]}
-              >
-                See All
-              </Text>
-            </TouchableOpacity>
-          )}
+         
           <TouchableOpacity
             style={[
               styles.squadAddBtn,
@@ -205,7 +197,6 @@ const StudySquadsSection: React.FC<Props> = ({
             data={squads}
             renderItem={renderItem}
             keyExtractor={keyExtractor}
-            estimatedItemSize={SQUAD_ROW_HEIGHT}
             scrollEnabled={false}
             showsVerticalScrollIndicator={false}
           />

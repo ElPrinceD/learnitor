@@ -38,7 +38,7 @@ import config from "../tamagui.config";
 import { vexo } from "vexo-analytics";
 import * as Sentry from "@sentry/react-native";
 import { isRunningInExpoGo } from "expo";
-import { StatusBar, LogBox, InteractionManager } from "react-native";
+import { StatusBar, LogBox } from "react-native";
 
 LogBox.ignoreLogs(["SafeAreaView has been deprecated"]);
 import Colors from "../constants/Colors";
@@ -80,6 +80,16 @@ const ConsentHydrator = () => {
   }, [token]);
 
   return null;
+};
+
+// Defer navigation to the next frame so the root navigator is settled.
+const navigateFromDeepLink = (
+  pathname: "/(game)/GameWaiting" | "/(game)/GameIntro",
+  params: Record<string, string>
+) => {
+  requestAnimationFrame(() => {
+    router.replace({ pathname, params });
+  });
 };
 
 // Component to handle deep links
@@ -124,21 +134,14 @@ const DeepLinkHandler = () => {
 
               if (response.status === 200) {
                 const id = response.data.id;
-                InteractionManager.runAfterInteractions(() => {
-                  router.replace({
-                    pathname: "/(game)/GameWaiting",
-                    params: { code: gameCode, id: id },
-                  });
+                navigateFromDeepLink("/(game)/GameWaiting", {
+                  code: gameCode,
+                  id: String(id),
                 });
               }
             } catch (error) {
               console.error("Error joining game via deep link:", error);
-              InteractionManager.runAfterInteractions(() => {
-                router.replace({
-                  pathname: "/(game)/GameIntro",
-                  params: { code: gameCode },
-                });
-              });
+              navigateFromDeepLink("/(game)/GameIntro", { code: gameCode });
             }
           }
         }
@@ -169,29 +172,17 @@ const DeepLinkHandler = () => {
 
               if (response.status === 200) {
                 const id = response.data.id;
-                InteractionManager.runAfterInteractions(() => {
-                  router.replace({
-                    pathname: "/(game)/GameWaiting",
-                    params: { code: gameCode, id: id },
-                  });
+                navigateFromDeepLink("/(game)/GameWaiting", {
+                  code: gameCode,
+                  id: String(id),
                 });
               }
             } catch (error) {
               console.error("Error joining game via deep link:", error);
-              InteractionManager.runAfterInteractions(() => {
-                router.replace({
-                  pathname: "/(game)/GameIntro",
-                  params: { code: gameCode },
-                });
-              });
+              navigateFromDeepLink("/(game)/GameIntro", { code: gameCode });
             }
           } else if (gameCode && !userToken?.token) {
-            InteractionManager.runAfterInteractions(() => {
-              router.replace({
-                pathname: "/(game)/GameIntro",
-                params: { code: gameCode },
-              });
-            });
+            navigateFromDeepLink("/(game)/GameIntro", { code: gameCode });
           }
         }
       } catch (error) {

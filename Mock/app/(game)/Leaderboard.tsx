@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -8,11 +8,12 @@ import {
   useColorScheme,
   TouchableOpacity,
   StatusBar,
+  RefreshControl,
 } from "react-native";
 import ScreenLoadingSpinner from "../../components/ScreenLoadingSpinner";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowLeft } from "lucide-react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { getLeaderboardDetails, RankingItem, UserStatus } from "../../services/LeaderboardApiCalls";
 import Animated, {
@@ -28,6 +29,11 @@ import { rMS, rV, rS, SIZES, useShadows } from "../../constants/index.js";
 import ApiUrl from "../../config";
 import ErrorMessage from "../../components/ErrorMessage";
 import { BlurView } from "expo-blur";
+import LeaderboardSetupGate from "../../components/leaderboard/LeaderboardSetupGate";
+import LeaderboardProfileSetupSheet, {
+  LeaderboardProfileSetupSheetRef,
+} from "../../components/leaderboard/LeaderboardProfileSetupSheet";
+import { getLeaderboardSetupBlock } from "../../utils/leaderboardProfile";
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -49,6 +55,18 @@ export default function Leaderboard() {
 
   const leaderboardId = (id || "world").toLowerCase();
   const isSchoolLeaderboard = leaderboardId === "school";
+
+  const setupBlock = useMemo(
+    () => getLeaderboardSetupBlock(leaderboardId, userInfo?.user),
+    [leaderboardId, userInfo?.user]
+  );
+  const canFetchLeaderboard = !!userToken?.token && !setupBlock;
+
+  const setupSheetRef = useRef<LeaderboardProfileSetupSheetRef>(null);
+
+  const openSetupSheet = useCallback(() => {
+    setupSheetRef.current?.present();
+  }, []);
   const leaderboardName = isSchoolLeaderboard
     ? "School Ranking"
     : name || "World Rankings";
@@ -74,12 +92,45 @@ export default function Leaderboard() {
     hasAnimated.current ? undefined : FadeInDown.duration(300).delay(delay);
 
   // React Query Hook
-  const { data: leaderboardData, isLoading: loading, error: queryError } = useQuery({
+  const {
+    data: leaderboardData,
+    isLoading: loading,
+    error: queryError,
+    refetch,
+    isFetching,
+  } = useQuery({
     queryKey: ["leaderboardDetails", leaderboardId, tfParam],
     queryFn: () =>
       getLeaderboardDetails(leaderboardId, userToken?.token, tfParam || "season"),
-    enabled: !!userToken?.token,
+    enabled: canFetchLeaderboard,
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!canFetchLeaderboard) {
+        return;
+      }
+      void refetch();
+    }, [canFetchLeaderboard, refetch])
+  );
+
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    if (!canFetchLeaderboard) {
+      return;
+    }
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [canFetchLeaderboard, refetch]);
+
+  const handleSetupSuccess = useCallback(() => {
+    void refetch();
+  }, [refetch]);
 
   const rankings = leaderboardData?.rankings || [];
   const userStatus = leaderboardData?.userStatus || { rank: null, percentile: null, message: null };
@@ -95,13 +146,17 @@ export default function Leaderboard() {
   const dismissedErrorRef = useRef<string | null>(null);
 
   useEffect(() => {
+    if (setupBlock) {
+      setError("");
+      return;
+    }
     const nextError = queryError ? "Failed to load rankings" : "";
     if (nextError && nextError === dismissedErrorRef.current) return;
     if (nextError !== error) {
       dismissedErrorRef.current = null;
       setError(nextError);
     }
-  }, [queryError, error]);
+  }, [setupBlock, queryError, error]);
 
   const dismissError = useCallback(() => {
     dismissedErrorRef.current = error;
@@ -392,6 +447,17 @@ export default function Leaderboard() {
         style={{ flex: 1 }}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          setupBlock ? undefined : (
+            <RefreshControl
+              refreshing={refreshing || (isFetching && !loading)}
+              onRefresh={onRefresh}
+              tintColor={themeColors.tint}
+              colors={[themeColors.tint, themeColors.text]}
+              progressBackgroundColor={themeColors.background}
+            />
+          )
+        }
       >
 
         {/* Hero Section */}
@@ -408,7 +474,7 @@ export default function Leaderboard() {
               {schoolSubtitle}
             </Text>
           ) : null}
-          {!isSchoolLeaderboard ? (
+          {!isSchoolLeaderboard && !setupBlock ? (
             <Text style={styles.heroSubtext}>
               The elite echelon of learners. Every point represents a boundary
               pushed and a concept mastered.
@@ -416,6 +482,14 @@ export default function Leaderboard() {
           ) : null}
         </Animated.View>
 
+        {setupBlock ? (
+          <LeaderboardSetupGate
+            variant={setupBlock}
+            onPrimaryPress={openSetupSheet}
+            onBack={() => router.back()}
+          />
+        ) : (
+          <>
         {/* Column Headers */}
         <Animated.View
           entering={enterAnim(100)}
@@ -516,13 +590,25 @@ export default function Leaderboard() {
             </BlurView>
           </Animated.View>
         )}
+          </>
+        )}
       </ScrollView>
 
-      <ErrorMessage
-        message={error}
-        visible={!!error}
-        onDismiss={dismissError}
-      />
+      {!setupBlock ? (
+        <ErrorMessage
+          message={error}
+          visible={!!error}
+          onDismiss={dismissError}
+        />
+      ) : null}
+
+      {setupBlock ? (
+        <LeaderboardProfileSetupSheet
+          ref={setupSheetRef}
+          variant={setupBlock}
+          onSuccess={handleSetupSuccess}
+        />
+      ) : null}
     </View>
   );
 }

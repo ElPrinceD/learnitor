@@ -329,6 +329,7 @@ export default function WeeklyExam() {
       queryClient.invalidateQueries({ queryKey: ["knockoutBracket"] });
       queryClient.invalidateQueries({ queryKey: ["customH2HMatches"] });
       queryClient.invalidateQueries({ queryKey: ["customH2HStandings"] });
+      queryClient.invalidateQueries({ queryKey: ["h2hCurrent"] });
     } catch (err) {
       // Silently swallow — the user still navigates to the Results screen.
     }

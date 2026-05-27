@@ -1,5 +1,9 @@
 import axios from 'axios';
 import ApiUrl from '../config';
+import {
+  normalizeCustomH2HMatch,
+  parseCustomH2HStandingsResponse,
+} from '../utils/h2hStandings';
 
 const apiClient = axios.create({
   baseURL: ApiUrl,
@@ -149,7 +153,38 @@ export interface CustomH2HStanding {
   totalScore: number;
   weekScore: number;
   tiebreaker?: "standoff";
+  isUser?: boolean;
+  isAverage?: boolean;
 }
+
+type RawRecord = Record<string, unknown>;
+
+const normalizeList = <T>(
+  payload: unknown,
+  normalizeItem: (raw: RawRecord) => T
+): T[] => {
+  if (Array.isArray(payload)) {
+    return payload.map((item) => normalizeItem(item as RawRecord));
+  }
+  if (payload && typeof payload === "object") {
+    const record = payload as RawRecord;
+    const nested =
+      record.results ??
+      record.data ??
+      record.matches ??
+      record.items;
+    if (Array.isArray(nested)) {
+      return nested.map((item) => normalizeItem(item as RawRecord));
+    }
+  }
+  return [];
+};
+
+/** Ensures H2H fetches always hit the server so fixture rebuild can run. */
+export const H2H_QUERY_OPTIONS = {
+  staleTime: 0,
+  refetchOnMount: "always" as const,
+};
 
 // --- Existing API calls ---
 
@@ -208,9 +243,13 @@ export const getLeaderboardDetails = async (
   return response.data;
 };
 
-export const getH2HCurrent = async (token: string | null | undefined): Promise<H2HMatchup | null> => {
-  const response = await apiClient.get<H2HMatchup | null>('/api/h2h/current', {
+export const getH2HCurrent = async (
+  token: string | null | undefined,
+  squadId?: string
+): Promise<H2HMatchup | null> => {
+  const response = await apiClient.get<H2HMatchup | null>("/api/h2h/current", {
     headers: { Authorization: `Token ${token}` },
+    params: squadId ? { squadId } : undefined,
   });
   return response.data;
 };
@@ -236,20 +275,26 @@ export const getCustomH2HMatches = async (
   squadId: string,
   token: string | null | undefined
 ): Promise<CustomH2HMatchItem[]> => {
-  const response = await apiClient.get<CustomH2HMatchItem[]>(`/api/h2h/custom/${squadId}/matches`, {
-    headers: { Authorization: `Token ${token}` },
-  });
-  return response.data;
+  const response = await apiClient.get<unknown>(
+    `/api/h2h/custom/${squadId}/matches`,
+    {
+      headers: { Authorization: `Token ${token}` },
+    }
+  );
+  return normalizeList(response.data, normalizeCustomH2HMatch);
 };
 
 export const getCustomH2HStandings = async (
   squadId: string,
   token: string | null | undefined
 ): Promise<CustomH2HStanding[]> => {
-  const response = await apiClient.get<CustomH2HStanding[]>(`/api/h2h/custom/${squadId}/standings`, {
-    headers: { Authorization: `Token ${token}` },
-  });
-  return response.data;
+  const response = await apiClient.get<unknown>(
+    `/api/h2h/custom/${squadId}/standings`,
+    {
+      headers: { Authorization: `Token ${token}` },
+    }
+  );
+  return parseCustomH2HStandingsResponse(response.data);
 };
 
 // --- Squad Management API calls (NEW) ---

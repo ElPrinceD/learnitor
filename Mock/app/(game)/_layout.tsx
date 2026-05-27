@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
 import React from "react";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { GameAudioProvider } from "../../contexts/GameAudioContext";
 
 const smoothFade = {
@@ -11,6 +12,7 @@ const smoothFade = {
 
 export default function GameLayout() {
   return (
+    <BottomSheetModalProvider>
     <GameAudioProvider>
     <Stack
       initialRouteName="GameIntro"
@@ -44,5 +46,6 @@ export default function GameLayout() {
       <Stack.Screen name="SquadSettings" options={{ gestureEnabled: true, animation: "slide_from_right" }} />
     </Stack>
     </GameAudioProvider>
+    </BottomSheetModalProvider>
   );
 }

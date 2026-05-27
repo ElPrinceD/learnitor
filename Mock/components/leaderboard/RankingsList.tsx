@@ -5,6 +5,7 @@ import {
   useColorScheme,
   View,
   TouchableOpacity,
+  RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FlashList, ListRenderItemInfo } from "@shopify/flash-list";
@@ -29,6 +30,8 @@ interface Props {
   heroSlot?: React.ReactNode;
   ListEmptyComponent?: React.ComponentType<any> | React.ReactElement | null;
   ListFooterComponent?: React.ComponentType<any> | React.ReactElement | null;
+  refreshing?: boolean;
+  onRefresh?: () => void;
 }
 
 const ColumnHeaders: React.FC<{
@@ -76,6 +79,8 @@ const RankingsList: React.FC<Props> = ({
   heroSlot,
   ListEmptyComponent,
   ListFooterComponent,
+  refreshing = false,
+  onRefresh,
 }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -201,6 +206,17 @@ const RankingsList: React.FC<Props> = ({
         ListFooterComponent={renderFooter}
         contentContainerStyle={contentContainerStyle}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={themeColors.tint}
+              colors={[themeColors.tint, themeColors.text]}
+              progressBackgroundColor={themeColors.background}
+            />
+          ) : undefined
+        }
       />
     </View>
   );

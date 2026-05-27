@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  RefreshControl,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -9,7 +10,7 @@ import {
 } from "react-native";
 import ScreenLoadingSpinner from "../../components/ScreenLoadingSpinner";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 
 import {
@@ -17,6 +18,7 @@ import {
   getCustomH2HStandings,
   getKnockoutBracket,
   getLeaderboardDetails,
+  H2H_QUERY_OPTIONS,
   SquadInfo,
 } from "../../services/LeaderboardApiCalls";
 import { useAuth } from "../../components/AuthContext";
@@ -32,6 +34,12 @@ import LeaderboardTabs, {
   LeaderboardTab,
 } from "../../components/leaderboard/LeaderboardTabs";
 import KnockoutBracket from "../../components/leaderboard/KnockoutBracket";
+import LeaderboardSetupGate from "../../components/leaderboard/LeaderboardSetupGate";
+import LeaderboardProfileSetupSheet, {
+  LeaderboardProfileSetupSheetRef,
+} from "../../components/leaderboard/LeaderboardProfileSetupSheet";
+import { getLeaderboardSetupBlock } from "../../utils/leaderboardProfile";
+import { ensureAverageInStandings } from "../../utils/h2hStandings";
 
 const COUNTRY_MAP: Record<string, string> = {
   GH: "Ghana",
@@ -66,6 +74,18 @@ export default function LeaderboardDetail() {
 
   const isKnockout = type === "knockout";
 
+  const setupBlock = useMemo(
+    () => getLeaderboardSetupBlock(id, userInfo?.user),
+    [id, userInfo?.user]
+  );
+  const canFetchLeaderboard = !!userToken?.token && !setupBlock;
+
+  const setupSheetRef = useRef<LeaderboardProfileSetupSheetRef>(null);
+
+  const openSetupSheet = useCallback(() => {
+    setupSheetRef.current?.present();
+  }, []);
+
   // ── Outer tabs (only meaningful for non-knockout squads) ────────────────
   // Knockout squads (`custom_1v1`) skip these entirely — their page body is
   // the H2H Battles panel (Matches | Standings), not the global Rankings /
@@ -95,10 +115,12 @@ export default function LeaderboardDetail() {
     data: leaderboardData,
     isLoading: rankingsLoading,
     error: rankingsError,
+    refetch: refetchLeaderboard,
+    isFetching: isLeaderboardFetching,
   } = useQuery({
     queryKey: ["leaderboardDetails", id, timeframe],
     queryFn: () => getLeaderboardDetails(id, userToken?.token, timeframe),
-    enabled: !!userToken?.token,
+    enabled: canFetchLeaderboard,
   });
 
   // Global knockout bracket — same endpoint the pre-refactor code imported.
@@ -106,24 +128,108 @@ export default function LeaderboardDetail() {
   // For global leaderboards (world/country/school): fetches the global bracket.
   // Only fetched when the user is on the Knockout sub-tab since `custom_1v1`
   // squads render their own H2H panel.
-  const { data: knockoutBracketData, error: knockoutBracketError } = useQuery({
+  const {
+    data: knockoutBracketData,
+    error: knockoutBracketError,
+    refetch: refetchKnockoutBracket,
+    isFetching: isKnockoutBracketFetching,
+  } = useQuery({
     queryKey: ["knockoutBracket", id],
     queryFn: () => getKnockoutBracket(userToken?.token, id),
     // Prefetch eagerly so data is ready when the user switches tabs.
-    enabled: !!userToken?.token && !isKnockout,
+    enabled: canFetchLeaderboard && !isKnockout,
   });
 
-  const { data: h2hMatchesData, error: h2hMatchesError } = useQuery({
+  const {
+    data: h2hMatchesData,
+    error: h2hMatchesError,
+    refetch: refetchH2HMatches,
+    isFetching: isH2HMatchesFetching,
+  } = useQuery({
     queryKey: ["customH2HMatches", id],
     queryFn: () => getCustomH2HMatches(id, userToken?.token),
-    enabled: !!userToken?.token && isKnockout,
+    enabled: canFetchLeaderboard && isKnockout,
+    ...H2H_QUERY_OPTIONS,
   });
 
-  const { data: h2hStandingsData, error: h2hStandingsError } = useQuery({
+  const {
+    data: h2hStandingsData,
+    error: h2hStandingsError,
+    refetch: refetchH2HStandings,
+    isFetching: isH2HStandingsFetching,
+  } = useQuery({
     queryKey: ["customH2HStandings", id],
     queryFn: () => getCustomH2HStandings(id, userToken?.token),
-    enabled: !!userToken?.token && isKnockout,
+    enabled: canFetchLeaderboard && isKnockout,
+    ...H2H_QUERY_OPTIONS,
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!canFetchLeaderboard) {
+        return;
+      }
+      void refetchLeaderboard();
+      if (isKnockout) {
+        void refetchH2HMatches();
+        void refetchH2HStandings();
+      }
+    }, [
+      canFetchLeaderboard,
+      isKnockout,
+      refetchLeaderboard,
+      refetchH2HMatches,
+      refetchH2HStandings,
+    ])
+  );
+
+  const handleSetupSuccess = useCallback(() => {
+    void refetchLeaderboard();
+  }, [refetchLeaderboard]);
+
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    if (!canFetchLeaderboard) {
+      return;
+    }
+    setRefreshing(true);
+    try {
+      const tasks: Promise<unknown>[] = [refetchLeaderboard()];
+      if (isKnockout) {
+        tasks.push(refetchH2HMatches(), refetchH2HStandings());
+      } else {
+        tasks.push(refetchKnockoutBracket());
+      }
+      await Promise.all(tasks);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [
+    canFetchLeaderboard,
+    isKnockout,
+    refetchLeaderboard,
+    refetchH2HMatches,
+    refetchH2HStandings,
+    refetchKnockoutBracket,
+  ]);
+
+  const isRefreshing =
+    refreshing ||
+    isLeaderboardFetching ||
+    (isKnockout
+      ? isH2HMatchesFetching || isH2HStandingsFetching
+      : isKnockoutBracketFetching);
+
+  const refreshControl = (
+    <RefreshControl
+      refreshing={isRefreshing}
+      onRefresh={onRefresh}
+      tintColor={themeColors.tint}
+      colors={[themeColors.tint, themeColors.text]}
+      progressBackgroundColor={themeColors.background}
+    />
+  );
 
   // ── Derived data ────────────────────────────────────────────────────────
   const rankings = useMemo(() => {
@@ -247,14 +353,21 @@ export default function LeaderboardDetail() {
   }, [h2hMatchesData, userInfo?.user.username]);
 
   const standings = useMemo(() => {
-    const list = h2hStandingsData ?? [];
+    const list = ensureAverageInStandings(h2hStandingsData ?? [], matches);
     return list.map((s) => {
+      if (s.isAverage) {
+        return s;
+      }
       if (s.name === "You" || s.name === userInfo?.user.username) {
-        return { ...s, name: userInfo?.user.username || s.name };
+        return {
+          ...s,
+          name: userInfo?.user.username || s.name,
+          isUser: true,
+        };
       }
       return s;
     });
-  }, [h2hStandingsData, userInfo?.user.username]);
+  }, [h2hStandingsData, matches, userInfo?.user.username]);
 
   const knockoutRounds = useMemo(() => {
     const rounds = knockoutBracketData?.rounds ?? [];
@@ -281,6 +394,10 @@ export default function LeaderboardDetail() {
   const dismissedErrorRef = useRef<string | null>(null);
 
   useEffect(() => {
+    if (setupBlock) {
+      setError("");
+      return;
+    }
     let nextError = "";
     if (isKnockout) {
       if (h2hMatchesError || h2hStandingsError) {
@@ -304,6 +421,7 @@ export default function LeaderboardDetail() {
       setError(nextError);
     }
   }, [
+    setupBlock,
     isKnockout,
     activeTab,
     h2hMatchesError,
@@ -454,13 +572,14 @@ export default function LeaderboardDetail() {
           style={styles.knockoutScroll}
           contentContainerStyle={styles.h2hScrollContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={refreshControl}
         >
           <LeaderboardHero
             timeframe={timeframe}
             name={heroTitle}
             subtitle={leaderboardSubtitle}
           />
-          <H2HBattlesPanel matches={matches} standings={standings} />
+          <H2HBattlesPanel squadId={id} matches={matches} standings={standings} />
         </ScrollView>
       ) : (
         // Non-knockout squads: the hero + Rankings/Knockout tab pill live
@@ -477,16 +596,26 @@ export default function LeaderboardDetail() {
               name={heroTitle}
               subtitle={leaderboardSubtitle}
             />
-            <LeaderboardTabs
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-            />
+            {!setupBlock ? (
+              <LeaderboardTabs
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+              />
+            ) : null}
           </View>
+
+          {setupBlock ? (
+            <LeaderboardSetupGate
+              variant={setupBlock}
+              onPrimaryPress={openSetupSheet}
+              onBack={onBack}
+            />
+          ) : null}
 
           {/* Rankings sub-tab. Conditionally rendered (re-mounts on tab
               switch) — RankingRow has no entering animations, so a fresh
               mount is silent and react-query keeps the data cached. */}
-          {activeTab === "rankings" && (
+          {!setupBlock && activeTab === "rankings" && (
             rankingsLoading ? (
               <ScreenLoadingSpinner />
             ) : (
@@ -494,6 +623,8 @@ export default function LeaderboardDetail() {
                 rankings={rankings}
                 isMe={isMe}
                 showWeeklyExamColumn={showWeeklyExamColumn}
+                refreshing={isRefreshing}
+                onRefresh={onRefresh}
               />
             )
           )}
@@ -503,7 +634,7 @@ export default function LeaderboardDetail() {
               swaps back to Rankings). This is what makes the bracket's
               per-round FadeInDown fire exactly once — on the first
               render with data — instead of on every tab toggle. */}
-          {bracketEverVisited && (
+          {!setupBlock && bracketEverVisited && (
             <ScrollView
               style={[
                 styles.knockoutScroll,
@@ -511,6 +642,7 @@ export default function LeaderboardDetail() {
               ]}
               contentContainerStyle={styles.bracketScrollContent}
               showsVerticalScrollIndicator={false}
+              refreshControl={refreshControl}
             >
               <KnockoutBracket
                 rounds={knockoutRounds}
@@ -522,13 +654,23 @@ export default function LeaderboardDetail() {
         </View>
       )}
 
-      <View style={styles.errorWrap} pointerEvents="box-none">
-        <ErrorMessage
-          message={error}
-          visible={!!error}
-          onDismiss={dismissError}
+      {!setupBlock ? (
+        <View style={styles.errorWrap} pointerEvents="box-none">
+          <ErrorMessage
+            message={error}
+            visible={!!error}
+            onDismiss={dismissError}
+          />
+        </View>
+      ) : null}
+
+      {setupBlock ? (
+        <LeaderboardProfileSetupSheet
+          ref={setupSheetRef}
+          variant={setupBlock}
+          onSuccess={handleSetupSuccess}
         />
-      </View>
+      ) : null}
     </View>
   );
 }

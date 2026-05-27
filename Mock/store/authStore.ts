@@ -29,6 +29,7 @@ export interface UserInfo {
     email: string;
     dob?: string;
     username?: string;
+    institution?: number;
     institution_id?: number;
     program_of_study?: number;
     profile_picture: string;
@@ -84,9 +85,10 @@ export const useAuthStore = create<AuthState>()((set) => ({
       const user = await getItem('user');
 
       if (token && user) {
+        const userInfo = JSON.parse(user) as UserInfo;
         set({
           userToken: { token },
-          userInfo: JSON.parse(user),
+          userInfo,
           isLoading: false,
         });
       } else {
@@ -138,11 +140,12 @@ export const useAuthStore = create<AuthState>()((set) => ({
   },
 
   setUserInformation: async (userInfo) => {
+    // Keep UI state current even if persistence fails.
+    set({ userInfo });
     try {
       await setItem('user', JSON.stringify(userInfo));
-      set({ userInfo });
-    } catch {
-      // Silent failure — matches original behavior
+    } catch (error) {
+      console.warn('Failed to persist user info:', error);
     }
   },
 }));
