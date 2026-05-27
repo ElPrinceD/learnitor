@@ -1,6 +1,6 @@
 import { Stack } from "expo-router";
 import React from "react";
-import { useColorScheme } from "react-native";
+import { useColorScheme } from "../../../components/useColorScheme";
 import Colors from "../../../constants/Colors";
 
 export default function Tab2Layout() {

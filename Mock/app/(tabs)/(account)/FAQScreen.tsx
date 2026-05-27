@@ -15,6 +15,7 @@ import {
 import { Search, ChevronUp, ChevronDown } from "lucide-react-native";
 import Colors from "../../../constants/Colors";
 import { rMS, rS, rV, SIZES } from "../../../constants";
+import ScreenLoadingSpinner from "../../../components/ScreenLoadingSpinner";
 
 // FAQ data based on actual app features
 const faqData = [
@@ -350,7 +351,7 @@ const FAQScreen: React.FC = () => {
   if (isLoading) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
-        <ActivityIndicator size="large" color={themeColors.tint} />
+        <ScreenLoadingSpinner style={{ flex: 0, paddingVertical: 0 }} />
         <Text style={styles.loadingText}>Loading FAQs...</Text>
       </View>
     );

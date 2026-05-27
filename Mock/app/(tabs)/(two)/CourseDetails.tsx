@@ -9,11 +9,11 @@ import {
   View,
   StyleSheet,
   Animated as RNAnimated,
-  useColorScheme,
   Dimensions,
   RefreshControl,
   ActivityIndicator,
 } from "react-native";
+import { useColorScheme } from "../../../components/useColorScheme";
 import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInDown, ReduceMotion } from "react-native-reanimated";
@@ -23,6 +23,7 @@ import Toast from "react-native-root-toast";
 import Colors from "../../../constants/Colors";
 import { SIZES, rS, rV } from "../../../constants";
 import { useNavigation } from "@react-navigation/native";
+import ScreenLoadingSpinner from "../../../components/ScreenLoadingSpinner";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "../../../QueryClient";
 import {
@@ -417,7 +418,7 @@ const CourseDetails: React.FC = () => {
           zIndex: 1,
         },
       }),
-    [themeColors.icon, rV, rS, SIZES, MAX_HEADER_HEIGHT]
+    [themeColors, rV, rS, SIZES, MAX_HEADER_HEIGHT]
   );
 
   useEffect(() => {
@@ -454,7 +455,7 @@ const CourseDetails: React.FC = () => {
         />
       ),
     });
-  }, [navigation, headerTitleOpacity, headerOpacity]);
+  }, [navigation, headerTitleOpacity, headerOpacity, themeColors, styles, parsedCourse.title]);
 
   return (
     <View style={styles.container}>
@@ -516,11 +517,7 @@ const CourseDetails: React.FC = () => {
         </View>
         <View>
           {topicsStatus === "pending" || enrollmentStatus === "pending" ? (
-            <ActivityIndicator
-              style={styles.activityIndicator}
-              size="large"
-              color={themeColors.tint}
-            />
+            <ScreenLoadingSpinner style={styles.activityIndicator} />
           ) : null}
         </View>
         <Animated.View

@@ -49,7 +49,7 @@ const ColumnHeaders: React.FC<{
       color: themeColors.textSecondary,
     },
     columnLabelStudent: { flex: 1, textAlign: "left" },
-    columnLabelSW: { width: rS(48), textAlign: "right" },
+    columnLabelSW: { width: rS(48), textAlign: "center" },
     columnLabelPoints: { width: rS(72), textAlign: "right" },
   });
 

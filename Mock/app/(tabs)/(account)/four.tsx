@@ -41,6 +41,7 @@ import {
 import { getRankingsSummary } from "../../../services/LeaderboardApiCalls";
 import ProfileInsightsSummary from "../../../components/profile/ProfileInsightsSummary";
 import { formatMemberSince } from "../../../components/profile/profileCopy";
+import ScreenLoadingSpinner from "../../../components/ScreenLoadingSpinner";
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -50,6 +51,14 @@ interface SeasonEntry {
   rank: number;
   maxScore?: number;
 }
+
+const parseRankString = (field: any): string => {
+  if (!field) return "—";
+  if (typeof field === "object" && field !== null) {
+    return field.rank || "—";
+  }
+  return String(field);
+};
 
 const Profile = () => {
   const { userToken, userInfo, setUserInformation, setUserInfo } = useAuth();
@@ -608,7 +617,7 @@ const Profile = () => {
         >
           {insightsLoading ? (
             <View style={styles.insightsLoading}>
-              <ActivityIndicator size="small" color={themeColors.tint} />
+              <ScreenLoadingSpinner style={{ flex: 0, paddingVertical: rV(20) }} />
             </View>
           ) : (
             <ProfileInsightsSummary
@@ -676,7 +685,7 @@ const Profile = () => {
                   </View>
                 </View>
                 <Text style={styles.standingRank}>
-                  {item.rank || "—"}
+                  {parseRankString(item.rank)}
                 </Text>
               </TouchableOpacity>
             </Animated.View>

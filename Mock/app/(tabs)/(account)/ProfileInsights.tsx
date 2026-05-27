@@ -20,6 +20,7 @@ import {
 } from '../../../services/UserStatsApiCalls';
 import ProfileInsightsBody from '../../../components/profile/ProfileInsightsBody';
 import { formatMemberSince } from '../../../components/profile/profileCopy';
+import ScreenLoadingSpinner from '../../../components/ScreenLoadingSpinner';
 
 const ProfileInsightsPage = () => {
   const { userToken } = useAuth();
@@ -109,7 +110,7 @@ const ProfileInsightsPage = () => {
         >
           {isLoading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color={themeColors.tint} />
+              <ScreenLoadingSpinner style={{ flex: 0, paddingVertical: 0 }} />
             </View>
           ) : (
             <ProfileInsightsBody insights={insights} />

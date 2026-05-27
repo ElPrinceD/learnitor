@@ -6,9 +6,9 @@ import {
   TouchableOpacity,
   ScrollView,
   Animated,
-  useColorScheme,
   ActivityIndicator,
 } from "react-native";
+import { useColorScheme } from "../../../components/useColorScheme";
 import { router, useLocalSearchParams } from "expo-router";
 import { useAuth } from "../../../components/AuthContext";
 import { Course, Topic, Result } from "../../../components/types";
@@ -372,10 +372,13 @@ const ScorePage: React.FC = () => {
     titleTranslateY,
     scoreOpacity,
     scoreTranslateY,
+    themeColors,
+    styles,
+    score,
   ]);
 
   return (
-    <View>
+    <View style={{ flex: 1, backgroundColor: themeColors.background }}>
       <ScrollView
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}

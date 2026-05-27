@@ -31,6 +31,7 @@ import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { useTimeline } from "../../../contexts/TimelineContext";
 import { CalendarOff } from "lucide-react-native";
 import ErrorMessage from "../../../components/ErrorMessage";
+import ScreenLoadingSpinner from "../../../components/ScreenLoadingSpinner";
 
 const Timeline = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -321,9 +322,7 @@ const Timeline = () => {
       >
         <View style={styles.plansContainer}>
           {plansStatus === "pending" ? (
-            <View style={{ flex: 1, justifyContent: "center" }}>
-              <ActivityIndicator size="large" color="#0D47A1" />
-            </View>
+            <ScreenLoadingSpinner />
           ) : memoizedPlans.length === 0 ? (
             <View style={styles.noPlansContainer}>
               <View style={styles.noPlansIcon}>
@@ -371,14 +370,7 @@ const Timeline = () => {
 
       {!bottomSheetReady ? (
         // Loading state while BottomSheet initializes
-        <View
-          style={[
-            styles.bottom,
-            { flex: 1, justifyContent: "center", alignItems: "center" },
-          ]}
-        >
-          <ActivityIndicator size="large" color={themeColors.tint} />
-        </View>
+        <ScreenLoadingSpinner />
       ) : useFallback ? (
         // Fallback ScrollView when BottomSheet fails
         renderFallbackContent()
@@ -404,9 +396,7 @@ const Timeline = () => {
           >
             <View style={styles.plansContainer}>
               {plansStatus === "pending" ? (
-                <View style={{ flex: 1, justifyContent: "center" }}>
-                  <ActivityIndicator size="large" color="#0D47A1" />
-                </View>
+                <ScreenLoadingSpinner />
               ) : memoizedPlans.length === 0 ? (
                 <View style={styles.noPlansContainer}>
                   <View style={styles.noPlansIcon}>

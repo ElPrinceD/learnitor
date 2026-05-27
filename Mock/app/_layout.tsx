@@ -101,11 +101,11 @@ const DeepLinkHandler = () => {
         // Parse the URL to extract game code
         const parsedUrl = Linking.parse(url);
 
-        // Handle custom scheme: elevay://game/join/ABC123
+        // Handle custom scheme: elevay://game/join?code=ABC123
         if (
           parsedUrl.scheme === "elevay" &&
           parsedUrl.hostname === "game" &&
-          parsedUrl.path === "/join"
+          (parsedUrl.path === "join" || parsedUrl.path === "/join" || parsedUrl.path === "join/" || parsedUrl.path === "/join/")
         ) {
           const gameCode = parsedUrl.queryParams?.code as string;
 
@@ -142,11 +142,15 @@ const DeepLinkHandler = () => {
             }
           }
         }
-        // Handle universal links: https://elevay.online/GameIntro?code=ABC123
+        // Handle universal links and custom schemes for GameIntro
         else if (
-          parsedUrl.scheme === "https" &&
-          parsedUrl.hostname === "elevay.online" &&
-          parsedUrl.path === "/GameIntro"
+          (parsedUrl.scheme === "https" &&
+            (parsedUrl.hostname === "elevay.online" || parsedUrl.hostname === "www.elevay.online") &&
+            (parsedUrl.path === "GameIntro" || parsedUrl.path === "/GameIntro" || parsedUrl.path === "GameIntro/" || parsedUrl.path === "/GameIntro/")) ||
+          (parsedUrl.scheme === "elevay" &&
+            (parsedUrl.hostname === "GameIntro" ||
+              (parsedUrl.hostname === "game" &&
+                (parsedUrl.path === "GameIntro" || parsedUrl.path === "/GameIntro" || parsedUrl.path === "GameIntro/" || parsedUrl.path === "/GameIntro/"))))
         ) {
           const gameCode = parsedUrl.queryParams?.code as string;
 
@@ -261,6 +265,30 @@ mobileAds()
   .then((adapterStatuses) => {})
   .catch((error) => {});
 
+const CustomDefaultTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: Colors.light.background,
+    card: Colors.light.card,
+    text: Colors.light.text,
+    border: Colors.light.border,
+    primary: Colors.light.tint,
+  },
+};
+
+const CustomDarkTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    background: Colors.dark.background,
+    card: Colors.dark.card,
+    text: Colors.dark.text,
+    border: Colors.dark.border,
+    primary: Colors.dark.tint,
+  },
+};
+
 const RootLayoutNav = () => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -293,7 +321,7 @@ const RootLayoutNav = () => {
 
                 <ThemeProvider
                   value={
-                    colorScheme === "dark" ? DarkTheme : DefaultTheme
+                    colorScheme === "dark" ? CustomDarkTheme : CustomDefaultTheme
                   }
                 >
                   <Stack>

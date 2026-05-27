@@ -3,10 +3,10 @@ import {
   View,
   Text,
   StyleSheet,
-  useColorScheme,
   Switch,
   ScrollView,
 } from "react-native";
+import { useColorScheme } from "../../../components/useColorScheme";
 import { router, useLocalSearchParams } from "expo-router";
 import Colors from "../../../constants/Colors";
 import GameButton from "../../../components/GameButton";

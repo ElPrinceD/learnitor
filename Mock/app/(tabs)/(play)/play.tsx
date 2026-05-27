@@ -36,6 +36,7 @@ import {
   getWeeklyExamStatus,
   WeeklyExamStatus,
 } from "../../../services/WeeklyExamApiCalls";
+import { getProfileInsights } from "../../../services/UserStatsApiCalls";
 
 import ScoreCardHero from "../../../components/play/ScoreCardHero";
 import ExamActionRow from "../../../components/play/ExamActionRow";
@@ -164,6 +165,12 @@ export default function PlayScreen() {
   });
   const examStatus = examStatusQuery;
 
+  const { data: profileInsights } = useQuery({
+    queryKey: ["profileInsights"],
+    queryFn: () => getProfileInsights(userToken?.token),
+    enabled: !!userToken?.token,
+  });
+
   // ── Derived: exam window (ticks every 60s) ──────────────────────────────
   const now = useNowTick(60_000);
 
@@ -270,7 +277,7 @@ export default function PlayScreen() {
   }, []);
 
   const navigateToExam = useCallback(() => {
-    router.push("/(game)/WeeklyExam");
+    router.push("/(game)/WeeklyExamIntro");
   }, []);
 
   const openLeaderboard = useCallback(
@@ -376,6 +383,7 @@ export default function PlayScreen() {
             examStartLocal={examDerived.startLocal}
             examEndLocal={examDerived.endLocal}
             enterAnim={enterAnim}
+            streak={profileInsights?.habits?.current_daily_streak}
           />
 
           <ExamActionRow

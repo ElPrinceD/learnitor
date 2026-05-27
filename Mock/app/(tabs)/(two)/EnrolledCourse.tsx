@@ -10,12 +10,12 @@ import {
   StyleSheet,
   ScrollView,
   Animated,
-  useColorScheme,
   RefreshControl,
   BackHandler,
   Text,
   ActivityIndicator,
 } from "react-native";
+import { useColorScheme } from "../../../components/useColorScheme";
 import CourseRoadmap from "../../../components/CourseRoadmap";
 import RoadmapTitle from "../../../components/RoadmapTitle";
 import { useLocalSearchParams, router } from "expo-router";
@@ -23,6 +23,7 @@ import { useAuth } from "../../../components/AuthContext";
 import { Topic, Course } from "../../../components/types";
 import { useNavigation } from "@react-navigation/native";
 import Colors from "../../../constants/Colors";
+import ScreenLoadingSpinner from "../../../components/ScreenLoadingSpinner";
 import ProgressBar from "../../../components/ProgressBar";
 import { SIZES, rS, rV } from "../../../constants";
 import { useQuery } from "@tanstack/react-query";
@@ -154,21 +155,7 @@ const EnrolledCourse: React.FC = () => {
 
   // Show loading state while course is being parsed
   if (!parsedCourse) {
-    return (
-      <View
-        style={[
-          {
-            flex: 1,
-            backgroundColor: themeColors.background,
-            justifyContent: "center",
-            alignItems: "center",
-            padding: 20,
-          },
-        ]}
-      >
-        <ActivityIndicator size="large" color={themeColors.tint} />
-      </View>
-    );
+    return <ScreenLoadingSpinner />;
   }
 
   const {
@@ -362,9 +349,9 @@ const EnrolledCourse: React.FC = () => {
   });
   const containerStyle = useMemo(
     () => ({ backgroundColor: themeColors.text, height: 7 }),
-    []
+    [themeColors.text]
   );
-  const fillStyle = useMemo(() => ({ backgroundColor: themeColors.icon }), []);
+  const fillStyle = useMemo(() => ({ backgroundColor: themeColors.icon }), [themeColors.icon]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -417,6 +404,12 @@ const EnrolledCourse: React.FC = () => {
     titleTranslateY,
     progressOpacity,
     progressTranslateY,
+    themeColors,
+    styles,
+    containerStyle,
+    fillStyle,
+    progress,
+    parsedCourse.title,
   ]);
 
   // Show component error if any
@@ -468,16 +461,7 @@ const EnrolledCourse: React.FC = () => {
         <View style={styles.container}>
           <RoadmapTitle course={parsedCourse} progress={progress} />
           {enrolledTopicsStatus === "pending" ? (
-            <View
-              style={{
-                flex: 1,
-                justifyContent: "center",
-                alignItems: "center",
-                padding: 20,
-              }}
-            >
-              <ActivityIndicator size="large" color={themeColors.tint} />
-            </View>
+            <ScreenLoadingSpinner />
           ) : enrolledTopicsError ? (
             <View
               style={{

@@ -3,6 +3,8 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { queryClient } from '../QueryClient';
+import { useCacheStore } from './cacheStore';
 
 // ── Types ──────────────────────────────────────────────────────────────
 export interface UserToken {
@@ -96,6 +98,14 @@ export const useAuthStore = create<AuthState>()((set) => ({
   },
 
   login: async (user, token) => {
+    // Prevent leak by clearing both QueryClient cache and SQLite cache first
+    try {
+      queryClient.clear();
+      await useCacheStore.getState().clear();
+    } catch (e) {
+      console.warn('Error clearing caches on login:', e);
+    }
+
     await setItem('token', token);
     await setItem('user', JSON.stringify(user));
 
@@ -106,6 +116,14 @@ export const useAuthStore = create<AuthState>()((set) => ({
   },
 
   logout: async () => {
+    // Clear both QueryClient cache and SQLite cache on logout
+    try {
+      queryClient.clear();
+      await useCacheStore.getState().clear();
+    } catch (e) {
+      console.warn('Error clearing caches on logout:', e);
+    }
+
     await deleteItem('token');
     await deleteItem('user');
 

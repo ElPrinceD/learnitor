@@ -17,6 +17,7 @@ import {
   getCustomH2HStandings,
   getKnockoutBracket,
   getLeaderboardDetails,
+  SquadInfo,
 } from "../../services/LeaderboardApiCalls";
 import { useAuth } from "../../components/AuthContext";
 import Colors from "../../constants/Colors";
@@ -31,6 +32,25 @@ import LeaderboardTabs, {
   LeaderboardTab,
 } from "../../components/leaderboard/LeaderboardTabs";
 import KnockoutBracket from "../../components/leaderboard/KnockoutBracket";
+
+const COUNTRY_MAP: Record<string, string> = {
+  GH: "Ghana",
+  NG: "Nigeria",
+  US: "United States",
+  GB: "United Kingdom",
+  CA: "Canada",
+  DE: "Germany",
+  FR: "France",
+  ZA: "South Africa",
+  KE: "Kenya",
+  IN: "India",
+};
+
+const getCountryName = (code?: string) => {
+  if (!code) return undefined;
+  const upper = code.toUpperCase();
+  return COUNTRY_MAP[upper] || code;
+};
 
 export default function LeaderboardDetail() {
   const { id, name, timeframe, type } = useLocalSearchParams<{
@@ -123,7 +143,40 @@ export default function LeaderboardDetail() {
       return item;
     });
   }, [leaderboardData?.rankings, userInfo?.user.id, userInfo?.user.username]);
-  const squadInfo = leaderboardData?.squadInfo;
+
+  // For custom squads, knockout timing lives inside `squadInfo`. For global
+  // leaderboards (world/country/school), the backend returns it at the
+  // response root. Merge both sources so KnockoutBracket always receives
+  // the info it needs to display "KNOCKOUT STARTS IN SW X".
+  const squadInfo = useMemo<SquadInfo | undefined>(() => {
+    const base = leaderboardData?.squadInfo;
+    const topLevel = {
+      knockoutStartWeek: leaderboardData?.knockoutStartWeek,
+      knockoutStarted: leaderboardData?.knockoutStarted,
+      totalKnockoutRounds: leaderboardData?.totalKnockoutRounds,
+    };
+    // If squadInfo exists (custom squad), prefer its values but let
+    // top-level act as fallback. If it doesn't exist (global leaderboard),
+    // construct a minimal SquadInfo from the top-level fields.
+    if (base) {
+      return {
+        ...base,
+        knockoutStartWeek: base.knockoutStartWeek ?? topLevel.knockoutStartWeek,
+        knockoutStarted: base.knockoutStarted ?? topLevel.knockoutStarted,
+        totalKnockoutRounds: base.totalKnockoutRounds ?? topLevel.totalKnockoutRounds,
+      };
+    }
+    // Only construct if the backend actually sent at least one field.
+    if (topLevel.knockoutStartWeek != null) {
+      return topLevel;
+    }
+    return undefined;
+  }, [
+    leaderboardData?.squadInfo,
+    leaderboardData?.knockoutStartWeek,
+    leaderboardData?.knockoutStarted,
+    leaderboardData?.totalKnockoutRounds,
+  ]);
   const resolvedLeaderboardId = Array.isArray(id) ? id[0] : id;
   const isGlobalLeaderboard =
     typeof resolvedLeaderboardId === "string" &&
@@ -137,18 +190,35 @@ export default function LeaderboardDetail() {
 
   const heroTitle = isSchoolLeaderboard ? "School Ranking" : name;
 
-  const schoolSubtitle = useMemo(() => {
-    if (!isSchoolLeaderboard) return undefined;
-    return (
-      leaderboardData?.schoolName ??
-      leaderboardData?.schoolInstitution?.name ??
-      leaderboardData?.userStatus?.schoolName
-    );
+  const isCountryLeaderboard =
+    typeof resolvedLeaderboardId === "string" &&
+    resolvedLeaderboardId.toLowerCase() === "country";
+
+  const leaderboardSubtitle = useMemo(() => {
+    if (isSchoolLeaderboard) {
+      return (
+        leaderboardData?.schoolName ??
+        leaderboardData?.schoolInstitution?.name ??
+        leaderboardData?.userStatus?.schoolName
+      );
+    }
+    if (isCountryLeaderboard) {
+      const countryVal =
+        leaderboardData?.countryName ??
+        leaderboardData?.country ??
+        userInfo?.user?.address?.country;
+      return getCountryName(countryVal);
+    }
+    return undefined;
   }, [
     isSchoolLeaderboard,
+    isCountryLeaderboard,
     leaderboardData?.schoolName,
     leaderboardData?.schoolInstitution?.name,
     leaderboardData?.userStatus?.schoolName,
+    leaderboardData?.countryName,
+    leaderboardData?.country,
+    userInfo?.user?.address?.country,
   ]);
 
   // SW column: custom squads when the API sends `weeklyExamScore`, and
@@ -388,7 +458,7 @@ export default function LeaderboardDetail() {
           <LeaderboardHero
             timeframe={timeframe}
             name={heroTitle}
-            subtitle={schoolSubtitle}
+            subtitle={leaderboardSubtitle}
           />
           <H2HBattlesPanel matches={matches} standings={standings} />
         </ScrollView>
@@ -405,7 +475,7 @@ export default function LeaderboardDetail() {
             <LeaderboardHero
               timeframe={timeframe}
               name={heroTitle}
-              subtitle={schoolSubtitle}
+              subtitle={leaderboardSubtitle}
             />
             <LeaderboardTabs
               activeTab={activeTab}

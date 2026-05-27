@@ -9,9 +9,9 @@ const apiClient = axios.create({
 });
 
 export interface RankingSummary {
-  world: string | null;
-  country: string | null;
-  school: string | null;
+  world: string | { rank: string | null; movement?: "up" | "down" | "same" } | null;
+  country: string | { rank: string | null; movement?: "up" | "down" | "same" } | null;
+  school: string | { rank: string | null; movement?: "up" | "down" | "same" } | null;
 }
 
 export interface CustomLeaderboard {
@@ -90,6 +90,13 @@ export interface LeaderboardDetailsResponse {
   squadInfo?: SquadInfo;
   schoolName?: string;
   schoolInstitution?: SchoolInstitution;
+  countryName?: string;
+  country?: string;
+  // For segment leaderboards (world/country/school) the backend returns
+  // knockout timing at the response root instead of inside squadInfo.
+  knockoutStartWeek?: number;
+  knockoutStarted?: boolean;
+  totalKnockoutRounds?: number;
 }
 
 export interface H2HMatchup {
@@ -212,12 +219,12 @@ export const getKnockoutBracket = async (
   token: string | null | undefined,
   squadId?: string
 ): Promise<KnockoutBracketResponse> => {
-  // Per-squad bracket endpoint (see BACKEND_KNOCKOUT_BRACKET.md).
-  // Global leaderboard IDs (world/country/school) don't have a per-squad
-  // bracket, so fall back to the legacy global endpoint for those.
-  const isGlobal = !squadId || ['world', 'country', 'school'].includes(squadId.toLowerCase());
-  const url = isGlobal
-    ? '/api/knockout/bracket'
+  // Segment brackets (world/country/school) use the leaderboard details path.
+  // Custom squad brackets use the per-squad custom path.
+  const SEGMENT_IDS = ['world', 'country', 'school'];
+  const isSegment = !!squadId && SEGMENT_IDS.includes(squadId.toLowerCase());
+  const url = isSegment
+    ? `/api/leaderboards/details/${squadId.toLowerCase()}/knockout-bracket`
     : `/api/leaderboards/custom/${squadId}/knockout-bracket`;
   const response = await apiClient.get<KnockoutBracketResponse>(url, {
     headers: { Authorization: `Token ${token}` },

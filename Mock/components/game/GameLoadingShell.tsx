@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import Colors from "../../constants/Colors";
 import { rMS, rS, rV, SIZES } from "../../constants/index.js";
 import ErrorMessage from "../ErrorMessage";
+import ScreenLoadingSpinner from "../ScreenLoadingSpinner";
 
 interface Props {
   loadingText: string;
@@ -48,7 +49,7 @@ const GameLoadingShell: React.FC<Props> = ({
     loadingText: {
       color: themeColors.textSecondary,
       fontSize: SIZES.small,
-      marginTop: rV(12),
+      marginTop: rV(16),
       fontWeight: "700",
       textAlign: "center",
       paddingHorizontal: rMS(20),
@@ -60,6 +61,7 @@ const GameLoadingShell: React.FC<Props> = ({
       <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
       <View style={styles.blob1} />
       <View style={styles.blob2} />
+      <ScreenLoadingSpinner style={{ flex: 0, paddingVertical: 0 }} />
       <Text style={styles.loadingText}>{loadingText}</Text>
       <ErrorMessage
         message={error}

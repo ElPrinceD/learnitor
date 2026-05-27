@@ -9,9 +9,9 @@ import {
   View,
   Text,
   StyleSheet,
-  useColorScheme,
   StatusBar,
 } from "react-native";
+import { useColorScheme } from "../../../components/useColorScheme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import SearchBar from "../../../components/SearchBar";

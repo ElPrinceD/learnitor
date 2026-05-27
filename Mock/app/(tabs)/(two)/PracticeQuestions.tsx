@@ -4,9 +4,11 @@ import {
   StyleSheet,
   ScrollView,
   Text,
-  useColorScheme,
   ActivityIndicator,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
+import { useColorScheme } from "../../../components/useColorScheme";
 import { useLocalSearchParams, router } from "expo-router";
 import Toast from "react-native-root-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -21,8 +23,10 @@ import {
   getPracticeAnswers,
 } from "../../../services/CoursesApiCalls";
 import ErrorMessage from "../../../components/ErrorMessage";
+import ScreenLoadingSpinner from "../../../components/ScreenLoadingSpinner";
 
 const PracticeQuestions: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const { topic, level, isTimed, duration, course } = useLocalSearchParams();
   const { userToken } = useAuth();
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -347,74 +351,75 @@ const PracticeQuestions: React.FC = () => {
   );
 
   return (
-    <ScrollView
-      contentContainerStyle={{ flexGrow: 1, justifyContent: "space-between" }}
-    >
-      {questionsStatus === "pending" || answersStatus === "pending" ? (
-        <View style={{ flex: 1, justifyContent: "center" }}>
-          <ActivityIndicator size="large" color={themeColors.tint} />
-        </View>
-      ) : (
-        <View style={styles.container}>
-          {timeLeft !== null && (
-            <Text style={[styles.timer, timeLeft <= 60 && styles.timerRed]}>
-              {Math.floor(timeLeft / 60)}:
-              {timeLeft % 60 < 10 ? `0${timeLeft % 60}` : timeLeft % 60}
+    <View style={{ flex: 1, backgroundColor: themeColors.background, paddingTop: insets.top }}>
+      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1, justifyContent: "space-between" }}
+      >
+        {questionsStatus === "pending" || answersStatus === "pending" ? (
+          <ScreenLoadingSpinner />
+        ) : (
+          <View style={styles.container}>
+            {timeLeft !== null && (
+              <Text style={[styles.timer, timeLeft <= 60 && styles.timerRed]}>
+                {Math.floor(timeLeft / 60)}:
+                {timeLeft % 60 < 10 ? `0${timeLeft % 60}` : timeLeft % 60}
+              </Text>
+            )}
+            <Text style={styles.questionNumberText}>
+              Question {currentQuestion + 1} / {practiceQuestions?.length || 0}
             </Text>
-          )}
-          <Text style={styles.questionNumberText}>
-            Question {currentQuestion + 1} / {practiceQuestions?.length || 0}
-          </Text>
-          {practiceQuestions && practiceAnswers && (
-            <Questions
-              practiceQuestions={practiceQuestions}
-              practiceAnswers={practiceAnswers}
-              currentQuestion={currentQuestion}
-              questionsWithMultipleCorrectAnswers={
-                questionsWithMultipleCorrectAnswers
-              }
-              isAnswerSelected={isAnswerSelected}
-              handleAnswerSelection={handleAnswerSelection}
-              showImmediateFeedback={false}
-              styles={styles}
+            {practiceQuestions && practiceAnswers && (
+              <Questions
+                practiceQuestions={practiceQuestions}
+                practiceAnswers={practiceAnswers}
+                currentQuestion={currentQuestion}
+                questionsWithMultipleCorrectAnswers={
+                  questionsWithMultipleCorrectAnswers
+                }
+                isAnswerSelected={isAnswerSelected}
+                handleAnswerSelection={handleAnswerSelection}
+                showImmediateFeedback={false}
+                styles={styles}
+              />
+            )}
+            <View style={styles.buttonContainer}>
+              {currentQuestion > 0 && (
+                <GameButton
+                  onPress={handlePreviousQuestion}
+                  disabled={currentQuestion === 0}
+                  style={styles.button}
+                  title="Previous"
+                />
+              )}
+              {currentQuestion < (practiceQuestions?.length || 0) - 1 && (
+                <GameButton
+                  onPress={handleNextQuestion}
+                  style={styles.button}
+                  title="Next"
+                />
+              )}
+              {currentQuestion === (practiceQuestions?.length || 0) - 1 && (
+                <GameButton
+                  onPress={
+                    isSubmitDisabled ? handleDisabledSubmitPress : handleSubmit
+                  }
+                  style={
+                    isSubmitDisabled ? styles.disabledButtonText : styles.button
+                  }
+                  title="Submit"
+                />
+              )}
+            </View>
+            <ErrorMessage
+              message={errorMessage}
+              visible={!!errorMessage}
+              onDismiss={handleDismissError}
             />
-          )}
-          <View style={styles.buttonContainer}>
-            {currentQuestion > 0 && (
-              <GameButton
-                onPress={handlePreviousQuestion}
-                disabled={currentQuestion === 0}
-                style={styles.button}
-                title="Previous"
-              />
-            )}
-            {currentQuestion < (practiceQuestions?.length || 0) - 1 && (
-              <GameButton
-                onPress={handleNextQuestion}
-                style={styles.button}
-                title="Next"
-              />
-            )}
-            {currentQuestion === (practiceQuestions?.length || 0) - 1 && (
-              <GameButton
-                onPress={
-                  isSubmitDisabled ? handleDisabledSubmitPress : handleSubmit
-                }
-                style={
-                  isSubmitDisabled ? styles.disabledButtonText : styles.button
-                }
-                title="Submit"
-              />
-            )}
           </View>
-          <ErrorMessage
-            message={errorMessage}
-            visible={!!errorMessage}
-            onDismiss={handleDismissError}
-          />
-        </View>
-      )}
-    </ScrollView>
+        )}
+      </ScrollView>
+    </View>
   );
 };
 

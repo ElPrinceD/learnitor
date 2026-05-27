@@ -30,6 +30,8 @@ import {
 import { getAnnouncements } from "../../services/companyApiCalls";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "../../QueryClient";
+import { Flame } from "lucide-react-native";
+import { getProfileInsights } from "../../services/UserStatsApiCalls";
 
 import ErrorMessage from "../../components/ErrorMessage";
 import EnrolledCoursesList from "../../components/EnrolledCoursesList";
@@ -73,6 +75,13 @@ const Home: React.FC = () => {
   } = useQuery({
     queryKey: ["announcements", token],
     queryFn: () => getAnnouncements(token!),
+    enabled: !!token,
+  });
+
+  // Profile Insights (for daily streak)
+  const { data: profileInsights } = useQuery({
+    queryKey: ["profileInsights", token],
+    queryFn: () => getProfileInsights(token),
     enabled: !!token,
   });
 
@@ -188,6 +197,7 @@ const Home: React.FC = () => {
         }),
         queryClient.invalidateQueries({ queryKey: ["todayTasks", token] }),
         queryClient.invalidateQueries({ queryKey: ["allCourses", token] }),
+        queryClient.invalidateQueries({ queryKey: ["profileInsights", token] }),
       ]);
     } finally {
       setRefreshing(false);
@@ -288,12 +298,31 @@ const Home: React.FC = () => {
       borderRadius: rS(40),
       backgroundColor: themeColors.tint + "10",
     },
+    heroHeaderRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: rV(6),
+    },
     heroGreeting: {
       fontSize: rMS(13),
       fontWeight: "700",
       color: themeColors.tint,
       letterSpacing: 0.5,
-      marginBottom: rV(6),
+    },
+    streakBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: "#FF980015",
+      paddingHorizontal: rMS(10),
+      paddingVertical: rV(4),
+      borderRadius: rMS(12),
+      gap: rS(4),
+    },
+    streakText: {
+      fontSize: rMS(10),
+      fontWeight: "800",
+      color: "#FF9800",
     },
     heroName: {
       fontSize: rMS(28),
@@ -426,9 +455,19 @@ const Home: React.FC = () => {
               <RNView style={styles.heroStripe} />
               <RNView style={styles.heroAccent} />
 
-              <RNText style={styles.heroGreeting}>
-                {greeting} 👋
-              </RNText>
+              <RNView style={styles.heroHeaderRow}>
+                <RNText style={styles.heroGreeting}>
+                  {greeting} 👋
+                </RNText>
+                {profileInsights?.habits?.current_daily_streak !== undefined && profileInsights.habits.current_daily_streak > 0 && (
+                  <RNView style={styles.streakBadge}>
+                    <Flame size={12} color="#FF9800" fill="#FF9800" />
+                    <RNText style={styles.streakText}>
+                      {profileInsights.habits.current_daily_streak} Day Streak
+                    </RNText>
+                  </RNView>
+                )}
+              </RNView>
               <RNText style={styles.heroName}>
                 {userInfo?.user?.first_name || "Learner"}
               </RNText>

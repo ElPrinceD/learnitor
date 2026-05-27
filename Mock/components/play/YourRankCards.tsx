@@ -37,6 +37,22 @@ interface Props {
   enterAnim: (delay: number) => any;
 }
 
+const parseRankField = (field: any): { rank: string | null; movement: RankMovement } => {
+  if (!field) {
+    return { rank: null, movement: "same" };
+  }
+  if (typeof field === "object" && field !== null) {
+    return {
+      rank: field.rank ?? null,
+      movement: (field.movement as RankMovement) ?? "same",
+    };
+  }
+  return {
+    rank: String(field),
+    movement: "same",
+  };
+};
+
 const YourRankCards: React.FC<Props> = ({
   rankings,
   onOpenLeaderboard,
@@ -45,38 +61,44 @@ const YourRankCards: React.FC<Props> = ({
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
-  const items: StandingItem[] = useMemo(
-    () => [
+  const items: StandingItem[] = useMemo(() => {
+    const worldParsed = parseRankField(rankings.world);
+    const countryParsed = parseRankField(rankings.country);
+    const schoolParsed = parseRankField(rankings.school);
+
+    return [
       {
         id: "world",
         name: "World Rankings",
         IconComponent: Globe,
-        rank: rankings.world,
+        rank: worldParsed.rank,
+        movement: worldParsed.movement,
         color: themeColors.tint,
       },
       {
         id: "country",
         name: "Country Rankings",
         IconComponent: Flag,
-        rank: rankings.country,
+        rank: countryParsed.rank,
+        movement: countryParsed.movement,
         color: themeColors.tintSecond ?? themeColors.tint,
       },
       {
         id: "school",
         name: "School Rankings",
         IconComponent: School,
-        rank: rankings.school,
+        rank: schoolParsed.rank,
+        movement: schoolParsed.movement,
         color: "#8b3b8f",
       },
-    ],
-    [
-      rankings.world,
-      rankings.country,
-      rankings.school,
-      themeColors.tint,
-      themeColors.tintSecond,
-    ]
-  );
+    ];
+  }, [
+    rankings.world,
+    rankings.country,
+    rankings.school,
+    themeColors.tint,
+    themeColors.tintSecond,
+  ]);
 
   const renderRankIndicator = useCallback(
     (movement?: RankMovement) => {

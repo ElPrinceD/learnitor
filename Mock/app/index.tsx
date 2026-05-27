@@ -4,6 +4,8 @@ import { Redirect } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useAuth } from "../store/authStore";
 
+import ScreenLoadingSpinner from "../components/ScreenLoadingSpinner";
+
 export default function Index() {
   const { userToken, isLoading } = useAuth();
 
@@ -14,11 +16,7 @@ export default function Index() {
   }, [isLoading]);
 
   if (isLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center" }}>
-        <ActivityIndicator size="large" color="#0000ff" />
-      </View>
-    );
+    return <ScreenLoadingSpinner />;
   }
 
   if (userToken) {

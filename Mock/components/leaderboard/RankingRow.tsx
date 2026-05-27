@@ -6,6 +6,7 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import { ChevronUp, ChevronDown, Minus } from "lucide-react-native";
 
 import Colors from "../../constants/Colors";
 import { rMS, rS, rV, useShadows } from "../../constants";
@@ -102,22 +103,13 @@ const RankingRow: React.FC<Props> = ({ item, isMe, showWeeklyExamColumn }) => {
       fontWeight: "800",
       color: themeColors.textSecondary,
       width: rS(48),
-      textAlign: "right",
+      textAlign: "center",
     },
-    movementUp: {
-      color: "#4CAF50",
-      fontSize: rMS(11),
-      fontWeight: "900",
-    },
-    movementDown: {
-      color: "#F44336",
-      fontSize: rMS(11),
-      fontWeight: "900",
-    },
-    movementSame: {
-      color: themeColors.textSecondary,
-      fontSize: rMS(11),
-      fontWeight: "900",
+    indicatorBox: {
+      width: rMS(14),
+      height: rMS(14),
+      alignItems: "center",
+      justifyContent: "center",
     },
   });
 
@@ -127,9 +119,21 @@ const RankingRow: React.FC<Props> = ({ item, isMe, showWeeklyExamColumn }) => {
         <Text style={[styles.rankNumber, { color: rankColor }]}>
           {formatRank(item.rank)}
         </Text>
-        {item.movement === "up" && <Text style={styles.movementUp}>▲</Text>}
-        {item.movement === "down" && <Text style={styles.movementDown}>▼</Text>}
-        {item.movement === "same" && <Text style={styles.movementSame}>—</Text>}
+        {item.movement === "up" && (
+          <View style={styles.indicatorBox}>
+            <ChevronUp size={12} color="#4CAF50" />
+          </View>
+        )}
+        {item.movement === "down" && (
+          <View style={styles.indicatorBox}>
+            <ChevronDown size={12} color="#F44336" />
+          </View>
+        )}
+        {item.movement === "same" && (
+          <View style={styles.indicatorBox}>
+            <Minus size={12} color={themeColors.textSecondary} />
+          </View>
+        )}
         <Image
           source={
             item.avatarUrl

@@ -13,6 +13,7 @@ export default {
     "assetBundlePatterns": ["**/*"],
     "sourceExts": ["js", "json", "ts", "tsx", "jsx", "svg"],
     "ios": {
+      "userInterfaceStyle": "automatic",
       "supportsTablet": true,
       "bundleIdentifier": "com.cradle.learnitor",
       "associatedDomains": ["applinks:elevay.online"],
@@ -35,6 +36,7 @@ export default {
       }
     },
     "android": {
+      "userInterfaceStyle": "automatic",
       "usesCleartextTraffic": true,
       "permissions": [
         "INTERNET",

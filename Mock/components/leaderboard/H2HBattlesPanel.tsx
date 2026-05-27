@@ -9,12 +9,14 @@ import {
 } from "react-native";
 import Animated, {
   Easing,
+  FadeInDown,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+import { Swords } from "lucide-react-native";
 import Colors from "../../constants/Colors";
-import { rMS, rS, rV } from "../../constants";
+import { rMS, rS, rV, useShadows } from "../../constants";
 import type {
   CustomH2HMatchItem,
   CustomH2HStanding,
@@ -36,6 +38,33 @@ interface Props {
   initialTab?: H2HTab;
 }
 
+// Colour for the result indicator chip.
+const resultColor = (result: string) => {
+  switch (result) {
+    case "w":
+      return "#4CAF50";
+    case "l":
+      return "#F44336";
+    case "d":
+      return "#FF9800";
+    default:
+      return undefined; // pending — uses tint
+  }
+};
+
+const resultLabel = (result: string) => {
+  switch (result) {
+    case "w":
+      return "WIN";
+    case "l":
+      return "LOSS";
+    case "d":
+      return "DRAW";
+    default:
+      return "PENDING";
+  }
+};
+
 const H2HBattlesPanel: React.FC<Props> = ({
   matches,
   standings,
@@ -43,6 +72,7 @@ const H2HBattlesPanel: React.FC<Props> = ({
 }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
+  const shadow = useShadows();
 
   const [tab, setTab] = useState<H2HTab>(initialTab);
 
@@ -119,6 +149,105 @@ const H2HBattlesPanel: React.FC<Props> = ({
     toggleTextActive: {
       color: "#fff",
     },
+
+    // ── Match card styles ──────────────────────────────────────────────────
+    matchCard: {
+      backgroundColor: themeColors.cardGlass,
+      borderRadius: rMS(20),
+      marginBottom: rV(10),
+      borderWidth: 1,
+      borderColor: themeColors.border + "40",
+      overflow: "hidden",
+      ...shadow.light,
+    },
+    matchCardInner: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: rV(14),
+      paddingHorizontal: rMS(14),
+    },
+    matchSwBadge: {
+      backgroundColor: themeColors.tint + "14",
+      borderRadius: rMS(10),
+      paddingHorizontal: rMS(10),
+      paddingVertical: rV(6),
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: rS(12),
+      minWidth: rMS(44),
+    },
+    matchSwText: {
+      fontSize: rMS(9),
+      fontWeight: "800",
+      color: themeColors.tint,
+      letterSpacing: 0.8,
+    },
+    matchSwNumber: {
+      fontSize: rMS(16),
+      fontWeight: "900",
+      color: themeColors.tint,
+      lineHeight: rMS(20),
+    },
+    matchBody: {
+      flex: 1,
+    },
+    matchPlayers: {
+      fontSize: rMS(13),
+      fontWeight: "800",
+      color: themeColors.text,
+      marginBottom: rV(3),
+    },
+    matchResultChip: {
+      alignSelf: "flex-start",
+      paddingHorizontal: rMS(8),
+      paddingVertical: rV(2),
+      borderRadius: rMS(6),
+    },
+    matchResultText: {
+      fontSize: rMS(9),
+      fontWeight: "800",
+      letterSpacing: 0.8,
+    },
+    matchScorePill: {
+      backgroundColor: themeColors.background,
+      borderRadius: rMS(14),
+      paddingHorizontal: rMS(14),
+      paddingVertical: rV(8),
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      marginLeft: rS(10),
+      ...shadow.light,
+    },
+    matchScoreText: {
+      fontSize: rMS(16),
+      fontWeight: "900",
+      color: themeColors.text,
+    },
+    matchScoreDivider: {
+      width: 1,
+      height: rV(14),
+      backgroundColor: themeColors.border,
+      marginHorizontal: rS(8),
+    },
+    matchScorePending: {
+      color: themeColors.textSecondary + "80",
+    },
+
+    // ── Empty state ────────────────────────────────────────────────────────
+    emptyWrap: {
+      alignItems: "center",
+      paddingVertical: rV(32),
+    },
+    emptyText: {
+      color: themeColors.textSecondary,
+      fontSize: rMS(13),
+      fontWeight: "600",
+      marginTop: rV(10),
+      textAlign: "center",
+    },
+
+    // ── Standings styles (unchanged) ───────────────────────────────────────
     standingCard: {
       backgroundColor: themeColors.cardGlass,
       padding: rMS(10),
@@ -129,27 +258,6 @@ const H2HBattlesPanel: React.FC<Props> = ({
       marginBottom: rV(6),
       borderWidth: 1,
       borderColor: themeColors.border + "40",
-    },
-    standingName: {
-      fontSize: rMS(12),
-      fontWeight: "800",
-      color: themeColors.text,
-    },
-    standingRank: {
-      fontSize: rMS(12),
-      fontWeight: "bold",
-      color: themeColors.tint,
-    },
-    matchRowLeft: {
-      flexDirection: "row",
-      alignItems: "center",
-      flex: 1,
-    },
-    matchResultDot: {
-      width: rMS(8),
-      height: rMS(8),
-      borderRadius: 4,
-      marginRight: rS(8),
     },
     standingsHeaderRow: {
       backgroundColor: "transparent",
@@ -224,6 +332,70 @@ const H2HBattlesPanel: React.FC<Props> = ({
     },
   });
 
+  // ── Match card renderer ────────────────────────────────────────────────
+  const renderMatchCard = (m: CustomH2HMatchItem, idx: number) => {
+    const isPending = m.result === "pending";
+    const color = resultColor(m.result) ?? themeColors.tint;
+    const score1Display = m.score1 != null ? String(m.score1) : "—";
+    const score2Display = m.score2 != null ? String(m.score2) : "—";
+    const bothPending = m.score1 == null && m.score2 == null;
+
+    return (
+      <Animated.View
+        key={m.id}
+        entering={FadeInDown.duration(250).delay(50 + idx * 40)}
+      >
+        <View style={styles.matchCard}>
+          <View style={styles.matchCardInner}>
+            {/* SW badge */}
+            <View style={styles.matchSwBadge}>
+              <Text style={styles.matchSwText}>SW</Text>
+              <Text style={styles.matchSwNumber}>{m.round}</Text>
+            </View>
+
+            {/* Player names + result chip */}
+            <View style={styles.matchBody}>
+              <Text style={styles.matchPlayers} numberOfLines={1}>
+                {m.player1} vs {m.player2}
+              </Text>
+              <View
+                style={[
+                  styles.matchResultChip,
+                  { backgroundColor: color + "18" },
+                ]}
+              >
+                <Text style={[styles.matchResultText, { color }]}>
+                  {resultLabel(m.result)}
+                </Text>
+              </View>
+            </View>
+
+            {/* Score pill */}
+            <View style={styles.matchScorePill}>
+              <Text
+                style={[
+                  styles.matchScoreText,
+                  bothPending && styles.matchScorePending,
+                ]}
+              >
+                {score1Display}
+              </Text>
+              <View style={styles.matchScoreDivider} />
+              <Text
+                style={[
+                  styles.matchScoreText,
+                  bothPending && styles.matchScorePending,
+                ]}
+              >
+                {score2Display}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </Animated.View>
+    );
+  };
+
   return (
     <View style={styles.sectionWrapper}>
       <View style={styles.sectionHeader}>
@@ -263,31 +435,18 @@ const H2HBattlesPanel: React.FC<Props> = ({
       </View>
 
       {tab === "matches" ? (
-        matches.map((m) => (
-          <View key={m.id} style={styles.standingCard}>
-            <View style={styles.matchRowLeft}>
-              <View
-                style={[
-                  styles.matchResultDot,
-                  {
-                    backgroundColor:
-                      m.result === "w"
-                        ? "#4CAF50"
-                        : m.result === "l"
-                        ? "#F44336"
-                        : themeColors.tint,
-                  },
-                ]}
-              />
-              <Text style={styles.standingName}>
-                {m.player1} vs {m.player2}
-              </Text>
-            </View>
-            <Text style={[styles.standingRank, { fontSize: rMS(13) }]}>
-              {m.score1} - {m.score2}
-            </Text>
+        matches.length > 0 ? (
+          matches.map((m, idx) => renderMatchCard(m, idx))
+        ) : (
+          <View style={styles.emptyWrap}>
+            <Swords
+              size={36}
+              color={themeColors.textSecondary}
+              strokeWidth={1.5}
+            />
+            <Text style={styles.emptyText}>No matches yet</Text>
           </View>
-        ))
+        )
       ) : (
         <>
           <View style={[styles.standingCard, styles.standingsHeaderRow]}>

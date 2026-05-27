@@ -1,5 +1,6 @@
 import React from "react";
-import { View, StyleSheet, useColorScheme, Text } from "react-native";
+import { View, StyleSheet, Text } from "react-native";
+import { useColorScheme } from "../../../components/useColorScheme";
 import { router, useLocalSearchParams, Stack } from "expo-router";
 import PracticeLevel from "../../../components/PracticeLevel";
 import { Topic, Level } from "../../../components/types";

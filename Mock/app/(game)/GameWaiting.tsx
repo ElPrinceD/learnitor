@@ -14,6 +14,7 @@ import {
   StatusBar,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import ScreenLoadingSpinner from "../../components/ScreenLoadingSpinner";
 import * as Clipboard from "expo-clipboard";
 import { ArrowLeft, Copy, Share2 } from "lucide-react-native";
 import Animated, {
@@ -613,7 +614,7 @@ export default function GameWaitingScreen() {
           barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
           backgroundColor={themeColors.background}
         />
-        <ActivityIndicator size="large" color={themeColors.tint} />
+        <ScreenLoadingSpinner style={{ flex: 0, paddingVertical: 0 }} />
         <Text style={styles.loadingText}>Setting up arena...</Text>
       </View>
     );
@@ -709,7 +710,7 @@ export default function GameWaitingScreen() {
               entering={FadeInDown.duration(400).delay(200)}
               style={styles.waitingRow}
             >
-              <ActivityIndicator size="small" color={themeColors.tint} />
+              <ScreenLoadingSpinner style={{ flex: 0, paddingVertical: 0 }} />
               <Text style={styles.waitingText}>Waiting for players...</Text>
             </Animated.View>
           </>

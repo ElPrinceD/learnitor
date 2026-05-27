@@ -89,11 +89,13 @@ export default function GameIntro() {
     router.navigate({ pathname: "GameCourses", params: { isSinglePlayer: "true" } });
   };
 
-  const joinGame = async () => {
+  const joinGame = async (codeToJoin?: string) => {
+    const codeVal = codeToJoin || gameCode;
+    if (!codeVal) return;
     try {
       const response = await axios.post(
         `${ApiUrl}/games/join/`,
-        { game_code: gameCode },
+        { game_code: codeVal },
         {
           headers: {
             Authorization: `Token ${userToken?.token}`,
@@ -105,7 +107,7 @@ export default function GameIntro() {
         const id = response.data.id;
         router.navigate({
           pathname: "GameWaiting",
-          params: { code: gameCode, id: id },
+          params: { code: codeVal, id: id },
         });
       } else {
         Toast.show("Invalid game code. Please check and try again.", {
@@ -150,8 +152,11 @@ export default function GameIntro() {
   useEffect(() => {
     if (code != null && code !== "") {
       setGameCode(code);
+      if (userToken?.token) {
+        joinGame(code);
+      }
     }
-  }, [code]);
+  }, [code, userToken?.token]);
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(

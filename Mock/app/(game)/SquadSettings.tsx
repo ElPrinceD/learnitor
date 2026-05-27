@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import ScreenLoadingSpinner from "../../components/ScreenLoadingSpinner";
 import { ArrowLeft, Copy, RefreshCw } from "lucide-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -455,7 +456,7 @@ export default function SquadSettings() {
           barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
           backgroundColor={themeColors.background}
         />
-        <ActivityIndicator size="large" color={themeColors.tint} />
+        <ScreenLoadingSpinner style={{ flex: 0, paddingVertical: 0 }} />
         <Text style={styles.loadingText}>Loading Settings...</Text>
       </View>
     );

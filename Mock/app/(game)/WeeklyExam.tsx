@@ -21,9 +21,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getWeeklyExamStatus,
   getWeeklyExamQuestions,
+  submitWeeklyExam,
 } from "../../services/WeeklyExamApiCalls";
 import { getPracticeAnswers } from "../../services/CoursesApiCalls";
-import { submitGameResult } from "../../services/GamesApiCalls";
 import QuizGlassHeader from "../../components/game/QuizGlassHeader";
 import GameQuestionsScroll from "../../components/game/GameQuestionsScroll";
 import GameLoadingShell from "../../components/game/GameLoadingShell";
@@ -306,19 +306,16 @@ export default function WeeklyExam() {
     setGameEnded(true);
     endGame();
 
-    // Per-week id keeps (gameId, userId, gameMode) unique across weeks so a
-    // user can submit a new exam every Study Week without colliding with last
-    // week's idempotency key. Falls back to a date stamp if the backend has
-    // not yet returned currentWeek (offline-first safety).
+    // Use the dedicated weekly-exam submit endpoint. The backend builds the
+    // correct gameId (seasonId-weekId) internally — no need to construct it
+    // on the client.
     const weekId =
       examStatus?.currentWeek != null
         ? `weekly-exam-${examStatus.currentWeek}`
         : `weekly-exam-${new Date().toISOString().slice(0, 10)}`;
 
     try {
-      await submitGameResult(userToken?.token, {
-        gameId: weekId,
-        gameMode: "weekly_exam",
+      await submitWeeklyExam(userToken?.token, {
         finalScore: Math.round(score),
         highestStreak: streak,
       });
@@ -333,7 +330,7 @@ export default function WeeklyExam() {
       queryClient.invalidateQueries({ queryKey: ["customH2HMatches"] });
       queryClient.invalidateQueries({ queryKey: ["customH2HStandings"] });
     } catch (err) {
-      console.log("Error submitting weekly exam score:", err);
+      // Silently swallow — the user still navigates to the Results screen.
     }
 
     const scoresObject = {

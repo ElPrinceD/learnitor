@@ -1,6 +1,7 @@
 import React, { memo } from "react";
 import { View, Text, StyleSheet, useColorScheme } from "react-native";
 import Animated from "react-native-reanimated";
+import { Flame } from "lucide-react-native";
 import Colors from "../../constants/Colors";
 import { rMS, rS, rV, useShadows } from "../../constants";
 import type { WeeklyExamStatus } from "../../services/WeeklyExamApiCalls";
@@ -13,6 +14,7 @@ interface Props {
   examStartLocal: string;
   examEndLocal: string;
   enterAnim: (delay: number) => any;
+  streak?: number;
 }
 
 const ScoreCardHero: React.FC<Props> = ({
@@ -22,6 +24,7 @@ const ScoreCardHero: React.FC<Props> = ({
   examStartLocal,
   examEndLocal,
   enterAnim,
+  streak,
 }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -61,12 +64,31 @@ const ScoreCardHero: React.FC<Props> = ({
       borderRadius: rS(40),
       backgroundColor: themeColors.tint + "10",
     },
+    scoreCardHeaderRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: rV(14),
+    },
     scoreCardWeekLabel: {
       fontSize: rMS(11),
       fontWeight: "700",
       color: themeColors.tint,
       letterSpacing: 0.5,
-      marginBottom: rV(14),
+    },
+    streakBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: "#FF980015",
+      paddingHorizontal: rMS(10),
+      paddingVertical: rV(4),
+      borderRadius: rMS(12),
+      gap: rS(4),
+    },
+    streakText: {
+      fontSize: rMS(10),
+      fontWeight: "800",
+      color: "#FF9800",
     },
     scoreCardMain: {
       alignItems: "center",
@@ -111,12 +133,20 @@ const ScoreCardHero: React.FC<Props> = ({
           <View style={styles.scoreCardStripe} />
           <View style={styles.scoreCardAccent} />
 
-          <Text style={styles.scoreCardWeekLabel}>
-            {examStatus?.seasonName ? `${examStatus.seasonName} · ` : ""}
-            {examStatus?.currentWeek
-              ? `Study Week ${examStatus.currentWeek}`
-              : "Study Week"}
-          </Text>
+          <View style={styles.scoreCardHeaderRow}>
+            <Text style={styles.scoreCardWeekLabel}>
+              {examStatus?.seasonName ? `${examStatus.seasonName} · ` : ""}
+              {examStatus?.currentWeek
+                ? `Study Week ${examStatus.currentWeek}`
+                : "Study Week"}
+            </Text>
+            {streak !== undefined && streak > 0 && (
+              <View style={styles.streakBadge}>
+                <Flame size={12} color="#FF9800" fill="#FF9800" />
+                <Text style={styles.streakText}>{streak} Day Streak</Text>
+              </View>
+            )}
+          </View>
 
           <View style={styles.scoreCardMain}>
             <Text style={styles.scoreCardValue}>
@@ -127,7 +157,10 @@ const ScoreCardHero: React.FC<Props> = ({
 
           <View style={styles.scoreCardBottom}>
             <Text style={styles.scoreCardAvgText}>
-              Average · {examStatus?.globalAverage ?? "\u2014"}
+              Average ·{" "}
+              {examButtonState === "completed" || examButtonState === "expired"
+                ? (examStatus?.globalAverage ?? "\u2014")
+                : "\u2014"}
             </Text>
             <Text style={styles.scoreCardDeadline}>
               {examIsActive

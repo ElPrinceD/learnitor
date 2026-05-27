@@ -10,13 +10,14 @@ import {
   TouchableOpacity,
   KeyboardTypeOptions,
   Platform,
+  TextInputProps,
 } from "react-native";
 import { SIZES, rMS, rS, rV } from "../constants";
 import Colors from "../constants/Colors";
 import { useColorScheme } from "react-native";
 import { Eye, EyeOff } from "lucide-react-native";
 
-type AnimatedTextInputProps = {
+type AnimatedTextInputProps = TextInputProps & {
   label?: string;
   value?: string;
   onChangeText?: (text: string) => void;
@@ -47,6 +48,7 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
   editable = true,
   keyboardType,
   labelColor,
+  ...rest
 }) => {
   const [showPassword, setShowPassword] = useState(false);
   const colorScheme = useColorScheme();
@@ -209,6 +211,7 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
             keyboardType={keyboardType}
             // "Done" instead of "Enter"
             onSubmitEditing={handleSubmitEditing} // Prevent new line and blur
+            {...rest}
           />
           <TouchableOpacity
             onPressIn={() => setShowPassword(!showPassword)}
@@ -236,6 +239,7 @@ const AnimatedTextInput: React.FC<AnimatedTextInputProps> = ({
           returnKeyType="done" // "Done" instead of "Enter"
           multiline={false} // Disable multiline to prevent new line
           onSubmitEditing={handleSubmitEditing} // Prevent new line and blur
+          {...rest}
         />
       )}
     </Animated.View>

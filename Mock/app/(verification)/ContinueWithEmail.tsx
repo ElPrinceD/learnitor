@@ -20,6 +20,7 @@ import Colors from "../../constants/Colors";
 import { StatusBar } from "expo-status-bar";
 import { Typewriter } from "../../components/TypewriterText";
 import AnimatedTextInput from "../../components/AnimatedTextInput";
+import ScreenLoadingSpinner from "../../components/ScreenLoadingSpinner";
 import Animated, {
   FadeInDown,
   FadeInUp,
@@ -524,7 +525,7 @@ const ContinueWithEmail = () => {
         <View style={styles.blob2} />
         <View style={styles.blob3} />
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={themeColors.tint} />
+          <ScreenLoadingSpinner style={{ flex: 0 }} />
         </View>
       </View>
     );
