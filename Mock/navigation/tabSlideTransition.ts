@@ -1,9 +1,13 @@
 import { Dimensions, Easing } from "react-native";
-import type {
-  BottomTabSceneInterpolatedStyle,
-  BottomTabSceneInterpolationProps,
-  TransitionSpec,
-} from "@react-navigation/bottom-tabs";
+import type { BottomTabNavigationOptions } from "@react-navigation/bottom-tabs";
+
+type BottomTabSceneInterpolationProps = Parameters<
+  NonNullable<BottomTabNavigationOptions["sceneStyleInterpolator"]>
+>[0];
+type BottomTabSceneInterpolatedStyle = ReturnType<
+  NonNullable<BottomTabNavigationOptions["sceneStyleInterpolator"]>
+>;
+type TransitionSpec = NonNullable<BottomTabNavigationOptions["transitionSpec"]>;
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 

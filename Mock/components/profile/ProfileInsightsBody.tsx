@@ -33,9 +33,16 @@ const Row: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 const ProfileInsightsBody: React.FC<Props> = ({ insights }) => {
   const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const themeColors = Colors[colorScheme ?? 'light'];
   const { habits, volume, personal_bests, learning, competitive, legacy } =
     insights;
+
+  const gameBarColors = {
+    track: isDark ? themeColors.border : themeColors.secondaryBackground,
+    solo: isDark ? '#64B5F6' : themeColors.tint,
+    multi: isDark ? '#CE93D8' : '#7E57C2',
+  };
 
   const styles = StyleSheet.create({
     splitCard: {
@@ -62,6 +69,16 @@ const ProfileInsightsBody: React.FC<Props> = ({ insights }) => {
       fontWeight: '800',
       color: themeColors.text,
     },
+    splitValueSolo: {
+      fontSize: rMS(22),
+      fontWeight: '800',
+      color: gameBarColors.solo,
+    },
+    splitValueMulti: {
+      fontSize: rMS(22),
+      fontWeight: '800',
+      color: gameBarColors.multi,
+    },
     splitCaption: {
       fontSize: rMS(9),
       fontWeight: '600',
@@ -70,18 +87,23 @@ const ProfileInsightsBody: React.FC<Props> = ({ insights }) => {
       textTransform: 'uppercase',
     },
     barTrack: {
-      height: rV(6),
-      backgroundColor: themeColors.background,
-      borderRadius: 3,
+      height: rV(8),
+      backgroundColor: gameBarColors.track,
+      borderRadius: rMS(4),
       flexDirection: 'row',
       overflow: 'hidden',
+      gap: rS(2),
+      padding: rS(2),
     },
     barSingle: {
-      backgroundColor: themeColors.tint,
+      backgroundColor: gameBarColors.solo,
+      borderRadius: rMS(2),
+      minWidth: rS(4),
     },
     barMulti: {
-      backgroundColor: themeColors.tintSecond || themeColors.tint,
-      opacity: 0.7,
+      backgroundColor: gameBarColors.multi,
+      borderRadius: rMS(2),
+      minWidth: rS(4),
     },
     accuracyCard: {
       backgroundColor: themeColors.card,
@@ -276,13 +298,13 @@ const ProfileInsightsBody: React.FC<Props> = ({ insights }) => {
           <Text style={styles.splitLabel}>Games played</Text>
           <View style={styles.splitRow}>
             <View style={styles.splitItem}>
-              <Text style={styles.splitValue}>
+              <Text style={styles.splitValueSolo}>
                 {competitive.games_single_player}
               </Text>
               <Text style={styles.splitCaption}>Solo</Text>
             </View>
             <View style={styles.splitItem}>
-              <Text style={styles.splitValue}>
+              <Text style={styles.splitValueMulti}>
                 {competitive.games_multiplayer}
               </Text>
               <Text style={styles.splitCaption}>Multi</Text>

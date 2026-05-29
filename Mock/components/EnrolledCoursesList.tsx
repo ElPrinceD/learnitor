@@ -204,12 +204,7 @@ const EnrolledCoursesList: React.FC<Props> = ({
         <Text style={styles.title}>
           {isRecommended ? "Recommended Courses" : "Your Courses"}
         </Text>
-        <TouchableOpacity
-          onPress={() => router.push("/(tabs)/(two)")}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.seeAll}>See All</Text>
-        </TouchableOpacity>
+       
       </View>
       <FlashList
         horizontal
