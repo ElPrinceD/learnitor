@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import React, { memo, useMemo } from "react";
 import {
   Image,
   StyleSheet,
@@ -43,7 +43,7 @@ const RankingRow: React.FC<Props> = ({ item, isMe, showWeeklyExamColumn }) => {
       ? "#FFD700"
       : themeColors.textSecondary + "90";
 
-  const styles = StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     rankCard: {
       flexDirection: "row",
       alignItems: "center",
@@ -111,7 +111,7 @@ const RankingRow: React.FC<Props> = ({ item, isMe, showWeeklyExamColumn }) => {
       alignItems: "center",
       justifyContent: "center",
     },
-  });
+  }), [themeColors, shadow]);
 
   return (
     <View style={[styles.rankCard, isMe && styles.myRankCard]}>
@@ -168,6 +168,7 @@ export default memo(
     prev.item.rank === next.item.rank &&
     prev.item.score === next.item.score &&
     prev.item.weeklyExamScore === next.item.weeklyExamScore &&
+    prev.item.studyWeekScore === next.item.studyWeekScore &&
     prev.item.username === next.item.username &&
     prev.item.avatarUrl === next.item.avatarUrl &&
     prev.item.movement === next.item.movement &&

@@ -219,7 +219,7 @@ const GameCourses: React.FC = () => {
 
         {/* Hero */}
         <Animated.View
-          entering={FadeInDown.duration(500).delay(100)}
+          entering={FadeInDown.duration(250).delay(50)}
           style={styles.heroSection}
         >
           <Text style={styles.heroLabel}>Step 1</Text>

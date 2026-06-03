@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import React, { memo, useMemo } from "react";
 import { StyleSheet, Text, useColorScheme, View } from "react-native";
 
 import Colors from "../../constants/Colors";
@@ -14,7 +14,7 @@ const LeaderboardHero: React.FC<Props> = ({ timeframe, name, subtitle }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
 
-  const styles = StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     heroSection: {
       marginBottom: rV(28),
       paddingHorizontal: rS(8),
@@ -41,7 +41,7 @@ const LeaderboardHero: React.FC<Props> = ({ timeframe, name, subtitle }) => {
       marginTop: rV(8),
       lineHeight: rMS(20),
     },
-  });
+  }), [themeColors]);
 
   return (
     <View style={styles.heroSection}>

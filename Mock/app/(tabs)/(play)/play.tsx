@@ -20,6 +20,7 @@ import { router } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FadeInDown } from "react-native-reanimated";
 import Toast from "react-native-root-toast";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { useAuth } from "../../../components/AuthContext";
 import ScreenLoadingSpinner from "../../../components/ScreenLoadingSpinner";
@@ -45,6 +46,9 @@ import StudySquadsSection from "../../../components/play/StudySquadsSection";
 import YourRankCards from "../../../components/play/YourRankCards";
 import KnockoutSquadsList from "../../../components/play/KnockoutSquadsList";
 import SquadBottomSheet from "../../../components/play/SquadBottomSheet";
+import PlayTutorialOverlay, {
+  PLAY_TUTORIAL_SEEN_KEY,
+} from "../../../components/play/PlayTutorialOverlay";
 import type {
   ExamButtonState,
   PlayMode,
@@ -122,9 +126,17 @@ export default function PlayScreen() {
   const [squadName, setSquadName] = useState("");
   const [squadJoinCode, setSquadJoinCode] = useState("");
   const [createdSquadCode, setCreatedSquadCode] = useState<string | null>(null);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   // Bottom sheet ref
   const squadSheetRef = useRef<BottomSheetModal | null>(null);
+
+  // Show tutorial on first visit
+  useEffect(() => {
+    AsyncStorage.getItem(PLAY_TUTORIAL_SEEN_KEY).then((seen) => {
+      setShowTutorial(seen !== "true");
+    });
+  }, []);
 
   // ── Queries ─────────────────────────────────────────────────────────────
   const { data: rankingsQuery, isLoading: rankingsLoading } = useQuery({
@@ -152,7 +164,7 @@ export default function PlayScreen() {
       customLeaderboards.filter((lb) => lb.scoringMode !== "custom_1v1"),
     [customLeaderboards]
   );
-  const knockoutSquads = useMemo(
+  const h2hSquads = useMemo(
     () =>
       customLeaderboards.filter((lb) => lb.scoringMode === "custom_1v1"),
     [customLeaderboards]
@@ -246,20 +258,18 @@ export default function PlayScreen() {
       closeSquadSheet();
       queryClient.invalidateQueries({ queryKey: ["customLeaderboards"] });
     },
-    onError: () => {
-      showToast("Invalid code. Please check and try again.");
+    onError: (error: any) => {
+      if (error?.response?.status === 409) {
+        showToast("This league has already started. New members can no longer join.");
+      } else {
+        showToast("Invalid code. Please check and try again.");
+      }
     },
   });
 
   // ── Animation entry: only animate on first mount ───────────────────────
-  const hasAnimated = useRef(false);
-  useEffect(() => {
-    hasAnimated.current = true;
-  }, []);
-
   const enterAnim = useCallback(
-    (delay: number) =>
-      hasAnimated.current ? undefined : FadeInDown.duration(300).delay(delay),
+    (delay: number) => FadeInDown.duration(250).delay(delay),
     []
   );
 
@@ -290,11 +300,11 @@ export default function PlayScreen() {
     []
   );
 
-  const openKnockoutLeaderboard = useCallback(
+  const openH2HLeaderboard = useCallback(
     (id: string, name: string, type: string) => {
       router.push({
         pathname: "/(game)/LeaderboardDetail",
-        params: { id, name, timeframe: "season", type },
+        params: { id, name, timeframe: "season", type: "h2h" },
       });
     },
     []
@@ -376,6 +386,10 @@ export default function PlayScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          <PlayTutorialOverlay
+            visible={showTutorial}
+            onDismiss={() => setShowTutorial(false)}
+          />
           <ScoreCardHero
             examStatus={examStatus}
             examIsActive={examDerived.isActive}
@@ -423,13 +437,13 @@ export default function PlayScreen() {
               </>
             )}
           </View>
-          <View style={activeMode !== "knockout" ? containerStyles.hidden : undefined}>
+          <View style={activeMode !== "h2h" ? containerStyles.hidden : undefined}>
             {leaderboardsLoading ? (
               <ScreenLoadingSpinner />
             ) : (
               <KnockoutSquadsList
-                squads={knockoutSquads}
-                onOpenSquad={openKnockoutLeaderboard}
+                squads={h2hSquads}
+                onOpenSquad={openH2HLeaderboard}
                 enterAnim={enterAnim}
               />
             )}

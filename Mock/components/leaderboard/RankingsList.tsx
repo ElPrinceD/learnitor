@@ -28,10 +28,19 @@ interface Props {
   // Rendered above the column headers as the FlashList's list header so it
   // scrolls with the list (true virtualization, no nested-scroll trap).
   heroSlot?: React.ReactNode;
+  // When true, omit the inline ColumnHeaders from the list header. Used
+  // when the parent renders its own sticky column headers above this list.
+  hideColumnHeaders?: boolean;
   ListEmptyComponent?: React.ComponentType<any> | React.ReactElement | null;
   ListFooterComponent?: React.ComponentType<any> | React.ReactElement | null;
   refreshing?: boolean;
   onRefresh?: () => void;
+  // ── Server-side pagination ─────────────────────────────────────────────
+  // When provided, the list uses server-side pagination.
+  // When omitted, falls back to client-side "See More" (slicing).
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+  isLoadingMore?: boolean;
 }
 
 const ColumnHeaders: React.FC<{
@@ -77,26 +86,40 @@ const RankingsList: React.FC<Props> = ({
   isMe,
   showWeeklyExamColumn,
   heroSlot,
+  hideColumnHeaders = false,
   ListEmptyComponent,
   ListFooterComponent,
   refreshing = false,
   onRefresh,
+  hasMore: serverHasMore,
+  onLoadMore,
+  isLoadingMore = false,
 }) => {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const insets = useSafeAreaInsets();
 
+  // Client-side fallback: only used when the parent doesn't provide
+  // server-side pagination props.
+  const useServerPagination = onLoadMore != null;
   const [visibleCount, setVisibleCount] = useState(15);
 
   const visibleRankings = useMemo(() => {
+    if (useServerPagination) return rankings;
     return rankings.slice(0, visibleCount);
-  }, [rankings, visibleCount]);
+  }, [rankings, visibleCount, useServerPagination]);
 
-  const hasMore = rankings.length > visibleCount;
+  const hasMore = useServerPagination
+    ? (serverHasMore ?? false)
+    : rankings.length > visibleCount;
 
   const handleSeeMore = useCallback(() => {
-    setVisibleCount((prev) => prev + 15);
-  }, []);
+    if (useServerPagination && onLoadMore) {
+      onLoadMore();
+    } else {
+      setVisibleCount((prev) => prev + 15);
+    }
+  }, [useServerPagination, onLoadMore]);
 
   const renderItem = useCallback(
     ({ item }: ListRenderItemInfo<RankingItem>) => (
@@ -121,13 +144,15 @@ const RankingsList: React.FC<Props> = ({
     () => (
       <>
         {heroSlot}
-        <ColumnHeaders
-          themeColors={themeColors}
-          showWeeklyExamColumn={showWeeklyExamColumn}
-        />
+        {!hideColumnHeaders && (
+          <ColumnHeaders
+            themeColors={themeColors}
+            showWeeklyExamColumn={showWeeklyExamColumn}
+          />
+        )}
       </>
     ),
-    [heroSlot, themeColors, showWeeklyExamColumn]
+    [heroSlot, hideColumnHeaders, themeColors, showWeeklyExamColumn]
   );
 
   const renderFooterContent = useCallback(() => {
@@ -146,29 +171,33 @@ const RankingsList: React.FC<Props> = ({
 
     return (
       <View style={styles.footerContainer}>
-        <TouchableOpacity
-          style={styles.seeMoreButton}
-          onPress={handleSeeMore}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.seeMoreText}>See More</Text>
-        </TouchableOpacity>
+        {isLoadingMore ? (
+          <Text style={styles.seeMoreText}>Loading…</Text>
+        ) : (
+          <TouchableOpacity
+            style={styles.seeMoreButton}
+            onPress={handleSeeMore}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.seeMoreText}>See More</Text>
+          </TouchableOpacity>
+        )}
         {renderFooterContent()}
       </View>
     );
-  }, [hasMore, renderFooterContent, handleSeeMore, themeColors]);
+  }, [hasMore, isLoadingMore, renderFooterContent, handleSeeMore, themeColors]);
 
   // When `heroSlot` is provided the list is the only thing onscreen, so we
   // need topbar-clearing padding ourselves. When it's omitted (the parent
   // page now renders the hero + tabs as a static header above us), the
   // header already pushes us into position and we just need a small gap.
-  const contentContainerStyle = {
+  const contentContainerStyle = useMemo(() => ({
     paddingHorizontal: rS(16),
     paddingTop: heroSlot ? Math.max(rV(80), insets.top + rV(50)) : 0,
     paddingBottom: Math.max(rV(40), insets.bottom + rV(40)),
-  };
+  }), [heroSlot, insets.top, insets.bottom]);
 
-  const styles = StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     flex: { flex: 1 },
     footerContainer: {
       paddingVertical: rV(16),
@@ -190,7 +219,7 @@ const RankingsList: React.FC<Props> = ({
       fontSize: rMS(13),
       fontWeight: "800",
     },
-  });
+  }), [themeColors.tint]);
 
   return (
     // FlashList needs a bounded parent height to render. Wrap it in a

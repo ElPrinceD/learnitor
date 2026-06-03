@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -65,11 +65,10 @@ export default function SquadSettings() {
     transform: [{ scale: backScale.value }],
   }));
 
-  // One-time animation flag
-  const hasAnimated = useRef(false);
-  useEffect(() => { hasAnimated.current = true; }, []);
-  const enterAnim = (delay: number) =>
-    hasAnimated.current ? undefined : FadeInDown.duration(300).delay(delay);
+  const enterAnim = useCallback(
+    (delay: number) => FadeInDown.duration(250).delay(delay),
+    []
+  );
 
   // Fetch squad details for members list, invite code, etc.
   const { data: detailData, isLoading } = useQuery({
@@ -119,7 +118,13 @@ export default function SquadSettings() {
       showToast("New invite code generated!");
       queryClient.invalidateQueries({ queryKey: ["leaderboardDetails", id] });
     },
-    onError: () => showToast("Failed to regenerate code."),
+    onError: (error: any) => {
+      if (error?.response?.status === 409) {
+        showToast("Cannot regenerate code — H2H league has already started.");
+      } else {
+        showToast("Failed to regenerate code.");
+      }
+    },
   });
 
   const removeMemberMutation = useMutation({

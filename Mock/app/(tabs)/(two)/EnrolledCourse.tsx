@@ -323,6 +323,37 @@ const EnrolledCourse: React.FC = () => {
   }, [queryClient, userInfo?.user.id, parsedCourse.id, userToken?.token]);
 
   const styles = StyleSheet.create({
+    mainContainer: {
+      flex: 1,
+      backgroundColor: themeColors.background,
+    },
+    blob1: {
+      position: "absolute",
+      top: -rV(80),
+      left: -rS(60),
+      width: rS(260),
+      height: rS(260),
+      borderRadius: rS(130),
+      backgroundColor: themeColors.tint + "18",
+    },
+    blob2: {
+      position: "absolute",
+      bottom: rV(80),
+      right: -rS(100),
+      width: rS(300),
+      height: rS(300),
+      borderRadius: rS(150),
+      backgroundColor: "#6366F118",
+    },
+    blob3: {
+      position: "absolute",
+      top: rV(350),
+      left: -rS(40),
+      width: rS(180),
+      height: rS(180),
+      borderRadius: rS(90),
+      backgroundColor: "#10B98115",
+    },
     container: {
       flex: 1,
     },
@@ -439,7 +470,12 @@ const EnrolledCourse: React.FC = () => {
   }
 
   return (
-    <>
+    <View style={styles.mainContainer}>
+      {/* Glassmorphic background blobs */}
+      <View style={styles.blob1} />
+      <View style={styles.blob2} />
+      <View style={styles.blob3} />
+
       <ScrollView
         contentContainerStyle={styles.scrollViewContent}
         onScroll={Animated.event(
@@ -515,7 +551,7 @@ const EnrolledCourse: React.FC = () => {
         visible={!!errorMessage}
         onDismiss={handleDismissError}
       />
-    </>
+    </View>
   );
 };
 

@@ -36,8 +36,8 @@ export function forHorizontalTabSlide({
 export const horizontalTabTransitionSpec: TransitionSpec = {
   animation: "timing",
   config: {
-    duration: 280,
-    easing: Easing.inOut(Easing.ease),
+    duration: 140,
+    easing: Easing.out(Easing.poly(4)),
   },
 };
 

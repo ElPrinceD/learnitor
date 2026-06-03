@@ -45,13 +45,10 @@ const CoursesScreen: React.FC<CoursesScreenProps> = ({ segment }) => {
   const themeColors = Colors[colorScheme ?? "light"];
   const insets = useSafeAreaInsets();
 
-  // One-time animation flag
-  const hasAnimated = useRef(false);
-  useEffect(() => {
-    hasAnimated.current = true;
-  }, []);
-  const enterAnim = (delay: number) =>
-    hasAnimated.current ? undefined : FadeInDown.duration(300).delay(delay);
+  const enterAnim = useCallback(
+    (delay: number) => FadeInDown.duration(500).delay(delay),
+    []
+  );
 
   const handleDismissError = useCallback(() => setErrorMessage(null), []);
 

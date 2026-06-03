@@ -631,16 +631,6 @@ const Profile = () => {
         <Animated.View entering={FadeInDown.duration(500).delay(300)}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Global Standings</Text>
-            <TouchableOpacity
-              onPress={() =>
-                router.push({
-                  pathname: "/(game)/Leaderboard",
-                  params: { id: "world", name: "World Rankings" },
-                })
-              }
-            >
-              <Text style={styles.sectionAction}>View All</Text>
-            </TouchableOpacity>
           </View>
 
           {standingsData.map((item, index) => (

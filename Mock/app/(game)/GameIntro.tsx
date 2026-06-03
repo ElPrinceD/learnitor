@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Trophy, Users, Gamepad2, User } from "lucide-react-native";
+import { Users, Gamepad2, User } from "lucide-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -59,7 +59,6 @@ export default function GameIntro() {
   const joinScale = useSharedValue(1);
   const createScale = useSharedValue(1);
   const soloScale = useSharedValue(1);
-  const rankingsScale = useSharedValue(1);
 
   const joinAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: joinScale.value }],
@@ -69,9 +68,6 @@ export default function GameIntro() {
   }));
   const soloAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: soloScale.value }],
-  }));
-  const rankingsAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: rankingsScale.value }],
   }));
 
   const onPressIn = (sv: SharedValue<number>) => {
@@ -187,7 +183,7 @@ export default function GameIntro() {
     joinGame();
   };
 
-  const styles = StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: themeColors.background,
@@ -416,7 +412,7 @@ export default function GameIntro() {
       fontSize: rMS(13),
       fontWeight: "800",
     },
-  });
+  }), [themeColors, insets, shadow]);
 
   return (
     <View style={styles.container}>
@@ -431,18 +427,7 @@ export default function GameIntro() {
         tint={colorScheme === "dark" ? "dark" : "light"}
         style={styles.topBar}
       >
-        <View style={styles.topBarContent}>
-          <AnimatedTouchable
-            style={[styles.rankingsBtn, rankingsAnimStyle]}
-            onPress={() => router.push("Leaderboard")}
-            onPressIn={() => onPressIn(rankingsScale)}
-            onPressOut={() => onPressOut(rankingsScale)}
-            activeOpacity={1}
-          >
-            <Trophy size={18} color={themeColors.tint} />
-            <Text style={styles.rankingsBtnText}>Rankings</Text>
-          </AnimatedTouchable>
-        </View>
+        <View style={styles.topBarContent} />
       </BlurView>
 
       <KeyboardAvoidingView
@@ -471,7 +456,7 @@ export default function GameIntro() {
         >
           {/* Hero */}
           <Animated.View
-            entering={FadeInDown.duration(500).delay(100)}
+            entering={FadeInDown.duration(250).delay(50)}
             style={styles.hero}
           >
             <Text style={styles.heroLabel}>Game Mode</Text>
@@ -482,7 +467,7 @@ export default function GameIntro() {
           </Animated.View>
 
           {/* Join Game Card */}
-          <Animated.View entering={FadeInDown.duration(500).delay(200)}>
+          <Animated.View entering={FadeInDown.duration(250).delay(100)}>
             <View style={styles.joinCard}>
               <View style={styles.joinCardHeader}>
                 <View style={styles.joinIconCircle}>
@@ -520,7 +505,7 @@ export default function GameIntro() {
 
           {/* Create & Solo Cards */}
           <Animated.View
-            entering={FadeInUp.duration(500).delay(350)}
+            entering={FadeInUp.duration(250).delay(150)}
             style={styles.cardsRow}
           >
             {/* Create Game */}

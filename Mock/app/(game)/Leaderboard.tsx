@@ -10,6 +10,7 @@ import {
   StatusBar,
   RefreshControl,
 } from "react-native";
+import { FlashList, ListRenderItemInfo } from "@shopify/flash-list";
 import ScreenLoadingSpinner from "../../components/ScreenLoadingSpinner";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowLeft } from "lucide-react-native";
@@ -86,11 +87,11 @@ export default function Leaderboard() {
   const backAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: backScale.value }],
   }));
-  // One-time animation flag
-  const hasAnimated = useRef(false);
-  useEffect(() => { hasAnimated.current = true; }, []);
-  const enterAnim = (delay: number) =>
-    hasAnimated.current ? undefined : FadeInDown.duration(300).delay(delay);
+
+  const enterAnim = useCallback(
+    (delay: number) => FadeInDown.duration(250).delay(delay),
+    []
+  );
 
   // React Query Hook
   const {
@@ -196,7 +197,7 @@ export default function Leaderboard() {
     return themeColors.textSecondary + "90";
   };
 
-  const styles = StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: themeColors.background,
@@ -426,9 +427,140 @@ export default function Leaderboard() {
       marginTop: rV(12),
       fontWeight: "700",
     },
-  });
+  }), [themeColors, shadow, insets.top, insets.bottom]);
 
   // No full-screen loading gate — page shell renders instantly.
+
+  const renderItem = useCallback(
+    ({ item }: ListRenderItemInfo<RankingItem>) => (
+      <View style={styles.rankCard}>
+        <View style={styles.rankCardLeft}>
+          <Text
+            style={[
+              styles.rankNumber,
+              { color: getRankColor(item.rank) },
+            ]}
+          >
+            {formatRank(item.rank)}
+          </Text>
+          <Image
+            source={
+              item.avatarUrl
+                ? { uri: item.avatarUrl }
+                : require("../../assets/images/profile-placeholder.png")
+            }
+            style={styles.rankAvatar}
+          />
+          <View style={styles.rankInfo}>
+            <Text style={styles.rankName}>{item.username}</Text>
+            {item.badge && <Text style={styles.rankBadge}>{item.badge}</Text>}
+          </View>
+        </View>
+        {showWeeklyExamColumn && (
+          <Text style={styles.rankSW}>
+            {formatWeeklyExamSW(item.weeklyExamScore)}
+          </Text>
+        )}
+        <Text style={styles.rankScore}>{formatScore(item.score)}</Text>
+      </View>
+    ),
+    [showWeeklyExamColumn, themeColors]
+  );
+
+  const keyExtractor = useCallback((item: RankingItem) => String(item.id), []);
+
+  const renderListHeader = useCallback(
+    () => (
+      <>
+        {/* Hero Section */}
+        <View style={styles.heroSection}>
+          <Text style={styles.heroLabel}>Global Leaderboard</Text>
+          <Text style={styles.heroTitle}>
+            {leaderboardName.toUpperCase().replace(" ", "\n")}
+          </Text>
+          {schoolSubtitle ? (
+            <Text style={styles.heroSubtitle} numberOfLines={2}>
+              {schoolSubtitle}
+            </Text>
+          ) : null}
+          {!isSchoolLeaderboard && (
+            <Text style={styles.heroSubtext}>
+              The elite echelon of learners. Every point represents a boundary
+              pushed and a concept mastered.
+            </Text>
+          )}
+        </View>
+
+        {/* Column Headers */}
+        <View style={styles.columnHeaders}>
+          <Text style={[styles.columnLabel, styles.columnLabelStudent]}>
+            Rank / Student
+          </Text>
+          {showWeeklyExamColumn && (
+            <Text style={[styles.columnLabel, styles.columnLabelSW]}>SW</Text>
+          )}
+          <Text style={[styles.columnLabel, styles.columnLabelPoints]}>
+            Points
+          </Text>
+        </View>
+      </>
+    ),
+    [leaderboardName, schoolSubtitle, isSchoolLeaderboard, showWeeklyExamColumn, themeColors]
+  );
+
+  const renderListFooter = useCallback(
+    () => {
+      if (!userStatus.rank) {
+        return null;
+      }
+      return (
+        <Animated.View
+          entering={FadeInUp.duration(300).delay(200).springify()}
+          style={styles.userStatusCardContainer}
+        >
+          <BlurView
+            intensity={80}
+            tint={colorScheme === "dark" ? "dark" : "light"}
+            style={styles.userStatusCardBlur}
+          >
+            <View style={styles.userStatusTop}>
+              <View style={styles.userRankBadge}>
+                <Text style={styles.userRankBadgeText}>
+                  YOUR RANK: {userStatus.rank}
+                </Text>
+              </View>
+              <View style={styles.userStatusInfo}>
+                <Text style={styles.userStatusTitle}>
+                  {userStatus.message || "Keep climbing!"}
+                </Text>
+                {userStatus.percentile && (
+                  <Text style={styles.userStatusSubtext}>
+                    You are in the {userStatus.percentile} of global learners this
+                    season.
+                  </Text>
+                )}
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.viewStatsBtn}
+              activeOpacity={0.8}
+              onPress={() => {}}
+            >
+              <Text style={styles.viewStatsBtnText}>View My Stats</Text>
+            </TouchableOpacity>
+          </BlurView>
+        </Animated.View>
+      );
+    },
+    [userStatus, colorScheme, themeColors]
+  );
+
+  const renderListEmpty = useCallback(() => {
+    if (loading) {
+      return <ScreenLoadingSpinner />;
+    }
+    return null;
+  }, [loading]);
 
   return (
     <View style={styles.container}>
@@ -462,156 +594,48 @@ export default function Leaderboard() {
         </AnimatedTouchable>
       </BlurView>
 
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          setupBlock ? undefined : (
-            <RefreshControl
-              refreshing={refreshing || (isFetching && !loading)}
-              onRefresh={onRefresh}
-              tintColor={themeColors.tint}
-              colors={[themeColors.tint, themeColors.text]}
-              progressBackgroundColor={themeColors.background}
-            />
-          )
-        }
-      >
-
-        {/* Hero Section */}
-        <Animated.View
-          entering={enterAnim(50)}
-          style={styles.heroSection}
+      {setupBlock ? (
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.heroLabel}>Global Leaderboard</Text>
-          <Text style={styles.heroTitle}>
-            {leaderboardName.toUpperCase().replace(" ", "\n")}
-          </Text>
-          {schoolSubtitle ? (
-            <Text style={styles.heroSubtitle} numberOfLines={2}>
-              {schoolSubtitle}
+          {/* Hero Section */}
+          <Animated.View entering={enterAnim(25)} style={styles.heroSection}>
+            <Text style={styles.heroLabel}>Global Leaderboard</Text>
+            <Text style={styles.heroTitle}>
+              {leaderboardName.toUpperCase().replace(" ", "\n")}
             </Text>
-          ) : null}
-          {!isSchoolLeaderboard && !setupBlock ? (
-            <Text style={styles.heroSubtext}>
-              The elite echelon of learners. Every point represents a boundary
-              pushed and a concept mastered.
-            </Text>
-          ) : null}
-        </Animated.View>
-
-        {setupBlock ? (
+          </Animated.View>
           <LeaderboardSetupGate
             variant={setupBlock}
             onPrimaryPress={openSetupSheet}
             onBack={() => router.back()}
           />
-        ) : (
-          <>
-        {/* Column Headers */}
-        <Animated.View
-          entering={enterAnim(100)}
-          style={styles.columnHeaders}
-        >
-          <Text style={[styles.columnLabel, styles.columnLabelStudent]}>
-            Rank / Student
-          </Text>
-          {showWeeklyExamColumn && (
-            <Text style={[styles.columnLabel, styles.columnLabelSW]}>SW</Text>
-          )}
-          <Text style={[styles.columnLabel, styles.columnLabelPoints]}>
-            Points
-          </Text>
-        </Animated.View>
-
-        {/* Rankings List */}
-        {loading ? (
-          <ScreenLoadingSpinner />
-        ) : (
-          rankings.map((item, index) => (
-            <Animated.View
-              key={item.id}
-              entering={enterAnim(150 + index * 50)}
-            >
-                <View style={styles.rankCard}>
-                  <View style={styles.rankCardLeft}>
-                    <Text
-                      style={[
-                        styles.rankNumber,
-                        { color: getRankColor(item.rank) },
-                      ]}
-                    >
-                      {formatRank(item.rank)}
-                    </Text>
-                    <Image
-                      source={
-                        item.avatarUrl
-                          ? { uri: item.avatarUrl }
-                          : require("../../assets/images/profile-placeholder.png")
-                      }
-                      style={styles.rankAvatar}
-                    />
-                    <View style={styles.rankInfo}>
-                      <Text style={styles.rankName}>{item.username}</Text>
-                      {item.badge && (
-                        <Text style={styles.rankBadge}>{item.badge}</Text>
-                      )}
-                    </View>
-                  </View>
-                  {showWeeklyExamColumn && (
-                    <Text style={styles.rankSW}>
-                      {formatWeeklyExamSW(item.weeklyExamScore)}
-                    </Text>
-                  )}
-                  <Text style={styles.rankScore}>{formatScore(item.score)}</Text>
-                </View>
-            </Animated.View>
-          ))
-        )}
-
-        {/* User Status Card with Glassmorphism */}
-        {userStatus.rank && (
-          <Animated.View
-            entering={FadeInUp.duration(600).delay(400).springify()}
-            style={styles.userStatusCardContainer}
-          >
-            <BlurView
-              intensity={80}
-              tint={colorScheme === "dark" ? "dark" : "light"}
-              style={styles.userStatusCardBlur}
-            >
-              <View style={styles.userStatusTop}>
-                <View style={styles.userRankBadge}>
-                  <Text style={styles.userRankBadgeText}>
-                    YOUR RANK: {userStatus.rank}
-                  </Text>
-                </View>
-                <View style={styles.userStatusInfo}>
-                  <Text style={styles.userStatusTitle}>
-                    {userStatus.message || "Keep climbing!"}
-                  </Text>
-                  {userStatus.percentile && (
-                    <Text style={styles.userStatusSubtext}>
-                      You are in the {userStatus.percentile} of global learners
-                      this season.
-                    </Text>
-                  )}
-                </View>
-              </View>
-              <TouchableOpacity
-                style={styles.viewStatsBtn}
-                activeOpacity={0.8}
-                onPress={() => {}}
-              >
-                <Text style={styles.viewStatsBtnText}>View My Stats</Text>
-              </TouchableOpacity>
-            </BlurView>
-          </Animated.View>
-        )}
-          </>
-        )}
-      </ScrollView>
+        </ScrollView>
+      ) : (
+        <View style={{ flex: 1 }}>
+          <FlashList
+            data={rankings}
+            renderItem={renderItem}
+            keyExtractor={keyExtractor}
+            ListHeaderComponent={renderListHeader}
+            ListFooterComponent={renderListFooter}
+            ListEmptyComponent={renderListEmpty}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing || (isFetching && !loading)}
+                onRefresh={onRefresh}
+                tintColor={themeColors.tint}
+                colors={[themeColors.tint, themeColors.text]}
+                progressBackgroundColor={themeColors.background}
+              />
+            }
+          />
+        </View>
+      )}
 
       {!setupBlock ? (
         <ErrorMessage

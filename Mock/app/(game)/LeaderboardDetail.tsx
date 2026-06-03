@@ -33,7 +33,7 @@ import H2HBattlesPanel from "../../components/leaderboard/H2HBattlesPanel";
 import LeaderboardTabs, {
   LeaderboardTab,
 } from "../../components/leaderboard/LeaderboardTabs";
-import KnockoutBracket from "../../components/leaderboard/KnockoutBracket";
+import KnockoutBracketList from "../../components/leaderboard/KnockoutBracketList";
 import LeaderboardSetupGate from "../../components/leaderboard/LeaderboardSetupGate";
 import LeaderboardProfileSetupSheet, {
   LeaderboardProfileSetupSheetRef,
@@ -76,7 +76,7 @@ export default function LeaderboardDetail() {
   const themeColors = Colors[colorScheme ?? "light"];
   const insets = useSafeAreaInsets();
 
-  const isKnockout = type === "knockout";
+  const isH2H = type === "h2h";
 
   const setupBlock = useMemo(
     () => getLeaderboardSetupBlock(id, userInfo?.user),
@@ -90,29 +90,28 @@ export default function LeaderboardDetail() {
     setupSheetRef.current?.present();
   }, []);
 
-  // ── Outer tabs (only meaningful for non-knockout squads) ────────────────
-  // Knockout squads (`custom_1v1`) skip these entirely — their page body is
+  // ── Outer tabs (only meaningful for non-H2H squads) ─────────────────
+  // H2H squads (`custom_1v1`) skip these entirely — their page body is
   // the H2H Battles panel (Matches | Standings), not the global Rankings /
   // Knockout split.
   const [activeTab, setActiveTab] = useState<LeaderboardTab>("rankings");
-
-  // Tracks whether the Knockout sub-tab has ever been visited in this
-  // session. Once true, the bracket stays mounted in the tree (just hidden
-  // via `display: 'none'` when the user is on Rankings) so its
-  // `entering={FadeInDown}` round animations only fire once — on the first
-  // mount, right when the data first becomes available. Subsequent tab
-  // toggles re-show the existing instance with no animation re-trigger.
-  const [bracketEverVisited, setBracketEverVisited] = useState(false);
+  const [hasVisitedKnockout, setHasVisitedKnockout] = useState(false);
 
   useEffect(() => {
-    if (activeTab === "knockout" && !bracketEverVisited) {
-      setBracketEverVisited(true);
+    if (activeTab === "knockout") {
+      setHasVisitedKnockout(true);
     }
-  }, [activeTab, bracketEverVisited]);
+  }, [activeTab]);
+
+  // ── Pagination state ────────────────────────────────────────────────────
+  const PAGE_SIZE = 15;
+  const [paginationOffset, setPaginationOffset] = useState(0);
+  const [allRankings, setAllRankings] = useState<import("../../services/LeaderboardApiCalls").RankingItem[]>([]);
+  const [serverHasMore, setServerHasMore] = useState(false);
 
   // ── Queries ─────────────────────────────────────────────────────────────
-  // We fetch leaderboard details for BOTH squad types. Non-knockout squads
-  // consume `rankings`; knockout squads ignore `rankings` and only read
+  // We fetch leaderboard details for BOTH squad types. Non-H2H squads
+  // consume `rankings`; H2H squads ignore `rankings` and only read
   // `squadInfo` (needed to surface the creator-only settings gear and to
   // power SquadSettings.tsx, which calls the same query).
   const {
@@ -122,13 +121,36 @@ export default function LeaderboardDetail() {
     refetch: refetchLeaderboard,
     isFetching: isLeaderboardFetching,
   } = useQuery({
-    queryKey: ["leaderboardDetails", id, timeframe],
-    queryFn: () => getLeaderboardDetails(id, userToken?.token, timeframe),
+    queryKey: ["leaderboardDetails", id, timeframe, paginationOffset],
+    queryFn: () =>
+      getLeaderboardDetails(
+        id,
+        userToken?.token,
+        timeframe,
+        PAGE_SIZE,
+        paginationOffset
+      ),
     enabled: canFetchLeaderboard,
   });
 
+  // Accumulate rankings across pages.
+  useEffect(() => {
+    if (!leaderboardData) return;
+    const incoming = leaderboardData.rankings ?? [];
+    if (paginationOffset === 0) {
+      setAllRankings(incoming);
+    } else {
+      setAllRankings((prev) => {
+        const existingIds = new Set(prev.map((r) => r.id));
+        const newItems = incoming.filter((r) => !existingIds.has(r.id));
+        return [...prev, ...newItems];
+      });
+    }
+    setServerHasMore(leaderboardData.hasMore ?? false);
+  }, [leaderboardData, paginationOffset]);
+
   // Global knockout bracket — same endpoint the pre-refactor code imported.
-  // For non-knockout squads: fetches per-squad bracket.
+  // For non-H2H squads: fetches per-squad bracket.
   // For global leaderboards (world/country/school): fetches the global bracket.
   // Only fetched when the user is on the Knockout sub-tab since `custom_1v1`
   // squads render their own H2H panel.
@@ -141,7 +163,7 @@ export default function LeaderboardDetail() {
     queryKey: ["knockoutBracket", id],
     queryFn: () => getKnockoutBracket(userToken?.token, id),
     // Prefetch eagerly so data is ready when the user switches tabs.
-    enabled: canFetchLeaderboard && !isKnockout,
+    enabled: canFetchLeaderboard && !isH2H,
   });
 
   const {
@@ -152,7 +174,7 @@ export default function LeaderboardDetail() {
   } = useQuery({
     queryKey: ["customH2HMatches", id],
     queryFn: () => getCustomH2HMatches(id, userToken?.token),
-    enabled: canFetchLeaderboard && isKnockout,
+    enabled: canFetchLeaderboard && isH2H,
     ...H2H_QUERY_OPTIONS,
   });
 
@@ -164,9 +186,10 @@ export default function LeaderboardDetail() {
   } = useQuery({
     queryKey: ["customH2HStandings", id],
     queryFn: () => getCustomH2HStandings(id, userToken?.token),
-    enabled: canFetchLeaderboard && isKnockout,
+    enabled: canFetchLeaderboard && isH2H,
     ...H2H_QUERY_OPTIONS,
   });
+
 
   useFocusEffect(
     useCallback(() => {
@@ -174,13 +197,13 @@ export default function LeaderboardDetail() {
         return;
       }
       void refetchLeaderboard();
-      if (isKnockout) {
+      if (isH2H) {
         void refetchH2HMatches();
         void refetchH2HStandings();
       }
     }, [
       canFetchLeaderboard,
-      isKnockout,
+      isH2H,
       refetchLeaderboard,
       refetchH2HMatches,
       refetchH2HStandings,
@@ -218,10 +241,11 @@ export default function LeaderboardDetail() {
     if (!canFetchLeaderboard) {
       return;
     }
+    setPaginationOffset(0);
     setRefreshing(true);
     try {
       const tasks: Promise<unknown>[] = [refetchLeaderboard()];
-      if (isKnockout) {
+      if (isH2H) {
         tasks.push(refetchH2HMatches(), refetchH2HStandings());
       } else {
         tasks.push(refetchKnockoutBracket());
@@ -232,17 +256,24 @@ export default function LeaderboardDetail() {
     }
   }, [
     canFetchLeaderboard,
-    isKnockout,
+    isH2H,
     refetchLeaderboard,
     refetchH2HMatches,
     refetchH2HStandings,
     refetchKnockoutBracket,
   ]);
 
+  // ── Pagination handler ─────────────────────────────────────────────────
+  const handleLoadMore = useCallback(() => {
+    if (serverHasMore && !isLeaderboardFetching) {
+      setPaginationOffset((prev) => prev + PAGE_SIZE);
+    }
+  }, [serverHasMore, isLeaderboardFetching]);
+
   const isRefreshing =
     refreshing ||
     isLeaderboardFetching ||
-    (isKnockout
+    (isH2H
       ? isH2HMatchesFetching || isH2HStandingsFetching
       : isKnockoutBracketFetching);
 
@@ -258,8 +289,12 @@ export default function LeaderboardDetail() {
 
   // ── Derived data ────────────────────────────────────────────────────────
   const rankings = useMemo(() => {
-    const list = leaderboardData?.rankings ?? [];
-    return list.map((item) => {
+    const baseRankings =
+      paginationOffset === 0 && leaderboardData?.rankings
+        ? leaderboardData.rankings
+        : allRankings;
+
+    return baseRankings.map((item) => {
       const isCurrentUser =
         item.id === userInfo?.user.id ||
         item.username === userInfo?.user.username ||
@@ -273,7 +308,7 @@ export default function LeaderboardDetail() {
       }
       return item;
     });
-  }, [leaderboardData?.rankings, userInfo?.user.id, userInfo?.user.username]);
+  }, [allRankings, leaderboardData, paginationOffset, userInfo?.user.id, userInfo?.user.username]);
 
   // For custom squads, knockout timing lives inside `squadInfo`. For global
   // leaderboards (world/country/school), the backend returns it at the
@@ -424,7 +459,7 @@ export default function LeaderboardDetail() {
       return;
     }
     let nextError = "";
-    if (isKnockout) {
+    if (isH2H) {
       if (h2hMatchesError || h2hStandingsError) {
         nextError = "Failed to load battles";
       }
@@ -447,7 +482,7 @@ export default function LeaderboardDetail() {
     }
   }, [
     setupBlock,
-    isKnockout,
+    isH2H,
     activeTab,
     h2hMatchesError,
     h2hStandingsError,
@@ -529,24 +564,38 @@ export default function LeaderboardDetail() {
           paddingBottom: rV(60),
         },
         // Fixed (non-scrolling) header for non-knockout squads. Holds the
-        // hero title + Rankings/Knockout tab pill so they DON'T remount on
-        // sub-tab switches (which was causing the title to jitter and the
-        // pill animation to be skipped on every toggle).
+        // hero title + Rankings/Knockout tab pill + column headers so they
+        // stay pinned while the list scrolls beneath.
         fixedHeader: {
           paddingHorizontal: rS(16),
           paddingTop: Math.max(rV(80), insets.top + rV(50)),
         },
-        // Wraps the swap-able body (RankingsList | KnockoutBracket scroll)
-        // for the non-knockout flow. flex:1 so the FlashList / ScrollView
-        // beneath the fixedHeader fills the remaining viewport.
+        // Sticky column headers that remain fixed during scroll
+        stickyColumnHeaders: {
+          flexDirection: "row",
+          alignItems: "center",
+          paddingHorizontal: rMS(10),
+          paddingBottom: rV(8),
+        },
+        columnLabel: {
+          fontSize: rMS(10),
+          fontWeight: "800",
+          textTransform: "uppercase",
+          letterSpacing: 2,
+          color: themeColors.textSecondary,
+        },
+        columnLabelStudent: { flex: 1, textAlign: "left" },
+        columnLabelSW: { width: rS(48), textAlign: "center" },
+        columnLabelPoints: { width: rS(72), textAlign: "right" },
+        // Wraps the swap-able body (RankingsList | KnockoutBracketList)
+        // for the non-knockout flow. flex:1 so the FlashList beneath
+        // the fixedHeader fills the remaining viewport.
         nonKnockoutBody: {
           flex: 1,
         },
-        // Knockout sub-tab body (now mounted BELOW the fixedHeader, so it
-        // no longer needs the topbar-clearing paddingTop).
-        bracketScrollContent: {
-          paddingHorizontal: rS(16),
-          paddingBottom: rV(60),
+        // Used by the H2H knockout squad (custom_1v1) ScrollView
+        knockoutScroll: {
+          flex: 1,
         },
         errorWrap: {
           position: "absolute",
@@ -554,16 +603,6 @@ export default function LeaderboardDetail() {
           left: 0,
           right: 0,
           zIndex: 50,
-        },
-        knockoutScroll: {
-          flex: 1,
-        },
-        // Used to hide the kept-mounted Knockout ScrollView when the user
-        // is on the Rankings sub-tab. `display: 'none'` preserves the
-        // component instance (and therefore Reanimated's already-finished
-        // entering animations) instead of unmounting it.
-        hidden: {
-          display: "none",
         },
       }),
     [themeColors, insets.top]
@@ -589,10 +628,10 @@ export default function LeaderboardDetail() {
         showSettings={showSettings}
       />
 
-      {isKnockout ? (
-        // Knockout squads (`custom_1v1`): the entire page body is the H2H
+      {isH2H ? (
+        // H2H squads (`custom_1v1`): the entire page body is the H2H
         // Battles panel. No outer Rankings/Knockout tabs — those only apply
-        // to non-knockout squads.
+        // to non-H2H squads.
         <ScrollView
           style={styles.knockoutScroll}
           contentContainerStyle={styles.h2hScrollContent}
@@ -607,7 +646,7 @@ export default function LeaderboardDetail() {
           <H2HBattlesPanel squadId={id} matches={matches} standings={standings} />
         </ScrollView>
       ) : (
-        // Non-knockout squads: the hero + Rankings/Knockout tab pill live
+        // Non-H2H squads: the hero + Rankings/Knockout tab pill live
         // OUTSIDE the sub-tab conditional so they stay mounted across
         // switches. Previously they were re-mounted in each branch's parent
         // (FlashList header for Rankings, ScrollView for Knockout), which
@@ -627,6 +666,20 @@ export default function LeaderboardDetail() {
                 onTabChange={setActiveTab}
               />
             ) : null}
+            {/* Sticky column headers — only visible on Rankings tab */}
+            {!setupBlock && activeTab === "rankings" && (
+              <View style={styles.stickyColumnHeaders}>
+                <Text style={[styles.columnLabel, styles.columnLabelStudent]}>
+                  Rank / Student
+                </Text>
+                {showWeeklyExamColumn && (
+                  <Text style={[styles.columnLabel, styles.columnLabelSW]}>SW</Text>
+                )}
+                <Text style={[styles.columnLabel, styles.columnLabelPoints]}>
+                  Points
+                </Text>
+              </View>
+            )}
           </View>
 
           {setupBlock ? (
@@ -635,46 +688,44 @@ export default function LeaderboardDetail() {
               onPrimaryPress={openSetupSheet}
               onBack={onBack}
             />
-          ) : null}
+          ) : (
+            <View style={{ flex: 1 }}>
+              {/* Rankings sub-tab — FlashList with virtualization */}
+              {rankingsLoading ? (
+                activeTab === "rankings" ? (
+                  <ScreenLoadingSpinner />
+                ) : null
+              ) : (
+                <View style={{ flex: 1, display: activeTab === "rankings" ? "flex" : "none" }}>
+                  <RankingsList
+                    rankings={rankings}
+                    isMe={isMe}
+                    showWeeklyExamColumn={showWeeklyExamColumn}
+                    hideColumnHeaders
+                    refreshing={isRefreshing}
+                    onRefresh={onRefresh}
+                    hasMore={serverHasMore}
+                    onLoadMore={handleLoadMore}
+                    isLoadingMore={
+                      isLeaderboardFetching && paginationOffset > 0
+                    }
+                  />
+                </View>
+              )}
 
-          {/* Rankings sub-tab. Conditionally rendered (re-mounts on tab
-              switch) — RankingRow has no entering animations, so a fresh
-              mount is silent and react-query keeps the data cached. */}
-          {!setupBlock && activeTab === "rankings" && (
-            rankingsLoading ? (
-              <ScreenLoadingSpinner />
-            ) : (
-              <RankingsList
-                rankings={rankings}
-                isMe={isMe}
-                showWeeklyExamColumn={showWeeklyExamColumn}
-                refreshing={isRefreshing}
-                onRefresh={onRefresh}
-              />
-            )
-          )}
-
-          {/* Knockout sub-tab. LAZY-MOUNTED on first visit, then kept
-              mounted (just hidden via `display: 'none'` when the user
-              swaps back to Rankings). This is what makes the bracket's
-              per-round FadeInDown fire exactly once — on the first
-              render with data — instead of on every tab toggle. */}
-          {!setupBlock && bracketEverVisited && (
-            <ScrollView
-              style={[
-                styles.knockoutScroll,
-                activeTab !== "knockout" && styles.hidden,
-              ]}
-              contentContainerStyle={styles.bracketScrollContent}
-              showsVerticalScrollIndicator={false}
-              refreshControl={refreshControl}
-            >
-              <KnockoutBracket
-                rounds={knockoutRounds}
-                squadInfo={squadInfo}
-                isMe={isMeByName}
-              />
-            </ScrollView>
+              {/* Knockout sub-tab — FlashList for full virtualization */}
+              {hasVisitedKnockout && (
+                <View style={{ flex: 1, display: activeTab === "knockout" ? "flex" : "none" }}>
+                  <KnockoutBracketList
+                    rounds={knockoutRounds}
+                    squadInfo={squadInfo}
+                    isMe={isMeByName}
+                    refreshing={isRefreshing}
+                    onRefresh={onRefresh}
+                  />
+                </View>
+              )}
+            </View>
           )}
         </View>
       )}

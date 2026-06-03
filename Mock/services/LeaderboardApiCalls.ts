@@ -35,6 +35,7 @@ export interface CustomLeaderboard {
   //              the first H2H week hasn't resolved yet)
   // See Mock/BACKEND_RANKING_UPDATES.md Section "User rank on squad list".
   userRank?: number | null;
+  timeframe?: string;
 }
 
 export interface RankingItem {
@@ -53,6 +54,10 @@ export interface RankingItem {
   // (world / country / school): optional until the API adds it; the app
   // still shows the SW column for those boards for layout parity.
   weeklyExamScore?: number | null;
+  // Per integration guide: same semantics as weeklyExamScore but
+  // tracks the broader study-week activity score. null = current week,
+  // no activity yet; 0 = week ended, no points.
+  studyWeekScore?: number | null;
   institutionId?: number;
   schoolName?: string;
 }
@@ -101,6 +106,11 @@ export interface LeaderboardDetailsResponse {
   knockoutStartWeek?: number;
   knockoutStarted?: boolean;
   totalKnockoutRounds?: number;
+  // Server-side pagination fields.
+  hasMore?: boolean;
+  totalCount?: number;
+  // The study week currently in progress (1-indexed).
+  currentStudyWeek?: number;
 }
 
 export interface H2HMatchup {
@@ -234,11 +244,13 @@ export const joinCustomLeaderboard = async (
 export const getLeaderboardDetails = async (
   id: string,
   token: string | null | undefined,
-  timeframe: string = "season"
+  timeframe: string = "season",
+  limit: number = 15,
+  offset: number = 0
 ): Promise<LeaderboardDetailsResponse> => {
   const response = await apiClient.get<LeaderboardDetailsResponse>(`/api/leaderboards/details/${id}`, {
     headers: { Authorization: `Token ${token}` },
-    params: { timeframe },
+    params: { timeframe, limit, offset },
   });
   return response.data;
 };

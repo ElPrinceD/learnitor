@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from "react";
+import React, { useMemo, useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -274,7 +274,7 @@ export default function ResultsScreen() {
     return rV(56);
   };
 
-  const styles = StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: themeColors.background,
@@ -567,7 +567,7 @@ export default function ResultsScreen() {
       textAlign: "center",
       paddingHorizontal: rMS(20),
     },
-  });
+  }), [themeColors, shadow, insets]);
 
   const renderPodiumSlot = (
     item: any,
@@ -576,7 +576,7 @@ export default function ResultsScreen() {
   ) => (
     <Animated.View
       key={item.id}
-      entering={FadeInUp.duration(500).delay(place === 1 ? 200 : place === 2 ? 100 : 300).springify()}
+      entering={FadeInUp.duration(250).delay(place === 1 ? 100 : place === 2 ? 50 : 150).springify()}
       style={styles.podiumSlot}
     >
       <View style={styles.podiumAvatarContainer}>
@@ -628,7 +628,7 @@ export default function ResultsScreen() {
         >
           {/* Hero */}
           <Animated.View
-            entering={FadeInDown.duration(500).delay(100)}
+            entering={FadeInDown.duration(250).delay(50)}
             style={styles.heroSection}
           >
             <Text style={styles.heroLabel}>
@@ -651,7 +651,7 @@ export default function ResultsScreen() {
           </Animated.View>
 
           {/* Message Banner */}
-          <Animated.View entering={FadeInDown.duration(500).delay(150)}>
+          <Animated.View entering={FadeInDown.duration(250).delay(75)}>
             <View style={styles.messageBanner}>
               <Text style={styles.messageBannerText}>{scoreBasedMessage}</Text>
             </View>
@@ -660,7 +660,7 @@ export default function ResultsScreen() {
           {isSolo ? (
             /* Solo: single centered score card, no podium / no opponents */
             <Animated.View
-              entering={FadeInUp.duration(500).delay(200).springify()}
+              entering={FadeInUp.duration(250).delay(100).springify()}
               style={[
                 styles.soloScoreCard,
                 isWeeklyExam && styles.weeklyScoreCard,
@@ -716,7 +716,7 @@ export default function ResultsScreen() {
                   {podiumPlayers.rest.map((item, idx) => (
                     <Animated.View
                       key={item.id}
-                      entering={FadeInDown.duration(400).delay(400 + idx * 80)}
+                      entering={FadeInDown.duration(200).delay(200 + idx * 40)}
                     >
                       <View
                         style={[

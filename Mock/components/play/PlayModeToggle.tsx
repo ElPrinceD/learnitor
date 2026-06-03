@@ -49,8 +49,8 @@ const PlayModeToggle: React.FC<Props> = ({
   const handlePressRankings = useCallback(() => {
     onChange("rankings");
   }, [onChange]);
-  const handlePressKnockout = useCallback(() => {
-    onChange("knockout");
+  const handlePressH2H = useCallback(() => {
+    onChange("h2h");
   }, [onChange]);
 
   return (
@@ -88,17 +88,17 @@ const PlayModeToggle: React.FC<Props> = ({
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.toggleButton}
-        onPress={handlePressKnockout}
+        onPress={handlePressH2H}
         activeOpacity={0.8}
       >
         <Text
           style={[
             styles.toggleText,
             { color: themeColors.textSecondary },
-            activeMode === "knockout" && styles.toggleTextActive,
+            activeMode === "h2h" && styles.toggleTextActive,
           ]}
         >
-          Knockout
+          1v1 Battles
         </Text>
       </TouchableOpacity>
     </Animated.View>

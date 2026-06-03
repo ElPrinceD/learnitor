@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useState, useMemo, useEffect } from "react";
+import React, { memo, useCallback, useState, useMemo, useEffect, useRef } from "react";
 import {
   Dimensions,
   StyleSheet,
@@ -106,17 +106,64 @@ const H2HBattlesPanel: React.FC<Props> = ({
 
   const [tab, setTab] = useState<H2HTab>(initialTab);
 
+  const dedupedMatches = useMemo(() => {
+    const seen = new Set<string>();
+    return matches.filter((m) => {
+      if (m.id) {
+        if (seen.has(`id_${m.id}`)) return false;
+        seen.add(`id_${m.id}`);
+      }
+      const sortedPlayers = [m.player1, m.player2].sort().join("::");
+      const key = `${m.round ?? "noround"}_${sortedPlayers}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [matches]);
+
   const uniqueWeeks = useMemo(() => {
     const weeks = new Set<number>();
-    matches.forEach((m) => {
+    dedupedMatches.forEach((m) => {
       if (m.round != null) {
         weeks.add(m.round);
       }
     });
     return Array.from(weeks).sort((a, b) => a - b);
-  }, [matches]);
+  }, [dedupedMatches]);
 
   const [selectedWeek, setSelectedWeek] = useState<number | "all">("all");
+
+  const scrollViewRef = useRef<ScrollView | null>(null);
+  const tabLayouts = useRef<{ [key: string]: { x: number; width: number } }>({});
+
+  const handleTabLayout = useCallback(
+    (key: string | number, x: number, width: number) => {
+      tabLayouts.current[key.toString()] = { x, width };
+      if (key.toString() === selectedWeek.toString() && scrollViewRef.current) {
+        const screenWidth = Dimensions.get("window").width;
+        const scrollToX = x - screenWidth / 2 + width / 2;
+        scrollViewRef.current.scrollTo({
+          x: Math.max(0, scrollToX),
+          animated: true,
+        });
+      }
+    },
+    [selectedWeek]
+  );
+
+  useEffect(() => {
+    if (tab === "matches" && selectedWeek !== undefined) {
+      const layout = tabLayouts.current[selectedWeek.toString()];
+      if (layout && scrollViewRef.current) {
+        const screenWidth = Dimensions.get("window").width;
+        const scrollToX = layout.x - screenWidth / 2 + layout.width / 2;
+        scrollViewRef.current.scrollTo({
+          x: Math.max(0, scrollToX),
+          animated: true,
+        });
+      }
+    }
+  }, [selectedWeek, tab]);
 
   useEffect(() => {
     if (uniqueWeeks.length > 0) {
@@ -132,9 +179,9 @@ const H2HBattlesPanel: React.FC<Props> = ({
   }, [uniqueWeeks, examStatus?.currentWeek]);
 
   const filteredMatches = useMemo(() => {
-    if (selectedWeek === "all") return matches;
-    return matches.filter((m) => m.round === selectedWeek);
-  }, [matches, selectedWeek]);
+    if (selectedWeek === "all") return dedupedMatches;
+    return dedupedMatches.filter((m) => m.round === selectedWeek);
+  }, [dedupedMatches, selectedWeek]);
 
   // Sliding pill indicator: 0 = Matches (left), PILL_TRANSLATE_X = Standings
   // (right). Driven via Reanimated so the slide runs on the UI thread.
@@ -158,7 +205,7 @@ const H2HBattlesPanel: React.FC<Props> = ({
     });
   }, [pillX]);
 
-  const styles = StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     sectionWrapper: {
       marginBottom: rV(22),
     },
@@ -432,6 +479,12 @@ const H2HBattlesPanel: React.FC<Props> = ({
       color: themeColors.tint,
       fontWeight: "800",
     },
+    currentOpponentStatus: {
+      fontSize: rMS(11),
+      fontWeight: "800",
+      textAlign: "center",
+      marginTop: rV(4),
+    },
     averageStandingRow: {
       opacity: 0.92,
     },
@@ -439,7 +492,29 @@ const H2HBattlesPanel: React.FC<Props> = ({
       fontStyle: "italic",
       color: themeColors.textSecondary,
     },
-  });
+    // ── Match result chip ────────────────────────────────────────────────
+    matchResultChip: {
+      alignSelf: "center",
+      paddingHorizontal: rMS(10),
+      paddingVertical: rV(3),
+      borderRadius: rMS(10),
+      marginBottom: rV(8),
+    },
+    matchResultText: {
+      fontSize: rMS(9),
+      fontWeight: "900",
+      color: "#fff",
+      letterSpacing: 1,
+    },
+    // ── Standings totalScore cell ────────────────────────────────────────
+    statCellTP: {
+      flex: 1.2,
+      fontSize: rMS(11),
+      color: themeColors.textSecondary,
+      textAlign: "center",
+      fontWeight: "700",
+    },
+  }), [themeColors, shadow]);
 
   // ── Match card renderer ────────────────────────────────────────────────
   const renderMatchCard = (m: CustomH2HMatchItem, idx: number) => {
@@ -474,9 +549,16 @@ const H2HBattlesPanel: React.FC<Props> = ({
     const p1NameColor = isPlayer1Me ? themeColors.tint : themeColors.text;
     const p2NameColor = isPlayer2Me ? themeColors.tint : themeColors.text;
 
+    const chipBg = resultColor(m.result) ?? themeColors.tint;
+
     const cardContent = (
       <View style={styles.matchCardInner}>
-        {isMeInMatch}
+        {/* Result indicator chip */}
+        {isMeInMatch && (
+          <View style={[styles.matchResultChip, { backgroundColor: chipBg }]}>
+            <Text style={styles.matchResultText}>{resultLabel(m.result)}</Text>
+          </View>
+        )}
         <View style={styles.matchTopRow}>
           {/* Player 1 (Left Block, Right Aligned) */}
           <View style={styles.player1Block}>
@@ -553,6 +635,38 @@ const H2HBattlesPanel: React.FC<Props> = ({
               {currentMatchup.opponentName}
             </Text>
           </Text>
+          {currentMatchup.status !== "pending" ? (
+            <Text
+              style={[
+                styles.currentOpponentStatus,
+                {
+                  color:
+                    currentMatchup.status === "won"
+                      ? "#4CAF50"
+                      : currentMatchup.status === "lost"
+                      ? "#F44336"
+                      : "#FF9800",
+                },
+              ]}
+            >
+              {currentMatchup.userScore ?? "—"} – {currentMatchup.opponentScore ?? "—"}
+              {"  •  "}
+              {currentMatchup.status === "won"
+                ? "WIN"
+                : currentMatchup.status === "lost"
+                ? "LOSS"
+                : "DRAW"}
+            </Text>
+          ) : (
+            <Text
+              style={[
+                styles.currentOpponentStatus,
+                { color: themeColors.textSecondary },
+              ]}
+            >
+              Pending — Take the Weekly Exam to score!
+            </Text>
+          )}
         </View>
       ) : null}
 
@@ -590,6 +704,7 @@ const H2HBattlesPanel: React.FC<Props> = ({
 
       {tab === "matches" && uniqueWeeks.length > 0 && (
         <ScrollView
+          ref={scrollViewRef}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.weekSelectorContainer}
@@ -600,6 +715,10 @@ const H2HBattlesPanel: React.FC<Props> = ({
               selectedWeek === "all" && styles.weekTabActive,
             ]}
             onPress={() => setSelectedWeek("all")}
+            onLayout={(event) => {
+              const { x, width } = event.nativeEvent.layout;
+              handleTabLayout("all", x, width);
+            }}
           >
             <Text
               style={[
@@ -619,6 +738,10 @@ const H2HBattlesPanel: React.FC<Props> = ({
                 selectedWeek === week && styles.weekTabActive,
               ]}
               onPress={() => setSelectedWeek(week)}
+              onLayout={(event) => {
+                const { x, width } = event.nativeEvent.layout;
+                handleTabLayout(week, x, width);
+              }}
             >
               <Text
                 style={[
@@ -685,6 +808,14 @@ const H2HBattlesPanel: React.FC<Props> = ({
             >
               L
             </Text>
+            <Text
+              style={[
+                styles.standingsHeaderText,
+                { flex: 1.2, textAlign: "center" },
+              ]}
+            >
+              TP
+            </Text>
           </View>
           {standings.map((s) => {
             const isUser = s.isUser === true;
@@ -721,6 +852,7 @@ const H2HBattlesPanel: React.FC<Props> = ({
                 <Text style={styles.statCellWin}>{s.w}</Text>
                 <Text style={styles.statCellDraw}>{s.d}</Text>
                 <Text style={styles.statCellLoss}>{s.l}</Text>
+                <Text style={styles.statCellTP}>{s.totalScore}</Text>
               </View>
             );
           })}

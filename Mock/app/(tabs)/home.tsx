@@ -47,13 +47,10 @@ const Home: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  // One-time animation flag
-  const hasAnimated = useRef(false);
-  useEffect(() => {
-    hasAnimated.current = true;
-  }, []);
-  const enterAnim = (delay: number) =>
-    hasAnimated.current ? undefined : FadeInDown.duration(300).delay(delay);
+  const enterAnim = useCallback(
+    (delay: number) => FadeInDown.duration(500).delay(delay),
+    []
+  );
 
   const token = userToken?.token;
   const userId = userInfo?.user?.id;

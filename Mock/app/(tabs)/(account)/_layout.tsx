@@ -1,8 +1,9 @@
-import { Stack } from "expo-router";
 import React from "react";
 import { useColorScheme } from "react-native";
 import Colors from "../../../constants/Colors";
 import { rMS } from "../../../constants";
+import { JsStack, fastStackTransition } from "../../../navigation/JsStack";
+import { CardStyleInterpolators } from "@react-navigation/stack";
 
 export default function AccountLayout() {
   const colorScheme = useColorScheme();
@@ -19,14 +20,19 @@ export default function AccountLayout() {
   };
 
   return (
-    <Stack>
-      <Stack.Screen
+    <JsStack
+      screenOptions={{
+        headerShown: false,
+        ...fastStackTransition,
+      }}
+    >
+      <JsStack.Screen
         name="four"
         options={{
           headerShown: false,
         }}
       />
-      <Stack.Screen
+      <JsStack.Screen
         name="SettingsPage"
         options={{
           headerShown: true,
@@ -35,11 +41,9 @@ export default function AccountLayout() {
           headerTitleStyle,
           headerStyle,
           headerShadowVisible: false,
-          presentation: "card",
-          animation: "slide_from_right",
         }}
       />
-      <Stack.Screen
+      <JsStack.Screen
         name="AccountSettings"
         options={{
           headerShown: true,
@@ -49,11 +53,9 @@ export default function AccountLayout() {
           headerStyle,
           headerBackTitle: "Back",
           headerShadowVisible: false,
-          presentation: "card",
-          animation: "slide_from_right",
         }}
       />
-      <Stack.Screen
+      <JsStack.Screen
         name="ReportProblem"
         options={{
           headerShown: true,
@@ -62,10 +64,10 @@ export default function AccountLayout() {
           headerTitleStyle,
           headerStyle,
           headerShadowVisible: false,
-          presentation: "modal",
+          cardStyleInterpolator: CardStyleInterpolators.forVerticalIOS,
         }}
       />
-      <Stack.Screen
+      <JsStack.Screen
         name="FAQScreen"
         options={{
           headerShown: true,
@@ -74,10 +76,10 @@ export default function AccountLayout() {
           headerTitleStyle,
           headerStyle,
           headerShadowVisible: false,
-          presentation: "modal",
+          cardStyleInterpolator: CardStyleInterpolators.forVerticalIOS,
         }}
       />
-      <Stack.Screen
+      <JsStack.Screen
         name="ConsentSettings"
         options={{
           headerShown: true,
@@ -87,11 +89,9 @@ export default function AccountLayout() {
           headerStyle,
           headerBackTitle: "Back",
           headerShadowVisible: false,
-          presentation: "card",
-          animation: "slide_from_right",
         }}
       />
-      <Stack.Screen
+      <JsStack.Screen
         name="ProfileInsights"
         options={{
           headerShown: true,
@@ -101,10 +101,9 @@ export default function AccountLayout() {
           headerStyle,
           headerBackTitle: "Back",
           headerShadowVisible: false,
-          presentation: "card",
-          animation: "slide_from_right",
         }}
       />
-    </Stack>
+    </JsStack>
   );
 }
+

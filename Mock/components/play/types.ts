@@ -12,7 +12,7 @@ export type ExamButtonState =
   | "completed"
   | "expired";
 
-export type PlayMode = "rankings" | "knockout";
+export type PlayMode = "rankings" | "h2h";
 
 export type H2HTab = "matches" | "standings";
 

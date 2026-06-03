@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import Animated, {
   FadeIn,
-  FadeOut,
   SlideInRight,
   SlideOutLeft,
   useAnimatedStyle,
@@ -21,43 +20,49 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import {
+  Zap,
   Gamepad2,
-  Lightbulb,
-  Clock,
   Users,
+  Swords,
+  GraduationCap,
   Trophy,
   type LucideIcon,
 } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Colors from "../constants/Colors";
-import { rMS, rS, rV, useShadows } from "../constants";
+import Colors from "../../constants/Colors";
+import { rMS, rS, rV, useShadows } from "../../constants";
 
-const GAME_TUTORIAL_SEEN_KEY = "game_tutorial_seen";
+export const PLAY_TUTORIAL_SEEN_KEY = "play_tutorial_seen";
 
 const SLIDES: { title: string; text: string; IconComponent: LucideIcon }[] = [
   {
-    title: "Welcome to\nthe Arena!",
-    text: "Join a game with a code from a friend, or create your own game to invite others. Go solo to sharpen your skills.",
+    title: "Welcome to\nPlay",
+    text: "This is your hub for everything competitive — games, exams, rankings, and study squads. Let's show you around!",
+    IconComponent: Zap,
+  },
+  {
+    title: "Game\nModes",
+    text: "Challenge friends in multiplayer or practice solo. Create a game, share the code, and compete in real-time quiz battles.",
     IconComponent: Gamepad2,
   },
   {
-    title: "Power-ups",
-    text: "'Double Dip' lets you pick 2 answers. 'Ask Prince' gives you a helpful hint. Use them wisely — you only get one of each!",
-    IconComponent: Lightbulb,
-  },
-  {
-    title: "Beat the\nClock",
-    text: "Answer before time runs out. Quick correct answers earn you respect in the arena!",
-    IconComponent: Clock,
-  },
-  {
     title: "Study\nSquads",
-    text: "Create or join squads to compete with friends. Climb the squad rankings and prove your knowledge together.",
+    text: "Create or join squads to compete with friends. Squad members earn points and climb the squad leaderboard together.",
     IconComponent: Users,
   },
   {
+    title: "Knockout\nBattles",
+    text: "Go head-to-head in 1v1 knockout rounds. Win matches, climb the bracket, and prove you're the best in your squad.",
+    IconComponent: Swords,
+  },
+  {
     title: "Weekly\nExams",
-    text: "Scheduled exams are the main way to earn points for World, Country, School, and squads. They run on a strict schedule with specific start and end times — you can ONLY access and complete them during this live period!",
+    text: "Scheduled exams are the main way to earn ranking points for World, Country, School, and squad leaderboards. They run on a strict schedule with specific start and end times — you can ONLY access and complete them during this live period!",
+    IconComponent: GraduationCap,
+  },
+  {
+    title: "Leader-\nboards",
+    text: "Track your progress across World, Country, and School rankings. Every game and exam counts towards your standing.",
     IconComponent: Trophy,
   },
 ];
@@ -69,7 +74,7 @@ type Props = {
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
-function GameTutorialOverlay({ visible, onDismiss }: Props) {
+function PlayTutorialOverlay({ visible, onDismiss }: Props) {
   const [slideIndex, setSlideIndex] = useState(0);
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
@@ -100,18 +105,18 @@ function GameTutorialOverlay({ visible, onDismiss }: Props) {
     transform: [{ scale: buttonScale.value }],
   }));
 
-  const handleGotIt = useCallback(async () => {
+  const handleNext = useCallback(async () => {
     if (slideIndex < SLIDES.length - 1) {
       setSlideIndex((i) => i + 1);
     } else {
-      await AsyncStorage.setItem(GAME_TUTORIAL_SEEN_KEY, "true");
+      await AsyncStorage.setItem(PLAY_TUTORIAL_SEEN_KEY, "true");
       setSlideIndex(0);
       onDismiss();
     }
   }, [slideIndex, onDismiss]);
 
   const handleSkip = useCallback(async () => {
-    await AsyncStorage.setItem(GAME_TUTORIAL_SEEN_KEY, "true");
+    await AsyncStorage.setItem(PLAY_TUTORIAL_SEEN_KEY, "true");
     setSlideIndex(0);
     onDismiss();
   }, [onDismiss]);
@@ -155,12 +160,12 @@ function GameTutorialOverlay({ visible, onDismiss }: Props) {
       width: rMS(80),
       height: rMS(80),
       borderRadius: rMS(40),
-      backgroundColor: themeColors.tint + "15",
+      backgroundColor: (themeColors.tintSecond ?? themeColors.tint) + "15",
       alignItems: "center",
       justifyContent: "center",
       marginBottom: rV(20),
       borderWidth: 1.5,
-      borderColor: themeColors.tint + "25",
+      borderColor: (themeColors.tintSecond ?? themeColors.tint) + "25",
     },
     title: {
       fontSize: rMS(24),
@@ -183,18 +188,18 @@ function GameTutorialOverlay({ visible, onDismiss }: Props) {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
-      gap: rS(8),
+      gap: rS(6),
       marginBottom: rV(24),
     },
     dot: {
-      width: rMS(8),
-      height: rMS(8),
+      width: rMS(7),
+      height: rMS(7),
       borderRadius: rMS(4),
       backgroundColor: themeColors.border,
     },
     dotActive: {
-      width: rMS(24),
-      backgroundColor: themeColors.tint,
+      width: rMS(20),
+      backgroundColor: themeColors.tintSecond ?? themeColors.tint,
     },
     button: {
       backgroundColor: "transparent",
@@ -204,11 +209,11 @@ function GameTutorialOverlay({ visible, onDismiss }: Props) {
       alignItems: "center",
       justifyContent: "center",
       borderWidth: 2,
-      borderColor: themeColors.tint,
+      borderColor: themeColors.tintSecond ?? themeColors.tint,
       width: "100%",
     },
     buttonText: {
-      color: themeColors.tint,
+      color: themeColors.tintSecond ?? themeColors.tint,
       fontSize: rMS(15),
       fontWeight: "800",
       letterSpacing: 0.5,
@@ -226,10 +231,7 @@ function GameTutorialOverlay({ visible, onDismiss }: Props) {
       statusBarTranslucent
     >
       <View style={styles.overlay}>
-        <Animated.View
-          entering={FadeIn.duration(300)}
-          style={styles.card}
-        >
+        <Animated.View entering={FadeIn.duration(300)} style={styles.card}>
           {/* Skip button */}
           {!isLast && (
             <TouchableOpacity
@@ -244,12 +246,15 @@ function GameTutorialOverlay({ visible, onDismiss }: Props) {
 
           {/* Animated icon */}
           <Animated.View style={[styles.iconRing, iconPulseStyle]}>
-            <slide.IconComponent size={36} color={themeColors.tint} />
+            <slide.IconComponent
+              size={36}
+              color={themeColors.tintSecond ?? themeColors.tint}
+            />
           </Animated.View>
 
           {/* Title */}
           <Animated.Text
-            key={`title-${slideIndex}`}
+            key={`play-title-${slideIndex}`}
             entering={SlideInRight.duration(250)}
             exiting={SlideOutLeft.duration(200)}
             style={styles.title}
@@ -259,7 +264,7 @@ function GameTutorialOverlay({ visible, onDismiss }: Props) {
 
           {/* Description */}
           <Animated.Text
-            key={`text-${slideIndex}`}
+            key={`play-text-${slideIndex}`}
             entering={SlideInRight.duration(250).delay(50)}
             exiting={SlideOutLeft.duration(200)}
             style={styles.text}
@@ -280,7 +285,7 @@ function GameTutorialOverlay({ visible, onDismiss }: Props) {
           {/* Action button */}
           <AnimatedTouchable
             style={[styles.button, buttonAnimStyle]}
-            onPress={handleGotIt}
+            onPress={handleNext}
             onPressIn={() => {
               buttonScale.value = withTiming(0.96, { duration: 100 });
             }}
@@ -290,7 +295,7 @@ function GameTutorialOverlay({ visible, onDismiss }: Props) {
             activeOpacity={1}
           >
             <Text style={styles.buttonText}>
-              {isLast ? "Let's Go!" : "Next"}
+              {isLast ? "Let's Play!" : "Next"}
             </Text>
           </AnimatedTouchable>
         </Animated.View>
@@ -299,5 +304,4 @@ function GameTutorialOverlay({ visible, onDismiss }: Props) {
   );
 }
 
-export default React.memo(GameTutorialOverlay);
-export { GAME_TUTORIAL_SEEN_KEY };
+export default React.memo(PlayTutorialOverlay);

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -376,7 +376,7 @@ export default function GameWaitingScreen() {
     }
   };
 
-  const styles = StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: themeColors.background,
@@ -584,10 +584,10 @@ export default function GameWaitingScreen() {
       marginTop: rV(12),
       fontWeight: "700",
     },
-  });
+  }), [themeColors, shadow, insets]);
 
   const renderPlayer = ({ item, index }: { item: Player; index: number }) => (
-    <Animated.View entering={FadeInDown.duration(400).delay(200 + index * 80)}>
+    <Animated.View entering={FadeInDown.duration(200).delay(100 + index * 40)}>
       <View style={styles.playerCard}>
         <Image
           source={
@@ -663,7 +663,7 @@ export default function GameWaitingScreen() {
 
             {/* Hero */}
             <Animated.View
-              entering={FadeInDown.duration(500).delay(100)}
+              entering={FadeInDown.duration(250).delay(50)}
               style={styles.heroSection}
             >
               <Text style={styles.heroLabel}>Lobby</Text>
@@ -673,7 +673,7 @@ export default function GameWaitingScreen() {
             </Animated.View>
 
             {/* Code Card */}
-            <Animated.View entering={FadeInDown.duration(500).delay(150)}>
+            <Animated.View entering={FadeInDown.duration(250).delay(75)}>
               <View style={styles.codeCard}>
                 <Text style={styles.codeLabel}>Game Code</Text>
                 <Text style={styles.codeText}>{gameCode}</Text>
@@ -721,13 +721,13 @@ export default function GameWaitingScreen() {
       {(isCreator || creatorId === userInfo?.user.id) && (
         <View style={styles.startButtonContainer}>
           {players.length < 2 ? (
-            <Animated.View entering={FadeInUp.duration(500).delay(300)}>
+            <Animated.View entering={FadeInUp.duration(250).delay(150)}>
               <Text style={styles.multiplayerMessage}>
                 Invite at least one more player to start the game
               </Text>
             </Animated.View>
           ) : (
-            <Animated.View entering={FadeInUp.duration(500).delay(300)}>
+            <Animated.View entering={FadeInUp.duration(250).delay(150)}>
               <TouchableOpacity
                 style={styles.startButton}
                 onPress={handleStartGame}

@@ -8,12 +8,13 @@ import {
   DefaultTheme,
 } from "@react-navigation/native";
 import {
-  Stack,
   router,
   useSegments,
   useRootNavigationState,
   useNavigationContainerRef,
 } from "expo-router";
+import { JsStack, fastStackTransition } from "../navigation/JsStack";
+import { CardStyleInterpolators } from "@react-navigation/stack";
 import * as SplashScreen from "expo-splash-screen";
 import { useAuth } from "../store/authStore";
 import { useColorScheme } from "../components/useColorScheme";
@@ -315,27 +316,28 @@ const RootLayoutNav = () => {
                     colorScheme === "dark" ? CustomDarkTheme : CustomDefaultTheme
                   }
                 >
-                  <Stack>
-                    <Stack.Screen
+                  <JsStack
+                    screenOptions={{
+                      headerShown: false,
+                      ...fastStackTransition,
+                    }}
+                  >
+                    <JsStack.Screen
                       name="index"
-                      options={{ headerShown: false }}
                     />
-                    <Stack.Screen
+                    <JsStack.Screen
                       name="(verification)"
-                      options={{ headerShown: false }}
                     />
-                    <Stack.Screen
+                    <JsStack.Screen
                       name="(tabs)"
                       options={{
-                        headerShown: false,
-                        headerShadowVisible: false,
+                        cardStyleInterpolator: CardStyleInterpolators.forFadeFromBottomAndroid,
                       }}
                     />
-                    <Stack.Screen
+                    <JsStack.Screen
                       name="(game)"
-                      options={{ headerShown: false }}
                     />
-                  </Stack>
+                  </JsStack>
                 </ThemeProvider>
 
                 {/* Alert modal portal (renders above everything) */}

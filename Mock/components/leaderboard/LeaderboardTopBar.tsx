@@ -1,4 +1,4 @@
-import React, { memo, useCallback } from "react";
+import React, { memo, useCallback, useMemo } from "react";
 import {
   StyleSheet,
   TouchableOpacity,
@@ -48,7 +48,7 @@ const LeaderboardTopBar: React.FC<Props> = ({
     backScale.value = withSpring(1, { damping: 15, stiffness: 300 });
   }, [backScale]);
 
-  const styles = StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     topBar: {
       position: "absolute",
       top: 0,
@@ -76,7 +76,7 @@ const LeaderboardTopBar: React.FC<Props> = ({
     spacer: {
       flex: 1,
     },
-  });
+  }), [themeColors, shadow, insets.top]);
 
   return (
     <BlurView

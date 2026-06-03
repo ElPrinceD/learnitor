@@ -232,7 +232,7 @@ const GameLevel: React.FC = () => {
         </Animated.View>
 
         <Animated.View
-          entering={FadeInDown.duration(500).delay(100)}
+          entering={FadeInDown.duration(250).delay(50)}
           style={styles.heroSection}
         >
           <Text style={styles.heroLabel}>Difficulty</Text>

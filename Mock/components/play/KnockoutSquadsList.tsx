@@ -30,7 +30,7 @@ interface KnockoutCupCardProps {
 const KnockoutCupCard: React.FC<KnockoutCupCardProps> = memo(
   ({ item, themeColors, onPress }) => {
     const handlePress = useCallback(() => {
-      onPress(item.id, item.name, "knockout");
+      onPress(item.id, item.name, "h2h");
     }, [onPress, item.id, item.name]);
 
     const memberCount = item.memberCount;
