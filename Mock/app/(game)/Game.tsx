@@ -228,12 +228,19 @@ export default function Game() {
     }, 1000);
 
     const timer = setTimeout(() => {
-      if (!gameEnded) {
-        if (currentQuestion < gameQuestions.length - 1) {
-          setCurrentQuestion((prev) => prev + 1);
-        } else {
-          handleSubmit();
-        }
+      if (!gameEnded && !showFastAnswerCue) {
+        // Time ran out
+        setSelectedAnswers((prev) => {
+          const currentId = gameQuestions[currentQuestion]?.id;
+          if (!prev[currentId] || prev[currentId].length === 0) {
+            attemptQuestion(currentId);
+            return {
+              ...prev,
+              [currentId]: [],
+            };
+          }
+          return prev;
+        });
       }
     }, questionDuration);
 
@@ -339,7 +346,7 @@ export default function Game() {
           if (!redirected) {
             setRedirected(true);
             router.replace({
-              pathname: "Results",
+              pathname: "/(game)/Results",
               params: { scores: JSON.stringify(scoresObject), gameId },
             });
           }
@@ -358,7 +365,7 @@ export default function Game() {
         webSocket.current.close();
       }
       router.push({
-        pathname: "Results",
+        pathname: "/(game)/Results",
         params: { scores: JSON.stringify(allScores), gameId },
       });
       if (webSocket.current) webSocket.current.close();
@@ -483,19 +490,23 @@ export default function Game() {
         if (doubleDipActive) {
           if (updated[questionId]?.length >= 2) return updated;
           if (!updated[questionId]) updated[questionId] = [answerId];
-          else updated[questionId].push(answerId);
-          if (updated[questionId].length === 2) {
-            // Defer sibling-state update — calling `setDoubleDipActive(false)`
-            // synchronously inside this updater triggers React's
-            // "Cannot update a component while rendering a different component"
-            // warning, because React may replay the updater during a render.
+          else if (!updated[questionId].includes(answerId)) updated[questionId].push(answerId);
+          
+          const isThisAnswerCorrect = correctIds.includes(answerId);
+          
+          if (isThisAnswerCorrect) {
             queueMicrotask(() => setDoubleDipActive(false));
             didSubmit = true;
-            const sel = updated[questionId];
-            isCorrect =
-              sel.length === correctIds.length &&
-              sel.every((id) => correctIds.includes(id));
+            isCorrect = true;
             attemptQuestion(questionId);
+          } else if (updated[questionId].length === 2) {
+            queueMicrotask(() => setDoubleDipActive(false));
+            didSubmit = true;
+            isCorrect = false;
+            attemptQuestion(questionId);
+          } else {
+            didSubmit = false;
+            isCorrect = false;
           }
         } else {
           updated[questionId] = [answerId];
@@ -553,10 +564,11 @@ export default function Game() {
       const correctIds = gameAnswers
         .filter((ans) => ans.question === question.id && ans.isRight)
         .map((ans) => ans.id);
-      if (
-        selectedIds.length === correctIds.length &&
-        selectedIds.every((id) => correctIds.includes(id))
-      ) {
+      const isCorrect = correctIds.length > 1
+        ? selectedIds.length === correctIds.length && selectedIds.every((id) => correctIds.includes(id))
+        : selectedIds.some((id) => correctIds.includes(id));
+        
+      if (isCorrect) {
         correct++;
       }
     });
@@ -578,9 +590,9 @@ export default function Game() {
       const correctIds = gameAnswers
         .filter((a) => a.question === q.id && a.isRight)
         .map((a) => a.id);
-      const isCorrect =
-        selectedIds.length === correctIds.length &&
-        selectedIds.every((id) => correctIds.includes(id));
+      const isCorrect = correctIds.length > 1
+        ? selectedIds.length === correctIds.length && selectedIds.every((id) => correctIds.includes(id))
+        : selectedIds.some((id) => correctIds.includes(id));
       if (isCorrect) streak++;
       else break;
     }

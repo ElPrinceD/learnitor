@@ -192,9 +192,19 @@ export default function SinglePlayerGame() {
 
     const timer = setTimeout(() => {
       if (!gameEnded) {
-        // Did not answer in time -> counted as wrong
-        answerQuestion(false, questionDuration);
-        moveToNextQuestionOrEnd();
+        setSelectedAnswers((prev) => {
+          const currentId = gameQuestions[currentQuestion]?.id;
+          if (!prev[currentId] || prev[currentId].length === 0) {
+            // Did not answer in time -> counted as wrong
+            answerQuestion(false, questionDuration);
+            moveToNextQuestionOrEnd();
+            return {
+              ...prev,
+              [currentId]: [],
+            };
+          }
+          return prev;
+        });
       }
     }, questionDuration);
 
@@ -296,7 +306,7 @@ export default function SinglePlayerGame() {
     };
 
     router.replace({
-      pathname: "Results",
+      pathname: "/(game)/Results",
       params: { scores: JSON.stringify(scoresObject), gameId },
     });
   };
@@ -337,19 +347,21 @@ export default function SinglePlayerGame() {
         if (doubleDipActive) {
           if (updated[questionId]?.length >= 2) return updated;
           if (!updated[questionId]) updated[questionId] = [answerId];
-          else if (!updated[questionId].includes(answerId))
-            updated[questionId].push(answerId);
-          if (updated[questionId].length === 2) {
-            // Defer sibling-state update — calling `setDoubleDipActive(false)`
-            // synchronously inside this updater triggers React's
-            // "Cannot update a component while rendering a different component"
-            // warning, because React may replay the updater during a render.
+          else if (!updated[questionId].includes(answerId)) updated[questionId].push(answerId);
+          
+          const isThisAnswerCorrect = correctIds.includes(answerId);
+          
+          if (isThisAnswerCorrect) {
             queueMicrotask(() => setDoubleDipActive(false));
             didSubmit = true;
-            const sel = updated[questionId];
-            isCorrect =
-              sel.length === correctIds.length &&
-              sel.every((id) => correctIds.includes(id));
+            isCorrect = true;
+          } else if (updated[questionId].length === 2) {
+            queueMicrotask(() => setDoubleDipActive(false));
+            didSubmit = true;
+            isCorrect = false;
+          } else {
+            didSubmit = false;
+            isCorrect = false;
           }
         } else {
           updated[questionId] = [answerId];
@@ -495,9 +507,9 @@ export default function SinglePlayerGame() {
       const correctIds = gameAnswers
         .filter((a) => a.question === q.id && a.isRight)
         .map((a) => a.id);
-      const isCorrect =
-        selectedIds.length === correctIds.length &&
-        selectedIds.every((id) => correctIds.includes(id));
+      const isCorrect = correctIds.length > 1
+        ? selectedIds.length === correctIds.length && selectedIds.every((id) => correctIds.includes(id))
+        : selectedIds.some((id) => correctIds.includes(id));
       if (isCorrect) s++;
       else break;
     }
