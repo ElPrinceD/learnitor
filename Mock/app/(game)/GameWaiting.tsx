@@ -176,6 +176,11 @@ export default function GameWaitingScreen() {
     });
   }, [gameQuestions, isCreator, gameId, id, gameCode]);
 
+  const goToGameRef = useRef(goToGame);
+  useEffect(() => {
+    goToGameRef.current = goToGame;
+  }, [goToGame]);
+
   const connectWebSocket = useCallback(() => {
     if (!gameCode || ws.current) return;
 
@@ -247,10 +252,10 @@ export default function GameWaitingScreen() {
           }
 
           if (payload.started && !payload.ended) {
-            goToGame();
+            goToGameRef.current();
           }
         } else if (data.type === "game.start") {
-          goToGame();
+          goToGameRef.current();
         } else if (data.type === "game.state") {
           // Handle game state updates
           const payload = data.data || data;
@@ -271,7 +276,7 @@ export default function GameWaitingScreen() {
           }
 
           if (payload.started && !payload.ended) {
-            goToGame();
+            goToGameRef.current();
           }
         }
       } catch (error) {
@@ -294,7 +299,7 @@ export default function GameWaitingScreen() {
         setWsError(errorMsg);
       }
     };
-  }, [gameCode, userInfo, goToGame]);
+  }, [gameCode, userInfo]);
 
   useEffect(() => {
     connectWebSocket();

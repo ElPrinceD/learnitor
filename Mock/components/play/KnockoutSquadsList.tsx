@@ -19,7 +19,7 @@ interface Props {
   enterAnim: (delay: number) => any;
 }
 
-const CUP_CARD_HEIGHT = 88;
+const CUP_CARD_HEIGHT = 72;
 
 interface KnockoutCupCardProps {
   item: CustomLeaderboard;
@@ -92,7 +92,7 @@ const KnockoutCupCard: React.FC<KnockoutCupCardProps> = memo(
               —
             </Text>
           )}
-          <ChevronRight size={18} color={themeColors.textSecondary} />
+          <ChevronRight size={16} color={themeColors.textSecondary} />
         </View>
       </TouchableOpacity>
     );
@@ -184,6 +184,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: rV(14),
+    minHeight: rMS(32),
   },
   sectionTitle: {
     fontSize: rMS(16),
@@ -206,18 +207,18 @@ const styles = StyleSheet.create({
     minHeight: CUP_CARD_HEIGHT,
   },
   cupCard: {
-    borderRadius: rMS(20),
     padding: rMS(12),
-    marginBottom: rV(8),
-    borderWidth: 1,
+    borderRadius: rMS(24),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    marginBottom: rV(6),
+    borderWidth: 1,
   },
   cupCardLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: rS(10),
+    gap: rS(12),
     flex: 1,
   },
   cupIcon: {
@@ -228,13 +229,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   cupName: {
-    fontSize: rMS(13),
-    fontWeight: "800",
+    fontSize: SIZES.small,
+    fontWeight: "700",
   },
   cupWeek: {
-    fontSize: rMS(10),
-    fontWeight: "600",
-    marginTop: rV(2),
+    fontSize: SIZES.small,
   },
   cupCardRight: {
     flexDirection: "row",

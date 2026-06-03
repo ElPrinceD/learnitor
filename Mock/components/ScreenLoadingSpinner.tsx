@@ -15,7 +15,7 @@ import { rMS } from "../constants";
 
 // ── Config ─────────────────────────────────────────────────────────────
 const DOT_COUNT = 3;
-const DOT_SIZE = rMS(8);
+const DOT_SIZE = rMS(7);
 const DOT_GAP = rMS(10);
 const BOUNCE_HEIGHT = rMS(10);
 const DURATION = 350;

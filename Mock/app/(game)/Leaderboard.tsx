@@ -28,6 +28,8 @@ import { useAuth } from "../../components/AuthContext";
 import Colors from "../../constants/Colors";
 import { rMS, rV, rS, SIZES, useShadows } from "../../constants/index.js";
 import ApiUrl from "../../config";
+import { safeRequestIdleCallback, safeCancelIdleCallback } from "../../utils/idleCallback";
+
 import ErrorMessage from "../../components/ErrorMessage";
 import { BlurView } from "expo-blur";
 import LeaderboardSetupGate from "../../components/leaderboard/LeaderboardSetupGate";
@@ -52,6 +54,15 @@ export default function Leaderboard() {
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? "light"];
   const shadow = useShadows();
+
+  const [isTransitionReady, setIsTransitionReady] = useState(false);
+
+  useEffect(() => {
+    const handle = safeRequestIdleCallback(() => {
+      setIsTransitionReady(true);
+    }, { timeout: 150 });
+    return () => safeCancelIdleCallback(handle);
+  }, []);
 
   // We can derive loading/error from react-query
 
@@ -556,11 +567,11 @@ export default function Leaderboard() {
   );
 
   const renderListEmpty = useCallback(() => {
-    if (loading) {
+    if (loading || !isTransitionReady) {
       return <ScreenLoadingSpinner />;
     }
     return null;
-  }, [loading]);
+  }, [loading, isTransitionReady]);
 
   return (
     <View style={styles.container}>
@@ -616,7 +627,7 @@ export default function Leaderboard() {
       ) : (
         <View style={{ flex: 1 }}>
           <FlashList
-            data={rankings}
+            data={isTransitionReady ? rankings : []}
             renderItem={renderItem}
             keyExtractor={keyExtractor}
             ListHeaderComponent={renderListHeader}
