@@ -4,7 +4,7 @@ export default {
     "slug": "mock",
     "scheme": "elevay",
     "description": "Learn it all",
-    "version": "1.1.3",
+    "version": "1.1.4",
     "deepLinking": true,
     "orientation": "portrait",
     "icon": "./assets/images/ElevayWithoutTextLogo.png",
@@ -45,7 +45,7 @@ export default {
         "RECEIVE_BOOT_COMPLETED",
         "WAKE_LOCK"
       ],
-      "versionCode": 14,
+      "versionCode": 15,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/ElevayWithoutTextLogo.png",
         "monochromeImage": "./assets/images/ElevayWithoutTextLogo.png",
